@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "autoencodix"
+dynamic = ["version"]
+description = ''
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "joas", email = "joas@informatik.uni-leipzig.de" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = []
+
+[project.urls]
+Documentation = "https://github.com/joas/autoencodix#readme"
+Issues = "https://github.com/joas/autoencodix/issues"
+Source = "https://github.com/joas/autoencodix"
+
+[tool.hatch.version]
+path = "src/autoencodix/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/autoencodix tests}"
+
+[tool.coverage.run]
+source_pkgs = ["autoencodix", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/autoencodix/__about__.py",
+]
+
+[tool.coverage.paths]
+autoencodix = ["src/autoencodix", "*/autoencodix/src/autoencodix"]
+tests = ["tests", "*/autoencodix/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]

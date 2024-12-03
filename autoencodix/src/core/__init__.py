@@ -1,9 +1,7 @@
-from ._model_interface import ModelInterface
+from ._base_pipeline import BasePipeline
 from ._default_config import DefaultConfig
-from ._vanillix import Vanillix
+from ._vanillix_architecture import VanillixArchitecture
+from ._layer_factory import LayerFactory
+from ._base_autoencoder import BaseAutoencoder
 
-__all__ = [
-    'ModelInterface',
-    'DefaultConfig',
-    'Vanillix'
-]
+__all__ = ["BasePipeline", "DefaultConfig", "VanillixArchitecture", "LayerFactory", "BaseAutoencoder"]

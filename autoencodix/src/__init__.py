@@ -8,12 +8,7 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 from autoencodix.src.preprocessing import Preprocessor
-from autoencodix.src.core._model_interface import ModelInterface
-from autoencodix.src.models._vanillix_model import VanillixModel
+from autoencodix.src.core._base_pipeline import BasePipeline
+from autoencodix.src.models._vanillix import VanillixModel
 
-__all__ = [
-    'Preprocessor', 
-    'ModelInterface', 
-    'VanillixModel',
-    '__version__'
-]
+__all__ = ["Preprocessor", "BasePipeline", "VanillixModel", "__version__"]

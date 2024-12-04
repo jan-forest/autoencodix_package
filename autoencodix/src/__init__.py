@@ -9,6 +9,6 @@ except PackageNotFoundError:
 
 from autoencodix.src.preprocessing import Preprocessor
 from autoencodix.src.core._base_pipeline import BasePipeline
-from autoencodix.src.models._vanillix import VanillixModel
+from autoencodix.src.models.vanillix import VanillixModel
 
 __all__ = ["Preprocessor", "BasePipeline", "VanillixModel", "__version__"]

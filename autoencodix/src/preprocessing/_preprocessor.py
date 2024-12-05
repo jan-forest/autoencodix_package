@@ -1,24 +1,17 @@
 import torch
+from typing import Union
 import numpy as np
+import pandas as pd
+from anndata import AnnData
 
 
 class Preprocessor:
     def __init__(self):
-        pass
+        self._preprocessed = False
 
-    def preprocess(self, data: np.ndarray) -> np.ndarray:
-        """
-        Preprocess input data
-
-        Args:
-            data (np.ndarray): Input data to preprocess
-
-        Returns:
-            np.ndarray: Preprocessed data
-        """
-        raise NotImplementedError("Preprocessor not implemented")
-
-    def mock_preprocess(self, data: np.ndarray) -> np.ndarray:
+    def preprocess(
+        self, data: Union[np.ndarray, pd.DataFrame, AnnData]
+    ) -> torch.Tensor:
         """
         Mock preprocess input data
 
@@ -29,4 +22,5 @@ class Preprocessor:
             torch.Tensor: Preprocessed data
         """
         tensor = torch.from_numpy(data)
+        self.preprocessed = True
         return tensor

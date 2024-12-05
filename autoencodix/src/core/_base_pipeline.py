@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import abc
-from typing import Dict, Any, Optional, Union
-from anndata import AnnData
+from typing import Dict, Optional, Union
+from anndata import AnnData #type: ignore
 import torch
 from autoencodix.src.preprocessing import Preprocessor
 from ._default_config import DefaultConfig
@@ -59,16 +59,16 @@ class BasePipeline(abc.ABC):
             )
         self.data: Union[np.ndarray, AnnData, pd.DataFrame] = data
         self.config = config
-        self.x = None
+        self.x: Optional[Union[np.ndarray, torch.Tensor]] = None
 
-        self.preprocessor: Optional[Preprocessor] = None
+        self.preprocessor: Preprocessor = Preprocessor()
         self.predictor: Optional[None] = None
         self.visualizer: Optional[None] = None
         self.evaluator: Optional[None] = None
 
         self.predictions: Optional[np.ndarray] = None
         self.evaluation_results: Optional[Dict[str, float]] = None
-        self.model: torch.nn.Module = None
+        self.model: Optional[torch.nn.Module] = None
 
     def preprocess(self) -> None:
         """
@@ -204,7 +204,7 @@ class BasePipeline(abc.ABC):
         ground_truth : Optional[np.ndarray], optional
             The ground truth for evaluation (default is None).
         """
-        self.preprocess(data)
+        self.preprocess()
         self.fit()
         self.predict()
         self.visualize()

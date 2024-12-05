@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
 from typing import Dict, Any
+import torch
 import numpy as np
 
 @dataclass
-class Results:
+class Result:
     """
     A dataclass to store results from the pipeline with predefined keys.
     Attributes
@@ -24,6 +25,7 @@ class Results:
     mus: Dict[str, np.ndarray] = field(default_factory=dict)
     sigmas: Dict[str, np.ndarray] = field(default_factory=dict)
     losses: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    preprocessed_data: torch.Tensor = field(default_factory=torch.Tensor)
 
     def __getitem__(self, key: str) -> Any:
         """

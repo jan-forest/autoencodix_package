@@ -2,12 +2,13 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-from ._default_config import DefaultConfig
 from ._layer_factory import LayerFactory
 from ._base_autoencoder import BaseAutoencoder
+from autoencodix.src.utils.default_config import DefaultConfig
 
 
-
+# TODO check if correct and implemnet new config logic#
+# TODO add tests
 class VanillixArchitecture(BaseAutoencoder):
     """
     Vanilla Autoencoder implementation that consists of an encoder and a decoder.
@@ -43,20 +44,14 @@ class VanillixArchitecture(BaseAutoencoder):
             The configuration object containing model parameters.
             If not provided, default configuration is used.
         """
-        if config is None:
-            config = DefaultConfig()
 
         super().__init__()
 
-        self.input_dim = config.preprocessor_params.get(
-            "input_dim", 784
-        )  # Example default value
-        self.latent_dim = config.preprocessor_params.get(
-            "latent_dim", 64
-        )  # Example default value
-        self.n_layers = config.preprocessor_params.get("n_layers", 2)
-        self.enc_factor = config.preprocessor_params.get("enc_factor", 4)
-        self.drop_p = config.preprocessor_params.get("drop_p", 0.1)
+        self.input_dim = 784  # Example default value
+        self.latent_dim = 16
+        self.n_layers = 3
+        self.enc_factor = 4
+        self.drop_p = 0.1
 
         # Building the encoder and decoder using the configuration
         self.encoder = nn.Sequential(

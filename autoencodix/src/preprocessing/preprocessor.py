@@ -2,7 +2,7 @@ import torch
 from typing import Union
 import numpy as np
 import pandas as pd
-from anndata import AnnData
+from anndata import AnnData #type: ignore
 
 
 class Preprocessor:

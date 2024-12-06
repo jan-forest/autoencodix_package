@@ -1,13 +1,23 @@
+import abc
+from typing import Optional, Union
+
 import numpy as np
 import pandas as pd
-import abc
-from typing import Dict, Optional, Union
-from anndata import AnnData #type: ignore
 import torch
+from anndata import AnnData  # type: ignore
+
+from autoencodix.src.core._base_dataset import BaseDataset
+from autoencodix.src.data._datasetcontainer import DataSetContainer
+from autoencodix.src.data._datasplitter import DataSplitter
+from autoencodix.src.evaluate.evaluate import Evaluator
 from autoencodix.src.preprocessing import Preprocessor
-from ._default_config import DefaultConfig
+from autoencodix.src.trainers.predictor import Predictor
+from autoencodix.src.trainers.trainer import Trainer
+from autoencodix.src.utils._result import Result
+from autoencodix.src.utils.default_config import DefaultConfig, config_method
+from autoencodix.src.visualize.visualize import Visualizer
 
-
+# TODO test`
 class BasePipeline(abc.ABC):
     """
     Abstract base class defining the interface for all models.
@@ -19,31 +29,62 @@ class BasePipeline(abc.ABC):
     Attributes
     ----------
     config : DefaultConfig
-        The configuration for the model.
+        The configuration for the pipeline. Handles preprocessing, training, and
+        other settings.
     data : Union[np.ndarray, AnnData, pd.DataFrame]
-    preprocessor : Optional[Preprocessor]
-        The preprocessor used for data preprocessing.
-    predictor : Optional[None]
-        The predictor used for making predictions.
-    visualizer : Optional[None]
-        The visualizer used for visualizing results.
-    evaluator : Optional[None]
-        The evaluator used for evaluating model performance.
-    preprocessed_data : Optional[np.ndarray]
+    _features : Optional[np.ndarray]
         The data after preprocessing.
-    predictions : Optional[np.ndarray]
-        The model predictions.
-    evaluation_results : Optional[Dict[str, float]]
-        The evaluation metrics.
-    model : torch.nn.Module
+    _preprocessor : Optional[Preprocessor]
+        The preprocessor used for data preprocessing.
+    _datasets: Optional[DataSetContainer]
+    _data_splitter : Optional[DataSplitter]:
+        returns train, valid, test indices
+    _model : torch.nn.Module
         The model instance.
+    _trainer : Optional[Trainer]
+    _predictor : Optional[Predictor]
+        The predictor used for making predictions.
+    _evaluator : Optional[Evaluator]
+        The evaluator used for evaluating model performance.
+    _visualizer : Optional[Visualizer]
+        The visualizer used for visualizing results.
+        result: Result
+
+    Methods
+    -------
+    _build_dataset(*kwargs):
+        Calls a DataSplitter instance to obtain train, valid and test indicies
+        Updates the self._datset attribute with the train, valid and test datasets
+        Datsets are a subclass of torch.utils.data.Dataset and can be different subclasses
+        depending on the Pipeline.
+    preprocess(*kwargs):
+        Calls the Preprocessor instance to preprocess the data. UPdates the self._preprocessed_data
+        attribute.
+    fit(*kwargs):
+        Calls the Trainer instance to train the model on the preprocessed data.
+        Updates the self._model attribute and result attribute.
+    predict(*kwargs):
+        Calls the Predictor instance to run inference with the test data on the trained model.
+        If user inputs data, it preprocesses the data and runs inference.
+        Updates the result attribute.
+    evaluate(*kwargs):
+        Calls the Evaluator instance to evaluate the model performane in downstream tasks.
+        Updates the result attribute.
+    visualize(*kwargs):
+        Calls the Visualizer instance to visualize all relevant data in the result attribute.
+    show_result():
+        Helper Function to directly show the visualized results.
+    run():
+        Runs the entire pipeline in the following order: preprocess, fit, predict, evaluate, visualize.
+        Updates the result attribute.
     """
 
     def __init__(
-        #TODO adjust attributes and methods according to the changes in vanilix class
         self,
         data: Union[pd.DataFrame, AnnData, np.ndarray],
-        config: Optional[DefaultConfig] = None,
+        config: Optional[Union[None, DefaultConfig]] = None,
+        dataset_splitter: Optional[DataSplitter] = None,
+        **kwargs,
     ):
         """
         Initialize the model interface.
@@ -58,91 +99,139 @@ class BasePipeline(abc.ABC):
                 f"Expected data type to be one of np.ndarray, AnnData, or pd.DataFrame, got {type(data)}."
             )
         self.data: Union[np.ndarray, AnnData, pd.DataFrame] = data
-        self.config = config
-        self.x: Optional[Union[np.ndarray, torch.Tensor]] = None
+        self.config = DefaultConfig()
+        if config:
+            if not isinstance(config, DefaultConfig):
+                raise TypeError(
+                    f"Expected config type to be DefaultConfig, got {type(config)}."
+                )
+            self.config = config
+        self._data_splitter = DataSplitter()
+        if dataset_splitter:
+            if not isinstance(dataset_splitter, DataSplitter):
+                raise TypeError(
+                    f"Expected dataset_splitter type to be DataSplitter, got {type(dataset_splitter)}."
+                )
+            self._data_splitter = dataset_splitter
 
-        self.preprocessor: Preprocessor = Preprocessor()
-        self.predictor: Optional[None] = None
-        self.visualizer: Optional[None] = None
-        self.evaluator: Optional[None] = None
+        self._preprocessor: Optional[Preprocessor]
+        self._features: Optional[torch.Tensor]
+        self._datasets: Optional[DataSetContainer]
+        self._model: Optional[torch.nn.Module]
+        self._trainer: Optional[Trainer]
+        self._predictor: Optional[Predictor]
+        self._visualizer: Optional[Visualizer]
+        self._evaluator: Optional[Evaluator]
+        self.result: Result
 
-        self.predictions: Optional[np.ndarray] = None
-        self.evaluation_results: Optional[Dict[str, float]] = None
-        self.model: Optional[torch.nn.Module] = None
-
-    def preprocess(self) -> None:
+    def _build_datasets(self) -> None:
         """
-        Preprocess input data.
-
-        Parameters
-        ----------
-        data : np.ndarray
-            The input data to preprocess.
-
-        Returns
-        -------
-        np.ndarray
-            The preprocessed data.
+        Build datasets for training, validation, and testing.
 
         Raises
         ------
         NotImplementedError
-            If the preprocessor is not initialized.
+            If the data splitter is not initialized.
         """
-        if not self.preprocessor:
+        if self._data_splitter is None:
+            raise NotImplementedError("Data splitter not initialized")
+
+        if self._features is None:
+            raise ValueError("No data available for splitting")
+
+        split_indices = self._data_splitter.split(self._features)
+        train_ids, valid_ids, test_ids = (
+            split_indices["train"],
+            split_indices["valid"],
+            split_indices["test"],
+        )
+
+        self._datasets = DataSetContainer(
+            train=BaseDataset(data=self._features[train_ids]),
+            valid=BaseDataset(data=self._features[valid_ids]),
+            test=BaseDataset(data=self._features[test_ids]),
+        )
+
+    # config parameter will be self.config if not provided, decorator will handle this
+    @config_method
+    def preprocess(
+        self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
+    ) -> None:
+        """
+        Takes the user input data and filters, norrmalizes and cleans the data.
+        Populates the self._features attribute with the preprocessed data as a numpy array.
+
+
+        """
+        if self._preprocessor is None:
             raise NotImplementedError("Preprocessor not initialized")
 
-        self.x = self.preprocessor.preprocess(self.data)
+        self._features = self._preprocessor.preprocess(self.data)
+        self.result.preprocessed_data = self._features
 
-    def fit(self) -> None:
+    @config_method
+    def fit(
+        self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
+    ) -> None:
         """
         Train the model on preprocessed data.
-
-        Raises
-        ------
-        NotImplementedError
-            If the trainer is not initialized or if data has not been preprocessed.
         """
-        if not self.trainer or self.preprocessed_data is None:
-            raise NotImplementedError(
-                "Trainer not initialized or data not preprocessed"
+        if self._features is None:
+            raise ValueError("No data available for training, please preprocess first")
+
+        if self._trainer is None:
+            raise NotImplementedError("_trainer not initialized")
+        self._build_datasets()
+        if self._datasets is None:
+            raise ValueError(
+                "Datasets not built. Please run the preprocess method first."
             )
 
-        self.trainer.fit(self.preprocessed_data)
+        trainer_result = self._trainer.train(
+            model=self._model,
+            train=self._datasets.train,
+            valid=self._datasets.valid,
+            result=self.result,
+            config=config,
+        )
+        self.result.update(trainer_result)
 
-    def predict(self, data: Optional[np.ndarray] = None) -> np.ndarray:
+    @config_method
+    def predict(
+        self,
+        data: Union[np.ndarray, pd.DataFrame, AnnData] = None,
+        config: Optional[Union[None, DefaultConfig]] = None,
+        **kwargs,
+    ) -> None:
         """
-        Make predictions.
-
-        Parameters
-        ----------
-        data : Optional[np.ndarray], optional
-            The input data for prediction (default is None, in which case preprocessed data is used).
-
-        Returns
-        -------
-        np.ndarray
-            The prediction results.
-
-        Raises
-        ------
-        NotImplementedError
-            If the predictor is not initialized.
-        ValueError
-            If no data is available for prediction.
+        Run inference with the test data on the trained model.
+        If user inputs data, it preprocesses the data and runs inference.
         """
-        if not self.predictor:
+        if self._preprocessor is None:
+            raise NotImplementedError("Preprocessor not initialized")
+        if self._predictor is None:
             raise NotImplementedError("Predictor not initialized")
+        if self._datasets is None:
+            raise ValueError("Datasets not built. Please run the fit method first.")
 
-        input_data = data if data is not None else self.preprocessed_data
+        if data:
+            processed_data = self._preprocessor.preprocess(data)
+            input_data = BaseDataset(data=processed_data)
+            predictor_results = self._predictor.predict(data=input_data)
+        else:
+            predictor_results = self._predictor.predict(data=self._datasets.test)
+        self.result.update(predictor_results)
 
-        if input_data is None:
-            raise ValueError("No data available for prediction")
+    @config_method
+    def evaluate(
+        self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
+    ) -> None:
+        pass
 
-        self.predictions = self.predictor.predict(input_data)
-        return self.predictions
-
-    def visualize(self) -> None:
+    @config_method
+    def visualize(
+        self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
+    ) -> None:
         """
         Visualize model results.
 
@@ -153,61 +242,25 @@ class BasePipeline(abc.ABC):
         ValueError
             If no data is available for visualization.
         """
-        if not self.visualizer:
+        if self._visualizer is None:
             raise NotImplementedError("Visualizer not initialized")
 
-        if self.preprocessed_data is None:
+        if self._features is None:
             raise ValueError("No data available for visualization")
 
-        self.visualizer.visualize(self.preprocessed_data, self.predictions)
+        self._visualizer.visualize(self.result)
 
-    def evaluate(self, ground_truth: np.ndarray) -> Dict[str, float]:
+    def show_result(self) -> None:
+        pass
+
+    def run(self) -> Result:
         """
-        Evaluate model performance.
-
-        Parameters
-        ----------
-        ground_truth : np.ndarray
-            The ground truth data for evaluation.
-
-        Returns
-        -------
-        Dict[str, float]
-            The evaluation metrics.
-
-        Raises
-        ------
-        NotImplementedError
-            If the evaluator is not initialized.
-        ValueError
-            If no predictions are available for evaluation.
-        """
-        if not self.evaluator:
-            raise NotImplementedError("Evaluator not initialized")
-
-        if self.predictions is None:
-            raise ValueError("No predictions available for evaluation")
-
-        self.evaluation_results = self.evaluator.evaluate(
-            ground_truth, self.predictions
-        )
-        return self.evaluation_results
-
-    def run(self, data: np.ndarray, ground_truth: Optional[np.ndarray] = None) -> None:
-        """
-        Run the entire model pipeline.
-
-        Parameters
-        ----------
-        data : np.ndarray
-            The input data.
-        ground_truth : Optional[np.ndarray], optional
-            The ground truth for evaluation (default is None).
+        Run the entire model pipeline (preprocess, fit, predict, evaluate, visualize).
+        Populates the result attribute and returns it.
         """
         self.preprocess()
         self.fit()
         self.predict()
+        self.evaluate()
         self.visualize()
-
-        if ground_truth is not None:
-            self.evaluate(ground_truth)
+        return self.result

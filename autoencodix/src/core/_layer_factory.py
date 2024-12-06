@@ -1,7 +1,9 @@
+from typing import Any, List, Union, Optional
+
 import torch.nn as nn
-from typing import List
 
 
+# TODO check implemetnation and test
 class LayerFactory:
     """
     A factory class for creating fully connected layers and model architectures.
@@ -13,7 +15,7 @@ class LayerFactory:
     -------
     create_fc_layer(in_dim, out_dim, drop_p=0.0, only_linear=False):
         Creates a fully connected layer with optional batch normalization, dropout, and activation.
-    
+
     create_encoder(input_dim, latent_dim, n_layers, enc_factor, drop_p):
         Creates the encoder layers for an autoencoder architecture.
 
@@ -24,7 +26,7 @@ class LayerFactory:
     @staticmethod
     def create_fc_layer(
         in_dim: int, out_dim: int, drop_p: float = 0.0, only_linear: bool = False
-    ) -> List[nn.Module]:
+    ) -> List[Optional[Union[nn.Module, Any]]]:
         """
         Creates a fully connected layer with optional batch normalization, dropout, and activation.
 
@@ -41,18 +43,18 @@ class LayerFactory:
 
         Returns
         -------
-        List[nn.Module]
+        List[Optional[Union[nn.Module, Any]]]
             A list of `nn.Module` layers including the linear, batch normalization, dropout, and activation layers.
         """
         layers = [nn.Linear(in_dim, out_dim)]
         if not only_linear:
-            layers += [nn.BatchNorm1d(out_dim), nn.Dropout(drop_p), nn.ReLU()]
+            layers.extend([nn.BatchNorm1d(out_dim), nn.Dropout(drop_p), nn.ReLU()])
         return layers
 
     @staticmethod
     def create_encoder(
         input_dim: int, latent_dim: int, n_layers: int, enc_factor: int, drop_p: float
-    ) -> List[nn.Module]:
+    ) -> List[Optional[Union[nn.Module, Any]]]:
         """
         Creates encoder layers for an autoencoder architecture.
 
@@ -71,7 +73,7 @@ class LayerFactory:
 
         Returns
         -------
-        List[nn.Module]
+        List[Optional[Union[nn.Module, Any]]]
             A list of `nn.Module` layers representing the encoder architecture.
         """
         layers = []
@@ -84,7 +86,7 @@ class LayerFactory:
     @staticmethod
     def create_decoder(
         input_dim: int, latent_dim: int, n_layers: int, enc_factor: int, drop_p: float
-    ) -> List[nn.Module]:
+    ) -> List[Optional[Union[nn.Module, Any]]]:
         """
         Creates decoder layers for an autoencoder architecture.
 
@@ -103,7 +105,7 @@ class LayerFactory:
 
         Returns
         -------
-        List[nn.Module]
+        List[Optional[Union[nn.Module, Any]]]
             A list of `nn.Module` layers representing the decoder architecture.
         """
         layers = []

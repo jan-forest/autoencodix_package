@@ -1,4 +1,4 @@
 
-from ._preprocessor import Preprocessor 
+from .preprocessor import Preprocessor 
 
 __all__ = ["Preprocessor"]

@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
-import torch.nn as nn
-import torch
 
+import torch
+import torch.nn as nn
+
+# TODO add defualt class docstring
 class BaseAutoencoder(ABC, nn.Module):
     """
     Abstract BaseAutoencoder class defining the required methods for an autoencoder.

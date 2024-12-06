@@ -64,3 +64,33 @@ class Result:
         if not hasattr(self, key):
             raise KeyError(f"Invalid key: '{key}'. Allowed keys are: {', '.join(self.__annotations__.keys())}")
         setattr(self, key, value)
+
+
+    def update(self, other: 'Result') -> None:
+        """
+        Update the current Result object with non-empty values from another Result object.
+        
+        Parameters
+        ----------
+        other : Result
+            The Result object to update from.
+        """
+        for field_name, field_type in self.__annotations__.items():
+            current_value = getattr(self, field_name)
+            other_value = getattr(other, field_name)
+            
+            # Handle dictionary fields
+            if isinstance(current_value, dict):
+                for key, value in other_value.items():
+                    if key not in current_value or not current_value.get(key):
+                        current_value[key] = value
+            
+            # Handle tensor/numpy array fields
+            elif isinstance(current_value, (torch.Tensor, np.ndarray)):
+                if current_value is None or current_value.size == 0:
+                    setattr(self, field_name, other_value)
+            
+            # Handle other types of fields
+            else:
+                if current_value is None or current_value == field_type.__origin__():
+                    setattr(self, field_name, other_value)

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from torch.utils.data import Dataset
+from autoencodix.src.core._base_dataset import BaseDataset
 
+# TODO add tests
 @dataclass
 class DataSetContainer:
     """
@@ -15,17 +16,18 @@ class DataSetContainer:
     test : Dataset
         The testing dataset.
     """
-    train: Dataset
-    valid: Dataset
-    test: Dataset
 
-    def __getitem__(self, key: str) -> Dataset:
+    train: BaseDataset
+    valid: BaseDataset
+    test: BaseDataset
+
+    def __getitem__(self, key: str) -> BaseDataset:
         """Allows dictionary-like access to datasets."""
         if key not in {"train", "valid", "test"}:
             raise KeyError(f"Invalid key: {key}. Must be 'train', 'valid', or 'test'.")
         return getattr(self, key)
 
-    def __setitem__(self, key: str, value: Dataset):
+    def __setitem__(self, key: str, value: BaseDataset):
         """Allows dictionary-like assignment of datasets."""
         if key not in {"train", "valid", "test"}:
             raise KeyError(f"Invalid key: {key}. Must be 'train', 'valid', or 'test'.")

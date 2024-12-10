@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from autoencodix.src.core._base_dataset import BaseDataset
+from autoencodix.src.base._base_dataset import BaseDataset
 
 # TODO add tests
 @dataclass

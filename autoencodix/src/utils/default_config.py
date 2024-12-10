@@ -21,6 +21,12 @@ class DefaultConfig:
     learning_rate: float = 0.001
     batch_size: int = 32
     epochs: int = 100
+    latent_dim: int = 16
+    n_layers: int = 3
+    enc_factor: int = 4
+    input_dim: int = 10000
+    drop_p: float = 0.1
+
     
     def update(self, **kwargs) -> None:
         """

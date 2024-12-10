@@ -1,6 +1,6 @@
 from typing import Optional
 
-from autoencodix.src.core._base_dataset import BaseDataset
+from autoencodix.src.base._base_dataset import BaseDataset
 from autoencodix.src.utils._result import Result
 
 

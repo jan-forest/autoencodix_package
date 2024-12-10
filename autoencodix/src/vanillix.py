@@ -1,12 +1,11 @@
-from typing import Optional, Union
+from typing import Optional, Union, Type
 
 import numpy as np
 import pandas as pd
-import torch
 from anndata import AnnData  # type: ignore
 
-from autoencodix.src.core._base_pipeline import BasePipeline
-from autoencodix.src.core._vanillix_architecture import VanillixArchitecture
+from autoencodix.src.base._base_pipeline import BasePipeline
+from autoencodix.src.base._base_dataset import BaseDataset
 from autoencodix.src.data._datasetcontainer import DataSetContainer
 from autoencodix.src.data._datasplitter import DataSplitter
 from autoencodix.src.data._numeric_dataset import NumericDataset
@@ -14,12 +13,14 @@ from autoencodix.src.preprocessing import Preprocessor
 from autoencodix.src.trainers.trainer import Trainer
 from autoencodix.src.trainers.predictor import Predictor
 from autoencodix.src.utils._result import Result
-from autoencodix.src.utils.default_config import DefaultConfig, config_method
+from autoencodix.src.utils.default_config import DefaultConfig
 from autoencodix.src.visualize.visualize import Visualizer
 from autoencodix.src.evaluate.evaluate import Evaluator
 
 
 class Vanillix(BasePipeline):
+    dataset_class: Type[BaseDataset] = NumericDataset
+
     def __init__(
         self,
         data: Union[np.ndarray, AnnData, pd.DataFrame],
@@ -28,7 +29,6 @@ class Vanillix(BasePipeline):
     ):
         super().__init__(data, config)
         self.data = data
-        self._model = VanillixArchitecture(config=self.config)
         self._preprocessor = Preprocessor()
         self._trainer = Trainer()
         self._visualizer = Visualizer()

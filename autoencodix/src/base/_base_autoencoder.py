@@ -1,7 +1,11 @@
 from abc import ABC, abstractmethod
+from typing import Optional, Union
 
 import torch
 import torch.nn as nn
+from autoencodix.src.utils.default_config import DefaultConfig
+from autoencodix.src.utils._model_output import ModelOutput
+
 
 # TODO add defualt class docstring
 class BaseAutoencoder(ABC, nn.Module):
@@ -13,11 +17,27 @@ class BaseAutoencoder(ABC, nn.Module):
     by specific autoencoder models.
     """
 
-    def __init__(self):
+    def __init__(
+        self, config: Optional[Union[DefaultConfig, None]], input_dim: int
+    ) -> None:
         """
         Initializes the BaseAutoencoder class.
         """
         super().__init__()
+        if config is None:
+            config = DefaultConfig()
+        self.latent_dim = config.latent_dim
+        self.input_dim = input_dim
+
+    @abstractmethod
+    def _build_network(self) -> None:
+        """
+        Builds the encoder and decoder networks for the autoencoder model.
+
+        This method should be implemented by subclasses to define the architecture
+        of the encoder and decoder networks.
+        """
+        pass
 
     @abstractmethod
     def encode(self, x: torch.Tensor) -> torch.Tensor:
@@ -34,7 +54,7 @@ class BaseAutoencoder(ABC, nn.Module):
         torch.Tensor
             The encoded latent space representation.
         """
-        pass
+        return self.encoder(x)
 
     @abstractmethod
     def decode(self, x: torch.Tensor) -> torch.Tensor:
@@ -51,10 +71,10 @@ class BaseAutoencoder(ABC, nn.Module):
         torch.Tensor
             The decoded tensor, reconstructed from the latent space.
         """
-        pass
+        return self.decoder(x)
 
     @abstractmethod
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> ModelOutput:
         """
         Combines encoding and decoding steps for the autoencoder.
 
@@ -65,20 +85,13 @@ class BaseAutoencoder(ABC, nn.Module):
 
         Returns
         -------
-        torch.Tensor
-            The reconstructed input tensor after encoding and decoding.
+        ModelOutput
+            The reconstructed input tensor, and any additional information, depending on the model type.
         """
         pass
 
-    @abstractmethod
-    def _init_weights(self, module: nn.Module) -> None:
-        """
-        Initialize weights for the model layers. This method should be implemented 
-        by subclasses to define how weights are initialized for each layer type.
 
-        Parameters
-        ----------
-        module : nn.Module
-            The PyTorch module whose weights are to be initialized.
-        """
-        pass
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            torch.nn.init.xavier_uniform_(m.weight)
+            m.bias.data.fill_(0.01)

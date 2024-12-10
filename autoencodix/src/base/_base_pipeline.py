@@ -1,12 +1,12 @@
 import abc
-from typing import Optional, Union
+from typing import Optional, Union, Type
 
 import numpy as np
 import pandas as pd
 import torch
 from anndata import AnnData  # type: ignore
 
-from autoencodix.src.core._base_dataset import BaseDataset
+from autoencodix.src.base._base_dataset import BaseDataset
 from autoencodix.src.data._datasetcontainer import DataSetContainer
 from autoencodix.src.data._datasplitter import DataSplitter
 from autoencodix.src.evaluate.evaluate import Evaluator
@@ -16,6 +16,7 @@ from autoencodix.src.trainers.trainer import Trainer
 from autoencodix.src.utils._result import Result
 from autoencodix.src.utils.default_config import DefaultConfig, config_method
 from autoencodix.src.visualize.visualize import Visualizer
+
 
 # TODO test`
 class BasePipeline(abc.ABC):
@@ -39,8 +40,6 @@ class BasePipeline(abc.ABC):
     _datasets: Optional[DataSetContainer]
     _data_splitter : Optional[DataSplitter]:
         returns train, valid, test indices
-    _model : torch.nn.Module
-        The model instance.
     _trainer : Optional[Trainer]
     _predictor : Optional[Predictor]
         The predictor used for making predictions.
@@ -78,6 +77,8 @@ class BasePipeline(abc.ABC):
         Runs the entire pipeline in the following order: preprocess, fit, predict, evaluate, visualize.
         Updates the result attribute.
     """
+    # needed for the predict function to be able to use a child of BaseDataset in subclasses
+    dataset_class: Type[BaseDataset] = BaseDataset
 
     def __init__(
         self,
@@ -117,7 +118,6 @@ class BasePipeline(abc.ABC):
         self._preprocessor: Optional[Preprocessor]
         self._features: Optional[torch.Tensor]
         self._datasets: Optional[DataSetContainer]
-        self._model: Optional[torch.nn.Module]
         self._trainer: Optional[Trainer]
         self._predictor: Optional[Predictor]
         self._visualizer: Optional[Visualizer]
@@ -132,6 +132,8 @@ class BasePipeline(abc.ABC):
         ------
         NotImplementedError
             If the data splitter is not initialized.
+        ValueError
+            If self._features is None.
         """
         if self._data_splitter is None:
             raise NotImplementedError("Data splitter not initialized")
@@ -160,14 +162,16 @@ class BasePipeline(abc.ABC):
         """
         Takes the user input data and filters, norrmalizes and cleans the data.
         Populates the self._features attribute with the preprocessed data as a numpy array.
-
+        Calls the _build_datasets method to build the datasets for training, validation and testing.
 
         """
         if self._preprocessor is None:
             raise NotImplementedError("Preprocessor not initialized")
 
         self._features = self._preprocessor.preprocess(self.data)
+        self._build_datasets()
         self.result.preprocessed_data = self._features
+        self.result.datasets = self._datasets
 
     @config_method
     def fit(
@@ -181,14 +185,12 @@ class BasePipeline(abc.ABC):
 
         if self._trainer is None:
             raise NotImplementedError("_trainer not initialized")
-        self._build_datasets()
         if self._datasets is None:
             raise ValueError(
                 "Datasets not built. Please run the preprocess method first."
             )
 
         trainer_result = self._trainer.train(
-            model=self._model,
             train=self._datasets.train,
             valid=self._datasets.valid,
             result=self.result,
@@ -212,11 +214,17 @@ class BasePipeline(abc.ABC):
         if self._predictor is None:
             raise NotImplementedError("Predictor not initialized")
         if self._datasets is None:
-            raise ValueError("Datasets not built. Please run the fit method first.")
+            raise NotImplementedError(
+                "Datasets not built. Please run the fit method first."
+            )
+        if self.result.model is None:
+            raise NotImplementedError(
+                "Model not trained. Please run the fit method first"
+            )
 
         if data:
             processed_data = self._preprocessor.preprocess(data)
-            input_data = BaseDataset(data=processed_data)
+            input_data = self.dataset_class(data=processed_data)
             predictor_results = self._predictor.predict(data=input_data)
         else:
             predictor_results = self._predictor.predict(data=self._datasets.test)

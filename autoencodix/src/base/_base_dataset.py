@@ -2,6 +2,7 @@ from typing import Any, Tuple
 
 from torch.utils.data import Dataset
 
+
 # TODO decide wheter to use this at all and how (abstract class or not)
 class BaseDataset(Dataset):
     """
@@ -41,3 +42,14 @@ class BaseDataset(Dataset):
             The sample and its label.
         """
         return self.data[index]
+
+    def get_input_dim(self) -> int:
+        """
+        Get the input dimension of the dataset.
+
+        Returns
+        -------
+        int
+            The input dimension of the dataset, of the feature space.
+        """
+        return len(self.data[0])  # TODO: check if this is correct

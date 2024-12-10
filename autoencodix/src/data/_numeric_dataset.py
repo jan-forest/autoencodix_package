@@ -1,13 +1,14 @@
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset
+from autoencodix.src.base._base_dataset import BaseDataset
+
 
 # TODO check implemetnation and test (see old repo)
 # TODO add tests
 # TODO add default class docstring
-class NumericDataset(Dataset):
+class NumericDataset(BaseDataset):
     """
     A custom PyTorch dataset that can handle numpy arrays or tensors
     """
@@ -27,29 +28,19 @@ class NumericDataset(Dataset):
         labels : Optional[Union[np.ndarray, torch.Tensor]]
             Optional labels for supervised learning
         """
-        # Convert to tensor if numpy array
         self.data = torch.tensor(data, dtype=torch.float32)
 
         # Handle labels
         if labels is not None:
             self.labels = torch.tensor(labels, dtype=torch.float32)
 
-    def __getitem__(
-        self, idx: int
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    def get_input_dim(self) -> int:
         """
-        Get a single item from the dataset
-
-        Parameters:
-        -----------
-        idx : int
-            Index of the item to retrieve
+        Get the input dimension of the dataset
 
         Returns:
         --------
-        Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
-            Single data item, or data with labels if labels exist
+        int
+            The input dimension
         """
-        if self.labels is not None:
-            return self.data[idx], self.labels[idx]
-        return self.data[idx]
+        return self.data.shape[1]

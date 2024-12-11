@@ -1,7 +1,7 @@
 from typing import Optional
 
-from src.autoencodix.base._base_dataset import BaseDataset
-from src.autoencodix.utils._result import Result
+from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.utils._result import Result
 
 
 class Predictor:

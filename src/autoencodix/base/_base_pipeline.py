@@ -6,15 +6,15 @@ import pandas as pd
 import torch
 from anndata import AnnData  # type: ignore
 from ._base_dataset import BaseDataset
-from src.autoencodix.data._datasetcontainer import DataSetContainer
-from src.autoencodix.data._datasplitter import DataSplitter
-from src.autoencodix.evaluate.evaluate import Evaluator
-from src.autoencodix.data.preprocessor import Preprocessor
-from src.autoencodix.trainers.predictor import Predictor
-from src.autoencodix.trainers.trainer import Trainer
-from src.autoencodix.utils._result import Result
-from src.autoencodix.utils.default_config import DefaultConfig, config_method
-from src.autoencodix.visualize.visualize import Visualizer
+from autoencodix.data._datasetcontainer import DataSetContainer
+from autoencodix.data._datasplitter import DataSplitter
+from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.data.preprocessor import Preprocessor
+from autoencodix.trainers.predictor import Predictor
+from autoencodix.trainers.trainer import Trainer
+from autoencodix.utils._result import Result
+from autoencodix.utils.default_config import DefaultConfig, config_method
+from autoencodix.visualize.visualize import Visualizer
 
 
 # TODO test`

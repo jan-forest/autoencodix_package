@@ -7,4 +7,5 @@ except PackageNotFoundError:
 
 # Import key classes to make them directly accessible
 from .vanillix import Vanillix
+
 __all__ = ["Vanillix"]

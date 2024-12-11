@@ -1,9 +1,9 @@
 from typing import Optional, Union
-from src.autoencodix.utils._result import Result
-from src.autoencodix.utils.default_config import DefaultConfig
-from src.autoencodix.modeling._vanillix_architecture import VanillixArchitecture
-from src.autoencodix.data._numeric_dataset import NumericDataset
-from src.autoencodix.base._base_dataset import BaseDataset
+from autoencodix.utils._result import Result
+from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
+from autoencodix.data._numeric_dataset import NumericDataset
+from autoencodix.base._base_dataset import BaseDataset
 
 
 class Trainer:

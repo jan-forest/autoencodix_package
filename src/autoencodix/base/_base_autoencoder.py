@@ -3,8 +3,8 @@ from typing import Optional, Union
 
 import torch
 import torch.nn as nn
-from src.autoencodix.utils.default_config import DefaultConfig
-from src.autoencodix.utils._model_output import ModelOutput
+from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.utils._model_output import ModelOutput
 
 
 # TODO add defualt class docstring

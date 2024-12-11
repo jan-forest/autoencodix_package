@@ -2,7 +2,7 @@ from typing import Optional, Union
 
 import numpy as np
 import torch
-from src.autoencodix.base._base_dataset import BaseDataset
+from autoencodix.base._base_dataset import BaseDataset
 
 
 # TODO check implemetnation and test (see old repo)

@@ -3,10 +3,10 @@ from typing import Optional, Union
 import torch
 import torch.nn as nn
 
-from src.autoencodix.utils._model_output import ModelOutput
-from src.autoencodix.utils.default_config import DefaultConfig
+from autoencodix.utils._model_output import ModelOutput
+from autoencodix.utils.default_config import DefaultConfig
 
-from src.autoencodix.base._base_autoencoder import BaseAutoencoder
+from autoencodix.base._base_autoencoder import BaseAutoencoder
 from ._layer_factory import LayerFactory
 
 

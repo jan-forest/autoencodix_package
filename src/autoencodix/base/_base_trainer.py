@@ -1,5 +1,5 @@
 import abc
-from src.autoencodix.utils._result import Result
+from autoencodix.utils._result import Result
 
 
 class BaseTrainer(abc.ABC):

@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Any, Optional
 import torch
 import numpy as np
-from src.autoencodix.data import DataSetContainer
+from autoencodix.data import DataSetContainer
 
 
 @dataclass

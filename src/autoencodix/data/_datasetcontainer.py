@@ -1,6 +1,6 @@
 from typing import Optional, Union
 from dataclasses import dataclass
-from src.autoencodix.base._base_dataset import BaseDataset
+from autoencodix.base._base_dataset import BaseDataset
 
 # TODO add tests
 @dataclass

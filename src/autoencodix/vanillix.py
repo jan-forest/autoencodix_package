@@ -4,18 +4,18 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData  # type: ignore
 
-from src.autoencodix.base._base_pipeline import BasePipeline
-from src.autoencodix.base._base_dataset import BaseDataset
-from src.autoencodix.data._datasetcontainer import DataSetContainer
-from src.autoencodix.data._datasplitter import DataSplitter
-from src.autoencodix.data._numeric_dataset import NumericDataset
-from src.autoencodix.data.preprocessor import Preprocessor
-from src.autoencodix.trainers.trainer import Trainer
-from src.autoencodix.trainers.predictor import Predictor
-from src.autoencodix.utils._result import Result
-from src.autoencodix.utils.default_config import DefaultConfig
-from src.autoencodix.visualize.visualize import Visualizer
-from src.autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.base._base_pipeline import BasePipeline
+from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.data._datasetcontainer import DataSetContainer
+from autoencodix.data._datasplitter import DataSplitter
+from autoencodix.data._numeric_dataset import NumericDataset
+from autoencodix.data.preprocessor import Preprocessor
+from autoencodix.trainers.trainer import Trainer
+from autoencodix.trainers.predictor import Predictor
+from autoencodix.utils._result import Result
+from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.visualize.visualize import Visualizer
+from autoencodix.evaluate.evaluate import Evaluator
 
 
 class Vanillix(BasePipeline):

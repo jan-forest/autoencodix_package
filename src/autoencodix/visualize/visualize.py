@@ -1,4 +1,4 @@
-from src.autoencodix.utils._result import Result
+from autoencodix.utils._result import Result
 class Visualizer:
     def __init__(self):
         pass

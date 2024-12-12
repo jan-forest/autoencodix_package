@@ -6,14 +6,16 @@ import pandas as pd
 import torch
 from anndata import AnnData  # type: ignore
 from ._base_dataset import BaseDataset
+from ._base_trainer import BaseTrainer
 from autoencodix.data._datasetcontainer import DataSetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.data.preprocessor import Preprocessor
 from autoencodix.trainers.predictor import Predictor
-from autoencodix.trainers.trainer import Trainer
+from autoencodix.trainers.simple_trainer import SimpleTrainer
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig, config_method
+from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.utils._utils import config_method
 from autoencodix.visualize.visualize import Visualizer
 
 
@@ -79,6 +81,7 @@ class BasePipeline(abc.ABC):
 
     # needed for the predict function to be able to use a child of BaseDataset in subclasses
     _dataset_class: Type[BaseDataset] = BaseDataset
+    _trainer_class: Type[BaseTrainer] = BaseTrainer
 
     def __init__(
         self,
@@ -99,6 +102,8 @@ class BasePipeline(abc.ABC):
             raise TypeError(
                 f"Expected data type to be one of np.ndarray, AnnData, or pd.DataFrame, got {type(data)}."
             )
+
+        self._id = "base"
         self.data: Union[np.ndarray, AnnData, pd.DataFrame] = data
         self.config = DefaultConfig()
         if config:
@@ -118,7 +123,7 @@ class BasePipeline(abc.ABC):
         self._preprocessor: Optional[Preprocessor]
         self._features: Optional[torch.Tensor]
         self._datasets: Optional[DataSetContainer]
-        self._trainer: Optional[Trainer]
+        self._trainer: Optional[BaseTrainer]
         self._predictor: Optional[Predictor]
         self._visualizer: Optional[Visualizer]
         self._evaluator: Optional[Evaluator]
@@ -172,7 +177,7 @@ class BasePipeline(abc.ABC):
         self._features = self._preprocessor.preprocess(self.data)
         self._build_datasets()
         self.result.preprocessed_data = self._features
-        # self.result.datasets = self._datasets
+        self.result.datasets = self._datasets
 
     @config_method
     def fit(
@@ -184,19 +189,19 @@ class BasePipeline(abc.ABC):
         if self._features is None:
             raise ValueError("No data available for training, please preprocess first")
 
-        if self._trainer is None:
-            raise NotImplementedError("_trainer not initialized")
         if self._datasets is None:
             raise ValueError(
                 "Datasets not built. Please run the preprocess method first."
             )
 
-        trainer_result = self._trainer.train(
-            train=self._datasets.train,
-            valid=self._datasets.valid,
+        self._trainer = self._trainer_class(
+            trainset=self._datasets.train,
+            validset=self._datasets.valid,
             result=self.result,
             config=config,
+            called_from=self._id,
         )
+        trainer_result = self._trainer.train()
         print(f"default config: {self.config}")
         self.result.update(trainer_result)
 

@@ -30,6 +30,7 @@ class VanillixArchitecture(BaseAutoencoder):
             config = DefaultConfig()
         super().__init__(config, input_dim)
         self.input_dim = input_dim
+        print("input_dim", input_dim)
         self.latent_dim = config.latent_dim
         self.n_layers = config.n_layers
         self.enc_factor = config.enc_factor
@@ -89,6 +90,7 @@ class VanillixArchitecture(BaseAutoencoder):
         latent = self.encode(x)
         return ModelOutput(
             reconstruction=self.decode(latent),
+            latentspace=latent,
             latent_mean=None,
             latent_logvar=None,
             additional_info=None,

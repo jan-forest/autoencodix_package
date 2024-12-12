@@ -1,8 +1,12 @@
 from dataclasses import dataclass, field
-from typing import Dict, Any, Optional
-import torch
+from typing import Any, Dict, Optional
+
 import numpy as np
+import torch
+
 from autoencodix.data import DataSetContainer
+
+from ._traindynamics import TrainingDynamics
 
 
 @dataclass
@@ -11,31 +15,28 @@ class Result:
     A dataclass to store results from the pipeline with predefined keys.
     Attributes
     ----------
-    latentspaces : Dict[str, np.ndarray]
+    latentspaces : TrainingDynamics
         Stores latent space representations for 'train', 'valid', and 'test' splits.
-    reconstructions : Dict[str, np.ndarray]
+    reconstructions : TrainingDynamics
         Stores reconstructed outputs for 'train', 'valid', and 'test' splits.
-    mus : Dict[str, np.ndarray]
+    mus : TrainingDynamics
         Stores mean values of latent distributions for 'train', 'valid', and 'test' splits.
-    sigmas : Dict[str, np.ndarray]
+    sigmas : TrainingDynamics
         Stores standard deviations of latent distributions for 'train', 'valid', and 'test' splits.
-    losses : Dict[str, Dict[str, float]]
+    losses : TrainingDynamics
         Stores loss values for various metrics (e.g., 'recon') and splits ('train', 'valid', 'test').
     """
 
-    latentspaces: Dict[str, np.ndarray] = field(default_factory=dict)
-    reconstructions: Dict[str, np.ndarray] = field(default_factory=dict)
-    mus: Dict[str, np.ndarray] = field(default_factory=dict)
-    sigmas: Dict[str, np.ndarray] = field(default_factory=dict)
-    losses: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    latentspaces: TrainingDynamics = field(default_factory=TrainingDynamics)
+    reconstructions: TrainingDynamics = field(default_factory=TrainingDynamics)
+    mus: TrainingDynamics = field(default_factory=TrainingDynamics)
+    sigmas: TrainingDynamics = field(default_factory=TrainingDynamics)
+    losses: TrainingDynamics = field(default_factory=TrainingDynamics)
     preprocessed_data: torch.Tensor = field(default_factory=torch.Tensor)
     model: torch.nn.Module = field(default_factory=torch.nn.Module)
+    model_checkpoints: Dict[int, torch.nn.Module] = field(default_factory=dict)
     datasets: Optional[DataSetContainer] = field(
-        default_factory=lambda: DataSetContainer(
-            train=None,
-            valid=None,
-            test=None
-        )
+        default_factory=lambda: DataSetContainer(train=None, valid=None, test=None)
     )
 
     def __getitem__(self, key: str) -> Any:
@@ -97,9 +98,13 @@ class Result:
             if other_value is None:
                 continue
 
-            # Handle dictionary fields
-            if isinstance(current_value, dict):
-                current_value.update(other_value)
+            # For TrainingDynamics, merge data
+            if isinstance(
+                current_value, TrainingDynamics
+            ):  # TODO check if merge is the correct operation
+                for epoch, split_data in other_value._data.items():
+                    for split, value in split_data.items():
+                        current_value.add(epoch, value, split)
 
             # Handle tensor/numpy array fields
             elif isinstance(current_value, (torch.Tensor, np.ndarray)):

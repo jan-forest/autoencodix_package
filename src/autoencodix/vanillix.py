@@ -6,11 +6,12 @@ from anndata import AnnData  # type: ignore
 
 from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.data._datasetcontainer import DataSetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.preprocessor import Preprocessor
-from autoencodix.trainers.trainer import Trainer
+from autoencodix.trainers.simple_trainer import SimpleTrainer
 from autoencodix.trainers.predictor import Predictor
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
@@ -20,6 +21,7 @@ from autoencodix.evaluate.evaluate import Evaluator
 
 class Vanillix(BasePipeline):
     _dataset_class: Type[BaseDataset] = NumericDataset
+    _trainer_class: Type[BaseTrainer] = SimpleTrainer
 
     def __init__(
         self,
@@ -28,11 +30,12 @@ class Vanillix(BasePipeline):
         data_splitter: Optional[DataSplitter] = None,
     ):
         super().__init__(data, config)
+        self._id = "Vanillix"
         self.data = data
         self._preprocessor = Preprocessor()
-        self._trainer = Trainer()
         self._visualizer = Visualizer()
         self._predictor = Predictor()
+        self._trainer: self._trainer_class
         self._evaluator = Evaluator()
         self.result = Result()
 
@@ -42,12 +45,8 @@ class Vanillix(BasePipeline):
             self.data_splitter = DataSplitter()
 
     def _build_datasets(self):
-        """
-        Takes the self.x attribute and creates train, valid, and test datasets.
-        If no Datasplitter is provided, it will split the data according to the default configuration.
+        # TODO docstring
 
-
-        """
         split_indices = self.data_splitter.split(self._features)
         train_ids, valid_ids, test_ids = (
             split_indices["train"],

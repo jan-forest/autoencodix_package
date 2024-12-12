@@ -2,13 +2,14 @@ from typing import Optional
 from dataclasses import dataclass
 import torch
 
+
 @dataclass
 class ModelOutput:
     """
     A structured output class for autoencoder models.
 
-    This class is used to encapsulate the outputs of autoencoder models in a 
-    consistent format, allowing for flexibility in the type of outputs returned 
+    This class is used to encapsulate the outputs of autoencoder models in a
+    consistent format, allowing for flexibility in the type of outputs returned
     by different architectures.
 
     Attributes
@@ -22,7 +23,10 @@ class ModelOutput:
     additional_info : Optional[dict]
         A dictionary to store any additional information or intermediate outputs.
     """
+
     reconstruction: torch.Tensor
+    latentspace: torch.Tensor
+    z: Optional[torch.Tensor] = None
     latent_mean: Optional[torch.Tensor] = None
     latent_logvar: Optional[torch.Tensor] = None
     additional_info: Optional[dict] = None

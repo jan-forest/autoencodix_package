@@ -1,10 +1,18 @@
 import abc
+import torch
+from lightning_fabric import Fabric
+from typing import Optional, Union
+from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._result import Result
+from autoencodix.utils._model_output import ModelOutput
+from torch.utils.data import DataLoader
 
 
 class BaseTrainer(abc.ABC):
     """
-    Interface for Trainer classes, custom trainers should follow this interface
+    Parent class for all trainer classes. Here we initialize all general training components
+    such as model, optimizer, dataloaders, etc.
 
     Attributes
     ----------
@@ -19,10 +27,115 @@ class BaseTrainer(abc.ABC):
 
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        trainset: Optional[BaseDataset],
+        validset: Optional[Union[BaseDataset, None]],
+        result: Result,
+        config: Optional[Union[None, DefaultConfig]],
+        called_from: str,
+    ):
+        # passed attributes --------------------------
+        self._trainset = trainset
+        self._called_from = called_from
+        self._validset = validset
         self._result = Result()
+        self._config = config
+        self._handle_reproducibility()
+        self._input_validation()
+
+        # internal data handlinl ----------------------
+        self._trainloader = DataLoader(
+            self._trainset,
+            batch_size=self._config.batch_size,
+            shuffle=True,  # TODO check if shuffle is needed
+            # TODO add num_workers
+        )
+        if self._validset:
+            self._validloader = DataLoader(
+                self._validset,
+                batch_size=self._config.batch_size,
+                shuffle=False,  # TODO check if shuffle is needed
+                # TODO add num_workers
+            )
+
+        # model and optimizer setup --------------------------------
+        device = "cpu" if not self._config.use_gpu else "auto"
+        self._fabric = Fabric(
+            accelerator=device,
+            devices=self._config.n_devices,
+            precision=self._config.float_precision,
+            strategy=self._config.gpu_strategy,  # TODO allow non-auto and handle based on available devices
+        )
+
+        self._input_dim = self._trainset.get_input_dim()
+        self._get_model_architecture()
+        self._optimizer = torch.optim.AdamW(
+            self._model.parameters(),
+            lr=self._config.learning_rate,
+            weight_decay=self._config.weight_decay,
+        )
+        self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
+        self._trainloader = self._fabric.setup_dataloaders(
+            self._trainloader, move_to_device=self._config.use_gpu
+        )
+        if self._validset:
+            self._validloader = self._fabric.setup_dataloaders(
+                self._validloader, move_to_device=self._config.use_gpu
+            )
+        self._fabric.launch()
+
+    def _input_validation(self):
+        if not isinstance(self._trainset, (BaseDataset)):
+            raise TypeError(
+                f"Expected train type to be an instance of BaseDataset, got {type(self._trainset)}."
+            )
+        if self._validset is None:
+            print("training without validation")
+        if self._validset:
+            if not isinstance(self._validset, (BaseDataset)):
+                raise TypeError(
+                    f"Expected valid type to be an instance of BaseDataset, got {type(self._validset)}."
+                )
+        if self._config is None:
+            raise ValueError("Config cannot be None.")
+
+    def _handle_reproducibility(self):
+        if self._config.reproducible in ["all", "training"]:
+            torch.use_deterministic_algorithms(True)
+            torch.manual_seed(seed=self._config.global_seed)
+            if self._device == "cuda":
+                torch.cuda.manual_seed(seed=self._config.global_seed)
+                torch.cuda.manual_seed_all(seed=self._config.global_seed)
+                torch.backends.cudnn.deterministic = True
+                torch.backends.cudnn.benchmark = False
+            elif self._device == "mps":
+                print("warning: MPS backend does not support reproducibility")
+            else:
+                print("cpu not relevant here")
+
+    def _get_model_architecture(self):
+        if self._called_from == "Vanillix":
+            from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
+
+            self._model = VanillixArchitecture(
+                config=self._config, input_dim=self._input_dim
+            )
+        else:
+            raise NotImplementedError(
+                f"Model architecture for {self._called_from} is not implemented, only Vanillix is supported."
+            )
+
+    @abc.abstractmethod
+    def train(self) -> Result:
         pass
 
     @abc.abstractmethod
-    def train(self):
+    def _capture_dynamics(self, epoch: int, model_output: torch.Tensor) -> None:
+        pass
+
+    @abc.abstractmethod
+    def _loss_fn(
+        sefl, model_output: ModelOutput, targets: torch.Tensor
+    ) -> torch.Tensor:
         pass

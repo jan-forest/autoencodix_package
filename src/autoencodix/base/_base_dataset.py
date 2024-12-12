@@ -52,4 +52,4 @@ class BaseDataset(Dataset):
         int
             The input dimension of the dataset, of the feature space.
         """
-        return len(self.data[0])  # TODO: check if this is correct
+        return len(self.data[1])  # TODO: check if this is correct

@@ -33,6 +33,12 @@ class NumericDataset(BaseDataset):
         # Handle labels
         if labels is not None:
             self.labels = torch.tensor(labels, dtype=torch.float32)
+    def __len__(self) -> int:
+        """
+        Returns the number of samples (rows) in the dataset
+        
+        """
+        return self.data.shape[0]
 
     def get_input_dim(self) -> int:
         """

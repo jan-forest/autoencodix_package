@@ -38,11 +38,12 @@ class SimpleTrainer(BaseTrainer):
 
             self._model.train()
             epoch_loss = 0.0
-            for _, (features, *_) in enumerate(self._trainloader):
+            for _, features in enumerate(self._trainloader):
                 # acutal training step --------------------------------------
                 self._optimizer.zero_grad()
+                print(f"features shape: {features.shape}")
                 model_outputs = self._model(features)
-                loss = self._loss_fn(model_outputs.reconstruction, features)
+                loss = self._loss_fn(model_outputs, features)
                 self._fabric.backward(loss)
                 self._optimizer.step()
                 epoch_loss += loss.item()
@@ -56,9 +57,9 @@ class SimpleTrainer(BaseTrainer):
                 self._model.eval()
                 with torch.no_grad():
                     valid_loss = 0.0
-                    for batch_idx, (features, targets) in enumerate(self._validloader):
+                    for _, features in enumerate(self._validloader):
                         model_output = self._model(features)
-                        loss = self._loss_fn(model_output.reconstruction, features)
+                        loss = self._loss_fn(model_output, features)
                         valid_loss += loss.item()
                 self._result.losses.add(
                     epoch=epoch, split="valid", data=valid_loss / len(self._validloader)
@@ -79,7 +80,7 @@ class SimpleTrainer(BaseTrainer):
         self._result.latentspaces.add(
             epoch=epoch,
             split="train",
-            data=model_output.latent_space.cpu().detach().numpy(),
+            data=model_output.latentspace.cpu().detach().numpy(),
         )
         self._result.reconstructions.add(
             epoch=epoch,
@@ -90,7 +91,7 @@ class SimpleTrainer(BaseTrainer):
             self._result.latentspaces.add(
                 epoch=epoch,
                 split="valid",
-                data=model_output.latent_space.cpu().detach().numpy(),
+                data=model_output.latentspace.cpu().detach().numpy(),
             )
             self._result.reconstructions.add(
                 epoch=epoch,
@@ -101,9 +102,9 @@ class SimpleTrainer(BaseTrainer):
     def _loss_fn(
         self, model_output: ModelOutput, targets: torch.Tensor
     ) -> torch.Tensor:
-        if self._config.reconstruction_loss == "MSE":
+        if self._config.reconstruction_loss == "mse":
             return F.mse_loss(input=model_output.reconstruction, target=targets)
-        elif self._config.reconstruction_loss == "BCE":
+        elif self._config.reconstruction_loss == "bce":
             return F.binary_cross_entropy_with_logits(
                 input=model_output.reconstruction, target=targets
             )

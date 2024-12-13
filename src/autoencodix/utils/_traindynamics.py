@@ -13,7 +13,9 @@ class TrainingDynamics:
 
     _data: Dict[int, Dict[str, np.ndarray]] = field(default_factory=dict, repr=False)
 
-    def add(self, epoch: int, value: np.ndarray, split: str = "train"):
+    def add(
+        self, epoch: int, data: Optional[Union[float, np.ndarray]], split: str = "train"
+    ):
         """
         Add a numpy array for a specific epoch and split.
 
@@ -26,14 +28,17 @@ class TrainingDynamics:
         split : str, optional
             The data split (default: 'train').
         """
-        if not isinstance(value, np.ndarray):
+        if isinstance(data, (int, float)):
+            data = np.array(data)
+
+        if not isinstance(data, np.ndarray):
             raise TypeError(
-                f"Expected value to be of type numpy.ndarray, got {type(value)}."
+                f"Expected value to be of type numpy.ndarray, got {type(data)}."
             )
 
         if epoch not in self._data:
             self._data[epoch] = {}
-        self._data[epoch][split] = value
+        self._data[epoch][split] = data
 
     def get(
         self, epoch: Optional[int] = None, split: Optional[str] = None

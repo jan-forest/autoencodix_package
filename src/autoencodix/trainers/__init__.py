@@ -1,3 +1,3 @@
-from .simple_trainer import SimpleTrainer
+from ._vanillix_trainer import VanillixTrainer
 from .predictor import Predictor
-__all__ = ["SimpleTrainer", "Predictor"]
+__all__ = ["VanillixTrainer", "Predictor"]

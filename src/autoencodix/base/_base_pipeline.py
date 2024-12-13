@@ -12,7 +12,6 @@ from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.data.preprocessor import Preprocessor
 from autoencodix.trainers.predictor import Predictor
-from autoencodix.trainers.simple_trainer import SimpleTrainer
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._utils import config_method

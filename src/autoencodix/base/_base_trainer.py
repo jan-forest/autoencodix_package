@@ -61,20 +61,23 @@ class BaseTrainer(abc.ABC):
 
         # model and optimizer setup --------------------------------
         device = "cpu" if not self._config.use_gpu else "auto"
+        self._input_dim = self._trainset.get_input_dim()
+        self._get_model_architecture()
+
         self._fabric = Fabric(
             accelerator=device,
             devices=self._config.n_devices,
-            precision=self._config.float_precision,
+            # precision=self._config.float_precision, #TODO see issue github
             strategy=self._config.gpu_strategy,  # TODO allow non-auto and handle based on available devices
         )
 
-        self._input_dim = self._trainset.get_input_dim()
-        self._get_model_architecture()
         self._optimizer = torch.optim.AdamW(
             self._model.parameters(),
             lr=self._config.learning_rate,
             weight_decay=self._config.weight_decay,
         )
+
+        # print(f"model dtype after casting: {self._model.dtype} in base")
         self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
         self._trainloader = self._fabric.setup_dataloaders(
             self._trainloader, move_to_device=self._config.use_gpu
@@ -84,6 +87,8 @@ class BaseTrainer(abc.ABC):
                 self._validloader, move_to_device=self._config.use_gpu
             )
         self._fabric.launch()
+        print(f" dtype of tensors in dataloader: {self._trainloader.dataset.data.dtype}")
+        print(f"model dtype: {self._model.dtype}")
 
     def _input_validation(self):
         if not isinstance(self._trainset, (BaseDataset)):
@@ -117,10 +122,12 @@ class BaseTrainer(abc.ABC):
     def _get_model_architecture(self):
         if self._called_from == "Vanillix":
             from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
+            print(f"gettinf model for {self._called_from}")
 
             self._model = VanillixArchitecture(
                 config=self._config, input_dim=self._input_dim
             )
+
         else:
             raise NotImplementedError(
                 f"Model architecture for {self._called_from} is not implemented, only Vanillix is supported."

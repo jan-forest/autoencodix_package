@@ -27,9 +27,9 @@ class DefaultConfig:
     input_dim: int = 10000
     drop_p: float = 0.1
     weight_decay: float = 0.01
-    use_gpu: bool = False
+    use_gpu: bool = True
     n_devices: int = 1
-    # ('transformer-engine', 'transformer-engine-float16', '16-true', '16-mixed', 'bf16-true', 'bf16-mixed', '32-true', '64-true', 64, 32, 16, '64', '32', '16', 'bf16')
+    # ('transformer-engine', 'transformer-engine-float16', '16-true', '16-mixed', 'bf16-true', 'bf16-mixed', '32-true', '64-true', '64', '32', '16', 'bf16')
     float_precision: str = "bf16-mixed"
     gpu_strategy: str = "auto" #"FSDP"
     checkpoint_interval: int = 10

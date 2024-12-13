@@ -28,13 +28,11 @@ class VanillixArchitecture(BaseAutoencoder):
         """
         if config is None:
             config = DefaultConfig()
+        self._config = config
+        print(f"config in VanillixArchitecture: {config}")
         super().__init__(config, input_dim)
         self.input_dim = input_dim
         print("input_dim", input_dim)
-        self.latent_dim = config.latent_dim
-        self.n_layers = config.n_layers
-        self.enc_factor = config.enc_factor
-        self.drop_p = config.drop_p
 
         # populate self.encoder and self.decoder
         self._build_network()
@@ -51,7 +49,10 @@ class VanillixArchitecture(BaseAutoencoder):
         """
         # Calculate layer dimensions
         enc_dim = LayerFactory.get_layer_dimensions(
-            self.input_dim, self.latent_dim, self.n_layers, self.enc_factor
+            feature_dim=self.input_dim,
+            latent_dim=self._config.latent_dim,
+            n_layers=self._config.n_layers,
+            enc_factor=self._config.enc_factor,
         )
 
         encoder_layers = []
@@ -60,7 +61,10 @@ class VanillixArchitecture(BaseAutoencoder):
             last_layer = i == len(enc_dim) - 2
             encoder_layers.extend(
                 LayerFactory.create_layer(
-                    enc_dim[i], enc_dim[i + 1], self.drop_p, last_layer=last_layer
+                    in_features=enc_dim[i],
+                    out_features=enc_dim[i + 1],
+                    dropout_p=self._config.drop_p,
+                    last_layer=last_layer,
                 )
             )
 
@@ -71,19 +75,22 @@ class VanillixArchitecture(BaseAutoencoder):
             last_layer = i == len(dec_dim) - 2
             decoder_layers.extend(
                 LayerFactory.create_layer(
-                    dec_dim[i], dec_dim[i + 1], self.drop_p, last_layer=last_layer
+                    in_features=dec_dim[i],
+                    out_features=dec_dim[i + 1],
+                    dropout_p=self._config.drop_p,
+                    last_layer=last_layer,
                 )
             )
-        self.encoder = nn.Sequential(*encoder_layers)
-        self.decoder = nn.Sequential(*decoder_layers)
+        self._encoder = nn.Sequential(*encoder_layers)
+        self._decoder = nn.Sequential(*decoder_layers)
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         """Encodes the input data."""
-        return self.encoder(x)
+        return self._encoder(x)
 
     def decode(self, x: torch.Tensor) -> torch.Tensor:
         """Decodes the latent space representation."""
-        return self.decoder(x)
+        return self._decoder(x)
 
     def forward(self, x: torch.Tensor) -> ModelOutput:
         """Performs a forward pass."""

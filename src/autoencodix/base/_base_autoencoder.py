@@ -6,28 +6,65 @@ import torch.nn as nn
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._model_output import ModelOutput
 
-
-# TODO add defualt class docstring
+# internal check done
+# write tests: TODO
 class BaseAutoencoder(ABC, nn.Module):
     """
     Abstract BaseAutoencoder class defining the required methods for an autoencoder.
-    Provides an interface for weight initialization that subclasses should implement.
+    Child classes should follow this strucutre:
+    build the encoder and decoder networks, with the _build_network method,
+    Each autoencoder model should implement the encode and decode methods and forward method.
+    Weight initalization is also encouraged to be implemented in the _init_weights method.
 
     This class inherits from `torch.nn.Module` and is intended to be extended
-    by specific autoencoder models.
+    by specific autoencoder models i.e. a variational autoencoder might add a
+    reparmeterization method.
+
+    Attributes
+    ----------
+    self.input_dim : int
+        number of input features
+    self.config: DefaultConfig
+        Configuration object containing model architecture parameters
+    self.encoder: nn.Module
+        Encoder network
+    self.decoder: nn.Module
+        Decoder network
+
+    Methods
+    -------
+    _build_network()
+        Abstract method to build the encoder and decoder networks
+    encode(x: torch.Tensor) -> torch.Tensor
+        Abstract method to encode input tensor x
+    decode(x: torch.Tensor) -> torch.Tensor
+        Abstract method to decode latent tensor x
+    forward(x: torch.Tensor) -> ModelOutput
+        forward pass of model, fills in the reconstruction and latentspace attributes of ModelOutput class.
+        For othe implementations, additional information can be added to the ModelOutput class.
+
     """
 
     def __init__(
         self, config: Optional[Union[DefaultConfig, None]], input_dim: int
     ) -> None:
         """
-        Initializes the BaseAutoencoder class.
+        Parameters:
+           config: Optional[Union[DefaultConfig, None]]
+                Configuration object containing model parameters.
+            input_dim: int
+                Number of input features.
+        Returns:
+            None
+
         """
         super().__init__()
         if config is None:
             config = DefaultConfig()
-        self.latent_dim = config.latent_dim
         self.input_dim = input_dim
+        self._encoder: nn.Module
+        self._decoder: nn.Module
+        self.config = config
 
     @abstractmethod
     def _build_network(self) -> None:
@@ -54,7 +91,7 @@ class BaseAutoencoder(ABC, nn.Module):
         torch.Tensor
             The encoded latent space representation.
         """
-        return self.encoder(x)
+        pass
 
     @abstractmethod
     def decode(self, x: torch.Tensor) -> torch.Tensor:
@@ -71,7 +108,7 @@ class BaseAutoencoder(ABC, nn.Module):
         torch.Tensor
             The decoded tensor, reconstructed from the latent space.
         """
-        return self.decoder(x)
+        pass
 
     @abstractmethod
     def forward(self, x: torch.Tensor) -> ModelOutput:
@@ -90,8 +127,10 @@ class BaseAutoencoder(ABC, nn.Module):
         """
         pass
 
-
     def _init_weights(self, m):
+        """
+        This weight inititalization method worked well in our experiments.
+        """
         if isinstance(m, nn.Linear):
             torch.nn.init.xavier_uniform_(m.weight)
             m.bias.data.fill_(0.01)

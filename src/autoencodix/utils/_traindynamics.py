@@ -12,7 +12,6 @@ class TrainingDynamics:
     """
 
     _data: Dict[int, Dict[str, np.ndarray]] = field(default_factory=dict, repr=False)
-
     def add(
         self, epoch: int, data: Optional[Union[float, np.ndarray]], split: str = "train"
     ):

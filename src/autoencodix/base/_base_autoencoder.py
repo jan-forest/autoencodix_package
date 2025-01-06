@@ -11,8 +11,7 @@ from autoencodix.utils._model_output import ModelOutput
 class BaseAutoencoder(ABC, nn.Module):
     """
     Abstract BaseAutoencoder class defining the required methods for an autoencoder.
-    Child classes should follow this strucutre:
-    build the encoder and decoder networks, with the _build_network method,
+    Builds the encoder and decoder networks, with the _build_network method,
     Each autoencoder model should implement the encode and decode methods and forward method.
     Weight initalization is also encouraged to be implemented in the _init_weights method.
 
@@ -41,7 +40,7 @@ class BaseAutoencoder(ABC, nn.Module):
         Abstract method to decode latent tensor x
     forward(x: torch.Tensor) -> ModelOutput
         forward pass of model, fills in the reconstruction and latentspace attributes of ModelOutput class.
-        For othe implementations, additional information can be added to the ModelOutput class.
+        For other implementations, additional information can be added to the ModelOutput class.
 
     """
 
@@ -70,6 +69,7 @@ class BaseAutoencoder(ABC, nn.Module):
     def _build_network(self) -> None:
         """
         Builds the encoder and decoder networks for the autoencoder model.
+        Populates the self._encoder and self._decoder attributes.
 
         This method should be implemented by subclasses to define the architecture
         of the encoder and decoder networks.

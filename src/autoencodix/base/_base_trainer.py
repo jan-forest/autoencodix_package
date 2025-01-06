@@ -87,7 +87,9 @@ class BaseTrainer(abc.ABC):
                 self._validloader, move_to_device=self._config.use_gpu
             )
         self._fabric.launch()
-        print(f" dtype of tensors in dataloader: {self._trainloader.dataset.data.dtype}")
+        print(
+            f" dtype of tensors in dataloader: {self._trainloader.dataset.data.dtype}"
+        )
         print(f"model dtype: {self._model.dtype}")
 
     def _input_validation(self):
@@ -122,7 +124,8 @@ class BaseTrainer(abc.ABC):
     def _get_model_architecture(self):
         if self._called_from == "Vanillix":
             from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
-            print(f"gettinf model for {self._called_from}")
+
+            print(f"getting model for {self._called_from}")
 
             self._model = VanillixArchitecture(
                 config=self._config, input_dim=self._input_dim

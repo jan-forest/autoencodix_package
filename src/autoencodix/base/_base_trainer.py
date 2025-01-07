@@ -1,14 +1,18 @@
 import abc
+from typing import Optional, Union
+
 import torch
 from lightning_fabric import Fabric
-from typing import Optional, Union
-from autoencodix.base._base_dataset import BaseDataset
-from autoencodix.utils.default_config import DefaultConfig
-from autoencodix.utils._result import Result
-from autoencodix.utils._model_output import ModelOutput
 from torch.utils.data import DataLoader
 
+from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.utils._model_output import ModelOutput
+from autoencodix.utils._result import Result
+from autoencodix.utils.default_config import DefaultConfig
 
+
+# internal check done
+# write tests: TODO
 class BaseTrainer(abc.ABC):
     """
     Parent class for all trainer classes. Here we initialize all general training components
@@ -44,23 +48,25 @@ class BaseTrainer(abc.ABC):
         self._handle_reproducibility()
         self._input_validation()
 
-        # internal data handlinl ----------------------
+        # internal data handling ----------------------
         self._trainloader = DataLoader(
             self._trainset,
             batch_size=self._config.batch_size,
-            shuffle=True,  # TODO check if shuffle is needed
-            # TODO add num_workers
+            shuffle=True,  # best practice to shuffle in training
+            num_workers=self._config.n_workers,
         )
         if self._validset:
             self._validloader = DataLoader(
                 self._validset,
                 batch_size=self._config.batch_size,
-                shuffle=False,  # TODO check if shuffle is needed
-                # TODO add num_workers
+                shuffle=False,
+                num_workers=self._config.n_workers,
             )
 
         # model and optimizer setup --------------------------------
-        device = "cpu" if not self._config.use_gpu else "auto"
+        device = (
+            "cpu" if not self._config.use_gpu else "auto"
+        )  # to allow cpu even if a gpu is available, "auto" handles different types of gpus (cuda, mps, etc)
         self._input_dim = self._trainset.get_input_dim()
         self._get_model_architecture()
 
@@ -77,7 +83,6 @@ class BaseTrainer(abc.ABC):
             weight_decay=self._config.weight_decay,
         )
 
-        # print(f"model dtype after casting: {self._model.dtype} in base")
         self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
         self._trainloader = self._fabric.setup_dataloaders(
             self._trainloader, move_to_device=self._config.use_gpu
@@ -93,6 +98,10 @@ class BaseTrainer(abc.ABC):
         print(f"model dtype: {self._model.dtype}")
 
     def _input_validation(self):
+        if self._trainset is None:
+            raise ValueError(
+                "Trainset cannot be None. Check the indices you provided with a custom split or be sure that the train_ratio attribute of the config is >0."
+            )
         if not isinstance(self._trainset, (BaseDataset)):
             raise TypeError(
                 f"Expected train type to be an instance of BaseDataset, got {type(self._trainset)}."
@@ -108,6 +117,7 @@ class BaseTrainer(abc.ABC):
             raise ValueError("Config cannot be None.")
 
     def _handle_reproducibility(self):
+        """Sets all relevant seeds for reproducibility"""
         if self._config.reproducible in ["all", "training"]:
             torch.use_deterministic_algorithms(True)
             torch.manual_seed(seed=self._config.global_seed)
@@ -122,6 +132,7 @@ class BaseTrainer(abc.ABC):
                 print("cpu not relevant here")
 
     def _get_model_architecture(self):
+        """Populates the model attribute with the appropriate model architecture"""
         if self._called_from == "Vanillix":
             from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
 

@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData #type: ignore
 
-
+# internal check done
+# write tests: TODO
 class Preprocessor:
     def __init__(self):
         self._preprocessed = False

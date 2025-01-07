@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, Union, Type
+from typing import Optional, Union, Type, Dict
 
 import numpy as np
 import pandas as pd
@@ -19,6 +19,7 @@ from autoencodix.visualize.visualize import Visualizer
 
 
 # TODO test`
+# internal check done
 class BasePipeline(abc.ABC):
     """
     Abstract base class defining the interface for all models.
@@ -102,7 +103,7 @@ class BasePipeline(abc.ABC):
         self,
         data: Union[pd.DataFrame, AnnData, np.ndarray],
         config: Optional[Union[None, DefaultConfig]] = None,
-        dataset_splitter: Optional[DataSplitter] = None,
+        custom_split: Optional[Dict[str, np.ndarray]] = None,
         **kwargs,
     ):
         """
@@ -127,13 +128,7 @@ class BasePipeline(abc.ABC):
                     f"Expected config type to be DefaultConfig, got {type(config)}."
                 )
             self.config = config
-        self.data_splitter = DataSplitter()
-        if dataset_splitter:
-            if not isinstance(dataset_splitter, DataSplitter):
-                raise TypeError(
-                    f"Expected dataset_splitter type to be DataSplitter, got {type(dataset_splitter)}."
-                )
-            self.data_splitter = dataset_splitter
+        self._data_splitter = DataSplitter(config=self.config, custom_splits=custom_split)
 
         self._preprocessor: Optional[Preprocessor]
         self._features: Optional[torch.Tensor]
@@ -155,23 +150,19 @@ class BasePipeline(abc.ABC):
         ValueError
             If self._features is None.
         """
-        if self.data_splitter is None:
-            raise NotImplementedError("Data splitter not initialized")
 
         if self._features is None:
             raise ValueError("No data available for splitting")
 
-        split_indices = self.data_splitter.split(self._features)
-        train_ids, valid_ids, test_ids = (
-            split_indices["train"],
-            split_indices["valid"],
-            split_indices["test"],
-        )
+        split_indices = self._data_splitter.split(self._features)
+        train_data = None if len(split_indices["train"]) == 0 else self._features[split_indices["train"]]
+        valid_data = None if len(split_indices["valid"]) == 0 else self._features[split_indices["valid"]]
+        test_data = None if len(split_indices["test"]) == 0 else self._features[split_indices["test"]]
 
         self._datasets = DataSetContainer(
-            train=self._dataset_class(data=self._features[train_ids]),
-            valid=self._dataset_class(data=self._features[valid_ids]),
-            test=self._dataset_class(data=self._features[test_ids]),
+            train=self._dataset_class(data=train_data),
+            valid=self._dataset_class(data=valid_data),
+            test=self._dataset_class(data=test_data),
         )
         self.result.datasets = self._datasets
 
@@ -193,7 +184,6 @@ class BasePipeline(abc.ABC):
         Raises:
             NotImplementedError:
                 If the preprocessor is not initialized.
-
 
         """
         if self._preprocessor is None:

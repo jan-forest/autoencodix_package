@@ -1,11 +1,12 @@
 import abc
-from typing import Any, Tuple
+from typing import Any, Tuple, Optional
 
 from torch.utils.data import Dataset
+import torch
 
 
-# TODO decide wheter to use this at all and how (abstract class or not)
-#
+# internal check done
+# write tests: TODO
 class BaseDataset(abc.ABC, Dataset):
     """
     Abstract base class for PyTorch datasets.
@@ -18,7 +19,7 @@ class BaseDataset(abc.ABC, Dataset):
         The dataset (can be any type, like a NumPy array, list, or Pandas DataFrame).
     """
 
-    def __init__(self, data: Any): #TOD specify data type
+    def __init__(self, data: torch.Tensor, ids: Optional[torch.Tensor] = None):
         """
         Initialize the dataset.
 
@@ -27,9 +28,11 @@ class BaseDataset(abc.ABC, Dataset):
         data : Any
             The data to be used by the dataset.
         """
+        if ids is not None:
+            self.ids = ids
         self.data = data
 
-    def __getitem__(self, index: int) -> Tuple[Any, Any]: #TODO specify return type
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, Any]:
         """
         Retrieve a single sample and its corresponding label.
 
@@ -43,7 +46,11 @@ class BaseDataset(abc.ABC, Dataset):
         Tuple[Any, Any]
             The sample and its label.
         """
-        return self.data[index] # TODO return in form of id, data[index], data[index] (for autoencoders, target is the same as input)
+        if self.id:
+            label = self.ids[index]
+        else:
+            label = index
+        return self.data[index], label
 
     def get_input_dim(self) -> int:
         """

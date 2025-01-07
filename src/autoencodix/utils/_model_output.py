@@ -2,7 +2,8 @@ from typing import Optional
 from dataclasses import dataclass
 import torch
 
-
+# internal check done
+# write tests: TODO
 @dataclass
 class ModelOutput:
     """

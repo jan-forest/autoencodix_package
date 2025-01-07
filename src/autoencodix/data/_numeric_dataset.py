@@ -1,7 +1,9 @@
-from typing import Optional, Union
+from typing import Optional
 import torch
 from autoencodix.base._base_dataset import BaseDataset
 
+# internal check done
+# write tests: TODO
 
 class NumericDataset(BaseDataset):
     """
@@ -53,7 +55,6 @@ class NumericDataset(BaseDataset):
         """
         # Clone and detach to ensure no gradient history is retained
         return tensor.clone().detach()
-        # return tensor.clone().detach().to(dtype)
 
     @staticmethod
     def _map_float_precision_to_dtype(float_precision: str) -> torch.dtype:

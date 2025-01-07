@@ -17,7 +17,7 @@ class DefaultConfig:
     """
 
     # Model architecture and training parameters
-    # TODO use pydantic to vlidate the configuration
+    # TODO use pydantic to validate the configuration
     learning_rate: float = 0.001
     batch_size: int = 32
     epochs: int = 100
@@ -28,10 +28,15 @@ class DefaultConfig:
     drop_p: float = 0.1
     weight_decay: float = 0.01
     use_gpu: bool = True
+    n_gpus: int = 1
     n_devices: int = 1
+    n_workers: int = 2 # recommended num_cpu_cores // 2
+    train_ratio: float = 0.7
+    test_ratio: float = 0.2
+    valid_ratio: float = 0.1
     # ('transformer-engine', 'transformer-engine-float16', '16-true', '16-mixed', 'bf16-true', 'bf16-mixed', '32-true', '64-true', '64', '32', '16', 'bf16')
     float_precision: str = "bf16-mixed"
-    gpu_strategy: str = "auto" #"FSDP"
+    gpu_strategy: str = "auto" # {""dp", "ddp", "ddp_spawn", "ddp_find_unused_parameters_true", "xla", "deepspeed", "fsdp"} # see https://lightning.ai/docs/fabric/stable/api/fabric_args.html
     checkpoint_interval: int = 10
     reconstruction_loss: str = "mse"
     default_vae_loss: str = "kl"

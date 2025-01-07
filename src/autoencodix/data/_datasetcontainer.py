@@ -2,7 +2,8 @@ from typing import Optional, Union
 from dataclasses import dataclass
 from autoencodix.base._base_dataset import BaseDataset
 
-# TODO add tests
+# internal check done
+# write tests: TODO
 @dataclass
 class DataSetContainer:
     """

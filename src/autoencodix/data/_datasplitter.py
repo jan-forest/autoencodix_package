@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from sklearn.model_selection import train_test_split  # type: ignore
 
-from src.autoencodix.utils.default_config import DefaultConfig
+from autoencodix.utils.default_config import DefaultConfig
 
 
 # internal check done
@@ -30,8 +30,8 @@ class DataSplitter:
         Configuration object containing split ratios
 
     _custom_splits : Optional[Dict[str, np.ndarray]]
-    _test_size : float
-    _valid_size : float
+    _test_ratio : float
+    _valid_ratio : float
 
     Methods:
     --------
@@ -63,10 +63,12 @@ class DataSplitter:
             ValueError: If ratios violate constraints or custom splits are malformed
         """
         self._config = config
-        self._test_size = self._config.test_ratio
-        self._valid_size = self._config.valid_ratio
-        self._train_size = self._config.train_ratio
+        self._test_ratio = self._config.test_ratio
+        self._valid_ratio = self._config.valid_ratio
+        self._train_ratio = self._config.train_ratio
         self._min_samples = self._config.min_samples_per_split
+        print(f" min_samples: {self._min_samples}")
+        print(f"type of min_samples: {type(self._min_samples)}")
         self._custom_splits = custom_splits
 
         self._validate_ratios()
@@ -83,6 +85,7 @@ class DataSplitter:
 
         """
         if not 0 <= self._test_ratio <= 1:
+
             raise ValueError(
                 f"Test ratio must be between 0 and 1, got {self._test_ratio}"
             )
@@ -112,9 +115,9 @@ class DataSplitter:
         """
 
         # Calculate expected sizes
-        n_train = int(n_samples * (1 - self._test_size - self._valid_size))
-        n_valid = int(n_samples * self._valid_size) if self._valid_size > 0 else 0
-        n_test = int(n_samples * self._test_size) if self._test_size > 0 else 0
+        n_train = int(n_samples * (1 - self._test_ratio - self._valid_ratio))
+        n_valid = int(n_samples * self._valid_ratio) if self._valid_ratio > 0 else 0
+        n_test = int(n_samples * self._test_ratio) if self._test_ratio > 0 else 0
 
         if n_train < self._min_samples:
             raise ValueError(
@@ -122,13 +125,13 @@ class DataSplitter:
                 f"which is less than minimum required ({self._min_samples})"
             )
 
-        if self._valid_size > 0 and n_valid < self._min_samples:
+        if self._valid_ratio > 0 and n_valid < self._min_samples:
             raise ValueError(
                 f"Validation set would have {n_valid} samples, "
                 f"which is less than minimum required ({self._min_samples})"
             )
 
-        if self._test_size > 0 and n_test < self._min_samples:
+        if self._test_ratio > 0 and n_test < self._min_samples:
             raise ValueError(
                 f"Test set would have {n_test} samples, "
                 f"which is less than minimum required ({self._min_samples})"
@@ -206,17 +209,17 @@ class DataSplitter:
         self._validate_split_sizes(n_samples)
         indices = np.arange(n_samples)
 
-        if self._test_size == 0 and self._valid_size == 0:
+        if self._test_ratio == 0 and self._valid_ratio == 0:
             return {
                 "train": indices,
                 "valid": np.array([], dtype=int),
                 "test": np.array([], dtype=int),
             }
 
-        if self._test_size == 0:
+        if self._test_ratio == 0:
             train_indices, valid_indices = train_test_split(
                 indices,
-                test_size=self._valid_size,
+                test_ratio=self._valid_ratio,
                 random_state=self._config.global_seed,
             )
             return {
@@ -225,10 +228,10 @@ class DataSplitter:
                 "test": np.array([], dtype=int),
             }
 
-        if self._valid_size == 0:
+        if self._valid_ratio == 0:
             train_indices, test_indices = train_test_split(
                 indices,
-                test_size=self._test_size,
+                test_ratio=self._test_ratio,
                 random_state=self._config.global_seed,
             )
             return {
@@ -239,12 +242,12 @@ class DataSplitter:
 
         # Normal case: split into all three sets
         train_valid_indices, test_indices = train_test_split(
-            indices, test_size=self._test_size, random_state=self._config.global_seed
+            indices, test_size=self._test_ratio, random_state=self._config.global_seed
         )
 
         train_indices, valid_indices = train_test_split(
             train_valid_indices,
-            test_size=self._valid_size / (1 - self._test_size),
+            test_size=self._valid_ratio / (1 - self._test_ratio),
             random_state=self._config.global_seed,
         )
 

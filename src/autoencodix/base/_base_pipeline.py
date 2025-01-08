@@ -105,7 +105,7 @@ class BasePipeline(abc.ABC):
         config: Optional[Union[None, DefaultConfig]] = None,
         custom_split: Optional[Dict[str, np.ndarray]] = None,
         **kwargs,
-    ):
+    ) -> None:
         """
         Initialize the model interface.
 
@@ -128,7 +128,9 @@ class BasePipeline(abc.ABC):
                     f"Expected config type to be DefaultConfig, got {type(config)}."
                 )
             self.config = config
-        self._data_splitter = DataSplitter(config=self.config, custom_splits=custom_split)
+        self._data_splitter = DataSplitter(
+            config=self.config, custom_splits=custom_split
+        )
 
         self._preprocessor: Optional[Preprocessor]
         self._features: Optional[torch.Tensor]
@@ -155,9 +157,21 @@ class BasePipeline(abc.ABC):
             raise ValueError("No data available for splitting")
 
         split_indices = self._data_splitter.split(self._features)
-        train_data = None if len(split_indices["train"]) == 0 else self._features[split_indices["train"]]
-        valid_data = None if len(split_indices["valid"]) == 0 else self._features[split_indices["valid"]]
-        test_data = None if len(split_indices["test"]) == 0 else self._features[split_indices["test"]]
+        train_data = (
+            None
+            if len(split_indices["train"]) == 0
+            else self._features[split_indices["train"]]
+        )
+        valid_data = (
+            None
+            if len(split_indices["valid"]) == 0
+            else self._features[split_indices["valid"]]
+        )
+        test_data = (
+            None
+            if len(split_indices["test"]) == 0
+            else self._features[split_indices["test"]]
+        )
 
         self._datasets = DataSetContainer(
             train=self._dataset_class(data=train_data),
@@ -167,7 +181,7 @@ class BasePipeline(abc.ABC):
         self.result.datasets = self._datasets
 
     # config parameter will be self.config if not provided, decorator will handle this
-    @config_method
+    @config_method(valid_params={"config"})
     def preprocess(
         self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
     ) -> None:
@@ -194,7 +208,22 @@ class BasePipeline(abc.ABC):
         self.result.preprocessed_data = self._features
         self.result.datasets = self._datasets
 
-    @config_method
+    @config_method(
+        valid_params={
+            "batch_size",
+            "epochs",
+            "learning_rate",
+            "n_workers",
+            "use_gpu",
+            "n_devices",
+            "gpu_strategy",
+            "weight_decay",
+            "reproducible",
+            "global_seed",
+            "reconstruction_loss",
+            "checkpoint_interval",
+        }
+    )
     def fit(
         self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
     ) -> None:
@@ -232,7 +261,7 @@ class BasePipeline(abc.ABC):
         trainer_result = self._trainer.train()
         self.result.update(trainer_result)
 
-    @config_method
+    @config_method(valid_params={"config"})
     def predict(
         self,
         data: Union[np.ndarray, pd.DataFrame, AnnData] = None,
@@ -282,13 +311,13 @@ class BasePipeline(abc.ABC):
             predictor_results = self._predictor.predict(data=self._datasets.test)
         self.result.update(predictor_results)
 
-    @config_method
+    @config_method(valid_params={"config"})
     def evaluate(
         self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
     ) -> None:
         pass
 
-    @config_method
+    @config_method(valid_params={"config"})
     def visualize(
         self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
     ) -> None:

@@ -46,7 +46,7 @@ class BaseDataset(abc.ABC, Dataset):
         Tuple[Any, Any]
             The sample and its label.
         """
-        if self.id:
+        if self.ids:
             label = self.ids[index]
         else:
             label = index

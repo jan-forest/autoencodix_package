@@ -8,7 +8,8 @@ from autoencodix.data import DataSetContainer
 
 from ._traindynamics import TrainingDynamics
 
-
+# internal check done
+# write tests: TODO
 @dataclass
 class Result:
     """
@@ -99,24 +100,14 @@ class Result:
                 continue
 
             # For TrainingDynamics, merge data
-            if isinstance(
-                current_value, TrainingDynamics
-            ):  # TODO check if merge is the correct operation
+            if isinstance(current_value, TrainingDynamics):
                 for epoch, split_data in other_value._data.items():
                     for split, value in split_data.items():
-                        current_value.add(epoch, value, split)
+                        current_value.add(epoch=epoch, data=value, split=split)
 
-            # Handle tensor/numpy array fields
             elif isinstance(current_value, (torch.Tensor, np.ndarray)):
                 if current_value is None or current_value.size == 0:
                     setattr(self, field_name, other_value)
-
-            # Handle torch.nn.Module specifically
-            elif isinstance(current_value, torch.nn.Module):
-                if current_value is None:
-                    setattr(self, field_name, other_value)
-
-            # Default case: replace if current is None
             else:
                 if current_value is None:
                     setattr(self, field_name, other_value)

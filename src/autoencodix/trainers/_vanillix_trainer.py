@@ -67,6 +67,8 @@ class VanillixTrainer(BaseTrainer):
                 self._trainloader
             ):  # features, _ is a tuple of data and label
                 # acutal training step --------------------------------------
+                print(f"type(features): {type(features)}")
+                print(f" features: {features}")
                 self._optimizer.zero_grad()
                 model_outputs = self._model(features)
                 loss = self._loss_fn(model_outputs, features)

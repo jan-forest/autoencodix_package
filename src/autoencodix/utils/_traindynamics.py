@@ -3,18 +3,34 @@ from typing import Dict, Optional, Union
 
 import numpy as np
 
-
+# internal check done
+# write tests: TODO
 @dataclass
 class TrainingDynamics:
     """
-    A type-safe, structured approach to storing training dynamics,
-    where all values are numpy arrays.
-    """
+    A type-safe, structured approach to storing training dynamics in the form
+    epoch -> split -> data.
 
+    Attributes:
+    ----------
+    _data : Dict[int, Dict[str, np.ndarray]]
+        A dictionary to store numpy arrays for each epoch and split
+
+    Methods:
+    --------
+    add(epoch: int, data: Optional[Union[float, np.ndarray]], split: str) -> None
+        Add a numpy array for a specific epoch and split.
+    get(epoch: Optional[int] = None, split: Optional[str] = None) -> Union[np.ndarray, Dict[str, np.ndarray], Dict[int, Dict[str, np.ndarray]]]
+        Retrieve stored numpy arrays with flexible filtering, based on epoch and/or split.
+    epochs() -> list
+        Return all recorded epochs.
+
+    """
     _data: Dict[int, Dict[str, np.ndarray]] = field(default_factory=dict, repr=False)
+
     def add(
-        self, epoch: int, data: Optional[Union[float, np.ndarray]], split: str = "train"
-    ):
+        self, epoch: int, data: Optional[Union[float, np.ndarray]], split: str
+    ) -> None:
         """
         Add a numpy array for a specific epoch and split.
 

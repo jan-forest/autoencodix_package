@@ -1,6 +1,8 @@
 import torch.nn as nn
 from typing import List
 
+# internal check done
+# write tests: TODO
 class LayerFactory:
     """
     Factory for creating configurable neural network layers.

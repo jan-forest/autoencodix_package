@@ -5,6 +5,7 @@ from autoencodix.base._base_dataset import BaseDataset
 # internal check done
 # write tests: TODO
 
+
 class NumericDataset(BaseDataset):
     """
     A custom PyTorch dataset that handles tensors.
@@ -13,8 +14,8 @@ class NumericDataset(BaseDataset):
     def __init__(
         self,
         data: torch.Tensor,
-        labels: Optional[torch.Tensor] = None,
-        float_precision: str = "bf16-mixed",
+        float_precision: str,
+        ids: Optional[torch.Tensor] = None,
     ):
         """
         Initialize the dataset
@@ -28,13 +29,14 @@ class NumericDataset(BaseDataset):
         float_precision : str
             Precision type for tensor dtype
         """
+        super().__init__(data)
         dtype = self._map_float_precision_to_dtype(float_precision)
 
         # Convert or clone data to the specified dtype
         self.data = self._to_tensor(data, dtype)
 
         # Handle labels
-        self.labels = self._to_tensor(labels, dtype) if labels is not None else None
+        self.ids = self._to_tensor(ids, dtype) if ids is not None else None
 
     @staticmethod
     def _to_tensor(tensor: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:
@@ -54,7 +56,7 @@ class NumericDataset(BaseDataset):
             Cloned tensor with the specified dtype
         """
         # Clone and detach to ensure no gradient history is retained
-        return tensor.clone().detach()
+        return tensor.clone().detach().to(dtype)
 
     @staticmethod
     def _map_float_precision_to_dtype(float_precision: str) -> torch.dtype:

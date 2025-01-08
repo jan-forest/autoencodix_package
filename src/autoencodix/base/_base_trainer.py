@@ -73,7 +73,7 @@ class BaseTrainer(abc.ABC):
         self._fabric = Fabric(
             accelerator=device,
             devices=self._config.n_devices,
-            # precision=self._config.float_precision, #TODO see issue github
+            precision=self._config.float_precision, #TODO see issue github
             strategy=self._config.gpu_strategy,  # TODO allow non-auto and handle based on available devices
         )
 
@@ -92,10 +92,10 @@ class BaseTrainer(abc.ABC):
                 self._validloader, move_to_device=self._config.use_gpu
             )
         self._fabric.launch()
-        print(
-            f" dtype of tensors in dataloader: {self._trainloader.dataset.data.dtype}"
-        )
-        print(f"model dtype: {self._model.dtype}")
+        # print(
+        #     f" dtype of tensors in dataloader: {self._trainloader.dataset.data.dtype}"
+        # )
+        # print(f"model dtype: {self._model.dtype}")
 
     def _input_validation(self):
         if self._trainset is None:

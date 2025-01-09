@@ -9,6 +9,7 @@ from autoencodix.utils._result import Result
 from autoencodix.utils._model_output import ModelOutput
 from autoencodix.utils.default_config import DefaultConfig
 
+
 # TODO: write tests
 # internal check done
 class VanillixTrainer(BaseTrainer):
@@ -59,49 +60,49 @@ class VanillixTrainer(BaseTrainer):
         )
 
     def train(self) -> Result:
-
-        for epoch in range(self._config.epochs):
-            self._model.train()
-            epoch_loss = 0.0
-            for _, (features, _) in enumerate(
-                self._trainloader
-            ):  # features, _ is a tuple of data and label
-                # acutal training step --------------------------------------
-                print(f"type(features): {type(features)}")
-                print(f" features: {features}")
-                self._optimizer.zero_grad()
-                model_outputs = self._model(features)
-                loss = self._loss_fn(model_outputs, features)
-                self._fabric.backward(loss)
-                self._optimizer.step()
-                epoch_loss += loss.item()
-            # capture epoch loss  --------------------------------------------
-            self._result.losses.add(
-                epoch=epoch, split="train", data=epoch_loss / len(self._trainloader)
-            )
-
-            # valid loop ------------------------------------------------------
-            if self._validset:
-                self._model.eval()
-                with torch.no_grad():
-                    valid_loss = 0.0
-                    for _, (features, _) in enumerate(self._validloader):
-                        model_output = self._model(features)
-                        loss = self._loss_fn(model_output, features)
-                        valid_loss += loss.item()
+        with self._fabric.autocast():
+            for epoch in range(self._config.epochs):
+                self._model.train()
+                epoch_loss = 0.0
+                for _, (features, _) in enumerate(
+                    self._trainloader
+                ):  # features, _ is a tuple of data and label
+                    # acutal training step --------------------------------------
+                    self._optimizer.zero_grad()
+                    model_outputs = self._model(features)
+                    loss = self._loss_fn(model_outputs, features)
+                    self._fabric.backward(loss)
+                    self._optimizer.step()
+                    epoch_loss += loss.item()
+                # capture epoch loss  --------------------------------------------
                 self._result.losses.add(
-                    epoch=epoch, split="valid", data=valid_loss / len(self._validloader)
+                    epoch=epoch, split="train", data=epoch_loss / len(self._trainloader)
                 )
 
-            # checkpointing -------------------------------------------------------
-            if not (epoch + 1) % self._config.checkpoint_interval:
-                print(f"Epoch: {epoch}, Loss: {epoch_loss}")
-                self._capture_dynamics(epoch=epoch, model_output=model_output)
+                # valid loop ------------------------------------------------------
+                if self._validset:
+                    self._model.eval()
+                    with torch.no_grad():
+                        valid_loss = 0.0
+                        for _, (features, _) in enumerate(self._validloader):
+                            model_output = self._model(features)
+                            loss = self._loss_fn(model_output, features)
+                            valid_loss += loss.item()
+                    self._result.losses.add(
+                        epoch=epoch,
+                        split="valid",
+                        data=valid_loss / len(self._validloader),
+                    )
 
-        # Update results
-        self._result.model = self._model
+                # checkpointing -------------------------------------------------------
+                if not (epoch + 1) % self._config.checkpoint_interval:
+                    print(f"Epoch: {epoch}, Loss: {epoch_loss}")
+                    self._capture_dynamics(epoch=epoch, model_output=model_output)
 
-        return self._result
+            # Update results
+            self._result.model = self._model
+
+            return self._result
 
     def _capture_dynamics(self, epoch, model_output):
         self._result.model_checkpoints[epoch] = self._model.state_dict()

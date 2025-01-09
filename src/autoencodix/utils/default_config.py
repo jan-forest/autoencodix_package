@@ -1,9 +1,25 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import Literal
+from typing import Literal, Dict, Any, Optional
 
 
 class DefaultConfig(BaseModel):
-    """Complete configuration for model, training, hardware, and data handling."""
+    """
+    Complete configuration for model, training, hardware, and data handling.
+
+    Attributes
+    ----------
+    all configuration parameters (change over time of development)
+
+    Methods
+    -------
+    update(**kwargs)
+        Update configuration with support for nested attributes.
+    get_params()
+        Get detailed information about all config fields including types and default values.
+    print_schema()
+        Print a human-readable schema of all config parameters.
+
+    """
 
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(16, ge=1, description="Dimension of the latent space")
@@ -19,20 +35,26 @@ class DefaultConfig(BaseModel):
         0.001, gt=0, description="Learning rate for optimization"
     )
     batch_size: int = Field(32, ge=1, description="Number of samples per batch")
-    epochs: int = Field(100, ge=1, description="Number of training epochs")
+    epochs: int = Field(23, ge=1, description="Number of training epochs")
     weight_decay: float = Field(0.01, ge=0, description="L2 regularization factor")
     reconstruction_loss: Literal["mse", "bce"] = Field(
         "mse", description="Type of reconstruction loss"
     )
     default_vae_loss: Literal["kl"] = Field("kl", description="Type of VAE loss")
-    min_samples_per_split: int = Field(1, ge=1, description="Minimum number of samples per split")
+    min_samples_per_split: int = Field(
+        1, ge=1, description="Minimum number of samples per split"
+    )
 
     # Hardware configuration --------------------------------------------------
-    use_gpu: bool = Field(False, description="Whether to use GPU acceleration")
-    n_gpus: int = Field(1, ge=0, description="Number of GPUs to use")
-    n_devices: int = Field(1, ge=1, description="Number of devices for computation")
+    device: Literal["cpu", "cuda", "gpu", "tpu", "mps", "auto"] = Field(
+        "auto", description="Device to use"
+    )
+    # 0 uses cpu and not gpu
+    n_gpus: int = Field(1, ge=1, description="Number of GPUs to use")
     n_workers: int = Field(2, ge=0, description="Number of data loading workers")
-    checkpoint_interval: int = Field(10, ge=1, description="Interval for saving checkpoints")
+    checkpoint_interval: int = Field(
+        10, ge=1, description="Interval for saving checkpoints"
+    )
     float_precision: Literal[
         "transformer-engine",
         "transformer-engine-float16",
@@ -47,7 +69,6 @@ class DefaultConfig(BaseModel):
         "16",
         "bf16",
     ] = Field("32", description="Floating point precision")
-    print("float_precision", float_precision)
     gpu_strategy: Literal[
         "auto",
         "dp",
@@ -68,6 +89,11 @@ class DefaultConfig(BaseModel):
         0.1, gt=0, lt=1, description="Ratio of data for validation"
     )
 
+    # General configuration ---------------------------------------------------
+    reproducible: bool = Field(True, description="Whether to ensure reproducibility")
+    global_seed: int = Field(1, ge=0, description="Global random seed")
+
+
     @field_validator("test_ratio", "valid_ratio")
     def validate_ratios(cls, v, values):
         total = (
@@ -81,10 +107,22 @@ class DefaultConfig(BaseModel):
             raise ValueError(f"Data split ratios must sum to 1.0 or less (got {total})")
         return v
 
-    # General configuration
-    reproducible: bool = Field(True, description="Whether to ensure reproducibility")
-    global_seed: int = Field(1, ge=0, description="Global random seed")
+    # TODO test if other float precisions work with MPS
+    @field_validator("float_precision")
+    def validate_float_precision(cls, v, values):
+        """Validate float precision based on device type."""
+        device = values.data.get("device")
+        if device == "mps" and v != "32":
+            raise ValueError("MPS backend only supports float precision '32'")
+        return v
 
+    # gpu strategy needs to be auto for mps # TODO test if other strategies work
+    @field_validator("gpu_strategy")
+    def validate_gpu_strategy(cls, v, values):
+        device = values.data.get("device")
+        if device == "mps" and v != "auto":
+            raise ValueError("MPS backend only supports GPU strategy 'auto'")
+    
     def update(self, **kwargs):
         """Update configuration with support for nested attributes."""
         for key, value in kwargs.items():
@@ -104,3 +142,42 @@ class DefaultConfig(BaseModel):
                 setattr(self, key, value)
             else:
                 raise ValueError(f"Unknown configuration parameter: {key}")
+
+    def get_params(cls) -> Dict[str, Dict[str, Any]]:
+        """
+        Get detailed information about all config fields including types and default values.
+
+        Returns
+        -------
+        Dict[str, Dict[str, Any]]
+            Dictionary containing field name, type, default value, and description if available
+        """
+        fields_info = {}
+        for name, field in cls.model_fields.items():
+            fields_info[name] = {
+                "type": str(field.annotation),
+                "default": field.default,
+                "description": field.description or "No description available",
+            }
+        return fields_info
+
+    @classmethod
+    def print_schema(cls, filter_params: Optional[None] = None) -> None:
+        """
+        Print a human-readable schema of all config parameters.
+        """
+        if filter_params:
+            filter_params = list(filter_params)
+            print("Valid Keyword Arguments:")
+            print("-" * 50)
+        else:
+            print(f"\n{cls.__name__} Configuration Parameters:")
+            print("-" * 50)
+
+        for name, info in cls.get_params(cls).items():
+            if filter_params and name not in filter_params:
+                continue
+            print(f"\n{name}:")
+            print(f"  Type: {info['type']}")
+            print(f"  Default: {info['default']}")
+            print(f"  Description: {info['description']}")

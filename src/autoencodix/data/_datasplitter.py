@@ -67,8 +67,6 @@ class DataSplitter:
         self._valid_ratio = self._config.valid_ratio
         self._train_ratio = self._config.train_ratio
         self._min_samples = self._config.min_samples_per_split
-        print(f" min_samples: {self._min_samples}")
-        print(f"type of min_samples: {type(self._min_samples)}")
         self._custom_splits = custom_splits
 
         self._validate_ratios()

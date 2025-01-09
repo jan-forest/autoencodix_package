@@ -53,10 +53,8 @@ class VanillixArchitecture(BaseAutoencoder):
         if config is None:
             config = DefaultConfig()
         self._config = config
-        print(f"config in VanillixArchitecture: {config}")
         super().__init__(config, input_dim)
         self.input_dim = input_dim
-        print("input_dim", input_dim)
 
         # populate self.encoder and self.decoder
         self._build_network()

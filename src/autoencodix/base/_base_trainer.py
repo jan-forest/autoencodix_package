@@ -64,16 +64,13 @@ class BaseTrainer(abc.ABC):
             )
 
         # model and optimizer setup --------------------------------
-        device = (
-            "cpu" if not self._config.use_gpu else "auto"
-        )  # to allow cpu even if a gpu is available, "auto" handles different types of gpus (cuda, mps, etc)
         self._input_dim = self._trainset.get_input_dim()
         self._get_model_architecture()
 
         self._fabric = Fabric(
-            accelerator=device,
-            devices=self._config.n_devices,
-            precision=self._config.float_precision, #TODO see issue github
+            accelerator=self._config.device,
+            devices=self._config.n_gpus,
+            precision=self._config.float_precision,  # TODO see issue github
             strategy=self._config.gpu_strategy,  # TODO allow non-auto and handle based on available devices
         )
 
@@ -84,18 +81,10 @@ class BaseTrainer(abc.ABC):
         )
 
         self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
-        self._trainloader = self._fabric.setup_dataloaders(
-            self._trainloader, move_to_device=self._config.use_gpu
-        )
+        self._trainloader = self._fabric.setup_dataloaders(self._trainloader)
         if self._validset:
-            self._validloader = self._fabric.setup_dataloaders(
-                self._validloader, move_to_device=self._config.use_gpu
-            )
+            self._validloader = self._fabric.setup_dataloaders(self._validloader)
         self._fabric.launch()
-        # print(
-        #     f" dtype of tensors in dataloader: {self._trainloader.dataset.data.dtype}"
-        # )
-        # print(f"model dtype: {self._model.dtype}")
 
     def _input_validation(self):
         if self._trainset is None:

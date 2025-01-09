@@ -3,6 +3,7 @@ from typing import Dict, Optional, Union
 
 import numpy as np
 
+
 # internal check done
 # write tests: TODO
 @dataclass
@@ -26,6 +27,7 @@ class TrainingDynamics:
         Return all recorded epochs.
 
     """
+
     _data: Dict[int, Dict[str, np.ndarray]] = field(default_factory=dict, repr=False)
 
     def add(
@@ -62,25 +64,65 @@ class TrainingDynamics:
         Retrieve stored numpy arrays with flexible filtering.
 
         Parameters:
-        ----------
-        epoch : int, optional
-            Specific epoch to retrieve.
-        split : str, optional
-            Specific split to retrieve.
+            epoch : int, optional
+                Specific epoch to retrieve. If None, returns data for all epochs.
+            split : str, optional
+                Specific split to retrieve (e.g., 'train', 'valid', 'test').
+                If None, returns data for all splits.
 
         Returns:
-        -------
-        Filtered data matching the specified criteria.
+            Union[np.ndarray, Dict[str, np.ndarray], Dict[int, Dict[str, np.ndarray]]]
+            - If epoch is None and split is None:
+                Returns complete data dictionary {epoch: {split: data}}
+            - If epoch is None and split is provided:
+                Returns numpy array of values for the specified split across all epochs
+            - If epoch is provided and split is None:
+                Returns dictionary of all splits for that epoch {split: data}
+            - If both epoch and split are provided:
+                Returns numpy array for specific epoch and split
+
+        Examples
+        --------
+        >>> dynamics = TrainingDynamics()
+        >>> dynamics.add(0, np.array([0.1, 0.2]), "train")
+        >>> dynamics.add(1, np.array([0.2, 0.3]), "train")
+        >>>
+        >>> # Get all data
+        >>> dynamics.get()  # Returns {0: {"train": array([0.1, 0.2])}, 1: {"train": array([0.2, 0.3])}}
+        >>>
+        >>> # Get train split across all epochs
+        >>> dynamics.get(split="train")  # Returns array([[0.1, 0.2], [0.2, 0.3]])
+        >>>
+        >>> # Get specific epoch
+        >>> dynamics.get(epoch=0)  # Returns {"train": array([0.1, 0.2])}
         """
+        # Case 1: No epoch specified
         if epoch is None:
+            # Case 1a: Split specified - return array of values across epochs
+            if split is not None:
+                epochs = sorted(self._data.keys())
+                data = []
+                for e in epochs:
+                    if split in self._data[e]:
+                        data.append(self._data[e][split])
+                return np.array(data) if data else np.array([])
+            # Case 1b: No split specified - return complete data dictionary
             return self._data
 
-        epoch_data = self._data.get(epoch, {})
+        # Case 2: Epoch specified
+        if epoch not in self._data:
+            if split is not None:
+                return np.array([])
+            return {}
 
+        epoch_data = self._data[epoch]
+
+        # Case 2a: No split specified - return all splits for epoch
         if split is None:
             return epoch_data
 
-        return epoch_data.get(split)
+        # Case 2b: Both epoch and split specified
+        return epoch_data.get(split, np.array([]))
 
     def __getitem__(
         self, key: Union[int, slice]

@@ -210,12 +210,13 @@ class BasePipeline(abc.ABC):
 
     @config_method(
         valid_params={
+            "config",
             "batch_size",
             "epochs",
             "learning_rate",
             "n_workers",
-            "use_gpu",
-            "n_devices",
+            "device",
+            "n_gpus",
             "gpu_strategy",
             "weight_decay",
             "reproducible",
@@ -303,9 +304,11 @@ class BasePipeline(abc.ABC):
                 "Model not trained. Please run the fit method first"
             )
 
-        if data:
+        if data is not None:
             processed_data = self._preprocessor.preprocess(data)
-            input_data = self._dataset_class(data=processed_data)
+            input_data = self._dataset_class(
+                data=processed_data, float_precision=self.config.float_precision
+            )
             predictor_results = self._predictor.predict(data=input_data)
         else:
             predictor_results = self._predictor.predict(data=self._datasets.test)

@@ -8,6 +8,7 @@ from autoencodix.data import DataSetContainer
 
 from ._traindynamics import TrainingDynamics
 
+
 # internal check done
 # write tests: TODO
 @dataclass
@@ -111,3 +112,38 @@ class Result:
             else:
                 if current_value is None:
                     setattr(self, field_name, other_value)
+
+    def __str__(self) -> str:
+        """
+        Provide a readable string representation of the Result object's public attributes.
+
+        Returns
+        -------
+        str
+            Formatted string showing all public attributes and their values
+        """
+        output = ["Result Object Public Attributes:", "-" * 30]
+
+        for name in self.__annotations__.keys():
+            if name.startswith("__"):
+                continue
+
+            value = getattr(self, name)
+            if isinstance(value, TrainingDynamics):
+                output.append(f"{name}: TrainingDynamics object")
+            elif isinstance(value, torch.nn.Module):
+                output.append(f"{name}: {value.__class__.__name__}")
+            elif isinstance(value, dict):
+                output.append(f"{name}: Dict with {len(value)} items")
+            elif isinstance(value, torch.Tensor):
+                output.append(f"{name}: Tensor of shape {tuple(value.shape)}")
+            else:
+                output.append(f"{name}: {value}")
+
+        return "\n".join(output)
+
+    def __repr__(self) -> str:
+        """
+        Return the same representation as __str__ for consistency.
+        """
+        return self.__str__()

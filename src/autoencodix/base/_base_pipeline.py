@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, Union, Type, Dict
+from typing import Optional, Union, Dict, Type
 
 import numpy as np
 import pandas as pd
@@ -7,15 +7,15 @@ import torch
 from anndata import AnnData  # type: ignore
 from ._base_dataset import BaseDataset
 from ._base_trainer import BaseTrainer
+from ._base_predictor import BasePredictor
+from ._base_visualizer import BaseVisualizer
+from ._base_preprocessor import BasePreprocessor
 from autoencodix.data._datasetcontainer import DataSetContainer
 from autoencodix.data._datasplitter import DataSplitter
-from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.data.preprocessor import Preprocessor
-from autoencodix.trainers.predictor import Predictor
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._utils import config_method
-from autoencodix.visualize.visualize import Visualizer
 
 
 # TODO test`
@@ -96,13 +96,18 @@ class BasePipeline(abc.ABC):
     """
 
     # needed for the predict function to be able to use a child of BaseDataset in subclasses
-    _dataset_class: Type[BaseDataset] = BaseDataset
-    _trainer_class: Type[BaseTrainer] = BaseTrainer
 
     def __init__(
         self,
         data: Union[pd.DataFrame, AnnData, np.ndarray],
-        config: Optional[Union[None, DefaultConfig]] = None,
+        dataset_type: Type[BaseDataset],
+        trainer_type: Type[BaseTrainer],
+        datasplitter_type: Type[DataSplitter],
+        preprocessor: BasePreprocessor,
+        predictor: BasePredictor,
+        visualizer: BaseVisualizer,
+        result: Result,
+        config: Optional[Union[None, DefaultConfig]] = DefaultConfig(),
         custom_split: Optional[Dict[str, np.ndarray]] = None,
         **kwargs,
     ) -> None:
@@ -121,25 +126,26 @@ class BasePipeline(abc.ABC):
 
         self._id = "base"
         self.data: Union[np.ndarray, AnnData, pd.DataFrame] = data
-        self.config = DefaultConfig()
+        self.config = config
+        self._trainer_type = trainer_type
+        self._preprocessor = preprocessor
+        self._predictor = predictor
+        self._visualizer = visualizer
+        self._dataset_type = dataset_type
+        self.result = result
+        self._data_splitter = datasplitter_type(
+            config=self.config, custom_splits=custom_split
+        )
+
         if config:
             if not isinstance(config, DefaultConfig):
                 raise TypeError(
                     f"Expected config type to be DefaultConfig, got {type(config)}."
                 )
             self.config = config
-        self._data_splitter = DataSplitter(
-            config=self.config, custom_splits=custom_split
-        )
 
-        self._preprocessor: Optional[Preprocessor]
         self._features: Optional[torch.Tensor]
         self._datasets: Optional[DataSetContainer]
-        self._trainer: Optional[BaseTrainer]
-        self._predictor: Optional[Predictor]
-        self._visualizer: Optional[Visualizer]
-        self._evaluator: Optional[Evaluator]
-        self.result: Result
 
     def _build_datasets(self) -> None:
         """
@@ -174,9 +180,9 @@ class BasePipeline(abc.ABC):
         )
 
         self._datasets = DataSetContainer(
-            train=self._dataset_class(data=train_data),
-            valid=self._dataset_class(data=valid_data),
-            test=self._dataset_class(data=test_data),
+            train=self._dataset_type(data=train_data),
+            valid=self._dataset_type(data=valid_data),
+            test=self._dataset_type(data=test_data),
         )
         self.result.datasets = self._datasets
 
@@ -252,7 +258,7 @@ class BasePipeline(abc.ABC):
                 "Datasets not built. Please run the preprocess method first."
             )
 
-        self._trainer = self._trainer_class(
+        self._trainer = self._trainer_type(
             trainset=self._datasets.train,
             validset=self._datasets.valid,
             result=self.result,
@@ -306,7 +312,7 @@ class BasePipeline(abc.ABC):
 
         if data is not None:
             processed_data = self._preprocessor.preprocess(data)
-            input_data = self._dataset_class(
+            input_data = self._dataset_type(
                 data=processed_data, float_precision=self.config.float_precision
             )
             predictor_results = self._predictor.predict(data=input_data)

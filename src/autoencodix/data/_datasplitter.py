@@ -9,7 +9,7 @@ from autoencodix.utils.default_config import DefaultConfig
 
 
 # internal check done
-# write tests: TODO
+# write tests: done
 class DataSplitter:
     """
     Splits data into train, validation, and test sets. And validates the splits.

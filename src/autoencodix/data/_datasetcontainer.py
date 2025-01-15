@@ -19,9 +19,10 @@ class DataSetContainer:
         The testing dataset.
     """
 
-    train: Optional[Union[BaseDataset, None]]
-    valid: Optional[Union[BaseDataset, None]]
-    test: Optional[Union[BaseDataset, None]]
+    train: Optional[Union[BaseDataset, None]] = None
+    valid: Optional[Union[BaseDataset, None]] = None
+    test: Optional[Union[BaseDataset, None]] = None
+
 
     def __getitem__(self, key: str) -> BaseDataset:
         """Allows dictionary-like access to datasets."""

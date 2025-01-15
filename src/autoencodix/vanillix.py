@@ -53,30 +53,39 @@ class Vanillix(BasePipeline):
 
     """
 
-    _dataset_class: Type[BaseDataset] = NumericDataset
-    _trainer_class: Type[BaseTrainer] = VanillixTrainer
-
     def __init__(
         self,
         data: Union[np.ndarray, AnnData, pd.DataFrame],
+        trainer_type: Type[BaseTrainer] = VanillixTrainer,
+        dataset_type: Type[BaseDataset] = NumericDataset,
+        preprocessor: Optional[Preprocessor] = None,
+        visualizer: Optional[Visualizer] = None,
+        predictor: Optional[Predictor] = None,
+        evaluator: Optional[Evaluator] = None,
+        result: Optional[Result] = None,
+        datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
-        config: Optional[Union[None, DefaultConfig]] = None,
+        config: Optional[DefaultConfig] = None,
     ) -> None:
-        super().__init__(data, config)
+        super().__init__(
+            data=data,
+            dataset_type=dataset_type,
+            trainer_type=trainer_type,
+            preprocessor=preprocessor or Preprocessor(),
+            visualizer=visualizer or Visualizer(),
+            predictor=predictor or Predictor(),
+            evaluator=evaluator or Evaluator(),
+            result=result or Result(),
+            datasplitter_type=datasplitter_type,
+            config=config or DefaultConfig(),
+            custom_split=custom_splits,
+        )
+
         self._id = "Vanillix"
         self.data = data
-        self._preprocessor = Preprocessor()
-        self._visualizer = Visualizer()
-        self._predictor = Predictor()
-        self._trainer: self._trainer_class
-        self._evaluator = Evaluator()
-        self.result = Result()
 
         self._datasets = None
         self._is_fitted = False
-        self.data_splitter = DataSplitter(
-            config=self.config, custom_splits=custom_splits
-        )
 
     def _build_datasets(self) -> None:
         """
@@ -87,7 +96,7 @@ class Vanillix(BasePipeline):
             None
 
         """
-        split_indices = self.data_splitter.split(self._features)
+        split_indices = self._data_splitter.split(self._features)
         train_ids, valid_ids, test_ids = (
             split_indices["train"],
             split_indices["valid"],
@@ -95,8 +104,17 @@ class Vanillix(BasePipeline):
         )
 
         self._datasets = DataSetContainer(
-            train=self._dataset_class(data=self._features[train_ids], float_precision=self.config.float_precision),
-            valid=self._dataset_class(data=self._features[valid_ids], float_precision=self.config.float_precision),
-            test=self._dataset_class(data=self._features[test_ids], float_precision=self.config.float_precision),
+            train=self._dataset_type(
+                data=self._features[train_ids],
+                float_precision=self.config.float_precision,
+            ),
+            valid=self._dataset_type(
+                data=self._features[valid_ids],
+                float_precision=self.config.float_precision,
+            ),
+            test=self._dataset_type(
+                data=self._features[test_ids],
+                float_precision=self.config.float_precision,
+            ),
         )
         self.result.datasets = self._datasets

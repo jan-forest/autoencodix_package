@@ -35,7 +35,7 @@ class BaseTrainer(abc.ABC):
         self,
         trainset: Optional[BaseDataset],
         validset: Optional[Union[BaseDataset, None]],
-        result: Result,
+        result: Optional[Result],
         config: Optional[Union[None, DefaultConfig]],
         called_from: str,
     ):
@@ -43,7 +43,7 @@ class BaseTrainer(abc.ABC):
         self._trainset = trainset
         self._called_from = called_from
         self._validset = validset
-        self._result = Result()
+        self._result = result
         self._config = config
         self._handle_reproducibility()
         self._input_validation()

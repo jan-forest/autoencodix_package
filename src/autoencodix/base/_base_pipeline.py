@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, Union, Dict, Type
+from typing import Optional, Union, Dict, Type, List
 
 import numpy as np
 import pandas as pd
@@ -99,7 +99,7 @@ class BasePipeline(abc.ABC):
 
     def __init__(
         self,
-        data: Union[pd.DataFrame, AnnData, np.ndarray],
+        data: Union[pd.DataFrame, AnnData, np.ndarray, List[np.ndarray]],
         dataset_type: Type[BaseDataset],
         trainer_type: Type[BaseTrainer],
         datasplitter_type: Type[DataSplitter],
@@ -147,46 +147,8 @@ class BasePipeline(abc.ABC):
         self._features: Optional[torch.Tensor]
         self._datasets: Optional[DataSetContainer]
 
-    def _build_datasets(self) -> None:
-        """
-        Build datasets for training, validation, and testing.
+        # config parameter will be self.config if not provided, decorator will handle this
 
-        Raises
-        ------
-        NotImplementedError
-            If the data splitter is not initialized.
-        ValueError
-            If self._features is None.
-        """
-
-        if self._features is None:
-            raise ValueError("No data available for splitting")
-
-        split_indices = self._data_splitter.split(self._features)
-        train_data = (
-            None
-            if len(split_indices["train"]) == 0
-            else self._features[split_indices["train"]]
-        )
-        valid_data = (
-            None
-            if len(split_indices["valid"]) == 0
-            else self._features[split_indices["valid"]]
-        )
-        test_data = (
-            None
-            if len(split_indices["test"]) == 0
-            else self._features[split_indices["test"]]
-        )
-
-        self._datasets = DataSetContainer(
-            train=self._dataset_type(data=train_data),
-            valid=self._dataset_type(data=valid_data),
-            test=self._dataset_type(data=test_data),
-        )
-        self.result.datasets = self._datasets
-
-    # config parameter will be self.config if not provided, decorator will handle this
     @config_method(valid_params={"config"})
     def preprocess(
         self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
@@ -209,8 +171,12 @@ class BasePipeline(abc.ABC):
         if self._preprocessor is None:
             raise NotImplementedError("Preprocessor not initialized")
 
-        self._features = self._preprocessor.preprocess(self.data)
-        self._build_datasets()
+        self._datasets, self._features = self._preprocessor.preprocess(
+            data=self.data,
+            data_splitter=self._data_splitter,
+            config=self.config,
+            dataset_type=self._dataset_type,
+        )
         self.result.preprocessed_data = self._features
         self.result.datasets = self._datasets
 
@@ -311,10 +277,15 @@ class BasePipeline(abc.ABC):
             )
 
         if data is not None:
-            processed_data = self._preprocessor.preprocess(data)
-            input_data = self._dataset_type(
-                data=processed_data, float_precision=self.config.float_precision
+            _, processed_data = self._preprocessor.preprocess(
+                data=data,
+                data_splitter=None,
+                config=self.config,
+                dataset_type=self._dataset_type,
+                split=False,
             )
+            input_data = self._dataset_type(
+                data=processed_data, config=self.config)
             predictor_results = self._predictor.predict(data=input_data)
         else:
             predictor_results = self._predictor.predict(data=self._datasets.test)

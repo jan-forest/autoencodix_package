@@ -18,7 +18,6 @@ from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.visualize.visualize import Visualizer
 
-
 class Vanillix(BasePipeline):
     """
     Vanillix specific version of the BasePipeline class.
@@ -50,7 +49,6 @@ class Vanillix(BasePipeline):
         Identifier for the pipeline (Vanillix)
     data_splitter : DataSplitter
         DataSplitter object to split the data into train, validation, and test sets
-
     """
 
     def __init__(
@@ -67,6 +65,36 @@ class Vanillix(BasePipeline):
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
         config: Optional[DefaultConfig] = None,
     ) -> None:
+        """Initialize Vanillix pipeline with customizable components.
+
+        Some components are passed as types rather than instances because they require
+        data that is only available after preprocessing.
+
+        Parameters
+        ----------
+        data : Union[np.ndarray, AnnData, pd.DataFrame]
+            Input data to be processed
+        trainer_type : Type[BaseTrainer], optional
+            Type of trainer to be instantiated during fit step, default is VanillixTrainer
+        dataset_type : Type[BaseDataset], optional
+            Type of dataset to be instantiated post-preprocessing, default is NumericDataset
+        preprocessor : Optional[Preprocessor]
+            For data preprocessing, default creates new Preprocessor
+        visualizer : Optional[Visualizer]
+            For result visualization, default creates new Visualizer
+        predictor : Optional[Predictor]
+            For model predictions, default creates new Predictor
+        evaluator : Optional[Evaluator]
+            For model evaluation, default creates new Evaluator
+        result : Optional[Result]
+            Container for pipeline results, default creates new Result
+        datasplitter_type : Type[DataSplitter], optional
+            Type of splitter to be instantiated during preprocessing, default is DataSplitter
+        custom_splits : Optional[Dict[str, np.ndarray]]
+            Custom train/valid/test split indices
+        config : Optional[DefaultConfig]
+            Configuration for all pipeline components
+        """
         super().__init__(
             data=data,
             dataset_type=dataset_type,
@@ -80,11 +108,7 @@ class Vanillix(BasePipeline):
             config=config or DefaultConfig(),
             custom_split=custom_splits,
         )
-
         self._id = "Vanillix"
-        self.data = data
-
-        self._datasets = None
         self._is_fitted = False
 
     def _build_datasets(self) -> None:

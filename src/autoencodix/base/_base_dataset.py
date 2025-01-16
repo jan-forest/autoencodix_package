@@ -4,6 +4,8 @@ from typing import Any, Tuple, Optional
 from torch.utils.data import Dataset
 import torch
 
+# from autoencodix.utils.default_config import DefaultConfig
+
 
 # internal check done
 # write tests: TODO
@@ -19,7 +21,12 @@ class BaseDataset(abc.ABC, Dataset):
         The dataset (can be any type, like a NumPy array, list, or Pandas DataFrame).
     """
 
-    def __init__(self, data: torch.Tensor, ids: Optional[torch.Tensor] = None):
+    def __init__(
+        self,
+        data: torch.Tensor,
+        config: Optional[Any] = None,
+        ids: Optional[torch.Tensor] = None,
+    ):
         """
         Initialize the dataset.
 
@@ -28,9 +35,9 @@ class BaseDataset(abc.ABC, Dataset):
         data : Any
             The data to be used by the dataset.
         """
-        if ids is not None:
-            self.ids = ids
+        self.ids = ids
         self.data = data
+        self.config = config
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, Any]:
         """

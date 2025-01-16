@@ -56,7 +56,7 @@ def test_dataset_container_initialization_test(empty_container):
 def test_invalid_key_getter(filled_container, key):
     """Test assignment of invalid types to ensure type checking."""
     with pytest.raises(KeyError):
-        my_dataset = filled_container[key]
+        _ = filled_container[key]
 
 
 @pytest.mark.parametrize("key", ["tran", "vaild", "tset"])

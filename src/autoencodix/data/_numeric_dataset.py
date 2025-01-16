@@ -1,6 +1,7 @@
 from typing import Optional
 import torch
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.utils.default_config import DefaultConfig
 
 # internal check done
 # write tests: TODO
@@ -14,7 +15,7 @@ class NumericDataset(BaseDataset):
     def __init__(
         self,
         data: torch.Tensor,
-        float_precision: str,
+        config: Optional[DefaultConfig],
         ids: Optional[torch.Tensor] = None,
     ):
         """
@@ -29,14 +30,12 @@ class NumericDataset(BaseDataset):
         float_precision : str
             Precision type for tensor dtype
         """
-        super().__init__(data)
-        dtype = self._map_float_precision_to_dtype(float_precision)
+        super().__init__(data=data, ids=ids, config=config)
+        dtype = self._map_float_precision_to_dtype(self.config.float_precision)
 
         # Convert or clone data to the specified dtype
         self.data = self._to_tensor(data, dtype)
 
-        # Handle labels
-        self.ids = self._to_tensor(ids, dtype) if ids is not None else None
 
     @staticmethod
     def _to_tensor(tensor: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:

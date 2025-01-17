@@ -1,7 +1,130 @@
 import pytest
 
+import numpy as np
+import torch
+from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.data._datasplitter import DataSplitter
 
+
+# FIXTURES --------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
+
 @pytest.fixture
-def data_splitter():
-    return DataSplitter()
+def default_config():
+    return DefaultConfig()
+
+
+@pytest.fixture
+def default_splitter(default_config):
+    splitter = DataSplitter(config=default_config)
+    return splitter
+
+
+@pytest.fixture
+def sample_data():
+    return np.random.rand(100, 10)
+
+
+@pytest.fixture
+def edge_case_data():
+    return np.random.rand(3, 10)
+
+
+@pytest.fixture
+def custom_splitter(default_config, sample_data):
+
+    split = {
+        "train": np.arange(int(len(sample_data) * 0.6)),
+        "valid": np.arange(int(len(sample_data)) * 0.6, int(len(sample_data) * 0.85)),
+        "test": np.arange(int(len(sample_data) * 0.85), len(sample_data)),
+    }
+    splitter = DataSplitter(config=default_config, custom_splits=split)
+    return splitter
+
+
+# TESTS -----------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# basic split sizes -----------------------------------------------------------
+def test_train_split_has_correct_size(default_splitter, sample_data, default_config):
+    splits = default_splitter.split(sample_data)
+    expected_len = default_config.train_ratio * len(sample_data)
+    assert len(splits["train"]) == expected_len
+
+
+def test_validation_split_has_correct_size(
+    default_config, sample_data, default_splitter
+):
+    splits = default_splitter.split(sample_data)
+    expected_len = default_config.valid_ratio * len(sample_data)
+    assert len(splits["valid"]) == expected_len
+
+
+def test_test_split_has_correct_size(default_config, sample_data, default_splitter):
+    splits = default_splitter.split(sample_data)
+    expected_len = default_config.test_ratio * len(sample_data)
+    assert len(splits["test"]) == expected_len
+
+
+# basic overlap checks --------------------------------------------------------
+def test_train_and_validation_splits_do_not_overlap(sample_data, default_splitter):
+    splits = default_splitter.split(sample_data)
+    assert len(set(splits["train"]) & set(splits["valid"])) == 0
+
+
+def test_train_and_test_splits_do_not_overlap(sample_data, default_splitter):
+    splits = default_splitter.split(sample_data)
+    assert len(set(splits["train"]) & set(splits["test"])) == 0
+
+
+def test_validation_and_test_splits_do_not_overlap(sample_data, default_splitter):
+    splits = default_splitter.split(sample_data)
+    assert len(set(splits["valid"]) & set(splits["test"])) == 0
+
+
+# input validation tests ------------------------------------------------------
+def test_ratio_validation(default_config):
+    default_config.test_ratio = 0.4
+    default_config.valid_ratio = 0.4
+    default_config.train_ratio = 0.4
+    with pytest.raises(ValueError) as exc_info:
+        DataSplitter(default_config)
+    assert "Split ratios must sum to 1" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("invalid_ratio", [-0.1, 1.1, 200, -100, -0.0001, 1.0001])
+def test_invalid_test_ratio_error_handling(default_config, invalid_ratio):
+    default_config.test_ratio = invalid_ratio
+    with pytest.raises(ValueError) as exc_info:
+        DataSplitter(default_config)
+    assert "Test ratio must be between 0 and 1" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("invalid_ratio", [-0.1, 1.1, 200, -100, -0.0001, 1.0001])
+def test_invalid_valid_ratio_error_handling(default_config, invalid_ratio):
+    default_config.valid_ratio = invalid_ratio
+    with pytest.raises(ValueError) as exc_info:
+        DataSplitter(default_config)
+    assert "Validation ratio must be between 0 and 1" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("invalid_ratio", [-0.1, 1.1, 200, -100, -0.0001, 1.0001])
+def test_invalid_train_ratio_error_handling(default_config, invalid_ratio):
+    default_config.train_ratio = invalid_ratio
+    with pytest.raises(ValueError) as exc_info:
+        DataSplitter(default_config)
+    assert "Train ratio must be between 0 and 1" in str(exc_info.value)
+
+
+def test_min_samples_validation(edge_case_data, default_splitter):
+    # check if a ValueError is raised when the number of samples is less than the minimum required
+    with pytest.raises(ValueError):
+        default_splitter.split(edge_case_data)
+
+
+# custom split tests ----------------------------------------------------------
+def test_custom_splitter_has_correct_sizes(custom_splitter, sample_data):
+    splits = custom_splitter.split(sample_data)
+    assert len(splits["train"]) == 60
+    assert len(splits["valid"]) == 25
+    assert len(splits["test"]) == 15

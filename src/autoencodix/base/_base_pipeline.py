@@ -284,8 +284,7 @@ class BasePipeline(abc.ABC):
                 dataset_type=self._dataset_type,
                 split=False,
             )
-            input_data = self._dataset_type(
-                data=processed_data, config=self.config)
+            input_data = self._dataset_type(data=processed_data, config=self.config)
             predictor_results = self._predictor.predict(data=input_data)
         else:
             predictor_results = self._predictor.predict(data=self._datasets.test)

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from autoencodix.base._base_dataset import BaseDataset
 
 # internal check done
-# write tests: TODO
+# write tests: done
 @dataclass
 class DataSetContainer:
     """

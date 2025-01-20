@@ -1,7 +1,6 @@
 import pytest
 
 import numpy as np
-import torch
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.data._datasplitter import DataSplitter
 

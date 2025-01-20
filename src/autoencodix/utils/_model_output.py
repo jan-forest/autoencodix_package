@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import torch
 
 # internal check done
-# write tests: TODO
+# write tests: done
 @dataclass
 class ModelOutput:
     """

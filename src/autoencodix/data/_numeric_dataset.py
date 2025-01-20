@@ -4,7 +4,7 @@ from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.utils.default_config import DefaultConfig
 
 # internal check done
-# write tests: TODO
+# write tests: done
 
 
 class NumericDataset(BaseDataset):

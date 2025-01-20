@@ -12,7 +12,6 @@ from ._base_visualizer import BaseVisualizer
 from ._base_preprocessor import BasePreprocessor
 from autoencodix.data._datasetcontainer import DataSetContainer
 from autoencodix.data._datasplitter import DataSplitter
-from autoencodix.data.preprocessor import Preprocessor
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._utils import config_method

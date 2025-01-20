@@ -117,7 +117,7 @@ class DataSplitter:
         n_valid = int(n_samples * self._valid_ratio) if self._valid_ratio > 0 else 0
         n_test = int(n_samples * self._test_ratio) if self._test_ratio > 0 else 0
 
-        if n_train < self._min_samples:
+        if self._train_ratio > 0 and n_train < self._min_samples:
             raise ValueError(
                 f"Training set would have {n_train} samples, "
                 f"which is less than minimum required ({self._min_samples})"
@@ -153,6 +153,7 @@ class DataSplitter:
                 f"Custom splits must contain all of: {required_keys} \ Got: {splits.keys()} \ if you want to pass empty splits, pass an empty array"
             )
 
+        # check for index out of bounds
         if len(splits["train"]) < self._min_samples:
             raise ValueError(
                 f"Custom training split has {len(splits['train'])} samples, "
@@ -201,23 +202,61 @@ class DataSplitter:
             X = X.numpy()
 
         if self._custom_splits:
+            # check if indices are out of range
+            max_index = X.shape[0] - 1
+            for split in self._custom_splits.values():
+                if len(split) > 0:
+                    if np.max(split) > max_index:
+                        raise AssertionError(
+                            f"Custom split indices must be within range [0, {max_index}]"
+                        )
+                    elif np.min(split) < 0:
+                        raise AssertionError(
+                            f"Custom split indices must be within range [0, {max_index}]"
+                        )
             return self._custom_splits
 
         n_samples = len(X)
         self._validate_split_sizes(n_samples)
         indices = np.arange(n_samples)
 
+        # all three 0 case already handled in _validate_ratios (sum to 1)
         if self._test_ratio == 0 and self._valid_ratio == 0:
             return {
                 "train": indices,
                 "valid": np.array([], dtype=int),
                 "test": np.array([], dtype=int),
             }
+        if self._train_ratio == 0 and self._valid_ratio == 0:
+            return {
+                "train": np.array([], dtype=int),
+                "valid": np.array([], dtype=int),
+                "test": indices,
+            }
+        if self._train_ratio == 0 and self._test_ratio == 0:
+            return {
+                "train": np.array([], dtype=int),
+                "valid": indices,
+                "test": np.array([], dtype=int),
+            }
+
+        # this case does not make to much sense, but maybe the user has some specific use case
+        if self._train_ratio == 0:
+            valid_indices, test_indices = train_test_split(
+                indices,
+                test_size=self._test_ratio,
+                random_state=self._config.global_seed,
+            )
+            return {
+                "train": np.array([], dtype=int),
+                "valid": valid_indices,
+                "test": test_indices,
+            }
 
         if self._test_ratio == 0:
             train_indices, valid_indices = train_test_split(
                 indices,
-                test_ratio=self._valid_ratio,
+                test_size=self._valid_ratio,
                 random_state=self._config.global_seed,
             )
             return {
@@ -229,7 +268,7 @@ class DataSplitter:
         if self._valid_ratio == 0:
             train_indices, test_indices = train_test_split(
                 indices,
-                test_ratio=self._test_ratio,
+                test_size=self._test_ratio,
                 random_state=self._config.global_seed,
             )
             return {

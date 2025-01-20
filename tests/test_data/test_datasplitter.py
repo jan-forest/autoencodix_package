@@ -31,18 +31,6 @@ def edge_case_data():
     return np.random.rand(3, 10)
 
 
-@pytest.fixture
-def custom_splitter(default_config, sample_data):
-
-    split = {
-        "train": np.arange(int(len(sample_data) * 0.6)),
-        "valid": np.arange(int(len(sample_data)) * 0.6, int(len(sample_data) * 0.85)),
-        "test": np.arange(int(len(sample_data) * 0.85), len(sample_data)),
-    }
-    splitter = DataSplitter(config=default_config, custom_splits=split)
-    return splitter
-
-
 # TESTS -----------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # basic split sizes -----------------------------------------------------------
@@ -123,8 +111,127 @@ def test_min_samples_validation(edge_case_data, default_splitter):
 
 
 # custom split tests ----------------------------------------------------------
-def test_custom_splitter_has_correct_sizes(custom_splitter, sample_data):
+@pytest.fixture
+def custom_splitter(default_config, sample_data):
+
+    split = {
+        "train": np.arange(int(len(sample_data) * 0.6)),
+        "valid": np.arange(int(len(sample_data)) * 0.6, int(len(sample_data) * 0.70)),
+        "test": np.arange(int(len(sample_data) * 0.70), len(sample_data)),
+    }
+    splitter = DataSplitter(config=default_config, custom_splits=split)
+    return splitter
+
+
+def test_custom_splitter_train_sizes(custom_splitter, sample_data):
     splits = custom_splitter.split(sample_data)
-    assert len(splits["train"]) == 60
-    assert len(splits["valid"]) == 25
-    assert len(splits["test"]) == 15
+    assert len(splits["train"]) == len(sample_data) * 0.6
+
+
+def test_custom_splitter_valid_sizes(custom_splitter, sample_data):
+    splits = custom_splitter.split(sample_data)
+    assert len(splits["valid"]) == len(sample_data) * 0.1
+
+
+def test_custom_splitter_test_sizes(custom_splitter, sample_data):
+    splits = custom_splitter.split(sample_data)
+    assert len(splits["test"]) == len(sample_data) * 0.3
+
+
+@pytest.mark.parametrize(
+    "invalid_split",
+    [
+        {
+            "train:": np.arange(60),
+            "valid": np.arange(50, 70),
+            "test": np.arange(70, 100),
+        },
+        {
+            "train": np.arange(60),
+            "valid": np.arange(50, 70),
+            "test": np.arange(50, 100),
+        },
+        {
+            "train": np.arange(60),
+            "valid": np.arange(50, 70),
+            "test": np.arange(65, 70),
+        },
+    ],
+)
+def test_overlap_error_handling(default_config, invalid_split):
+    with pytest.raises(ValueError):
+        DataSplitter(default_config, custom_splits=invalid_split)
+
+
+def test_zero_train_split(sample_data):
+    config = DefaultConfig()
+    config.test_ratio = 0.5
+    config.valid_ratio = 0.5
+    config.train_ratio = 0.0
+    splitter = DataSplitter(config=config)
+    splits = splitter.split(sample_data)
+    assert len(splits["train"]) == 0
+
+
+def test_zero_valid_split(sample_data):
+    config = DefaultConfig()
+    config.test_ratio = 0.5
+    config.valid_ratio = 0.0
+    config.train_ratio = 0.5
+    
+    splitter = DataSplitter(config=config)
+    splits = splitter.split(sample_data)
+    assert len(splits["valid"]) == 0
+
+
+def test_zero_test_split(sample_data):
+    config = DefaultConfig()
+    config.test_ratio = 0.0
+    config.valid_ratio = 0.5
+    config.train_ratio = 0.5
+    splitter = DataSplitter(config=config)
+    splits = splitter.split(sample_data)
+    assert len(splits["test"]) == 0
+
+
+def test_zero_train_and_valid_split(sample_data):
+    config = DefaultConfig()
+    config.test_ratio = 1.0
+    config.valid_ratio = 0.0
+    config.train_ratio = 0.0
+    splitter = DataSplitter(config=config)
+    splits = splitter.split(sample_data)
+    assert len(splits["train"]) == 0
+    assert len(splits["valid"]) == 0
+
+
+def test_zero_train_and_test_split(sample_data):
+    config = DefaultConfig()
+    config.test_ratio = 0.0
+    config.valid_ratio = 1.0
+    config.train_ratio = 0.0
+    splitter = DataSplitter(config=config)
+    splits = splitter.split(sample_data)
+    assert len(splits["train"]) == 0
+    assert len(splits["test"]) == 0
+
+def test_zero_valid_and_test_split(sample_data):
+    config = DefaultConfig()
+    config.test_ratio = 0.0
+    config.valid_ratio = 0.0
+    config.train_ratio = 1.0
+    splitter = DataSplitter(config=config)
+    splits = splitter.split(sample_data)
+    assert len(splits["valid"]) == 0
+    assert len(splits["test"]) == 0
+
+
+def test_out_of_range_custom_indices(sample_data, default_config):
+    custom_splits = {
+        "train": np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1000]),
+        "valid": np.arange(10, len(sample_data) - 10),
+        "test": np.arange(len(sample_data) - 10, len(sample_data)),
+    }
+    with pytest.raises(AssertionError):
+        splitter = DataSplitter(default_config, custom_splits)
+        _ = splitter.split(sample_data)

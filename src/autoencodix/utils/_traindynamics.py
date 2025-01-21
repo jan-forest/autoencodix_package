@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, Any
 
 import numpy as np
 
@@ -28,10 +28,12 @@ class TrainingDynamics:
 
     """
 
-    _data: Dict[int, Dict[str, np.ndarray]] = field(default_factory=dict, repr=False)
+    _data: Dict[int, Dict[str, Union[np.ndarray, Dict]]] = field(
+        default_factory=dict, repr=False
+    )
 
     def add(
-        self, epoch: int, data: Optional[Union[float, np.ndarray]], split: str
+        self, epoch: int, data: Optional[Union[float, np.ndarray]], split: str = "train"
     ) -> None:
         """
         Add a numpy array for a specific epoch and split.
@@ -49,9 +51,10 @@ class TrainingDynamics:
             data = np.array(data)
 
         if not isinstance(data, np.ndarray):
-            raise TypeError(
-                f"Expected value to be of type numpy.ndarray, got {type(data)}."
-            )
+            if not isinstance(data, Dict):
+                raise TypeError(
+                    f"Expected value to be of type numpy.ndarray or Dict, got {type(data)}."
+                )
 
         if epoch not in self._data:
             self._data[epoch] = {}

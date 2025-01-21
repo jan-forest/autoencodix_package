@@ -105,7 +105,7 @@ class VanillixTrainer(BaseTrainer):
             return self._result
 
     def _capture_dynamics(self, epoch, model_output):
-        self._result.model_checkpoints[epoch] = self._model.state_dict()
+        self._result.model_checkpoints.add(epoch=epoch, data=self._model.state_dict())
         self._result.latentspaces.add(
             epoch=epoch,
             split="train",

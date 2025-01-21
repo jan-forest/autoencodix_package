@@ -36,7 +36,7 @@ class Result:
     losses: TrainingDynamics = field(default_factory=TrainingDynamics)
     preprocessed_data: torch.Tensor = field(default_factory=torch.Tensor)
     model: torch.nn.Module = field(default_factory=torch.nn.Module)
-    model_checkpoints: Dict[int, torch.nn.Module] = field(default_factory=dict)
+    model_checkpoints: TrainingDynamics = field(default_factory=TrainingDynamics)
     datasets: Optional[DataSetContainer] = field(
         default_factory=lambda: DataSetContainer(train=None, valid=None, test=None)
     )
@@ -44,18 +44,13 @@ class Result:
     def __getitem__(self, key: str) -> Any:
         """
         Retrieve the value associated with a specific key.
-        Parameters
-        ----------
-        key : str
-            The name of the attribute to retrieve.
-        Returns
-        -------
-        Any
-            The value of the specified attribute.
-        Raises
-        ------
-        KeyError
-            If the key is not a valid attribute of the Results class.
+        Parameters:
+            key (str): The name of the attribute to retrieve.
+        Returns:
+            Any: The value of the specified attribute.
+        Raises:
+            KeyError - If the key is not a valid attribute of the Results class.
+
         """
         if not hasattr(self, key):
             raise KeyError(
@@ -66,16 +61,13 @@ class Result:
     def __setitem__(self, key: str, value: Any) -> None:
         """
         Assign a value to a specific attribute.
-        Parameters
-        ----------
-        key : str
-            The name of the attribute to set.
-        value : Any
-            The value to assign to the attribute.
-        Raises
-        ------
-        KeyError
-            If the key is not a valid attribute of the Results class.
+        Parameters:
+            key (str): The name of the attribute to set.
+            value (Any): The value to assign to the attribute.
+        Raises:
+            KeyError
+                If the key is not a valid attribute of the Results class.
+
         """
         if not hasattr(self, key):
             raise KeyError(
@@ -83,35 +75,63 @@ class Result:
             )
         setattr(self, key, value)
 
+    def _is_empty_value(self, value: Any) -> bool:
+        """
+        Helper method to check if an attribute of the Result object is empty.
+
+        Parameters:
+            value (Any): The value to check
+        Returns:
+            bool: True if the value is empty, False otherwise
+
+        """
+
+        if isinstance(value, TrainingDynamics):
+            return len(value._data) == 0
+        elif isinstance(value, torch.Tensor):
+            return value.numel() == 0
+        elif isinstance(value, torch.nn.Module):
+            return sum(p.numel() for p in value.parameters()) == 0
+        elif isinstance(value, DataSetContainer):
+            return all(v is None for v in [value.train, value.valid, value.test])
+        return False
+
     def update(self, other: "Result") -> None:
         """
-        Update the current Result object with non-empty values from another Result object.
+        Update the current Result object with values from another Result object.
+        For TrainingDynamics, merges the data across epochs and splits and overwrites if already exists.
+        For all other attributes, replaces the current value with the other value.
 
-        Parameters
-        ----------
-        other : Result
-            The Result object to update from.
+        Parameters:
+            other : Result
+                The Result object to update from.
+        Raises:
+            TypeError
+                If the input object is not a Result instance
+        Returns:
+            None
+
         """
+        if not isinstance(other, Result):
+            raise TypeError(f"Expected Result object, got {type(other)}")
+
         for field_name in self.__annotations__.keys():
             current_value = getattr(self, field_name)
             other_value = getattr(other, field_name)
-
-            # Skip if other_value is None
-            if other_value is None:
+            if self._is_empty_value(other_value):
                 continue
 
-            # For TrainingDynamics, merge data
+            # Handle TrainingDynamics - merge data
             if isinstance(current_value, TrainingDynamics):
                 for epoch, split_data in other_value._data.items():
                     for split, value in split_data.items():
-                        current_value.add(epoch=epoch, data=value, split=split)
+                        current_value.add(
+                            epoch=epoch, data=value, split=split
+                        )  # overwrites if already exists
 
-            elif isinstance(current_value, (torch.Tensor, np.ndarray)):
-                if current_value is None or current_value.size == 0:
-                    setattr(self, field_name, other_value)
+            # For all other types - replace with other value
             else:
-                if current_value is None:
-                    setattr(self, field_name, other_value)
+                setattr(self, field_name, other_value)
 
     def __str__(self) -> str:
         """

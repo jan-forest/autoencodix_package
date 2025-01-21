@@ -1,7 +1,8 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Dict, Any, Optional
 
-
+# internal check done
+# write tests: done
 class DefaultConfig(BaseModel):
     """
     Complete configuration for model, training, hardware, and data handling.
@@ -98,7 +99,7 @@ class DefaultConfig(BaseModel):
     def validate_ratios(cls, v, values):
         total = (
             sum(
-                values.get(key, 0)
+                values.data.get(key, 0)
                 for key in ["train_ratio", "test_ratio", "valid_ratio"]
             )
             + v
@@ -111,7 +112,7 @@ class DefaultConfig(BaseModel):
     @field_validator("float_precision")
     def validate_float_precision(cls, v, values):
         """Validate float precision based on device type."""
-        device = values.data.get("device")
+        device = values.data["device"]
         if device == "mps" and v != "32":
             raise ValueError("MPS backend only supports float precision '32'")
         return v
@@ -123,25 +124,6 @@ class DefaultConfig(BaseModel):
         if device == "mps" and v != "auto":
             raise ValueError("MPS backend only supports GPU strategy 'auto'")
     
-    def update(self, **kwargs):
-        """Update configuration with support for nested attributes."""
-        for key, value in kwargs.items():
-            parts = key.split(".")
-            if len(parts) > 1:
-                section = parts[0]
-                param = parts[1]
-                if not hasattr(self, section):
-                    raise ValueError(f"Unknown configuration section: {section}")
-                section_value = getattr(self, section)
-                if not hasattr(section_value, param):
-                    raise ValueError(
-                        f"Unknown parameter '{param}' in section '{section}'"
-                    )
-                setattr(section_value, param, value)
-            elif hasattr(self, key):
-                setattr(self, key, value)
-            else:
-                raise ValueError(f"Unknown configuration parameter: {key}")
 
     def get_params(cls) -> Dict[str, Dict[str, Any]]:
         """

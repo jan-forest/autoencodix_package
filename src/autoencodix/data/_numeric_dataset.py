@@ -27,8 +27,6 @@ class NumericDataset(BaseDataset):
             Input features
         labels : Optional[torch.Tensor]
             Optional labels for supervised learning
-        float_precision : str
-            Precision type for tensor dtype
         """
         super().__init__(data=data, ids=ids, config=config)
         dtype = self._map_float_precision_to_dtype(self.config.float_precision)

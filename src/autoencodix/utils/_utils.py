@@ -10,6 +10,7 @@ from typing import Any, Callable, get_type_hints
 
 from .default_config import DefaultConfig
 
+
 # internal check done
 # write tests: done
 def config_method(valid_params: set[str] = None):
@@ -54,17 +55,18 @@ def config_method(valid_params: set[str] = None):
                             f"Valid parameters are: {', '.join(sorted(valid_params))}"
                         )
                     # check if parameter is a config parameter
-                    
 
                     # Filter out invalid parameters
-                    valid_config_params = {p for p in valid_params if p in config.dict()}
+                    valid_config_params = {
+                        p for p in valid_params if p in config.model_dump()
+                    }
                     config_overrides = {
                         k: v for k, v in kwargs.items() if k in valid_config_params
                     }
                 else:
                     config_overrides = kwargs
 
-                config.update(**config_overrides)
+                config = config.model_copy(update=config_overrides)
             else:
                 if not isinstance(user_config, DefaultConfig):
                     raise TypeError(

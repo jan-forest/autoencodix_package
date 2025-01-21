@@ -55,7 +55,7 @@ class TestConfigMethod:
 
         """
         result = mock_class.mock_config_method_invalid(not_in_config="test")
-        assert "not_in_config" not in result["config"].dict()
+        assert "not_in_config" not in result["config"].model_dump()
 
     def test_invalid_keyword_args(self, mock_class, default_config):
         """

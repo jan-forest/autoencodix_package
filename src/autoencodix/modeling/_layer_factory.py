@@ -2,7 +2,9 @@ import torch.nn as nn
 from typing import List
 
 # internal check done
-# write tests: TODO
+# write tests unit: done
+# write tests integration (do together with architectures)
+# - TODO Vanilix
 class LayerFactory:
     """
     Factory for creating configurable neural network layers.

@@ -1,4 +1,3 @@
-import pytest
 import torch
 from autoencodix.utils._model_output import ModelOutput
 """

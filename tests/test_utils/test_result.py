@@ -1,4 +1,3 @@
-import copy
 from unittest.mock import Mock, patch
 
 import numpy as np

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Union, Any
+from typing import Dict, Optional, Union
 
 import numpy as np
 
@@ -47,6 +47,10 @@ class TrainingDynamics:
         split : str, optional
             The data split (default: 'train').
         """
+        if split not in ["train", "valid", "test"]:
+            raise KeyError(
+                f"Invalid split type: {split}, we only support 'train', 'valid', and 'test' splits."
+            )
         if isinstance(data, (int, float)):
             data = np.array(data)
 
@@ -100,6 +104,10 @@ class TrainingDynamics:
         >>> dynamics.get(epoch=0)  # Returns {"train": array([0.1, 0.2])}
         """
         # Case 1: No epoch specified
+        if split not in ["train", "valid", "test", None]:
+            raise KeyError(
+                f"Invalid split type: {split}, we only support 'train', 'valid', and 'test' splits."
+            )
         if epoch is None:
             # Case 1a: Split specified - return array of values across epochs
             if split is not None:

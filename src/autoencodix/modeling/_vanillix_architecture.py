@@ -10,7 +10,7 @@ from autoencodix.utils.default_config import DefaultConfig
 from ._layer_factory import LayerFactory
 
 # internal check done
-# write tests: TODO
+# write tests: done
 class VanillixArchitecture(BaseAutoencoder):
     """
     Vanilla Autoencoder implementation with separate encoder and decoder construction.

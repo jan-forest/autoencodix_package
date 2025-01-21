@@ -6,8 +6,9 @@ import torch.nn as nn
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._model_output import ModelOutput
 
+
 # internal check done
-# write tests: TODO
+# write tests: done
 class BaseAutoencoder(ABC, nn.Module):
     """
     Abstract BaseAutoencoder class defining the required methods for an autoencoder.

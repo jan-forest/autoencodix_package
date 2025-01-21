@@ -4,7 +4,7 @@ from typing import List
 # internal check done
 # write tests unit: done
 # write tests integration (do together with architectures)
-# - TODO Vanilix
+# -  Vanilix: done
 class LayerFactory:
     """
     Factory for creating configurable neural network layers.

@@ -8,7 +8,7 @@ import torch
 
 
 # internal check done
-# write tests: TODO
+# write tests: done
 class BaseDataset(abc.ABC, Dataset):
     """
     Abstract base class for PyTorch datasets.

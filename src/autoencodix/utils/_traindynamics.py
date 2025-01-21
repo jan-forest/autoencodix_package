@@ -5,7 +5,7 @@ import numpy as np
 
 
 # internal check done
-# write tests: TODO
+# write tests: done
 @dataclass
 class TrainingDynamics:
     """

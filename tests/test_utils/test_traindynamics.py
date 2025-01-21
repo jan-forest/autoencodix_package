@@ -156,3 +156,4 @@ class TestTrainingDynamicsUnit:
     def test_add_invalid_split(self, dynamics):
         with pytest.raises(KeyError):
             dynamics.add(0, np.array([0.1, 0.2]), "invalid")
+

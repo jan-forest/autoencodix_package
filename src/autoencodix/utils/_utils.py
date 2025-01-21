@@ -10,7 +10,8 @@ from typing import Any, Callable, get_type_hints
 
 from .default_config import DefaultConfig
 
-
+# internal check done
+# write tests: done
 def config_method(valid_params: set[str] = None):
     """
     Decorator for methods that accept configuration parameters.
@@ -52,10 +53,13 @@ def config_method(valid_params: set[str] = None):
                         print(
                             f"Valid parameters are: {', '.join(sorted(valid_params))}"
                         )
+                    # check if parameter is a config parameter
+                    
 
                     # Filter out invalid parameters
+                    valid_config_params = {p for p in valid_params if p in config.dict()}
                     config_overrides = {
-                        k: v for k, v in kwargs.items() if k in valid_params
+                        k: v for k, v in kwargs.items() if k in valid_config_params
                     }
                 else:
                     config_overrides = kwargs

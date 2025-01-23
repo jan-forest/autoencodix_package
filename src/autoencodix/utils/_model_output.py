@@ -31,3 +31,6 @@ class ModelOutput:
     latent_mean: Optional[torch.Tensor] = None
     latent_logvar: Optional[torch.Tensor] = None
     additional_info: Optional[dict] = None
+
+    def __iter__(self):
+        yield self

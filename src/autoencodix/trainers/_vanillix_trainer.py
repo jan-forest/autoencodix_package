@@ -1,7 +1,8 @@
-from typing import Optional, Union, Type
+from typing import Optional, Union, Type, List
 
 import torch
 import torch.nn.functional as F
+from torch.utils.data import DataLoader
 
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_autoencoder import BaseAutoencoder
@@ -11,8 +12,8 @@ from autoencodix.utils._model_output import ModelOutput
 from autoencodix.utils.default_config import DefaultConfig
 
 
-# TODO: write tests
 # internal check done
+# tests done
 class VanillixTrainer(BaseTrainer):
     """
     Handles model training process for the Vanilla Autoencoder model.
@@ -63,9 +64,11 @@ class VanillixTrainer(BaseTrainer):
     def train(self) -> Result:
         with self._fabric.autocast():
             for epoch in range(self._config.epochs):
+                train_outputs = []
+                valid_outputs = []
                 self._model.train()
                 epoch_loss = 0.0
-                for _, (features, _) in enumerate(
+                for i, (features, _) in enumerate(
                     self._trainloader
                 ):  # features, _ is a tuple of data and label
                     # acutal training step --------------------------------------
@@ -75,6 +78,7 @@ class VanillixTrainer(BaseTrainer):
                     self._fabric.backward(loss)
                     self._optimizer.step()
                     epoch_loss += loss.item()
+                    train_outputs.append(model_outputs)
                 # capture epoch loss  --------------------------------------------
                 self._result.losses.add(
                     epoch=epoch, split="train", data=epoch_loss / len(self._trainloader)
@@ -86,9 +90,10 @@ class VanillixTrainer(BaseTrainer):
                     with torch.no_grad():
                         valid_loss = 0.0
                         for _, (features, _) in enumerate(self._validloader):
-                            model_output = self._model(features)
-                            loss = self._loss_fn(model_output, features)
+                            valid_model_outputs = self._model(features)
+                            loss = self._loss_fn(valid_model_outputs, features)
                             valid_loss += loss.item()
+                            valid_outputs.append(valid_model_outputs)
                     self._result.losses.add(
                         epoch=epoch,
                         split="valid",
@@ -97,37 +102,47 @@ class VanillixTrainer(BaseTrainer):
 
                 # checkpointing -------------------------------------------------------
                 if not (epoch + 1) % self._config.checkpoint_interval:
+
+                    self._result.model_checkpoints.add(
+                        epoch=epoch, data=self._model.state_dict()
+                    )
                     print(f"Epoch: {epoch}, Loss: {epoch_loss}")
-                    self._capture_dynamics(epoch=epoch, model_output=model_output)
+                    self._capture_dynamics(
+                        epoch=epoch, model_outputs=train_outputs, split="train"
+                    )
+                    if self._validset:
+                        self._capture_dynamics(
+                            epoch=epoch,
+                            model_outputs=valid_model_outputs,
+                            split="valid",
+                        )
 
             # Update results
             self._result.model = self._model
 
             return self._result
 
-    def _capture_dynamics(self, epoch, model_output):
-        self._result.model_checkpoints.add(epoch=epoch, data=self._model.state_dict())
+    def _capture_dynamics(
+        self, epoch: int, model_outputs: List[ModelOutput], split: str
+    ):
+        # Concatenate tensors from all model outputs
+        latentspaces = torch.cat(
+            [output.latentspace for output in model_outputs], dim=0
+        )
+        reconstructions = torch.cat(
+            [output.reconstruction for output in model_outputs], dim=0
+        )
+
         self._result.latentspaces.add(
             epoch=epoch,
-            split="train",
-            data=model_output.latentspace.cpu().detach().numpy(),
+            split=split,
+            data=latentspaces.cpu().detach().numpy(),
         )
         self._result.reconstructions.add(
             epoch=epoch,
-            split="train",
-            data=model_output.reconstruction.cpu().detach().numpy(),
+            split=split,
+            data=reconstructions.cpu().detach().numpy(),
         )
-        if self._validset:
-            self._result.latentspaces.add(
-                epoch=epoch,
-                split="valid",
-                data=model_output.latentspace.cpu().detach().numpy(),
-            )
-            self._result.reconstructions.add(
-                epoch=epoch,
-                split="valid",
-                data=model_output.reconstruction.cpu().detach().numpy(),
-            )
 
     def _loss_fn(
         self, model_output: ModelOutput, targets: torch.Tensor
@@ -142,3 +157,29 @@ class VanillixTrainer(BaseTrainer):
             raise NotImplementedError(
                 f"Loss function {self._config.reconstruction_loss} is not implemented."
             )
+
+    def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
+        """
+        Decided to add predict method to the trainer class.
+        This violates SRP, but the trainer class has a lot of attributes and methods
+        that are needed for prediction. So this way we don't need to write so much duplicate code
+
+        Parameters:
+            data
+        """
+        model.eval()
+        inference_loader = DataLoader(
+            data,
+            batch_size=self._config.batch_size,
+            shuffle=False,
+            num_workers=self._config.n_workers,
+        )
+        inference_loader = self._fabric.setup_dataloaders(inference_loader)
+        with self._fabric.autocast(), torch.no_grad():
+            outputs = []
+            for _, (data, _) in enumerate(inference_loader):
+                model_output = model(data)
+                outputs.append(model_output)
+            self._capture_dynamics(epoch=-1, model_outputs=outputs, split="test")
+
+        return self._result

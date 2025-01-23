@@ -8,7 +8,6 @@ from anndata import AnnData  # type: ignore
 from ._base_dataset import BaseDataset
 from ._base_autoencoder import BaseAutoencoder
 from ._base_trainer import BaseTrainer
-from ._base_predictor import BasePredictor
 from ._base_visualizer import BaseVisualizer
 from ._base_preprocessor import BasePreprocessor
 from autoencodix.data._datasetcontainer import DatasetContainer
@@ -18,7 +17,7 @@ from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._utils import config_method
 
 
-# TODO test`
+# tests: done
 # internal check done
 class BasePipeline(abc.ABC):
     """
@@ -27,7 +26,7 @@ class BasePipeline(abc.ABC):
     This class provides the methods for preprocessing, training, predicting,
     visualizing, and evaluating (former ml_task step) models.
     Subclasses should perform steps like the parent class
-    but has custom attribute e.g Processor, Trainer, Predictor, Evaluator, Visualizer.
+    but has custom attribute e.g Processor, Trainer, Evaluator, Visualizer.
 
     Attributes
     ----------
@@ -51,8 +50,6 @@ class BasePipeline(abc.ABC):
     _trainer : Optional[Trainer]
         Trainer object with train method to train actual model weights.
         Each subclass will have its own Trainer class.
-    _predictor : Optional[Predictor]
-        TODO write docs when actual implementation is done (now only mock).
     _evaluator : Optional[Evaluator]
         TODO write docs when actual implementation is done (now only mock).
     _visualizer : Optional[Visualizer]
@@ -65,11 +62,6 @@ class BasePipeline(abc.ABC):
 
     Methods
     -------
-    _build_dataset(*kwargs):
-        Calls a DataSplitter instance to obtain train, valid and test indicies
-        Updates the self._datset attribute with the train, valid and test datasets
-        Datsets are a subclass of torch.utils.data.Dataset and can be different subclasses
-        depending on the Pipeline.
     preprocess(*kwargs):
         Calls the Preprocessor instance to preprocess the data. Updates the self._features attribute.
         Populates the self.results attribute with self._features and self._datasets.
@@ -77,7 +69,7 @@ class BasePipeline(abc.ABC):
         Calls the Trainer instance to train the model on the with training and validation data of self._datasets.
         Populates the self.results attribute with the trained model and training dynamics and results.
     predict(*kwargs):
-        Calls the Predictor instance to run inference with the test data on the trained model.
+        Calls the predict method of the Trainer instance to run inference with the test data on the trained model.
         If user inputs data, it preprocesses the data and runs inference.
         Updates the result attribute.
     evaluate(*kwargs):
@@ -102,7 +94,6 @@ class BasePipeline(abc.ABC):
         model_type: Type[BaseAutoencoder],
         datasplitter_type: Type[DataSplitter],
         preprocessor: BasePreprocessor,
-        predictor: BasePredictor,
         visualizer: BaseVisualizer,
         result: Result,
         config: Optional[Union[None, DefaultConfig]] = DefaultConfig(),
@@ -125,9 +116,8 @@ class BasePipeline(abc.ABC):
         self.data: Union[np.ndarray, AnnData, pd.DataFrame] = data
         self.config = config
         self._trainer_type = trainer_type
-        self._model_type = model_type   
+        self._model_type = model_type
         self._preprocessor = preprocessor
-        self._predictor = predictor
         self._visualizer = visualizer
         self._dataset_type = dataset_type
         self.result = result
@@ -142,11 +132,10 @@ class BasePipeline(abc.ABC):
                 )
             self.config = config
 
-        self._features: Optional[torch.Tensor]
-        self._datasets: Optional[DatasetContainer]
+        self._features: Optional[torch.Tensor] = None
+        self._datasets: Optional[DatasetContainer] = None
 
-        # config parameter will be self.config if not provided, decorator will handle this
-
+    # config parameter will be self.config if not provided, decorator will handle this
     @config_method(valid_params={"config"})
     def preprocess(
         self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
@@ -154,7 +143,6 @@ class BasePipeline(abc.ABC):
         """
         Takes the user input data and filters, norrmalizes and cleans the data.
         Populates the self._features attribute with the preprocessed data as a numpy array.
-        Calls the _build_datasets method to build the datasets for training, validation and testing.
 
         Parameters:
             config: DefaultConfig, optional (default: None)
@@ -227,7 +215,7 @@ class BasePipeline(abc.ABC):
             validset=self._datasets.valid,
             result=self.result,
             config=config,
-            model_type=self._model_type
+            model_type=self._model_type,
         )
         trainer_result = self._trainer.train()
         self.result.update(trainer_result)
@@ -263,8 +251,6 @@ class BasePipeline(abc.ABC):
         """
         if self._preprocessor is None:
             raise NotImplementedError("Preprocessor not initialized")
-        if self._predictor is None:
-            raise NotImplementedError("Predictor not initialized")
         if self._datasets is None:
             raise NotImplementedError(
                 "Datasets not built. Please run the fit method first."
@@ -283,9 +269,13 @@ class BasePipeline(abc.ABC):
                 split=False,
             )
             input_data = self._dataset_type(data=processed_data, config=self.config)
-            predictor_results = self._predictor.predict(data=input_data)
+            predictor_results = self._trainer.predict(
+                data=input_data, model=self.result.model
+            )
         else:
-            predictor_results = self._predictor.predict(data=self._datasets.test)
+            predictor_results = self._trainer.predict(
+                data=self._datasets.test, model=self.result.model
+            )
         self.result.update(predictor_results)
 
     @config_method(valid_params={"config"})

@@ -13,7 +13,7 @@ from autoencodix.utils.default_config import DefaultConfig
 
 
 # internal check done
-# write tests: TODO
+# write tests: done
 class BaseTrainer(abc.ABC):
     """
     Abstract base class for all trainer implementations. It sets up the general components 

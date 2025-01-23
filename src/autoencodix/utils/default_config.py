@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Dict, Any, Optional
 
+
 # internal check done
 # write tests: done
 class DefaultConfig(BaseModel):
@@ -36,7 +37,7 @@ class DefaultConfig(BaseModel):
         0.001, gt=0, description="Learning rate for optimization"
     )
     batch_size: int = Field(32, ge=1, description="Number of samples per batch")
-    epochs: int = Field(23, ge=1, description="Number of training epochs")
+    epochs: int = Field(3, ge=1, description="Number of training epochs")
     weight_decay: float = Field(0.01, ge=0, description="L2 regularization factor")
     reconstruction_loss: Literal["mse", "bce"] = Field(
         "mse", description="Type of reconstruction loss"
@@ -54,7 +55,7 @@ class DefaultConfig(BaseModel):
     n_gpus: int = Field(1, ge=1, description="Number of GPUs to use")
     n_workers: int = Field(2, ge=0, description="Number of data loading workers")
     checkpoint_interval: int = Field(
-        10, ge=1, description="Interval for saving checkpoints"
+        1, ge=1, description="Interval for saving checkpoints"
     )
     float_precision: Literal[
         "transformer-engine",
@@ -94,7 +95,6 @@ class DefaultConfig(BaseModel):
     reproducible: bool = Field(True, description="Whether to ensure reproducibility")
     global_seed: int = Field(1, ge=0, description="Global random seed")
 
-
     @field_validator("test_ratio", "valid_ratio")
     def validate_ratios(cls, v, values):
         total = (
@@ -123,7 +123,6 @@ class DefaultConfig(BaseModel):
         device = values.data.get("device")
         if device == "mps" and v != "auto":
             raise ValueError("MPS backend only supports GPU strategy 'auto'")
-    
 
     def get_params(cls) -> Dict[str, Dict[str, Any]]:
         """

@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 import torch
 
-from autoencodix.data import DataSetContainer
+from autoencodix.data import DatasetContainer
 
 from ._traindynamics import TrainingDynamics
 
@@ -36,8 +36,8 @@ class Result:
     preprocessed_data: torch.Tensor = field(default_factory=torch.Tensor)
     model: torch.nn.Module = field(default_factory=torch.nn.Module)
     model_checkpoints: TrainingDynamics = field(default_factory=TrainingDynamics)
-    datasets: Optional[DataSetContainer] = field(
-        default_factory=lambda: DataSetContainer(train=None, valid=None, test=None)
+    datasets: Optional[DatasetContainer] = field(
+        default_factory=lambda: DatasetContainer(train=None, valid=None, test=None)
     )
 
     def __getitem__(self, key: str) -> Any:
@@ -91,7 +91,7 @@ class Result:
             return value.numel() == 0
         elif isinstance(value, torch.nn.Module):
             return sum(p.numel() for p in value.parameters()) == 0
-        elif isinstance(value, DataSetContainer):
+        elif isinstance(value, DatasetContainer):
             return all(v is None for v in [value.train, value.valid, value.test])
         return False
 

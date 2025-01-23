@@ -1,0 +1,92 @@
+import pytest
+import numpy as np
+import torch
+from autoencodix.trainers._vanillix_trainer import VanillixTrainer
+from autoencodix.utils._result import Result
+from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.data._numeric_dataset import NumericDataset
+from autoencodix.data._datasetcontainer import DatasetContainer
+from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
+
+
+class TestVanillixTrainerIntegration:
+    @pytest.fixture
+    def default_config(self):
+        return DefaultConfig(epochs=1, checkpoint_interval=1, device="cpu")
+
+    @pytest.fixture
+    def train_dataset(self, default_config):
+        data = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
+        return NumericDataset(data, config=default_config)
+
+    @pytest.fixture
+    def valid_dataset(self, default_config):
+        data = torch.tensor(
+            [[10.0, 11.0, 12.0], [13.0, 14.0, 15.0], [16.0, 17.0, 18.0]]
+        )
+        return NumericDataset(data, config=default_config)
+
+    @pytest.fixture
+    def empty_result(self):
+        return Result()
+
+    @pytest.fixture
+    def filled_result(self, train_dataset, valid_dataset):
+        result = Result()
+        # fill with preprocessed_data and datasets (that might happen before training)
+        result.preprocessed_data = torch.tensor([1, 2, 3])
+        result.datasets = DatasetContainer(train=train_dataset, valid=valid_dataset)
+        return result
+
+    @pytest.fixture
+    def vanillix_trainer(
+        self, train_dataset, valid_dataset, default_config, filled_result
+    ):
+        return VanillixTrainer(
+            trainset=train_dataset,
+            validset=valid_dataset,
+            result=filled_result,
+            config=default_config,
+            model_type=VanillixArchitecture,
+        )
+
+    def test_train(self, vanillix_trainer):
+        result = vanillix_trainer.train()
+        assert result is not None, "Training should return a Result object."
+        assert len(result.losses.get("train")) == len(result.losses.get("valid"))
+
+    def test_result_not_overwritten(self, vanillix_trainer, filled_result):
+
+        before_preprocessed_data = filled_result.preprocessed_data
+        result = vanillix_trainer.train()
+        assert (
+            result.preprocessed_data is not None
+        ), "Preprocessed data should not overwrite."
+        assert (
+            result.preprocessed_data is before_preprocessed_data
+        ), "Preprocessed data should not overwrite."
+
+    @pytest.mark.parametrize("devices", ["cpu", "cuda", "mps"])
+    def test_reproducible(self, vanillix_trainer, devices):
+        # if device not available, skip test
+        if not torch.cuda.is_available() and devices == "cuda":
+            pytest.skip("CUDA not available.")
+        if not torch.backends.mps.is_available and devices == "mps":
+            pytest.skip("MPS not available.")
+        config = DefaultConfig(
+            device=devices, epochs=3, checkpoint_interval=1, reproducible=True
+        )
+        vanillix_trainer.config = config
+        result1 = vanillix_trainer.train()
+        train_loss1 = result1.losses.get("train")
+        reconstructed_data1 = result1.reconstructions.get("train")
+
+        result2 = vanillix_trainer.train()
+        train_losses2 = result2.losses.get("train")
+        reconstructed_data2 = result2.reconstructions.get("train")
+        assert np.array_equal(
+            train_loss1, train_losses2
+        ), "Training should be reproducible."
+        assert np.array_equal(
+            reconstructed_data1, reconstructed_data2
+        ), "Reconstruction should be reproducible."

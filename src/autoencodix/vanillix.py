@@ -7,16 +7,19 @@ from anndata import AnnData  # type: ignore
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.base._base_trainer import BaseTrainer
-from autoencodix.data._datasetcontainer import DataSetContainer
+from autoencodix.base._base_autoencoder import BaseAutoencoder
+from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.preprocessor import Preprocessor
 from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
 from autoencodix.trainers._vanillix_trainer import VanillixTrainer
 from autoencodix.trainers.predictor import Predictor
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.visualize.visualize import Visualizer
+
 
 class Vanillix(BasePipeline):
     """
@@ -41,7 +44,7 @@ class Vanillix(BasePipeline):
         Evaluator object that evaluates the model performance or downstream tasks (custom for Vanillix)
     result : Result
         Result object to store the pipeline results
-    _datasets : Optional[DataSetContainer]
+    _datasets : Optional[DatasetContainer]
         Container for train, validation, and test datasets (preprocessed)
     _is_fitted : bool
         Flag to check if the model has been trained
@@ -56,6 +59,7 @@ class Vanillix(BasePipeline):
         data: Union[np.ndarray, AnnData, pd.DataFrame],
         trainer_type: Type[BaseTrainer] = VanillixTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
+        model_type: Type[BaseAutoencoder] = VanillixArchitecture,
         preprocessor: Optional[Preprocessor] = None,
         visualizer: Optional[Visualizer] = None,
         predictor: Optional[Predictor] = None,
@@ -99,6 +103,7 @@ class Vanillix(BasePipeline):
             data=data,
             dataset_type=dataset_type,
             trainer_type=trainer_type,
+            model_type=model_type,
             preprocessor=preprocessor or Preprocessor(),
             visualizer=visualizer or Visualizer(),
             predictor=predictor or Predictor(),
@@ -127,7 +132,7 @@ class Vanillix(BasePipeline):
             split_indices["test"],
         )
 
-        self._datasets = DataSetContainer(
+        self._datasets = DatasetContainer(
             train=self._dataset_type(
                 data=self._features[train_ids],
                 float_precision=self.config.float_precision,

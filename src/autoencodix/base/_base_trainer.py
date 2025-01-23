@@ -1,11 +1,12 @@
 import abc
-from typing import Optional, Union
+from typing import Optional, Union, Type
 
 import torch
 from lightning_fabric import Fabric
 from torch.utils.data import DataLoader
 
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.utils._model_output import ModelOutput
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
@@ -15,38 +16,66 @@ from autoencodix.utils.default_config import DefaultConfig
 # write tests: TODO
 class BaseTrainer(abc.ABC):
     """
-    Parent class for all trainer classes. Here we initialize all general training components
-    such as model, optimizer, dataloaders, etc.
+    Abstract base class for all trainer implementations. It sets up the general components 
+    needed for training, such as the model, optimizer, and data loaders. Additionally, 
+    it provides the structure for handling reproducibility and model-specific configurations.
 
     Attributes
     ----------
+    _trainset : BaseDataset
+        The dataset used for training.
+    _validset : Optional[BaseDataset]
+        The dataset used for validation, if provided.
     _result : Result
-        Result object to store the training results
+        An object to store and manage training results.
+    _config : DefaultConfig
+        Configuration object containing training hyperparameters and settings.
+    _model_type : Type[BaseAutoencoder]
+        The autoencoder model class to be trained.
+    _trainloader : DataLoader
+        DataLoader for the training dataset.
+    _validloader : Optional[DataLoader]
+        DataLoader for the validation dataset, if validation data is provided.
+    _model : BaseAutoencoder
+        The instantiated model architecture.
+    _optimizer : torch.optim.Optimizer
+        The optimizer used for training.
+    _fabric : Fabric
+        A wrapper for distributed training and precision management.
 
     Methods
     -------
-    train():
-        Abstract method to train the model
-
+    train() -> Result
+        Abstract method that must be implemented to define the training loop.
+    _capture_dynamics(epoch: int, model_output: torch.Tensor) -> None
+        Abstract method for capturing model dynamics during training.
+    _loss_fn(model_output: ModelOutput, targets: torch.Tensor) -> torch.Tensor
+        Abstract method for defining the loss computation logic.
+    _input_validation() -> None
+        Validates input arguments and ensures the proper configuration.
+    _handle_reproducibility() -> None
+        Sets seeds and configurations for reproducibility.
+    _init_model_architecture() -> None
+        Initializes the model architecture based on the configuration.
 
     """
-
     def __init__(
         self,
         trainset: Optional[BaseDataset],
         validset: Optional[Union[BaseDataset, None]],
         result: Optional[Result],
         config: Optional[Union[None, DefaultConfig]],
-        called_from: str,
+        model_type: Type[BaseAutoencoder],
     ):
         # passed attributes --------------------------
         self._trainset = trainset
-        self._called_from = called_from
+        self._model_type = model_type
         self._validset = validset
         self._result = result
         self._config = config
-        self._handle_reproducibility()
+        # call this first for tests to work
         self._input_validation()
+        self._handle_reproducibility()
 
         # internal data handling ----------------------
         self._trainloader = DataLoader(
@@ -65,7 +94,7 @@ class BaseTrainer(abc.ABC):
 
         # model and optimizer setup --------------------------------
         self._input_dim = self._trainset.get_input_dim()
-        self._get_model_architecture()
+        self._init_model_architecture()
 
         self._fabric = Fabric(
             accelerator=self._config.device,
@@ -107,34 +136,22 @@ class BaseTrainer(abc.ABC):
 
     def _handle_reproducibility(self):
         """Sets all relevant seeds for reproducibility"""
-        if self._config.reproducible in ["all", "training"]:
+        if self._config.reproducible:
             torch.use_deterministic_algorithms(True)
             torch.manual_seed(seed=self._config.global_seed)
-            if self._device == "cuda":
+            if self._config.device == "cuda":
                 torch.cuda.manual_seed(seed=self._config.global_seed)
                 torch.cuda.manual_seed_all(seed=self._config.global_seed)
                 torch.backends.cudnn.deterministic = True
                 torch.backends.cudnn.benchmark = False
-            elif self._device == "mps":
+            elif self._config.device == "mps":
                 print("warning: MPS backend does not support reproducibility")
             else:
                 print("cpu not relevant here")
 
-    def _get_model_architecture(self):
-        """Populates the model attribute with the appropriate model architecture"""
-        if self._called_from == "Vanillix":
-            from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
+    def _init_model_architecture(self):
 
-            print(f"getting model for {self._called_from}")
-
-            self._model = VanillixArchitecture(
-                config=self._config, input_dim=self._input_dim
-            )
-
-        else:
-            raise NotImplementedError(
-                f"Model architecture for {self._called_from} is not implemented, only Vanillix is supported."
-            )
+        self._model = self._model_type(config=self._config, input_dim=self._input_dim)
 
     @abc.abstractmethod
     def train(self) -> Result:

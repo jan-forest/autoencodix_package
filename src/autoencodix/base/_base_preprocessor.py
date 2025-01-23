@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 from anndata import AnnData  # type: ignore
 
-from autoencodix.data._datasetcontainer import DataSetContainer
+from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.utils.default_config import DefaultConfig
 
@@ -23,7 +23,7 @@ class BasePreprocessor(abc.ABC):
         config: Optional[DefaultConfig],
         dataset_type: Type,
         split: bool = True,
-    ) -> DataSetContainer:
+    ) -> DatasetContainer:
         """
         Main method of the class. Handles the following steps:
         1. align the data (in case we have multiple datasets with different sample ids)
@@ -138,7 +138,7 @@ class BasePreprocessor(abc.ABC):
             if len(split_indices["test"]) == 0
             else self._features[split_indices["test"]]
         )
-        self._datasets = DataSetContainer(
+        self._datasets = DatasetContainer(
             train=self._dataset_type(
                 data=train_data, config=self.config, ids=train_ids
             ),

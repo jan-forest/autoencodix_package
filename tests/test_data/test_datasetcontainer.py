@@ -2,7 +2,7 @@ import pytest
 import torch
 
 from autoencodix.base._base_dataset import BaseDataset
-from autoencodix.data._datasetcontainer import DataSetContainer
+from autoencodix.data._datasetcontainer import DatasetContainer
 
 
 # makes sure to separate the DatasetContainer tests from the BaseDataset tests
@@ -11,11 +11,11 @@ class MockBaseDataset:
     pass
 
 
-class TestUnitDataSetContainer:
+class TestUnitDatasetContainer:
     @pytest.fixture
     def empty_container(self):
-        """Provides an empty DataSetContainer for testing initialization and gradual population."""
-        return DataSetContainer()
+        """Provides an empty DatasetContainer for testing initialization and gradual population."""
+        return DatasetContainer()
 
     @pytest.fixture
     def mock_datasets(self):
@@ -29,7 +29,7 @@ class TestUnitDataSetContainer:
     @pytest.fixture
     def filled_container(self, mock_datasets):
         """Provides a fully populated container to test operations on complete sets."""
-        return DataSetContainer(
+        return DatasetContainer(
             train=mock_datasets["train"],
             valid=mock_datasets["valid"],
             test=mock_datasets["test"],
@@ -61,7 +61,7 @@ class TestUnitDataSetContainer:
 
     def test_partial_initialization(self):
         """Test container behavior with only some slots populated."""
-        container = DataSetContainer(train=MockBaseDataset())
+        container = DatasetContainer(train=MockBaseDataset())
         assert isinstance(container.train, MockBaseDataset)
         assert container.valid is None
         assert container.test is None
@@ -81,7 +81,7 @@ class TestUnitDataSetContainer:
 
 
 # Integration Tests with Real BaseDataset
-class TestIntegrationDataSetContainer:
+class TestIntegrationDatasetContainer:
     @pytest.fixture
     def real_dataset(self):
         """Provides a real BaseDataset instance for integration testing."""
@@ -91,7 +91,7 @@ class TestIntegrationDataSetContainer:
     @pytest.fixture
     def real_filled_container(self, real_dataset):
         """Provides a fully populated container to test operations on complete sets."""
-        return DataSetContainer(train=real_dataset, valid=real_dataset, test=real_dataset)
+        return DatasetContainer(train=real_dataset, valid=real_dataset, test=real_dataset)
 
     def test_integration_with_real_dataset(self, real_filled_container, real_dataset):
         """Verify compatibility with actual BaseDataset instances."""

@@ -6,11 +6,12 @@ import pandas as pd
 import torch
 from anndata import AnnData  # type: ignore
 from ._base_dataset import BaseDataset
+from ._base_autoencoder import BaseAutoencoder
 from ._base_trainer import BaseTrainer
 from ._base_predictor import BasePredictor
 from ._base_visualizer import BaseVisualizer
 from ._base_preprocessor import BasePreprocessor
-from autoencodix.data._datasetcontainer import DataSetContainer
+from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
@@ -44,7 +45,7 @@ class BasePipeline(abc.ABC):
     _preprocessor : Optional[Preprocessor]
         The preprocessor ffilters, scales, matches and cleans the data.
         Specific implementations for this will be used in subclasses.
-    _datasets: Optional[DataSetContainer]
+    _datasets: Optional[DatasetContainer]
         data in form of Dataset classes after splitting, basically self._features wrapped in a
         Dataset class and split into train, valid and test datasets.
     _trainer : Optional[Trainer]
@@ -56,9 +57,6 @@ class BasePipeline(abc.ABC):
         TODO write docs when actual implementation is done (now only mock).
     _visualizer : Optional[Visualizer]
         TODO write docs when actual implementation is done (now only mock).
-    _id: str:
-        Identifier for the pipeline (here base). Used to identify the pipeline in the
-        specific pipeline subclasses, when calling specfic implementations of the Trainer, etc.
     _dataset_class: Type[BaseDataset]
         Used to use the methods from the parent class in the child classes with the correct type.
     _trainer_class: Type[BaseTrainer]
@@ -101,6 +99,7 @@ class BasePipeline(abc.ABC):
         data: Union[pd.DataFrame, AnnData, np.ndarray, List[np.ndarray]],
         dataset_type: Type[BaseDataset],
         trainer_type: Type[BaseTrainer],
+        model_type: Type[BaseAutoencoder],
         datasplitter_type: Type[DataSplitter],
         preprocessor: BasePreprocessor,
         predictor: BasePredictor,
@@ -123,10 +122,10 @@ class BasePipeline(abc.ABC):
                 f"Expected data type to be one of np.ndarray, AnnData, or pd.DataFrame, got {type(data)}."
             )
 
-        self._id = "base"
         self.data: Union[np.ndarray, AnnData, pd.DataFrame] = data
         self.config = config
         self._trainer_type = trainer_type
+        self._model_type = model_type   
         self._preprocessor = preprocessor
         self._predictor = predictor
         self._visualizer = visualizer
@@ -144,7 +143,7 @@ class BasePipeline(abc.ABC):
             self.config = config
 
         self._features: Optional[torch.Tensor]
-        self._datasets: Optional[DataSetContainer]
+        self._datasets: Optional[DatasetContainer]
 
         # config parameter will be self.config if not provided, decorator will handle this
 
@@ -228,7 +227,7 @@ class BasePipeline(abc.ABC):
             validset=self._datasets.valid,
             result=self.result,
             config=config,
-            called_from=self._id,
+            model_type=self._model_type
         )
         trainer_result = self._trainer.train()
         self.result.update(trainer_result)

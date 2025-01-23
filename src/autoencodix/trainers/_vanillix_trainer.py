@@ -1,9 +1,10 @@
-from typing import Optional, Union
+from typing import Optional, Union, Type
 
 import torch
 import torch.nn.functional as F
 
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.utils._result import Result
 from autoencodix.utils._model_output import ModelOutput
@@ -48,7 +49,7 @@ class VanillixTrainer(BaseTrainer):
         validset: Optional[Union[BaseDataset, None]],
         result: Result,
         config: Optional[Union[None, DefaultConfig]],
-        called_from: str,
+        model_type: Type[BaseAutoencoder],
     ):
         # see _base_trainer.py for more details, handles input validation and reproducibility, sets up Fabric
         super().__init__(
@@ -56,7 +57,7 @@ class VanillixTrainer(BaseTrainer):
             validset=validset,
             result=result,
             config=config,
-            called_from=called_from,
+            model_type=model_type,
         )
 
     def train(self) -> Result:

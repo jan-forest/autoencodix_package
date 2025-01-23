@@ -5,7 +5,7 @@ from autoencodix.base._base_dataset import BaseDataset
 # internal check done
 # write tests: done
 @dataclass
-class DataSetContainer:
+class DatasetContainer:
     """
     A container for datasets used in training, validation, and testing.
 

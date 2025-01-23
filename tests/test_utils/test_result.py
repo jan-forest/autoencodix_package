@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 
-from autoencodix.data._datasetcontainer import DataSetContainer
+from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.utils._result import Result
 from autoencodix.utils._traindynamics import TrainingDynamics
@@ -65,18 +65,18 @@ class TestResultUnit:
         assert empty_result._is_empty_value(model) is False
 
     def test_is_empty_value_empty_dataset_container(self, empty_result):
-        container = DataSetContainer(train=None, valid=None, test=None)
+        container = DatasetContainer(train=None, valid=None, test=None)
         assert empty_result._is_empty_value(container) is True
 
     def test_is_empty_value_nonempty_dataset_container(self, empty_result):
-        mock_container = Mock(spec=DataSetContainer)
+        mock_container = Mock(spec=DatasetContainer)
         mock_container.train = [1, 2, 3]
         mock_container.valid = None
         mock_container.test = None
         assert empty_result._is_empty_value(mock_container) is False
 
     def test_update_skips_empty_datasets(self, empty_result):
-        mock_container = Mock(spec=DataSetContainer)
+        mock_container = Mock(spec=DatasetContainer)
         mock_container.test = [1, 2, 3]
         empty_result.datasets = mock_container
         other = Result()
@@ -115,7 +115,7 @@ class TestResultIntegration:
         result.latentspaces.add(epoch=0, split="train", data=np.array([1, 2, 3]))
         result.preprocessed_data = torch.tensor([4, 5, 6])
         result.model = torch.nn.Linear(2, 2)
-        result.datasets = DataSetContainer(
+        result.datasets = DatasetContainer(
             train=np.array([7, 8, 9]), valid=None, test=None
         )
         return result
@@ -131,7 +131,7 @@ class TestResultIntegration:
         assert isinstance(result.preprocessed_data, torch.Tensor)
         assert isinstance(result.model, torch.nn.Module)
         assert isinstance(result.model_checkpoints, TrainingDynamics)
-        assert isinstance(result.datasets, DataSetContainer)
+        assert isinstance(result.datasets, DatasetContainer)
 
     def test_update_merges_training_dynamics(self, filled_result, empty_result):
         empty_result.update(filled_result)
@@ -152,7 +152,7 @@ class TestResultIntegration:
     def test_update_overwrites_datasets(self, empty_result, filled_result):
 
         config = DefaultConfig()
-        datasets = DataSetContainer(
+        datasets = DatasetContainer(
             train=NumericDataset(torch.tensor([1, 2, 3]), config=config),
             valid=None,
             test=None,

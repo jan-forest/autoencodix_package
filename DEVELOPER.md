@@ -19,7 +19,7 @@
   - example bad: `result = trainer.train(10, arr)`
   - example good: `result = trainer.train(epochs=10, data=array)`
 - Style is enforced with our GitHub Actions workflow for pull requests and pushes to the main branch
-
+- We try to provide a docstring for every class and method/function. 
 ## Coding principles
 - We try to adhere to SOLID, for more info see [here](https://realpython.com/solid-principles-python/). Howver if it makes our code too complicated, we violate the principles when necessary.
 - We use pytest to write tests, a good guide is [here](https://pytest-with-eric.com)

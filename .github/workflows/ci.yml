@@ -42,7 +42,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install -e '.[test]'
+          uv sync
 
       - name: Run tests with coverage
         run: |
@@ -69,7 +69,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install -e '.[test]'
+         uv sync 
 
       - name: Type check
         run: |
@@ -100,7 +100,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install -e '.[test]'
+          uv sync
 
       - name: Check formatting with Black
         run: |

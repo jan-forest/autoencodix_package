@@ -41,11 +41,11 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv sync
+        uv pip install -e .
 
     - name: Run tests with coverage
       run: |
-        pytest --cov=src --cov-report=xml tests/
+        uv run pytest --cov=src --cov-report=xml tests/
 
       continue-on-error: true
 

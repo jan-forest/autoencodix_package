@@ -14,7 +14,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "scikit-learn>=1.6.1",
     "scipy>=1.13.1",
-    "torch>=2.5.1",
+    "torch>=2.4.1",
 ]
 
 [dependency-groups]

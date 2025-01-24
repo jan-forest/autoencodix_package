@@ -5,7 +5,7 @@ Uuse of OOP would be overkill for the simple functions in this module.
 
 import inspect
 from functools import wraps
-from typing import Any, Callable, get_type_hints
+from typing import Any, Callable, Optional, get_type_hints
 
 
 from .default_config import DefaultConfig
@@ -13,7 +13,7 @@ from .default_config import DefaultConfig
 
 # internal check done
 # write tests: done
-def config_method(valid_params: set[str] = None):
+def config_method(valid_params: Optional[set[str]] = None):
     """
     Decorator for methods that accept configuration parameters.
     Parameters
@@ -23,8 +23,8 @@ def config_method(valid_params: set[str] = None):
     """
 
     def decorator(func: Callable) -> Callable:
-        hints = get_type_hints(func)  ## noqa: F841
-        sig = inspect.signature(func)  ## noqa: F841
+        get_type_hints(func)  ## noqa: F841
+        inspect.signature(func)  ## noqa: F841
 
         param_docs = "\nValid configuration parameters:\n"
         if valid_params:
@@ -76,7 +76,7 @@ def config_method(valid_params: set[str] = None):
 
             return func(self, *args, config=config, **kwargs)
 
-        wrapper.valid_params = valid_params
+        setattr(wrapper, "valid_params", valid_params)
         return wrapper
 
     return decorator

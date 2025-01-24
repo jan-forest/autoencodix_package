@@ -21,6 +21,7 @@ class TestBasePipeline:
                 datasplitter_type=Mock,
                 preprocessor=Mock(),
                 predictor=Mock(),
+                evaluator=Mock(),
                 visualizer=Mock(),
                 result=Mock(),
             )
@@ -39,6 +40,7 @@ class TestBasePipeline:
                 datasplitter_type=Mock,
                 preprocessor=Mock(),
                 predictor=Mock(),
+                evaluator=Mock(),
                 visualizer=Mock(),
                 result=Mock(),
             )
@@ -53,6 +55,7 @@ class TestBasePipeline:
             preprocessor=None,
             predictor=Mock(),
             visualizer=Mock(),
+            evaluator=Mock(),
             result=Mock(),
         )
 
@@ -69,6 +72,7 @@ class TestBasePipeline:
             preprocessor=Mock(),
             predictor=Mock(),
             visualizer=Mock(),
+            evaluator=Mock(),
             result=Mock(),
         )
 
@@ -85,6 +89,7 @@ class TestBasePipeline:
             preprocessor=Mock(),
             predictor=Mock(),
             visualizer=Mock(),
+            evaluator=Mock(),
             result=Mock(),
         )
         with pytest.raises(NotImplementedError):

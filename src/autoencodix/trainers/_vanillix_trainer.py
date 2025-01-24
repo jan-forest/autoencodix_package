@@ -49,7 +49,7 @@ class VanillixTrainer(BaseTrainer):
         trainset: Optional[BaseDataset],
         validset: Optional[Union[BaseDataset, None]],
         result: Result,
-        config: Optional[Union[None, DefaultConfig]],
+        config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
     ):
         # see _base_trainer.py for more details, handles input validation and reproducibility, sets up Fabric
@@ -174,7 +174,7 @@ class VanillixTrainer(BaseTrainer):
             shuffle=False,
             num_workers=self._config.n_workers,
         )
-        inference_loader = self._fabric.setup_dataloaders(inference_loader)
+        inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
         with self._fabric.autocast(), torch.no_grad():
             outputs = []
             for _, (data, _) in enumerate(inference_loader):

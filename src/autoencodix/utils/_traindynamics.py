@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, Any
 
 import numpy as np
 
@@ -33,7 +33,10 @@ class TrainingDynamics:
     )
 
     def add(
-        self, epoch: int, data: Optional[Union[float, np.ndarray]], split: str = "train"
+        self,
+        epoch: int,
+        data: Optional[Union[float, np.ndarray, Dict]],
+        split: str = "train",
     ) -> None:
         """
         Add a numpy array for a specific epoch and split.
@@ -64,9 +67,12 @@ class TrainingDynamics:
             self._data[epoch] = {}
         self._data[epoch][split] = data
 
-    def get(
-        self, epoch: Optional[int] = None, split: Optional[str] = None
-    ) -> Union[np.ndarray, Dict[str, np.ndarray], Dict[int, Dict[str, np.ndarray]]]:
+    def get(self, epoch: Optional[int] = None, split: Optional[str] = None) -> Union[
+        np.ndarray,
+        Dict[str, np.ndarray],
+        Dict[int, Dict[str, np.ndarray]],
+        Dict[Any, Any],
+    ]:
         """
         Retrieve stored numpy arrays with flexible filtering.
 
@@ -137,7 +143,7 @@ class TrainingDynamics:
 
     def __getitem__(
         self, key: Union[int, slice]
-    ) -> Union[np.ndarray, Dict[int, Dict[str, np.ndarray]]]:
+    ) -> Union[np.ndarray, Dict[int, Dict[str, np.ndarray]], Any]:
         """
         Allow dictionary-style and slice-based access.
 

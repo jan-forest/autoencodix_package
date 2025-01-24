@@ -10,6 +10,7 @@ from ._base_autoencoder import BaseAutoencoder
 from ._base_trainer import BaseTrainer
 from ._base_visualizer import BaseVisualizer
 from ._base_preprocessor import BasePreprocessor
+from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.utils._result import Result
@@ -95,10 +96,11 @@ class BasePipeline(abc.ABC):
         datasplitter_type: Type[DataSplitter],
         preprocessor: BasePreprocessor,
         visualizer: BaseVisualizer,
+        evaluator: Evaluator,
         result: Result,
-        config: Optional[Union[None, DefaultConfig]] = DefaultConfig(),
+        config: DefaultConfig = DefaultConfig(),
         custom_split: Optional[Dict[str, np.ndarray]] = None,
-        **kwargs,
+        **kwargs: dict,
     ) -> None:
         """
         Initialize the model interface.
@@ -120,6 +122,7 @@ class BasePipeline(abc.ABC):
         self._preprocessor = preprocessor
         self._visualizer = visualizer
         self._dataset_type = dataset_type
+        self._evaluator = evaluator
         self.result = result
         self._data_splitter = datasplitter_type(
             config=self.config, custom_splits=custom_split
@@ -138,7 +141,7 @@ class BasePipeline(abc.ABC):
     # config parameter will be self.config if not provided, decorator will handle this
     @config_method(valid_params={"config"})
     def preprocess(
-        self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
+        self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs: dict
     ) -> None:
         """
         Takes the user input data and filters, norrmalizes and cleans the data.
@@ -214,7 +217,7 @@ class BasePipeline(abc.ABC):
             trainset=self._datasets.train,
             validset=self._datasets.valid,
             result=self.result,
-            config=config,
+            config=self.config,
             model_type=self._model_type,
         )
         trainer_result = self._trainer.train()
@@ -263,7 +266,7 @@ class BasePipeline(abc.ABC):
         if data is not None:
             _, processed_data = self._preprocessor.preprocess(
                 data=data,
-                data_splitter=None,
+                data_splitter=self._data_splitter,
                 config=self.config,
                 dataset_type=self._dataset_type,
                 split=False,
@@ -273,6 +276,8 @@ class BasePipeline(abc.ABC):
                 data=input_data, model=self.result.model
             )
         else:
+            if self._datasets.test is None:
+                raise ValueError("No test data available for prediction")
             predictor_results = self._trainer.predict(
                 data=self._datasets.test, model=self.result.model
             )
@@ -282,7 +287,9 @@ class BasePipeline(abc.ABC):
     def evaluate(
         self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
     ) -> None:
-        pass
+        if config is None:
+            config = self.config
+        # Add your evaluation logic here
 
     @config_method(valid_params={"config"})
     def visualize(

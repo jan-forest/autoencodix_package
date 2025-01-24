@@ -15,7 +15,7 @@ class NumericDataset(BaseDataset):
     def __init__(
         self,
         data: torch.Tensor,
-        config: Optional[DefaultConfig],
+        config: DefaultConfig,
         ids: Optional[torch.Tensor] = None,
     ):
         """
@@ -29,6 +29,8 @@ class NumericDataset(BaseDataset):
             Optional labels for supervised learning
         """
         super().__init__(data=data, ids=ids, config=config)
+        if self.config is None:
+            raise ValueError("config cannot be None")
         dtype = self._map_float_precision_to_dtype(self.config.float_precision)
 
         # Convert or clone data to the specified dtype

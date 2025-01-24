@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, Union, Type
+from typing import Optional, Union, Type, List
 
 import torch
 from lightning_fabric import Fabric
@@ -64,8 +64,8 @@ class BaseTrainer(abc.ABC):
         self,
         trainset: Optional[BaseDataset],
         validset: Optional[Union[BaseDataset, None]],
-        result: Optional[Result],
-        config: Optional[Union[None, DefaultConfig]],
+        result: Result,
+        config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
     ):
         # passed attributes --------------------------
@@ -79,8 +79,10 @@ class BaseTrainer(abc.ABC):
         self._handle_reproducibility()
 
         # internal data handling ----------------------
+
+        self._model: BaseAutoencoder
         self._trainloader = DataLoader(
-            self._trainset,
+            self._trainset,  # type: ignore
             batch_size=self._config.batch_size,
             shuffle=True,  # best practice to shuffle in training
             num_workers=self._config.n_workers,
@@ -94,7 +96,8 @@ class BaseTrainer(abc.ABC):
             )
 
         # model and optimizer setup --------------------------------
-        self._input_dim = self._trainset.get_input_dim()
+        # type ignore because mypy does not understand that I use self._input_validation to ensure that self._trainset is not None
+        self._input_dim = self._trainset.get_input_dim()  # type: ignore
         self._init_model_architecture()
 
         self._fabric = Fabric(
@@ -111,9 +114,9 @@ class BaseTrainer(abc.ABC):
         )
 
         self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
-        self._trainloader = self._fabric.setup_dataloaders(self._trainloader)
+        self._trainloader = self._fabric.setup_dataloaders(self._trainloader)  # type: ignore
         if self._validset:
-            self._validloader = self._fabric.setup_dataloaders(self._validloader)
+            self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
         self._fabric.launch()
 
     def _input_validation(self):
@@ -151,7 +154,6 @@ class BaseTrainer(abc.ABC):
                 print("cpu not relevant here")
 
     def _init_model_architecture(self):
-
         self._model = self._model_type(config=self._config, input_dim=self._input_dim)
 
     @abc.abstractmethod
@@ -159,11 +161,17 @@ class BaseTrainer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def _capture_dynamics(self, epoch: int, model_output: torch.Tensor) -> None:
+    def _capture_dynamics(
+        self, epoch: int, model_output: List[ModelOutput], split: str
+    ) -> None:
+        pass
+
+    @abc.abstractmethod
+    def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
         pass
 
     @abc.abstractmethod
     def _loss_fn(
-        sefl, model_output: ModelOutput, targets: torch.Tensor
+        self, model_output: ModelOutput, targets: torch.Tensor
     ) -> torch.Tensor:
         pass

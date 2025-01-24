@@ -54,7 +54,7 @@ class BaseDataset(abc.ABC, Dataset):
             The sample and its label.
         """
         if self.ids is not None:
-            label = self.ids[index]
+            label = int(self.ids[index].item())
         else:
             label = index
         return self.data[index], label

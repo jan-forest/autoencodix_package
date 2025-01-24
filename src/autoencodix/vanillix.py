@@ -7,6 +7,7 @@ from anndata import AnnData  # type: ignore
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.base._base_trainer import BaseTrainer
+from autoencodix.base._base_visualizer import BaseVisualizer
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data._numeric_dataset import NumericDataset
@@ -53,7 +54,7 @@ class Vanillix(BasePipeline):
         dataset_type: Type[BaseDataset] = NumericDataset,
         model_type: Type[BaseAutoencoder] = VanillixArchitecture,
         preprocessor: Optional[Preprocessor] = None,
-        visualizer: Optional[Visualizer] = None,
+        visualizer: Optional[BaseVisualizer] = None,
         evaluator: Optional[Evaluator] = None,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,

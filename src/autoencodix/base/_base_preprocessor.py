@@ -1,5 +1,5 @@
 import abc
-from typing import List, Optional, Type, Union
+from typing import List, Optional, Type, Union, Tuple
 
 import numpy as np
 import pandas as pd
@@ -19,11 +19,11 @@ class BasePreprocessor(abc.ABC):
     def preprocess(
         self,
         data: Union[pd.DataFrame, AnnData, np.ndarray, List[np.ndarray]],
-        data_splitter: Optional[DataSplitter],
+        data_splitter: DataSplitter,
         config: Optional[DefaultConfig],
         dataset_type: Type,
         split: bool = True,
-    ) -> DatasetContainer:
+    ) -> Tuple[DatasetContainer, torch.Tensor]:
         """
         Main method of the class. Handles the following steps:
         1. align the data (in case we have multiple datasets with different sample ids)
@@ -71,21 +71,27 @@ class BasePreprocessor(abc.ABC):
         return t
 
     def _align_numpy_data(self, data: List[np.ndarray]) -> np.ndarray:
-        pass
+        # TODO
+        return np.array(data)
 
     def align_ann_data(self, data: AnnData) -> np.ndarray:
-        pass
+        # TODO
+        return np.array(data)
 
     def _extract_metadata_pandas(
         self, data: Union[pd.DataFrame, AnnData]
     ) -> np.ndarray:
-        pass
+        # TODO
+        return np.array(data)
 
     def _extract_metadata_anndata(self, data: AnnData) -> np.ndarray:
-        pass
+        # TODO
+        return np.array(data)
 
     def _extract_metadata_numpy(self, data: np.ndarray) -> np.ndarray:
         self._ids = None  # TODO
+        # TODO
+        return np.array(data)
 
     def _build_datasets(self) -> None:
         """

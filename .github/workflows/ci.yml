@@ -8,7 +8,8 @@ on:
       - main
   schedule:
     - cron: '0 12 * * 1'  # Weekly Monday at 12 UTC
-
+env:
+  UV_SYSTEM_PYTHON: 1
 jobs:
   test-all-os:
     name: "Test: Python ${{ matrix.python }} on ${{ matrix.os }}"

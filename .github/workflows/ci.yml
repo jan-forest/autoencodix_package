@@ -7,7 +7,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 12 * *1'  # Weekly Monday at 12 UTC
+    - cron: '0 12 * * 1'  # Weekly Monday at 12 UTC
 
 jobs:
   test-all-os:

@@ -16,8 +16,8 @@
 - git or gh
 ## Installation
 - `gh repo clone MaxJoas/autoencodix_package`
-- uv venv --python 3.10
-- source .venv/bin/activate
+- `uv venv --python 3.10`
+- `source .venv/bin/activate`
 - `uv pip install -e '.[dev]'`
 
 ## Sample Usage
@@ -34,6 +34,76 @@ result_object = van.run()
 - for more infos please read our `DEVELOPMENT.md`
 - for more details on usage and how to contribute notebook `notebooks/0.0-mj-sandbox.ipynb` might be helpful.
 
+## Structure
+```
+src
+|-- autoencodix
+|   |-- base
+|   |   |-- __init__.py
+|   |   |-- _base_autoencoder.py
+|   |   |-- _base_dataset.py
+|   |   |-- _base_evaluator.py
+|   |   |-- _base_pipeline.py
+|   |   |-- _base_predictor.py
+|   |   |-- _base_preprocessor.py
+|   |   |-- _base_trainer.py
+|   |   |-- _base_visualizer.py
+|   |-- data
+|   |   |-- __init__.py
+|   |   |-- _datasetcontainer.py
+|   |   |-- _datasplitter.py
+|   |   |-- _numeric_dataset.py
+|   |   `-- preprocessor.py
+|   |-- evaluate
+|   |   |-- __init__.py
+|   |   `-- evaluate.py
+|   |-- modeling
+|   |   |-- __init__.py
+|   |   |-- _layer_factory.py
+|   |   `-- _vanillix_architecture.py
+|   |-- trainers
+|   |   |-- __init__.py
+|   |   |-- _vanillix_trainer.py
+|   |   `-- predictor.py
+|   |-- utils
+|   |   |-- __init__.py
+|   |   |-- _model_output.py
+|   |   |-- _result.py
+|   |   |-- _traindynamics.py
+|   |   |-- _utils.py
+|   |   `-- default_config.py
+|   |-- visualize
+|   |   |-- __init__.py
+|   |   `-- visualize.py
+|   |-- __init__.py
+|   |-- py.typed
+|   `-- vanillix.py
+`-- __init__.py
+tests
+|-- test_base
+|   |-- test_base_autoencoder.py
+|   |-- test_base_dataset.py
+|   |-- test_base_pipeline.py
+|   `-- test_base_trainer.py
+|-- test_data
+|   |-- test_datasetcontainer.py
+|   |-- test_datasplitter.py
+|   `-- test_numericdataset.py
+|-- test_evaluate
+|-- test_modelling
+|   |-- test_layer_factory.py
+|   `-- test_vanillix_architecture.py
+|-- test_trainers
+|   `-- test_vanillix_trainer.py
+`-- test_utils
+    |-- test_default_config.py
+    |-- test_modeloutput.py
+    |-- test_result.py
+    |-- test_traindynamics.py
+    `-- test_utils.py
+
+
+```
 ## License
 
 Copyright [2024] [Maximilian Josef Joas & Jan Ewald, ScaDS.AI, Leipzig University]

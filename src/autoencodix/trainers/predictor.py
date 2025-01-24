@@ -10,5 +10,5 @@ class Predictor:
         pass
 
     def predict(self, data: Optional[BaseDataset], model: torch.nn.Module) -> Result:
-        
+
         return Result()

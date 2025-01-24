@@ -91,7 +91,9 @@ class TestIntegrationDatasetContainer:
     @pytest.fixture
     def real_filled_container(self, real_dataset):
         """Provides a fully populated container to test operations on complete sets."""
-        return DatasetContainer(train=real_dataset, valid=real_dataset, test=real_dataset)
+        return DatasetContainer(
+            train=real_dataset, valid=real_dataset, test=real_dataset
+        )
 
     def test_integration_with_real_dataset(self, real_filled_container, real_dataset):
         """Verify compatibility with actual BaseDataset instances."""

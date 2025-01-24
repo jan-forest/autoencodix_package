@@ -1,8 +1,10 @@
 import torch
 from autoencodix.utils._model_output import ModelOutput
+
 """
 One assert per test does not really make sense for this class (dataclass) as it is just a container for data.
 """
+
 
 def test_model_output_initialization():
     batch_size, features = 32, 10

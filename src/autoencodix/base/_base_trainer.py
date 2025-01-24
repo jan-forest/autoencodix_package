@@ -16,8 +16,8 @@ from autoencodix.utils.default_config import DefaultConfig
 # write tests: done
 class BaseTrainer(abc.ABC):
     """
-    Abstract base class for all trainer implementations. It sets up the general components 
-    needed for training, such as the model, optimizer, and data loaders. Additionally, 
+    Abstract base class for all trainer implementations. It sets up the general components
+    needed for training, such as the model, optimizer, and data loaders. Additionally,
     it provides the structure for handling reproducibility and model-specific configurations.
 
     Attributes
@@ -59,6 +59,7 @@ class BaseTrainer(abc.ABC):
         Initializes the model architecture based on the configuration.
 
     """
+
     def __init__(
         self,
         trainset: Optional[BaseDataset],

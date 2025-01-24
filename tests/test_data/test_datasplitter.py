@@ -3,6 +3,7 @@ import numpy as np
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.data._datasplitter import DataSplitter
 
+
 class TestDataSplitter:
     # FIXTURES --------------------------------------------------------------------
     # -----------------------------------------------------------------------------
@@ -26,23 +27,31 @@ class TestDataSplitter:
     # TESTS -----------------------------------------------------------------------
     # -----------------------------------------------------------------------------
     # basic split sizes -----------------------------------------------------------
-    def test_train_split_has_correct_size(self, default_splitter, sample_data, default_config):
+    def test_train_split_has_correct_size(
+        self, default_splitter, sample_data, default_config
+    ):
         splits = default_splitter.split(sample_data)
         expected_len = default_config.train_ratio * len(sample_data)
         assert len(splits["train"]) == expected_len
 
-    def test_validation_split_has_correct_size(self, default_config, sample_data, default_splitter):
+    def test_validation_split_has_correct_size(
+        self, default_config, sample_data, default_splitter
+    ):
         splits = default_splitter.split(sample_data)
         expected_len = default_config.valid_ratio * len(sample_data)
         assert len(splits["valid"]) == expected_len
 
-    def test_test_split_has_correct_size(self, default_config, sample_data, default_splitter):
+    def test_test_split_has_correct_size(
+        self, default_config, sample_data, default_splitter
+    ):
         splits = default_splitter.split(sample_data)
         expected_len = default_config.test_ratio * len(sample_data)
         assert len(splits["test"]) == expected_len
 
     # basic overlap checks --------------------------------------------------------
-    def test_train_and_validation_splits_do_not_overlap(self, sample_data, default_splitter):
+    def test_train_and_validation_splits_do_not_overlap(
+        self, sample_data, default_splitter
+    ):
         splits = default_splitter.split(sample_data)
         assert len(set(splits["train"]) & set(splits["valid"])) == 0
 
@@ -50,7 +59,9 @@ class TestDataSplitter:
         splits = default_splitter.split(sample_data)
         assert len(set(splits["train"]) & set(splits["test"])) == 0
 
-    def test_validation_and_test_splits_do_not_overlap(self, sample_data, default_splitter):
+    def test_validation_and_test_splits_do_not_overlap(
+        self, sample_data, default_splitter
+    ):
         splits = default_splitter.split(sample_data)
         assert len(set(splits["valid"]) & set(splits["test"])) == 0
 
@@ -94,7 +105,9 @@ class TestDataSplitter:
     def custom_splitter(self, default_config, sample_data):
         split = {
             "train": np.arange(int(len(sample_data) * 0.6)),
-            "valid": np.arange(int(len(sample_data)) * 0.6, int(len(sample_data) * 0.70)),
+            "valid": np.arange(
+                int(len(sample_data)) * 0.6, int(len(sample_data) * 0.70)
+            ),
             "test": np.arange(int(len(sample_data) * 0.70), len(sample_data)),
         }
         splitter = DataSplitter(config=default_config, custom_splits=split)

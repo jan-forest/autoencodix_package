@@ -147,7 +147,7 @@ class TestTrainingDynamicsUnit:
 
     @pytest.mark.parametrize("data", [1.0, 0.5, 0.0, 3, 1000000, 0.0000001])
     def test_data_conversion(self, dynamics, data):
-        dynamics.add(epoch=0, data=data, split="train") 
+        dynamics.add(epoch=0, data=data, split="train")
         retrieved_dynamics = dynamics.get(0, "train")
         print(retrieved_dynamics)
         # retrieved_data = retrieved_dynamics[0]["train"]
@@ -156,4 +156,3 @@ class TestTrainingDynamicsUnit:
     def test_add_invalid_split(self, dynamics):
         with pytest.raises(KeyError):
             dynamics.add(0, np.array([0.1, 0.2]), "invalid")
-

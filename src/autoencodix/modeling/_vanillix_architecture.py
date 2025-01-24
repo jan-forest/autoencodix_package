@@ -9,6 +9,7 @@ from autoencodix.utils.default_config import DefaultConfig
 
 from ._layer_factory import LayerFactory
 
+
 # internal check done
 # write tests: done
 class VanillixArchitecture(BaseAutoencoder):

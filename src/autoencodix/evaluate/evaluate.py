@@ -1,5 +1,6 @@
 from autoencodix.utils._result import Result
 
+
 # internal check done
 # write tests: TODO
 class Evaluator:

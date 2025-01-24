@@ -8,6 +8,7 @@ dependencies = [
     "lightning-fabric>=2.5.0.post0",
     "matplotlib>=3.9.4",
     "numpy>=2.0.2",
+    "pandas-stubs>=2.2.2.240807",
     "pandas>=2.2.3",
     "pydantic>=2.10.6",
     "pyyaml>=6.0.2",

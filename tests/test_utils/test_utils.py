@@ -46,7 +46,6 @@ class TestConfigMethod:
         result = mock_class.mock_config_method(epochs=123)
         assert result["config"].epochs == 123
 
-    
     def test_invalid_default_config_params(self, mock_class):
         """
         Special case, when we allowed a keyword argument in a config_method

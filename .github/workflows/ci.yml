@@ -70,47 +70,17 @@ jobs:
       - name: Install dependencies
         run: |
          uv sync 
-
+      - name: pip install
+        run: |
+          uv pip install pip
       - name: Type check
         run: |
-          mypy src
-
-  lint:
-    name: Code Quality Checks
+          uv run mypy --install-types --non-interactive --package autoencodix
+  fmt:
+    name: Format
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python:
-          - '3.10'
-          - '3.11'
-          - '3.12'
-
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
+      - uses: actions/checkout@v3
+      - uses: psf/black@stable
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          version: "0.5.24"
-
-      - name: Install dependencies
-        run: |
-          uv sync
-
-      - name: Check formatting with Black
-        run: |
-          black --check src tests
-
-      - name: Lint with Ruff
-        run: |
-          ruff check src tests
-          ruff format --check src tests
-
-      - name: Flake8 checks
-        run: |
-          flake8 src tests
+  

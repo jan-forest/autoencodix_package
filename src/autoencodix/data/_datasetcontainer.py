@@ -2,6 +2,7 @@ from typing import Optional, Union
 from dataclasses import dataclass
 from autoencodix.base._base_dataset import BaseDataset
 
+
 # internal check done
 # write tests: done
 @dataclass
@@ -22,7 +23,6 @@ class DatasetContainer:
     train: Optional[Union[BaseDataset, None]] = None
     valid: Optional[Union[BaseDataset, None]] = None
     test: Optional[Union[BaseDataset, None]] = None
-
 
     def __getitem__(self, key: str) -> BaseDataset:
         """Allows dictionary-like access to datasets."""

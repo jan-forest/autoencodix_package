@@ -1,6 +1,7 @@
 import torch.nn as nn
 from typing import List
 
+
 # internal check done
 # write tests unit: done
 # write tests integration (do together with architectures)
@@ -9,16 +10,14 @@ class LayerFactory:
     """
     Factory for creating configurable neural network layers.
     """
+
     @staticmethod
     def get_layer_dimensions(
-        feature_dim: int, 
-        latent_dim: int, 
-        n_layers: int, 
-        enc_factor: float
+        feature_dim: int, latent_dim: int, n_layers: int, enc_factor: float
     ) -> List[int]:
         """
         Calculate progressive layer dimensions.
-        
+
         Parameters
         ----------
         feature_dim : int
@@ -29,7 +28,7 @@ class LayerFactory:
             Number of layers
         enc_factor : float
             Reduction factor for layer sizes
-        
+
         Returns
         -------
         List[int]
@@ -42,17 +41,17 @@ class LayerFactory:
             layer_dimensions.append(next_layer_size)
         layer_dimensions.append(latent_dim)
         return layer_dimensions
-    
+
     @staticmethod
     def create_layer(
-        in_features: int, 
-        out_features: int, 
+        in_features: int,
+        out_features: int,
         dropout_p: float = 0.1,
-        last_layer: bool = False
+        last_layer: bool = False,
     ) -> List[nn.Module]:
         """
         Create a configurable layer with optional components.
-        
+
         Parameters
         ----------
         in_features : int
@@ -63,7 +62,7 @@ class LayerFactory:
             Dropout probability, by default 0.1
         last_layer : bool, optional
             Flag to skip activation/dropout for final layer, by default False
-        
+
         Returns
         -------
         List[nn.Module]
@@ -71,10 +70,10 @@ class LayerFactory:
         """
         if last_layer:
             return [nn.Linear(in_features, out_features)]
-        
+
         return [
             nn.Linear(in_features, out_features),
             nn.BatchNorm1d(out_features),
             nn.Dropout(dropout_p),
-            nn.ReLU()
+            nn.ReLU(),
         ]

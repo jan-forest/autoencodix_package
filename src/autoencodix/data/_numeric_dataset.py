@@ -34,7 +34,6 @@ class NumericDataset(BaseDataset):
         # Convert or clone data to the specified dtype
         self.data = self._to_tensor(data, dtype)
 
-
     @staticmethod
     def _to_tensor(tensor: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:
         """

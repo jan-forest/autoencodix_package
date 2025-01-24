@@ -21,8 +21,10 @@ class TestNumericDataset:
         return NumericDataset(data=data, config=default_config, ids=labels)
 
     def test_dataset_length(self, dataset, dummy_data):
-        data, _ = dummy_data 
-        assert len(dataset.data) == len(data), "Dataset length should match data length."
+        data, _ = dummy_data
+        assert len(dataset.data) == len(
+            data
+        ), "Dataset length should match data length."
 
     def test_float_precision(self, dummy_data, default_config):
         data, labels = dummy_data

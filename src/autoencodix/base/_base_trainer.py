@@ -6,6 +6,7 @@ from lightning_fabric import Fabric
 from torch.utils.data import DataLoader
 
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.utils._model_output import ModelOutput
 from autoencodix.utils._result import Result
@@ -32,6 +33,7 @@ class BaseTrainer(abc.ABC):
         Configuration object containing training hyperparameters and settings.
     _model_type : Type[BaseAutoencoder]
         The autoencoder model class to be trained.
+    _loss_fn : Type[BaseLoss], instantiated specific loss_fn for the corresponding model
     _trainloader : DataLoader
         DataLoader for the training dataset.
     _validloader : Optional[DataLoader]
@@ -67,6 +69,7 @@ class BaseTrainer(abc.ABC):
         result: Result,
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
+        loss_type: Type[BaseLoss],
     ):
         # passed attributes --------------------------
         self._trainset = trainset
@@ -78,6 +81,7 @@ class BaseTrainer(abc.ABC):
         self._input_validation()
         self._handle_reproducibility()
 
+        self._loss_fn = loss_type(config=self._config)
         # internal data handling ----------------------
 
         self._model: BaseAutoencoder
@@ -168,10 +172,4 @@ class BaseTrainer(abc.ABC):
 
     @abc.abstractmethod
     def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
-        pass
-
-    @abc.abstractmethod
-    def _loss_fn(
-        self, model_output: ModelOutput, targets: torch.Tensor
-    ) -> torch.Tensor:
         pass

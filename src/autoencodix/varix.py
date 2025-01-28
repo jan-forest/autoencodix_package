@@ -125,7 +125,7 @@ def sample_latent_space(self, split: str = "test", epoch: int = -1) -> torch.Ten
         epoch: int - The epoch to sample from, default is the last epoch (-1)
     Returns:
         z: torch.Tensor - The sampled latent space points
-    
+
     """
     if self._model is None:
         raise ValueError("Model is not trained yet. Please train the model first.")

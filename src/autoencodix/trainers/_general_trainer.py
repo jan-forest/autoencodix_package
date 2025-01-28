@@ -1,4 +1,5 @@
 from typing import Optional, Union, Type, List
+from collections import defaultdict
 
 import torch
 from torch.utils.data import DataLoader
@@ -63,22 +64,33 @@ class GeneralTrainer(BaseTrainer):
                 valid_outputs = []
                 self._model.train()
                 epoch_loss = 0.0
-                epoch_sub_losses = []
-                valid_epoch_sub_losses = []
+                epoch_sub_losses = defaultdict(lambda: 0.0)
+                valid_epoch_sub_losses = defaultdict(lambda: 0.0)
                 for _, (features, _) in enumerate(self._trainloader):
                     self._optimizer.zero_grad()
                     model_outputs = self._model(features)
-                    loss, sub_losses = self._loss_fn(model_output=model_outputs, targets=features)
+                    loss, sub_losses = self._loss_fn(
+                        model_output=model_outputs, targets=features
+                    )
                     self._fabric.backward(loss)
                     self._optimizer.step()
-                    epoch_sub_losses.append(sub_losses)
                     epoch_loss += loss.item()
                     train_outputs.append(model_outputs)
-                sum_sub_losses= {k: torch.sum(torch.stack([x[k] for x in epoch_sub_losses])) for k in epoch_sub_losses[0].keys()}
+                    for k, v in sub_losses.items():
+                        epoch_sub_losses[k] += v.item()
+                # loss per epoch savving -----------------------------------
                 self._result.losses.add(
                     epoch=epoch, split="train", data=epoch_loss / len(self._trainloader)
                 )
-
+                self._result.sub_losses.add(
+                    epoch=epoch,
+                    split="train",
+                    data={
+                        k: v / len(self._trainloader)
+                        for k, v in epoch_sub_losses.items()
+                    },
+                )
+                # validation loss per epoch ---------------------------------
                 if self._validset:
                     self._model.eval()
                     with torch.no_grad():
@@ -90,11 +102,20 @@ class GeneralTrainer(BaseTrainer):
                             )
                             valid_loss += loss.item()
                             valid_outputs.append(valid_model_outputs)
-                            valid_epoch_sub_losses.append(sub_losses)
+                            for k, v in sub_losses.items():
+                                valid_epoch_sub_losses[k] += v.item()
                     self._result.losses.add(
                         epoch=epoch,
                         split="valid",
                         data=valid_loss / len(self._validloader),
+                    )
+                    self._result.sub_losses.add(
+                        epoch=epoch,
+                        split="valid",
+                        data={
+                            k: v / len(self._validloader)
+                            for k, v in valid_epoch_sub_losses.items()
+                        },
                     )
 
                 if not (epoch + 1) % self._config.checkpoint_interval:

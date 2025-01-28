@@ -28,7 +28,6 @@ class ModelOutput:
 
     reconstruction: torch.Tensor
     latentspace: torch.Tensor
-    z: Optional[torch.Tensor] = None
     latent_mean: Optional[torch.Tensor] = None
     latent_logvar: Optional[torch.Tensor] = None
     additional_info: Optional[dict] = None

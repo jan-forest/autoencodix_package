@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 
 import torch
 
@@ -8,8 +8,29 @@ from autoencodix.data import DatasetContainer
 from ._traindynamics import TrainingDynamics
 
 
-# internal check done
-# write tests: done
+@dataclass
+class LossRegistry:
+    _losses: Dict[str, TrainingDynamics] = field(default_factory=dict)
+
+    def add(self, data: Dict[str, torch.Tensor], split: str, epoch: int) -> None:
+        for key, value in data.items():
+            if key not in self._losses:
+                self._losses[key] = TrainingDynamics()
+            self._losses[key].add(epoch=epoch, data=value, split=split)
+
+    def get(self, key: str) -> TrainingDynamics:
+        return self._losses[key]
+
+    def losses(self):
+        return self._losses.items()
+
+    def set(self, key: str, value: TrainingDynamics) -> None:
+        self._losses[key] = value
+
+    def keys(self):
+        return self._losses.keys()
+
+
 @dataclass
 class Result:
     """
@@ -25,7 +46,11 @@ class Result:
     sigmas : TrainingDynamics
         Stores standard deviations of latent distributions for 'train', 'valid', and 'test' splits.
     losses : TrainingDynamics
-        Stores loss values for various metrics (e.g., 'recon') and splits ('train', 'valid', 'test').
+        Stores the total loss for different epochs and splits ('train', 'valid', 'test').
+    recon_losses : TrainingDynamics
+        Stores the reconstruction loss for different epochs and splits ('train', 'valid', 'test').
+    var_losses : TrainingDynamics
+        Stores the variational i.e. kl divergence loss for different epochs and splits ('train', 'valid', 'test').
     """
 
     latentspaces: TrainingDynamics = field(default_factory=TrainingDynamics)
@@ -33,6 +58,7 @@ class Result:
     mus: TrainingDynamics = field(default_factory=TrainingDynamics)
     sigmas: TrainingDynamics = field(default_factory=TrainingDynamics)
     losses: TrainingDynamics = field(default_factory=TrainingDynamics)
+    sub_losses: LossRegistry = field(default_factory=LossRegistry)
     preprocessed_data: torch.Tensor = field(default_factory=torch.Tensor)
     model: torch.nn.Module = field(default_factory=torch.nn.Module)
     model_checkpoints: TrainingDynamics = field(default_factory=TrainingDynamics)
@@ -93,6 +119,10 @@ class Result:
             return sum(p.numel() for p in value.parameters()) == 0
         elif isinstance(value, DatasetContainer):
             return all(v is None for v in [value.train, value.valid, value.test])
+        elif isinstance(value, LossRegistry):
+            # single Nones are handled in update method (skipped)
+            return all(v is None for _, v in value.losses())
+
         return False
 
     def update(self, other: "Result") -> None:
@@ -122,15 +152,30 @@ class Result:
 
             # Handle TrainingDynamics - merge data
             if isinstance(current_value, TrainingDynamics):
-                for epoch, split_data in other_value._data.items():
-                    for split, value in split_data.items():
-                        current_value.add(
-                            epoch=epoch, data=value, split=split
-                        )  # overwrites if already exists
-
+                current_value = self._update_traindynamics(current_value, other_value)
             # For all other types - replace with other value
+            if isinstance(current_value, LossRegistry):
+                for key, value in other_value.losses():
+                    if value is None:
+                        continue
+                    if not isinstance(value, TrainingDynamics):
+                        raise ValueError(
+                            f"Expected TrainingDynamics object, got {type(value)}"
+                        )
+                    updated_dynamic = self._update_traindynamics(
+                        current_value=current_value.get(key=key), other_value=value
+                    )
+                    current_value.set(key=key, value=updated_dynamic)
             else:
                 setattr(self, field_name, other_value)
+
+    def _update_traindynamics(self, current_value, other_value):
+        for epoch, split_data in other_value._data.items():
+            for split, value in split_data.items():
+                current_value.add(
+                    epoch=epoch, data=value, split=split
+                )  # overwrites if already exists
+        return current_value
 
     def __str__(self) -> str:
         """

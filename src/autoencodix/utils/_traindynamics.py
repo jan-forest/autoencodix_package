@@ -126,12 +126,17 @@ class TrainingDynamics:
             # Case 1b: No split specified - return complete data dictionary
             return self._data
 
+        # we need the not in self._data check here, because in the predict step we save
+        # the model outputs with epoch -1
+        if epoch < 0 and epoch not in self._data:
+            # -1 equals to the highest epoch, -2 to the second highest, etc.
+            epoch = max(self._data.keys()) + (epoch + 1)
         # Case 2: Epoch specified
         if epoch not in self._data:
             if split is not None:
                 return np.array([])
             return {}
-
+        # handle reverse indexing
         epoch_data = self._data[epoch]
 
         # Case 2a: No split specified - return all splits for epoch

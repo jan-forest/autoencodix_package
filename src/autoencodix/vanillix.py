@@ -5,6 +5,7 @@ import pandas as pd
 from anndata import AnnData  # type: ignore
 
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.base._base_visualizer import BaseVisualizer
@@ -14,9 +15,10 @@ from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.preprocessor import Preprocessor
 from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
-from autoencodix.trainers._vanillix_trainer import VanillixTrainer
+from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.utils._losses import VanillixLoss
 from autoencodix.visualize.visualize import Visualizer
 
 
@@ -35,7 +37,7 @@ class Vanillix(BasePipeline):
         Preprocessor object to preprocess the input data (custom for Vanillix)
     _visualizer : Visualizer
         Visualizer object to visualize the model output (custom for Vanillix)
-    _trainer : VanillixTrainer
+    _trainer : GeneralTrainer
         Trainer object that trains the model (custom for Vanillix)
     _evaluator : Evaluator
         Evaluator object that evaluates the model performance or downstream tasks (custom for Vanillix)
@@ -50,9 +52,10 @@ class Vanillix(BasePipeline):
     def __init__(
         self,
         data: Union[np.ndarray, AnnData, pd.DataFrame],
-        trainer_type: Type[BaseTrainer] = VanillixTrainer,
+        trainer_type: Type[BaseTrainer] = GeneralTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
         model_type: Type[BaseAutoencoder] = VanillixArchitecture,
+        loss_type: Type[BaseLoss] = VanillixLoss,
         preprocessor: Optional[Preprocessor] = None,
         visualizer: Optional[BaseVisualizer] = None,
         evaluator: Optional[Evaluator] = None,
@@ -70,10 +73,11 @@ class Vanillix(BasePipeline):
         ----------
         data : Union[np.ndarray, AnnData, pd.DataFrame]
             Input data to be processed
-        trainer_type : Type[BaseTrainer], optional
-            Type of trainer to be instantiated during fit step, default is VanillixTrainer
-        dataset_type : Type[BaseDataset], optional
+        trainer_type : Type[BaseTrainer]
+            Type of trainer to be instantiated during fit step, default is GeneralTrainer
+        dataset_type : Type[BaseDataset]
             Type of dataset to be instantiated post-preprocessing, default is NumericDataset
+        loss_type : Type[BaseLoss], which loss to use for Vanillix, default is VanillaAutoencoderLoss
         preprocessor : Optional[Preprocessor]
             For data preprocessing, default creates new Preprocessor
         visualizer : Optional[Visualizer]
@@ -94,6 +98,7 @@ class Vanillix(BasePipeline):
             dataset_type=dataset_type,
             trainer_type=trainer_type,
             model_type=model_type,
+            loss_type=loss_type,
             preprocessor=preprocessor or Preprocessor(),
             visualizer=visualizer or Visualizer(),
             evaluator=evaluator or Evaluator(),

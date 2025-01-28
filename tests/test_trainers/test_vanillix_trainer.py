@@ -1,15 +1,16 @@
 import pytest
 import numpy as np
 import torch
-from autoencodix.trainers._vanillix_trainer import VanillixTrainer
+from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.utils._losses import VanillixLoss
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
 
 
-class TestVanillixTrainerIntegration:
+class TestGeneralTrainerIntegration:
     @pytest.fixture
     def default_config(self):
         return DefaultConfig(epochs=1, checkpoint_interval=1, device="cpu")
@@ -42,18 +43,21 @@ class TestVanillixTrainerIntegration:
     def vanillix_trainer(
         self, train_dataset, valid_dataset, default_config, filled_result
     ):
-        return VanillixTrainer(
+        return GeneralTrainer(
             trainset=train_dataset,
             validset=valid_dataset,
             result=filled_result,
             config=default_config,
             model_type=VanillixArchitecture,
+            loss_type=VanillixLoss,
         )
 
     def test_train(self, vanillix_trainer):
         result = vanillix_trainer.train()
         assert result is not None, "Training should return a Result object."
-        assert len(result.losses.get("train")) == len(result.losses.get("valid"))
+        assert len(result.losses.get(split="train")) == len(
+            result.losses.get(split="valid")
+        )
 
     def test_result_not_overwritten(self, vanillix_trainer, filled_result):
 
@@ -68,7 +72,7 @@ class TestVanillixTrainerIntegration:
 
     @pytest.mark.parametrize("devices", ["cpu", "cuda", "mps"])
     def test_reproducible(self, vanillix_trainer, devices):
-        # if device not available, skip test
+        # if device not available, skip tes
         if not torch.cuda.is_available() and devices == "cuda":
             pytest.skip("CUDA not available.")
         if not torch.backends.mps.is_available and devices == "mps":
@@ -78,12 +82,12 @@ class TestVanillixTrainerIntegration:
         )
         vanillix_trainer.config = config
         result1 = vanillix_trainer.train()
-        train_loss1 = result1.losses.get("train")
-        reconstructed_data1 = result1.reconstructions.get("train")
+        train_loss1 = result1.losses.get(split="train")
+        reconstructed_data1 = result1.reconstructions.get(split="train")
 
         result2 = vanillix_trainer.train()
-        train_losses2 = result2.losses.get("train")
-        reconstructed_data2 = result2.reconstructions.get("train")
+        train_losses2 = result2.losses.get(split="train")
+        reconstructed_data2 = result2.reconstructions.get(split="train")
         assert np.array_equal(
             train_loss1, train_losses2
         ), "Training should be reproducible."

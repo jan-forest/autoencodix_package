@@ -53,6 +53,13 @@ class DefaultConfig(BaseModel):
     default_vae_loss: Literal["kl"] = Field(
         default="kl", description="Type of VAE loss"
     )
+    loss_reduction: Literal["sum", "mean"] = Field(
+        default="mean",
+        description="Loss reduction in PyTorch i.e in torch.nn.functional.binary_cross_entropy_with_logits(reduction=loss_reduction)",
+    )
+    beta: float = Field(
+        default=0.1, ge=0, description="Beta weighting factor for VAE loss"
+    )
     min_samples_per_split: int = Field(
         default=1, ge=1, description="Minimum number of samples per split"
     )

@@ -10,6 +10,7 @@ from ._base_autoencoder import BaseAutoencoder
 from ._base_trainer import BaseTrainer
 from ._base_visualizer import BaseVisualizer
 from ._base_preprocessor import BasePreprocessor
+from ._base_loss import BaseLoss
 from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
@@ -25,9 +26,9 @@ class BasePipeline(abc.ABC):
     Abstract base class defining the interface for all models.
 
     This class provides the methods for preprocessing, training, predicting,
-    visualizing, and evaluating (former ml_task step) models.
-    Subclasses should perform steps like the parent class
-    but has custom attribute e.g Processor, Trainer, Evaluator, Visualizer.
+    visualizing, and evaluating models. Subclasses should perform steps similar
+    to the parent class but include custom attributes such as Processor, Trainer,
+    Evaluator, and Visualizer.
 
     Attributes
     ----------
@@ -36,30 +37,41 @@ class BasePipeline(abc.ABC):
         other settings.
     data : Union[np.ndarray, AnnData, pd.DataFrame]
         User input data.
-    data_splitter : Optional[DataSplitter]:
-        returns train, valid, test indices, user can provide custom splitter
+    data_splitter : Optional[DataSplitter]
+        Returns train, validation, and test indices; users can provide a custom splitter.
     result : Result
-        dataclass to store all results from the pipeline.
+        Dataclass to store all results from the pipeline.
     _features : Optional[torch.Tensor]
-        The preprocessed data, output of former make_data.
+        The preprocessed data, output of the former `make_data`.
     _preprocessor : Optional[Preprocessor]
-        The preprocessor ffilters, scales, matches and cleans the data.
+        The preprocessor filters, scales, matches, and cleans the data.
         Specific implementations for this will be used in subclasses.
-    _datasets: Optional[DatasetContainer]
-        data in form of Dataset classes after splitting, basically self._features wrapped in a
-        Dataset class and split into train, valid and test datasets.
+    _datasets : Optional[DatasetContainer]
+        Data in the form of Dataset classes after splitting; essentially, self._features
+        wrapped in a Dataset class and split into train, validation, and test datasets.
     _trainer : Optional[Trainer]
-        Trainer object with train method to train actual model weights.
+        Trainer object with a `train` method to train model weights.
         Each subclass will have its own Trainer class.
     _evaluator : Optional[Evaluator]
-        TODO write docs when actual implementation is done (now only mock).
+        Object responsible for evaluating model performance.
+        Currently a placeholder, with detailed implementation pending.
     _visualizer : Optional[Visualizer]
-        TODO write docs when actual implementation is done (now only mock).
-    _dataset_class: Type[BaseDataset]
-        Used to use the methods from the parent class in the child classes with the correct type.
-    _trainer_class: Type[BaseTrainer]
-        Used to use the methods from the parent class in the child classes with the correct type.
-
+        Object responsible for visualizing results.
+        Currently a placeholder, with detailed implementation pending.
+    _dataset_type : Type[BaseDataset]
+        Used to ensure correct dataset class type when overriding methods in subclasses.
+    _trainer_type : Type[BaseTrainer]
+        Used to ensure correct trainer class type when overriding methods in subclasses.
+    _model_type : Type[BaseAutoencoder]
+        Specifies the model architecture used in the pipeline.
+    _loss_type : Type[BaseLoss]
+        Specifies the loss function used during training.
+    _visualizer : BaseVisualizer
+        Visualizer instance responsible for generating visual outputs.
+    custom_split : Optional[Dict[str, np.ndarray]]
+        Allows users to provide a custom data split for training, validation, and testing.
+    _data_splitter : DataSplitter
+        The instance of the DataSplitter used for dividing data into training, validation, and testing sets.
 
     Methods
     -------
@@ -67,25 +79,23 @@ class BasePipeline(abc.ABC):
         Calls the Preprocessor instance to preprocess the data. Updates the self._features attribute.
         Populates the self.results attribute with self._features and self._datasets.
     fit(*kwargs):
-        Calls the Trainer instance to train the model on the with training and validation data of self._datasets.
+        Calls the Trainer instance to train the model on the training and validation data of self._datasets.
         Populates the self.results attribute with the trained model and training dynamics and results.
     predict(*kwargs):
-        Calls the predict method of the Trainer instance to run inference with the test data on the trained model.
+        Calls the `predict` method of the Trainer instance to run inference with the test data on the trained model.
         If user inputs data, it preprocesses the data and runs inference.
         Updates the result attribute.
     evaluate(*kwargs):
-        Calls the Evaluator instance to evaluate the model performane in downstream tasks.
+        Calls the Evaluator instance to evaluate the model performance in downstream tasks.
         Updates the result attribute.
     visualize(*kwargs):
         Calls the Visualizer instance to visualize all relevant data in the result attribute.
     show_result():
-        Helper Function to directly show the visualized results.
+        Helper function to directly show the visualized results.
     run():
         Runs the entire pipeline in the following order: preprocess, fit, predict, evaluate, visualize.
         Updates the result attribute.
     """
-
-    # needed for the predict function to be able to use a child of BaseDataset in subclasses
 
     def __init__(
         self,
@@ -93,6 +103,7 @@ class BasePipeline(abc.ABC):
         dataset_type: Type[BaseDataset],
         trainer_type: Type[BaseTrainer],
         model_type: Type[BaseAutoencoder],
+        loss_type: Type[BaseLoss],
         datasplitter_type: Type[DataSplitter],
         preprocessor: BasePreprocessor,
         visualizer: BaseVisualizer,
@@ -119,6 +130,7 @@ class BasePipeline(abc.ABC):
         self.config = config
         self._trainer_type = trainer_type
         self._model_type = model_type
+        self._loss_type = loss_type
         self._preprocessor = preprocessor
         self._visualizer = visualizer
         self._dataset_type = dataset_type
@@ -219,6 +231,7 @@ class BasePipeline(abc.ABC):
             result=self.result,
             config=self.config,
             model_type=self._model_type,
+            loss_type=self._loss_type,
         )
         trainer_result = self._trainer.train()
         self.result.update(trainer_result)

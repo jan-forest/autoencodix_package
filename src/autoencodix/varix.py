@@ -116,31 +116,42 @@ class Varix(BasePipeline):
             custom_split=custom_splits,
         )
 
+    def sample_latent_space(self, split: str = "test", epoch: int = -1) -> torch.Tensor:
+        """
+        Samples new latent space points from the learned distribution.
+        Parameters:
+            split: str - The split to sample from (train, valid, test), default is test
+            epoch: int - The epoch to sample from, default is the last epoch (-1)
+        Returns:
+            z: torch.Tensor - The sampled latent space points
 
-def sample_latent_space(self, split: str = "test", epoch: int = -1) -> torch.Tensor:
-    """
-    Samples new latent space points from the learned distribution.
-    Parameters:
-        split: str - The split to sample from (train, valid, test), default is test
-        epoch: int - The epoch to sample from, default is the last epoch (-1)
-    Returns:
-        z: torch.Tensor - The sampled latent space points
+        """
+        if self._trainer is None:
+            raise ValueError("Model is not trained yet. Please train the model first.")
+        if self.result.mus is None or self.result.sigmas is None:
+            raise ValueError("Model has not learned the latent space distribution yet.")
+        mu = self.result.mus.get(split=split, epoch=epoch)
+        logvar = self.result.sigmas.get(split=split, epoch=epoch)
 
-    """
-    if self._model is None:
-        raise ValueError("Model is not trained yet. Please train the model first.")
-    if self.result.mus is None or self.result.logvars is None:
-        raise ValueError("Model has not learned the latent space distribution yet.")
-    mu = self.result.mus.get(split=split, epoch=epoch)
-    logvar = self.result.logvars.get(split=split, epoch=epoch)
+        if not isinstance(mu, np.ndarray):
+            raise TypeError(
+                f"Expected value to be of type numpy.ndarray, got {type(mu)}."
+            )
+        if not isinstance(logvar, np.ndarray):
+            raise TypeError(
+                f"Expected value to be of type numpy.ndarray, got {type(logvar)}."
+            )
+        mu_t = torch.from_numpy(mu)
+        logvar_t = torch.from_numpy(logvar)
 
-    mu = torch.from_numpy(mu)
-    logvar = torch.from_numpy(logvar)
+        # Move to same device and dtype as model
+        mu_t = mu_t.to(
+            device=self._trainer._model.device, dtype=self._trainer._model.dtype
+        )
+        logvar_t = logvar_t.to(
+            device=self._trainer._model.device, dtype=self._trainer._model.dtype
+        )
 
-    # Move to same device and dtype as model
-    mu = mu.to(device=self._model.device, dtype=self._model.dtype)
-    logvar = logvar.to(device=self._model.device, dtype=self._model.dtype)
-
-    with self._trainer._fabric.autocast(), torch.no_grad():
-        z = self._model.reparametrize(mu, logvar)
-        return z
+        with self._trainer._fabric.autocast(), torch.no_grad():
+            z = self._trainer._model.reparametrize(mu_t, logvar_t)
+            return z

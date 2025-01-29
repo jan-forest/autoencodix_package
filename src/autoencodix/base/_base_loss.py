@@ -13,6 +13,7 @@ class BaseLoss(nn.Module, ABC):
     def __init__(self, config: DefaultConfig):
         super().__init__()
         self.config = config
+        self.recon_loss: nn.Module
         if self.config.loss_reduction == "mean":
             self.reduction_fn = torch.mean
         elif self.config.loss_reduction == "sum":
@@ -88,12 +89,16 @@ class BaseLoss(nn.Module, ABC):
 
     def compute_variational_loss(
         self,
-        mu: torch.Tensor,
-        logvar: torch.Tensor,
+        mu: Optional[torch.Tensor],
+        logvar: Optional[torch.Tensor],
         z: Optional[torch.Tensor] = None,
         true_samples: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         """Compute either KL or MMD loss based on config."""
+        if mu is None:
+            raise ValueError("mu must be provided for VAE loss")
+        if logvar is None:
+            raise ValueError("logvar must be provided for VAE loss")
         if self.config.default_vae_loss == "kl":
             return self.compute_kl_loss(mu, logvar)
         elif self.config.default_vae_loss == "mmd":

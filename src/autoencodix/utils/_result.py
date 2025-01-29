@@ -12,7 +12,7 @@ from ._traindynamics import TrainingDynamics
 class LossRegistry:
     _losses: Dict[str, TrainingDynamics] = field(default_factory=dict)
 
-    def add(self, data: Dict[str, torch.Tensor], split: str, epoch: int) -> None:
+    def add(self, data: Dict, split: str, epoch: int) -> None:
         for key, value in data.items():
             if key not in self._losses:
                 self._losses[key] = TrainingDynamics()

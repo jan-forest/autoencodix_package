@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
 
 import torch
 import torch.nn as nn
@@ -107,7 +107,7 @@ class VarixArchitecture(BaseAutoencoder):
         self._mu = nn.Linear(enc_dim[-2], self._config.latent_dim)
         self._logvar = nn.Linear(enc_dim[-2], self._config.latent_dim)
 
-    def encode(self, x: torch.Tensor) -> torch.Tensor:
+    def encode(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Encode the input tensor x
 

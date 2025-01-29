@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
 
 import torch
 import torch.nn as nn
@@ -35,7 +35,7 @@ class BaseAutoencoder(ABC, nn.Module):
     -------
     _build_network()
         Abstract method to build the encoder and decoder networks
-    encode(x: torch.Tensor) -> torch.Tensor
+    encode(x: torch.Tensor) -> Union[torch.Tensor, Tuple[torch.tensor, torch.tensor]]
         Abstract method to encode input tensor x
     decode(x: torch.Tensor) -> torch.Tensor
         Abstract method to decode latent tensor x
@@ -78,7 +78,9 @@ class BaseAutoencoder(ABC, nn.Module):
         pass
 
     @abstractmethod
-    def encode(self, x: torch.Tensor) -> torch.Tensor:
+    def encode(
+        self, x: torch.Tensor
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Encodes the input into the latent space.
 
@@ -89,8 +91,8 @@ class BaseAutoencoder(ABC, nn.Module):
 
         Returns
         -------
-        torch.Tensor
-            The encoded latent space representation.
+        Union[torch.Tensor, Tuple[torch.tensor, torch.tensor]]
+            The encoded latent space representation, or mu and logvar for VAE.
         """
         pass
 

@@ -64,8 +64,10 @@ class GeneralTrainer(BaseTrainer):
                 valid_outputs = []
                 self._model.train()
                 epoch_loss = 0.0
-                epoch_sub_losses = defaultdict(lambda: 0.0)
-                valid_epoch_sub_losses = defaultdict(lambda: 0.0)
+                epoch_sub_losses: defaultdict[str, float] = defaultdict(lambda: 0.0)
+                valid_epoch_sub_losses: defaultdict[str, float] = defaultdict(
+                    lambda: 0.0
+                )
                 for _, (features, _) in enumerate(self._trainloader):
                     self._optimizer.zero_grad()
                     model_outputs = self._model(features)

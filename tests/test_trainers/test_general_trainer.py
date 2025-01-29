@@ -40,7 +40,7 @@ class TestGeneralTrainerIntegration:
         return result
 
     @pytest.fixture
-    def vanillix_trainer(
+    def general_trainer(
         self, train_dataset, valid_dataset, default_config, filled_result
     ):
         return GeneralTrainer(
@@ -52,17 +52,17 @@ class TestGeneralTrainerIntegration:
             loss_type=VanillixLoss,
         )
 
-    def test_train(self, vanillix_trainer):
-        result = vanillix_trainer.train()
+    def test_train(self, general_trainer):
+        result = general_trainer.train()
         assert result is not None, "Training should return a Result object."
         assert len(result.losses.get(split="train")) == len(
             result.losses.get(split="valid")
         )
 
-    def test_result_not_overwritten(self, vanillix_trainer, filled_result):
+    def test_result_not_overwritten(self, general_trainer, filled_result):
 
         before_preprocessed_data = filled_result.preprocessed_data
-        result = vanillix_trainer.train()
+        result = general_trainer.train()
         assert (
             result.preprocessed_data is not None
         ), "Preprocessed data should not overwrite."
@@ -71,7 +71,7 @@ class TestGeneralTrainerIntegration:
         ), "Preprocessed data should not overwrite."
 
     @pytest.mark.parametrize("devices", ["cpu", "cuda", "mps"])
-    def test_reproducible(self, vanillix_trainer, devices):
+    def test_reproducible(self, devices, train_dataset, valid_dataset):
         # if device not available, skip tes
         if not torch.cuda.is_available() and devices == "cuda":
             pytest.skip("CUDA not available.")
@@ -80,12 +80,26 @@ class TestGeneralTrainerIntegration:
         config = DefaultConfig(
             device=devices, epochs=3, checkpoint_interval=1, reproducible=True
         )
-        vanillix_trainer.config = config
-        result1 = vanillix_trainer.train()
+        general_trainer = GeneralTrainer(
+            trainset=train_dataset,
+            validset=valid_dataset,
+            result=Result(),
+            config=config,
+            model_type=VanillixArchitecture,
+            loss_type=VanillixLoss,
+        )
+        result1 = general_trainer.train()
         train_loss1 = result1.losses.get(split="train")
         reconstructed_data1 = result1.reconstructions.get(split="train")
-
-        result2 = vanillix_trainer.train()
+        general_trainer = GeneralTrainer(
+            trainset=train_dataset,
+            validset=valid_dataset,
+            result=Result(),
+            config=config,
+            model_type=VanillixArchitecture,
+            loss_type=VanillixLoss,
+        )
+        result2 = general_trainer.train()
         train_losses2 = result2.losses.get(split="train")
         reconstructed_data2 = result2.reconstructions.get(split="train")
         assert np.array_equal(

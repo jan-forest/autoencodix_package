@@ -10,7 +10,38 @@ from ._traindynamics import TrainingDynamics
 
 @dataclass
 class LossRegistry:
+    """
+    Dataclass to store multiple TrainingDynamics objects for different losses.
+    Objective is to make the Result class extensible for multiple losses that might
+    be needed in the future for diffrent autoencoder architectures.
+
+    Attributes
+    ----------
+    _losses : Dict[str, TrainingDynamics]
+        A dictionary to store TrainingDynamics objects for different losses.
+    Methods
+    -------
+    add(data: Dict, split: str, epoch: int) -> None
+        Add a new loss value to the registry, calls the add method of TrainingDynamics.
+    get(key: str) -> TrainingDynamics
+        Retrieve a specific TrainingDynamics object from the registry, based on the loss name.
+    losses() -> Dict[str, TrainingDynamics]
+        Return all stored losses as a dictionary.
+    set(key: str, value: TrainingDynamics) -> None
+        Set a specific TrainingDynamics object in the registry.
+    keys() -> List[str]
+        Return all keys (loss names) in the registry as a list.
+
+    """
+
     _losses: Dict[str, TrainingDynamics] = field(default_factory=dict)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, LossRegistry):
+            return False
+        if self._losses.keys() != other._losses.keys():
+            return False
+        return all(self._losses[key] == other._losses[key] for key in self._losses)
 
     def add(self, data: Dict, split: str, epoch: int) -> None:
         for key, value in data.items():
@@ -19,6 +50,8 @@ class LossRegistry:
             self._losses[key].add(epoch=epoch, data=value, split=split)
 
     def get(self, key: str) -> TrainingDynamics:
+        if key not in self._losses:
+            self._losses[key] = TrainingDynamics()
         return self._losses[key]
 
     def losses(self):
@@ -51,6 +84,7 @@ class Result:
         Stores the reconstruction loss for different epochs and splits ('train', 'valid', 'test').
     var_losses : TrainingDynamics
         Stores the variational i.e. kl divergence loss for different epochs and splits ('train', 'valid', 'test').
+
     """
 
     latentspaces: TrainingDynamics = field(default_factory=TrainingDynamics)
@@ -169,13 +203,91 @@ class Result:
             else:
                 setattr(self, field_name, other_value)
 
-    def _update_traindynamics(self, current_value, other_value):
-        for epoch, split_data in other_value._data.items():
+    def _update_traindynamics(
+        self, current_value: TrainingDynamics, other_value: TrainingDynamics
+    ) -> TrainingDynamics:
+        """
+        Update TrainingDynamics object with values from another TrainingDynamics object.
+
+        Parameters
+        ----------
+        current_value : TrainingDynamics
+            The current TrainingDynamics object to update
+        other_value : TrainingDynamics
+            The TrainingDynamics object to update from
+
+        Returns
+        -------
+        TrainingDynamics
+            Updated TrainingDynamics object
+        """
+        if current_value is None:
+            return other_value
+
+        result = TrainingDynamics()
+
+        # First, copy all current data
+        for epoch, split_data in current_value._data.items():
+            if split_data is None:
+                continue
             for split, value in split_data.items():
-                current_value.add(
-                    epoch=epoch, data=value, split=split
-                )  # overwrites if already exists
-        return current_value
+                if value is None:
+                    continue
+                result.add(epoch=epoch, data=value, split=split)
+
+        # Then update with other data
+        for epoch, split_data in other_value._data.items():
+            if split_data is None:
+                continue
+
+            # If epoch exists in current data
+            if epoch in current_value._data:
+                current_splits = current_value._data.get(epoch, {})
+                if current_splits is None:
+                    current_splits = {}
+
+                # Handle empty dictionary case
+                if not split_data:
+                    # Keep all current splits for this epoch
+                    for split, value in current_splits.items():
+                        if value is not None:
+                            result.add(epoch=epoch, data=value, split=split)
+                    continue
+
+                # Get unique splits from both current and new data
+                current_keys = set(current_splits.keys()) if current_splits else set()
+                new_keys = set(split_data.keys()) if split_data else set()
+                all_splits = current_keys | new_keys
+
+                # Update only provided splits, keep others from current
+                for split in all_splits:
+                    if split in split_data and split_data[split] is not None:
+                        # Use new value if provided and not None
+                        result.add(epoch=epoch, data=split_data[split], split=split)
+                    elif split in current_splits and current_splits[split] is not None:
+                        # Keep current value if exists and not None
+                        result.add(epoch=epoch, data=current_splits[split], split=split)
+            else:
+                # For new epochs, add all non-None split data
+                for split, value in split_data.items():
+                    if value is not None:
+                        result.add(epoch=epoch, data=value, split=split)
+        # sort based on epoch
+        result._data = dict(sorted(result._data.items()))
+        return result
+
+    # def _update_traindynamics(self, current_value, other_value):
+    #     for epoch, split_data in other_value._data.items():
+    #         if split_data is None:
+    #             continue
+    #         for split, value in split_data.items():
+    #             if value is None:
+    #                 continue
+
+    #             current_value.add(
+    #                 epoch=epoch, data=value, split=split
+    #             )  # overwrites if already exists
+    #     return current_value
 
     def __str__(self) -> str:
         """

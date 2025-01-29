@@ -32,6 +32,28 @@ class TrainingDynamics:
         default_factory=dict, repr=False
     )
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, TrainingDynamics):
+            return False
+        if self._data.keys() != other._data.keys():
+            return False
+        for epoch, splits in self._data.items():
+            if epoch not in other._data:
+                return False
+            for split, data in splits.items():
+                if split not in other._data[epoch]:
+                    return False
+                other_data = other._data[epoch][split]
+                if isinstance(data, np.ndarray) and isinstance(other_data, np.ndarray):
+                    if not np.array_equal(data, other_data):
+                        return False
+                elif isinstance(data, dict) and isinstance(other_data, dict):
+                    if data != other_data:  # Shallow dict comparison
+                        return False
+                else:
+                    return False  # Mismatched types
+        return True
+
     def add(
         self,
         epoch: int,
@@ -49,7 +71,10 @@ class TrainingDynamics:
             The numpy array to store.
         split : str, optional
             The data split (default: 'train').
+
         """
+        if data is None:
+            return
         if split not in ["train", "valid", "test"]:
             raise KeyError(
                 f"Invalid split type: {split}, we only support 'train', 'valid', and 'test' splits."
@@ -67,7 +92,9 @@ class TrainingDynamics:
             self._data[epoch] = {}
         self._data[epoch][split] = data
 
-    def get(self, epoch: Optional[int] = None, split: Optional[str] = None) -> Union[
+    def get(
+        self, epoch: Optional[int] = None, split: Optional[str] = None
+    ) -> Union[
         np.ndarray,
         Dict[str, np.ndarray],
         Dict[int, Dict[str, np.ndarray]],

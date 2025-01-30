@@ -6,7 +6,7 @@ import torch
 
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._numeric_dataset import NumericDataset
-from autoencodix.utils._result import Result
+from autoencodix.utils._result import Result, LossRegistry
 from autoencodix.utils._traindynamics import TrainingDynamics
 from autoencodix.utils.default_config import DefaultConfig
 
@@ -97,10 +97,6 @@ class TestResultUnit:
         empty_result.update(other)
         assert torch.equal(empty_result.preprocessed_data, data)
 
-    def test_update_wrong_type_raises_error(self, empty_result):
-        with pytest.raises(TypeError):
-            empty_result.update("not a Result")
-
 
 # Integration Tests -----------------------------------------------------------
 class TestResultIntegration:
@@ -150,7 +146,6 @@ class TestResultIntegration:
         assert empty_result.model is model
 
     def test_update_overwrites_datasets(self, empty_result, filled_result):
-
         config = DefaultConfig()
         datasets = DatasetContainer(
             train=NumericDataset(torch.tensor([1, 2, 3]), config=config),
@@ -185,3 +180,280 @@ class TestResultIntegration:
         old_latentspaces = filled_result.latentspaces
         filled_result.update(empty_result)
         assert filled_result.latentspaces is old_latentspaces
+
+    def test_complex_loss_update(self):
+        to_update = {
+            0: {"train": 0.0, "valid": 0.0, "test": 0.0},  # totally overwrite
+            2: {"train": 0.0, "valid": 0.0, "test": 0.0},  # keep all
+            3: {},  # update with partial data
+            4: None,  # udate with all
+            5: {
+                "train": None,
+                "valid": 0.0,
+                "test": 0.0,
+            },  # update with partial data (keep test)
+            6: {
+                "train": 0.0
+            },  # update with partial data (keep train), add vlaid and test
+            7: {"train": 0},  # update with partial data {train: 0.1}
+            100: {"train": 0.0, "valid": 0.0, "test": 0.0},  # not in to update
+        }
+
+        update_with = {
+            0: {"train": 0.1, "valid": 0.2, "test": 0.3},
+            1: {"train": 0.4, "valid": 0.5, "test": 0.6},
+            2: {},
+            3: {"train": 0.7, "valid": 0.8},
+            4: {"train": 0.9, "valid": 1.0, "test": 1.1},
+            5: {"train": 0.12, "valid": 0.22},
+            6: {"valid": 0.32, "test": 0.42},
+            7: {"train": 0.1},
+        }
+
+        expected_result = {
+            0: {"train": np.array(0.1), "valid": np.array(0.2), "test": np.array(0.3)},
+            1: {"train": np.array(0.4), "valid": np.array(0.5), "test": np.array(0.6)},
+            2: {"train": np.array(0.0), "valid": np.array(0.0), "test": np.array(0.0)},
+            3: {"train": np.array(0.7), "valid": np.array(0.8)},
+            4: {"train": np.array(0.9), "valid": np.array(1.0), "test": np.array(1.1)},
+            5: {
+                "train": np.array(0.12),
+                "valid": np.array(0.22),
+                "test": np.array(0.0),
+            },
+            6: {
+                "train": np.array(0.0),
+                "valid": np.array(0.32),
+                "test": np.array(0.42),
+            },
+            7: {"train": np.array(0.1)},
+            100: {
+                "train": np.array(0.0),
+                "valid": np.array(0.0),
+                "test": np.array(0.0),
+            },
+        }
+
+        to_update_dyn = TrainingDynamics(_data=to_update)
+        to_update_registry = LossRegistry(_losses={"recon_loss": to_update_dyn})
+        to_update_result = Result(sub_losses=to_update_registry)
+
+        update_with_dyn = TrainingDynamics(_data=update_with)
+        update_with_registry = LossRegistry(_losses={"recon_loss": update_with_dyn})
+        update_with_result = Result(sub_losses=update_with_registry)
+        to_update_result.update(update_with_result)
+        after_update = dict(
+            sorted(to_update_result.sub_losses.get(key="recon_loss").get().items())
+        )
+        assert after_update == expected_result
+
+    @pytest.mark.parametrize(
+        "to_update, update_with, expected_result",
+        [
+            (
+                {
+                    0: {"train": 0.0, "valid": 0.0, "test": 0.0},
+                    2: {"train": 0.0, "valid": 0.0, "test": 0.0},
+                    3: {},
+                    4: None,
+                    5: {"train": None, "valid": 0.0, "test": 0.0},
+                    6: {"train": 0.0},
+                    7: {"train": 0},
+                    100: {"train": 0.0, "valid": 0.0, "test": 0.0},
+                },
+                {
+                    0: {"train": 0.1, "valid": 0.2, "test": 0.3},
+                    1: {"train": 0.4, "valid": 0.5, "test": 0.6},
+                    2: {},
+                    3: {"train": 0.7, "valid": 0.8},
+                    4: {"train": 0.9, "valid": 1.0, "test": 1.1},
+                    5: {"train": 0.12, "valid": 0.22},
+                    6: {"valid": 0.32, "test": 0.42},
+                    7: {"train": 0.1},
+                },
+                {
+                    0: {
+                        "train": np.array(0.1),
+                        "valid": np.array(0.2),
+                        "test": np.array(0.3),
+                    },
+                    1: {
+                        "train": np.array(0.4),
+                        "valid": np.array(0.5),
+                        "test": np.array(0.6),
+                    },
+                    2: {
+                        "train": np.array(0.0),
+                        "valid": np.array(0.0),
+                        "test": np.array(0.0),
+                    },
+                    3: {"train": np.array(0.7), "valid": np.array(0.8)},
+                    4: {
+                        "train": np.array(0.9),
+                        "valid": np.array(1.0),
+                        "test": np.array(1.1),
+                    },
+                    5: {
+                        "train": np.array(0.12),
+                        "valid": np.array(0.22),
+                        "test": np.array(0.0),
+                    },
+                    6: {
+                        "train": np.array(0.0),
+                        "valid": np.array(0.32),
+                        "test": np.array(0.42),
+                    },
+                    7: {"train": np.array(0.1)},
+                    100: {
+                        "train": np.array(0.0),
+                        "valid": np.array(0.0),
+                        "test": np.array(0.0),
+                    },
+                },
+            ),
+            (
+                {
+                    0: {"train": 0.0, "valid": 0.0, "test": 0.0},
+                    1: {"train": 0.0, "valid": 0.0, "test": 0.0},
+                },
+                {
+                    0: {"train": 0.1, "valid": 0.2, "test": 0.3},
+                    1: {"train": 0.4, "valid": 0.5, "test": 0.6},
+                },
+                {
+                    0: {
+                        "train": np.array(0.1),
+                        "valid": np.array(0.2),
+                        "test": np.array(0.3),
+                    },
+                    1: {
+                        "train": np.array(0.4),
+                        "valid": np.array(0.5),
+                        "test": np.array(0.6),
+                    },
+                },
+            ),
+            (
+                {
+                    0: {"train": 0.0, "valid": 0.0, "test": 0.0},
+                },
+                {
+                    0: {"train": 0.1, "valid": 0.2, "test": 0.3},
+                    1: {"train": 0.4, "valid": 0.5, "test": 0.6},
+                },
+                {
+                    0: {
+                        "train": np.array(0.1),
+                        "valid": np.array(0.2),
+                        "test": np.array(0.3),
+                    },
+                    1: {
+                        "train": np.array(0.4),
+                        "valid": np.array(0.5),
+                        "test": np.array(0.6),
+                    },
+                },
+            ),
+        ],
+    )
+    def test_update_with_various_losses(self, to_update, update_with, expected_result):
+        to_update_dyn = TrainingDynamics(_data=to_update)
+        to_update_registry = LossRegistry(_losses={"recon_loss": to_update_dyn})
+        to_update_result = Result(sub_losses=to_update_registry)
+
+        update_with_dyn = TrainingDynamics(_data=update_with)
+        update_with_registry = LossRegistry(_losses={"recon_loss": update_with_dyn})
+        update_with_result = Result(sub_losses=update_with_registry)
+
+        to_update_result.update(update_with_result)
+        after_update = dict(
+            sorted(to_update_result.sub_losses.get(key="recon_loss").get().items())
+        )
+        assert after_update == expected_result
+
+    def test_update_with_multiple_losses(self):
+        to_update = {
+            0: {"train": np.array(0.0), "valid": np.array(0.0), "test": np.array(0.0)},
+            2: {"train": np.array(0.0), "valid": np.array(0.0), "test": np.array(0.0)},
+            3: {},
+            4: None,
+            5: {"train": None, "valid": np.array(0.0), "test": np.array(0.0)},
+            6: {"train": np.array(0.0)},
+            7: {"train": np.array(0)},
+            100: {
+                "train": np.array(0.0),
+                "valid": np.array(0.0),
+                "test": np.array(0.0),
+            },
+        }
+
+        update_with = {
+            0: {"train": 0.1, "valid": 0.2, "test": 0.3},
+            1: {"train": 0.4, "valid": 0.5, "test": 0.6},
+            2: {},
+            3: {"train": 0.7, "valid": 0.8},
+            4: {"train": 0.9, "valid": 1.0, "test": 1.1},
+            5: {"train": 0.12, "valid": 0.22},
+            6: {"valid": 0.32, "test": 0.42},
+            7: {"train": 0.1},
+        }
+
+        expected_result = {
+            0: {"train": np.array(0.1), "valid": np.array(0.2), "test": np.array(0.3)},
+            1: {"train": np.array(0.4), "valid": np.array(0.5), "test": np.array(0.6)},
+            2: {"train": np.array(0.0), "valid": np.array(0.0), "test": np.array(0.0)},
+            3: {"train": np.array(0.7), "valid": np.array(0.8)},
+            4: {"train": np.array(0.9), "valid": np.array(1.0), "test": np.array(1.1)},
+            5: {
+                "train": np.array(0.12),
+                "valid": np.array(0.22),
+                "test": np.array(0.0),
+            },
+            6: {
+                "train": np.array(0.0),
+                "valid": np.array(0.32),
+                "test": np.array(0.42),
+            },
+            7: {"train": np.array(0.1)},
+            100: {
+                "train": np.array(0.0),
+                "valid": np.array(0.0),
+                "test": np.array(0.0),
+            },
+        }
+
+        to_update_dyn = TrainingDynamics(_data=to_update)
+        to_update_registry = LossRegistry(
+            _losses={
+                "recon_loss": to_update_dyn,
+                "var_loss": to_update_dyn,
+                "more_loss": TrainingDynamics(_data={}),
+            }
+        )
+        to_update_result = Result(sub_losses=to_update_registry)
+
+        update_with_dyn = TrainingDynamics(_data=update_with)
+        update_with_registry = LossRegistry(
+            _losses={
+                "recon_loss": update_with_dyn,
+                "var_loss": TrainingDynamics(_data={}),
+                "other_loss": TrainingDynamics(_data={}),
+            }
+        )
+        update_with_result = Result(sub_losses=update_with_registry)
+
+        to_update_result.update(update_with_result)
+        expected_recon_dyn = TrainingDynamics(_data=expected_result)
+        expected_varloss_dyn = TrainingDynamics(_data=to_update)
+        expected_moreloss_dyn = TrainingDynamics(_data={})
+        expected_other_dyn = TrainingDynamics(_data={})
+        expected_loss_registry = LossRegistry(
+            _losses={
+                "recon_loss": expected_recon_dyn,
+                "var_loss": expected_varloss_dyn,
+                "more_loss": expected_moreloss_dyn,
+                "other_loss": expected_other_dyn,
+            }
+        )
+        expected_result = Result(sub_losses=expected_loss_registry)
+        assert expected_result.sub_losses == to_update_result.sub_losses

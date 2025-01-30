@@ -36,6 +36,13 @@ class LossRegistry:
 
     _losses: Dict[str, TrainingDynamics] = field(default_factory=dict)
 
+    def __post_init__(self):
+        for name, data in self._losses.items():
+            if not isinstance(data, TrainingDynamics):
+                raise ValueError(
+                    f"Expected TrainingDynamics object, got {type(data)} for loss {name}"
+                )
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, LossRegistry):
             return False
@@ -212,82 +219,66 @@ class Result:
         Parameters
         ----------
         current_value : TrainingDynamics
-            The current TrainingDynamics object to update
+            The current TrainingDynamics object to update.
         other_value : TrainingDynamics
-            The TrainingDynamics object to update from
+            The TrainingDynamics object to update from.
 
         Returns
         -------
         TrainingDynamics
-            Updated TrainingDynamics object
+            Updated TrainingDynamics object.
+
+        Examples
+        --------
+        >>> current = TrainingDynamics()
+        >>> current._data = {1: {"train": np.array([1, 2, 3])},
+        ...                   2: None}
+
+        >>> other = TrainingDynamics()
+        >>> other._data = {1: {"train": np.array([4, 5, 6])},
+        ...                 2: {"train": np.array([7, 8, 9])}}
+        >>> # after update
+        >>> print(current._data)
+        {1: {"train": np.array([4, 5, 6])}, # updated
+         2: {"train": np.array([7, 8, 9])}} # kept, because other was None
+
         """
+
         if current_value is None:
             return other_value
+        if current_value._data is None:
+            return other_value
 
-        result = TrainingDynamics()
-
-        # First, copy all current data
-        for epoch, split_data in current_value._data.items():
-            if split_data is None:
-                continue
-            for split, value in split_data.items():
-                if value is None:
-                    continue
-                result.add(epoch=epoch, data=value, split=split)
-
-        # Then update with other data
         for epoch, split_data in other_value._data.items():
             if split_data is None:
                 continue
+            if len(split_data) == 0:
+                continue
 
-            # If epoch exists in current data
-            if epoch in current_value._data:
-                current_splits = current_value._data.get(epoch, {})
-                if current_splits is None:
-                    current_splits = {}
+            # If current epoch is None, it should be updated
+            if epoch in current_value._data and current_value._data[epoch] is None:
+                current_value._data[epoch] = {}
+                for split, data in split_data.items():
+                    if data is None:
+                        continue
+                    current_value.add(epoch=epoch, data=data, split=split)
+                continue
 
-                # Handle empty dictionary case
-                if not split_data:
-                    # Keep all current splits for this epoch
-                    for split, value in current_splits.items():
-                        if value is not None:
-                            result.add(epoch=epoch, data=value, split=split)
-                    continue
+            if epoch not in current_value._data:
+                for split, data in split_data.items():
+                    if data is None:
+                        continue
+                    current_value.add(epoch=epoch, data=data, split=split)
+                continue
+            # case when current epoch exists, then update all but None values
+            for split, value in split_data.items():
+                if value is not None:
+                    current_value.add(epoch=epoch, data=value, split=split)
 
-                # Get unique splits from both current and new data
-                current_keys = set(current_splits.keys()) if current_splits else set()
-                new_keys = set(split_data.keys()) if split_data else set()
-                all_splits = current_keys | new_keys
+        # Ensure ordering
+        current_value._data = dict(sorted(current_value._data.items()))
 
-                # Update only provided splits, keep others from current
-                for split in all_splits:
-                    if split in split_data and split_data[split] is not None:
-                        # Use new value if provided and not None
-                        result.add(epoch=epoch, data=split_data[split], split=split)
-                    elif split in current_splits and current_splits[split] is not None:
-                        # Keep current value if exists and not None
-                        result.add(epoch=epoch, data=current_splits[split], split=split)
-            else:
-                # For new epochs, add all non-None split data
-                for split, value in split_data.items():
-                    if value is not None:
-                        result.add(epoch=epoch, data=value, split=split)
-        # sort based on epoch
-        result._data = dict(sorted(result._data.items()))
-        return result
-
-    # def _update_traindynamics(self, current_value, other_value):
-    #     for epoch, split_data in other_value._data.items():
-    #         if split_data is None:
-    #             continue
-    #         for split, value in split_data.items():
-    #             if value is None:
-    #                 continue
-
-    #             current_value.add(
-    #                 epoch=epoch, data=value, split=split
-    #             )  # overwrites if already exists
-    #     return current_value
+        return current_value
 
     def __str__(self) -> str:
         """

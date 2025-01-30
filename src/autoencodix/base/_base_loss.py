@@ -100,11 +100,13 @@ class BaseLoss(nn.Module, ABC):
         if logvar is None:
             raise ValueError("logvar must be provided for VAE loss")
         if self.config.default_vae_loss == "kl":
-            return self.compute_kl_loss(mu, logvar)
+            return self.compute_kl_loss(mu=mu, logvar=logvar)
         elif self.config.default_vae_loss == "mmd":
             if z is None:
                 raise ValueError("z must be provided for MMD loss")
-            return self.compute_mmd_loss(z, true_samples)
+            if true_samples is None:
+                raise ValueError("true_samples must be provided for MMD loss")
+            return self.compute_mmd_loss(z=z, true_samples=true_samples)
         else:
             raise NotImplementedError(
                 f"VAE loss type {self.config.default_vae_loss} is not implemented. Only 'kl' and 'mmd' are supported."

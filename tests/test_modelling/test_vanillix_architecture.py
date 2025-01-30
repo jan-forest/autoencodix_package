@@ -32,7 +32,6 @@ class TestVanillixUnit:
     def test_latent_shape_shape(self, model, sample_data, defaults):
         latent_dim, _, data_shape = defaults
         latent = model.encode(sample_data)
-        print(f"latent shape: {latent.shape}")
         assert latent.shape[0] == data_shape[0]
         assert latent.shape[1] == latent_dim
 

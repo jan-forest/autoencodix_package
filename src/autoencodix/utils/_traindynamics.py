@@ -38,20 +38,23 @@ class TrainingDynamics:
         if self._data.keys() != other._data.keys():
             return False
         for epoch, splits in self._data.items():
-            if epoch not in other._data:
+            other_splits = other._data.get(epoch, {})
+            if set(splits.keys()) != set(other_splits.keys()):
                 return False
             for split, data in splits.items():
-                if split not in other._data[epoch]:
-                    return False
-                other_data = other._data[epoch][split]
+                other_data = other_splits.get(split, None)
+                if data is None and other_data is None:
+                    continue
                 if isinstance(data, np.ndarray) and isinstance(other_data, np.ndarray):
                     if not np.array_equal(data, other_data):
                         return False
                 elif isinstance(data, dict) and isinstance(other_data, dict):
-                    if data != other_data:  # Shallow dict comparison
+                    if not data == other_data:  # Dict equality check
                         return False
+                elif data is None or other_data is None:
+                    return False  # One is None, the other isn't
                 else:
-                    return False  # Mismatched types
+                    return False  # Type mismatch
         return True
 
     def add(
@@ -92,9 +95,7 @@ class TrainingDynamics:
             self._data[epoch] = {}
         self._data[epoch][split] = data
 
-    def get(
-        self, epoch: Optional[int] = None, split: Optional[str] = None
-    ) -> Union[
+    def get(self, epoch: Optional[int] = None, split: Optional[str] = None) -> Union[
         np.ndarray,
         Dict[str, np.ndarray],
         Dict[int, Dict[str, np.ndarray]],

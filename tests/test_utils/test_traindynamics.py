@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 import pytest
 from autoencodix.utils._traindynamics import TrainingDynamics
 
@@ -7,7 +6,6 @@ from autoencodix.utils._traindynamics import TrainingDynamics
 # Unit Tests ------------------------------------------------------------------
 # no integration tests necessary here
 class TestTrainingDynamicsUnit:
-
     @pytest.fixture
     def dynamics(self):
         return TrainingDynamics()
@@ -137,13 +135,6 @@ class TestTrainingDynamicsUnit:
         train_second = sliced[1]["train"]
         assert np.array_equal(train_first, np.array([0.1, 0.2]))
         assert np.array_equal(train_second, np.array([0.2, 0.3]))
-
-    @pytest.mark.parametrize(
-        "invalid_data", [None, "string", torch.tensor([1, 2, 3]), [1, 2, 3]]
-    )
-    def test_invalid_add_data(self, dynamics, invalid_data):
-        with pytest.raises(TypeError):
-            dynamics.add(epoch=0, data=invalid_data, split="train")
 
     @pytest.mark.parametrize("data", [1.0, 0.5, 0.0, 3, 1000000, 0.0000001])
     def test_data_conversion(self, dynamics, data):

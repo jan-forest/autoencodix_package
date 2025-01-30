@@ -50,7 +50,7 @@ class DefaultConfig(BaseModel):
     reconstruction_loss: Literal["mse", "bce"] = Field(
         default="mse", description="Type of reconstruction loss"
     )
-    default_vae_loss: Literal["kl"] = Field(
+    default_vae_loss: Literal["kl", "mmd"] = Field(
         default="kl", description="Type of VAE loss"
     )
     loss_reduction: Literal["sum", "mean"] = Field(

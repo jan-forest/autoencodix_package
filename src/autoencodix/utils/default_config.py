@@ -28,7 +28,9 @@ class DefaultConfig(BaseModel):
         default=16, ge=1, description="Dimension of the latent space"
     )
     n_layers: int = Field(
-        default=3, ge=1, description="Number of layers in encoder/decoder"
+        default=3,
+        ge=0,
+        description="Number of layers in encoder/decoder, without latent layer. If 0, is only the latent layer.",
     )
     enc_factor: int = Field(
         default=4, ge=1, description="Scaling factor for encoder dimensions"

@@ -5,7 +5,6 @@ from autoencodix.modeling._layer_factory import LayerFactory
 
 
 class TestLayerFactory:
-
     @pytest.fixture
     def layer_factory(self):
         return LayerFactory()

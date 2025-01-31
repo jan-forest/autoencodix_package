@@ -79,13 +79,12 @@ class VanillixArchitecture(BaseAutoencoder):
         )
 
         encoder_layers = []
-        for i in range(len(enc_dim) - 1):
-            # Last layer flag for final layer
+        for i, (in_features, out_features) in enumerate(zip(enc_dim[:-1], enc_dim[1:])):
             last_layer = i == len(enc_dim) - 2
             encoder_layers.extend(
                 LayerFactory.create_layer(
-                    in_features=enc_dim[i],
-                    out_features=enc_dim[i + 1],
+                    in_features=in_features,
+                    out_features=out_features,
                     dropout_p=self._config.drop_p,
                     last_layer=last_layer,
                 )
@@ -93,13 +92,12 @@ class VanillixArchitecture(BaseAutoencoder):
 
         dec_dim = enc_dim[::-1]  # Reverse the dimensions and copy
         decoder_layers = []
-        for i in range(len(dec_dim) - 1):
-            # Last layer flag for final layer
+        for i, (in_features, out_features) in enumerate(zip(dec_dim[:-1], dec_dim[1:])):
             last_layer = i == len(dec_dim) - 2
             decoder_layers.extend(
                 LayerFactory.create_layer(
-                    in_features=dec_dim[i],
-                    out_features=dec_dim[i + 1],
+                    in_features=in_features,
+                    out_features=out_features,
                     dropout_p=self._config.drop_p,
                     last_layer=last_layer,
                 )

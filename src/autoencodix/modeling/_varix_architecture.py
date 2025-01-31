@@ -55,57 +55,69 @@ class VarixArchitecture(BaseAutoencoder):
         self._config = config
         super().__init__(config, input_dim)
         self.input_dim = input_dim
+        self._mu: nn.Module
+        self._logvar: nn.Module
 
         # populate self.encoder and self.decoder
         self._build_network()
 
     def _build_network(self) -> None:
         """
-        Construct the encoder with linear layers.
+        Construct the encoder and decoder networks.
 
-        Returns
-        -------
-        nn.Sequential
-            Encoder model.
+        Handles cases where `n_layers=0` by skipping the encoder and using only mu/logvar.
         """
-        # Calculate layer dimensions
         enc_dim = LayerFactory.get_layer_dimensions(
             feature_dim=self.input_dim,
             latent_dim=self._config.latent_dim,
             n_layers=self._config.n_layers,
             enc_factor=self._config.enc_factor,
         )
+        #
 
-        encoder_layers = []
-        for i in range(len(enc_dim) - 1):
-            # Last layer flag for final layer
-            last_layer = i == len(enc_dim) - 2
-            encoder_layers.extend(
-                LayerFactory.create_layer(
-                    in_features=enc_dim[i],
-                    out_features=enc_dim[i + 1],
-                    dropout_p=self._config.drop_p,
-                    last_layer=last_layer,
+        # Case 1: No Hidden Layers (Direct Mapping)
+        self._encoder = nn.Sequential()
+        self._mu = nn.Linear(self.input_dim, self._config.latent_dim)
+        self._logvar = nn.Linear(self.input_dim, self._config.latent_dim)
+
+        # Case 2: At Least One Hidden Layer
+        if self._config.n_layers > 0:
+            encoder_layers = []
+            print(enc_dim)
+            for i, (in_features, out_features) in enumerate(
+                zip(enc_dim[:-1], enc_dim[1:])
+            ):
+                # since we add mu and logvar, we will remove the last layer
+                if i == len(enc_dim) - 2:
+                    break
+                encoder_layers.extend(
+                    LayerFactory.create_layer(
+                        in_features=in_features,
+                        out_features=out_features,
+                        dropout_p=self._config.drop_p,
+                        last_layer=False,  # only for decoder relevant
+                    )
                 )
-            )
 
+            self._encoder = nn.Sequential(*encoder_layers)
+            self._mu = nn.Linear(enc_dim[-2], self._config.latent_dim)
+            self._logvar = nn.Linear(enc_dim[-2], self._config.latent_dim)
+
+        # Construct Decoder (Same for Both Cases)
         dec_dim = enc_dim[::-1]  # Reverse the dimensions and copy
         decoder_layers = []
-        for i in range(len(dec_dim) - 1):
-            # Last layer flag for final layer
+        for i, (in_features, out_features) in enumerate(zip(dec_dim[:-1], dec_dim[1:])):
             last_layer = i == len(dec_dim) - 2
             decoder_layers.extend(
                 LayerFactory.create_layer(
-                    in_features=dec_dim[i],
-                    out_features=dec_dim[i + 1],
+                    in_features=in_features,
+                    out_features=out_features,
                     dropout_p=self._config.drop_p,
                     last_layer=last_layer,
                 )
             )
-        self._encoder = nn.Sequential(*encoder_layers)
+
         self._decoder = nn.Sequential(*decoder_layers)
-        self._mu = nn.Linear(enc_dim[-2], self._config.latent_dim)
-        self._logvar = nn.Linear(enc_dim[-2], self._config.latent_dim)
 
     def encode(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -122,7 +134,9 @@ class VarixArchitecture(BaseAutoencoder):
             Encoded tensor
 
         """
-        latent = self._encoder(x)
+        latent = x  # for case where n_layers=0
+        if len(self._encoder) > 0:
+            latent = self._encoder(x)
         mu = self._mu(latent)
         logvar = self._logvar(latent)
         # numeric stability

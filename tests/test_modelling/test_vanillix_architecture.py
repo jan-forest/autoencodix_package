@@ -100,3 +100,45 @@ class TestVanillixIntegration:
         output = model(x)
         assert isinstance(output.reconstruction, torch.Tensor)
         assert isinstance(output.latentspace, torch.Tensor)
+
+    @pytest.mark.parametrize(
+        "config, input_dim, expected_latent_input",
+        [
+            (
+                DefaultConfig(n_layers=0, enc_factor=1, batch_size=1, latent_dim=16),
+                100,
+                100,
+            ),
+            (
+                DefaultConfig(n_layers=1, enc_factor=1, batch_size=1, latent_dim=16),
+                100,
+                100,
+            ),
+            (
+                DefaultConfig(n_layers=4, enc_factor=1, batch_size=1, latent_dim=16),
+                100,
+                100,
+            ),
+            (
+                DefaultConfig(n_layers=2, enc_factor=2, batch_size=1, latent_dim=16),
+                100,
+                25,
+            ),
+            (
+                DefaultConfig(n_layers=3, enc_factor=2, batch_size=1, latent_dim=16),
+                100,
+                16,
+            ),  # cant be smaller than latent_dim
+            (
+                DefaultConfig(n_layers=3, enc_factor=2, batch_size=1, latent_dim=2),
+                100,
+                12,
+            ),
+        ],
+    )
+    def test_latent_details(
+        self, config: DefaultConfig, input_dim: int, expected_latent_input: int
+    ):
+        model = VanillixArchitecture(config=config, input_dim=input_dim)
+        mu_input = model._encoder[-1].in_features
+        assert mu_input == expected_latent_input

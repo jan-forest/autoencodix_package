@@ -2,6 +2,53 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Dict, Any, Optional
 
 
+from enum import Enum
+
+
+# Helper classes for data configuration
+class Direction(Enum):
+    FROM = "FROM"
+    TO = "TO"
+
+class DataType(Enum):
+    NUMERIC = "NUMERIC"
+    ANNOTATION = "ANNOTATION"
+    MIXED = "MIXED"
+    IMG = "IMG"
+
+class ScalingMethod(Enum):
+    NONE = "NoScaler"
+    MINMAX = "MinMax"
+    STANDARD = "Standard"
+    ROBUST = "Robust"
+    MAXABS = "MaxAbs"
+
+class FilteringMethod(Enum):
+    NONE = "NoFilt"
+    VAR = "Var"
+    MAD = "MAD"
+    CORR = "Corr"
+    VAR_CORR = "VarCorr"
+
+class DataInfo(BaseModel):
+    file_path: str
+    data_type: DataType = DataType.NUMERIC
+    scaling: ScalingMethod = ScalingMethod.STANDARD
+    filtering: FilteringMethod = FilteringMethod.VAR
+    is_single_cell: bool = False
+    data_object: Optional[Any] = None
+    min_cells: Optional[float] = Field(None, ge=0, le=1)
+    min_genes: Optional[float] = Field(None, ge=0, le=1)
+    translate_direction: Optional[Direction] = None
+    img_root: Optional[str] = None
+    is_X: bool = None  # only for single cell data TODO validate with is_single_cell
+    sep: Optional[None] = None  # all pandas read_csv 
+
+class DataConfig(BaseModel):
+    data_info: Dict[str, DataInfo]
+    patient_id_column: str = "patient_id"
+    output_h5ad: str = "multiomics.h5ad"
+
 # internal check done
 # write tests: done
 class DefaultConfig(BaseModel):
@@ -22,6 +69,10 @@ class DefaultConfig(BaseModel):
         Print a human-readable schema of all config parameters.
 
     """
+
+    # Datasets configuration --------------------------------------------------
+    data_config: DataConfig = DataConfig(data_info={})
+    paired_translation: bool = False
 
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(

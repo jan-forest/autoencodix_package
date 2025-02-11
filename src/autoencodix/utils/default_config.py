@@ -2,52 +2,29 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Dict, Any, Optional
 
 
-from enum import Enum
-
-
-# Helper classes for data configuration
-class Direction(Enum):
-    FROM = "FROM"
-    TO = "TO"
-
-class DataType(Enum):
-    NUMERIC = "NUMERIC"
-    ANNOTATION = "ANNOTATION"
-    MIXED = "MIXED"
-    IMG = "IMG"
-
-class ScalingMethod(Enum):
-    NONE = "NoScaler"
-    MINMAX = "MinMax"
-    STANDARD = "Standard"
-    ROBUST = "Robust"
-    MAXABS = "MaxAbs"
-
-class FilteringMethod(Enum):
-    NONE = "NoFilt"
-    VAR = "Var"
-    MAD = "MAD"
-    CORR = "Corr"
-    VAR_CORR = "VarCorr"
-
 class DataInfo(BaseModel):
     file_path: str
-    data_type: DataType = DataType.NUMERIC
-    scaling: ScalingMethod = ScalingMethod.STANDARD
-    filtering: FilteringMethod = FilteringMethod.VAR
-    is_single_cell: bool = False
-    data_object: Optional[Any] = None
-    min_cells: Optional[float] = Field(None, ge=0, le=1)
-    min_genes: Optional[float] = Field(None, ge=0, le=1)
-    translate_direction: Optional[Direction] = None
-    img_root: Optional[str] = None
-    is_X: bool = None  # only for single cell data TODO validate with is_single_cell
-    sep: Optional[None] = None  # all pandas read_csv 
+    data_type: Literal["NUMERIC", "CATEGORICAL", "IMG", "ANNOTATION"] = Field(
+        default="NUMERIC"
+    )
+    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "NONE"] = Field(default="STANDARD")
+    filtering: Literal["VAR", "MAD", "CORR", "VARCORR"] = Field(default="VAR")
+    is_single_cell: bool = Field(default=False)
+    data_object: Optional[Any] = Field(default=None)
+    min_cells: Optional[float] = Field(default=None, ge=0, le=1)
+    min_genes: Optional[float] = Field(default=None, ge=0, le=1)
+    translate_direction: Optional[Literal["from", "to"]] = Field(default=None)
+    img_root: Optional[str] = Field(default=None)
+    is_X: Optional[bool] = Field(default=None)  # only for single cell data
+    sep: Optional[str] = Field(default=None)  # for pandas read_csv
+    extra_anno_file: Optional[str] = Field(default=None)
+
 
 class DataConfig(BaseModel):
     data_info: Dict[str, DataInfo]
     patient_id_column: str = "patient_id"
     output_h5ad: str = "multiomics.h5ad"
+
 
 # internal check done
 # write tests: done
@@ -73,6 +50,8 @@ class DefaultConfig(BaseModel):
     # Datasets configuration --------------------------------------------------
     data_config: DataConfig = DataConfig(data_info={})
     paired_translation: bool = False
+    img_width_resize: Optional[int] = None
+    img_height_resize: Optional[int] = None
 
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(
@@ -182,6 +161,28 @@ class DefaultConfig(BaseModel):
         )
         if total > 1.0:
             raise ValueError(f"Data split ratios must sum to 1.0 or less (got {total})")
+        return v
+
+    # model specific validation
+    paired_translation: bool = False
+
+    # this should validate that extra_anno_file is not None if paired_translation is True
+    # and othweise it has to be None if paired_translation is False
+    @field_validator("paired_translation")
+    def validate_paired_translation(cls, v, values):
+        extra_anno_file = (
+            values.data.get("data_config", {})
+            .get("data_info", {})
+            .get("extra_anno_file")
+        )
+        if v and not extra_anno_file:
+            raise ValueError(
+                "extra_anno_file is required when paired_translation is True"
+            )
+        if not v and extra_anno_file:
+            raise ValueError(
+                "extra_anno_file must be None when paired_translation is False"
+            )
         return v
 
     # TODO test if other float precisions work with MPS

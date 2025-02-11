@@ -6,3 +6,4 @@ from autoencodix.base._base_preprocessor import BasePreprocessor
 class Preprocessor(BasePreprocessor):
     def __init__(self):
         super().__init__()
+

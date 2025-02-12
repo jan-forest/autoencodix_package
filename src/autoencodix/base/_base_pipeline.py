@@ -18,7 +18,7 @@ from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._utils import config_method
 
-from autoencodix.visualize.visualize import show_figure
+from autoencodix.utils._utils  import show_figure
 
 import matplotlib.pyplot as plt
 from matplotlib import _pylab_helpers
@@ -333,11 +333,11 @@ class BasePipeline(abc.ABC):
     def show_result(self) -> None:
         print("Make plots")
 
-        fig = self._visualizer.plots['loss_absolute']
+        fig = self.result.plots['loss_absolute']
         show_figure(fig)
         plt.show()
 
-        fig = self._visualizer.plots['loss_relative']
+        fig = self.result.plots['loss_relative']
         show_figure(fig)
         plt.show()
 

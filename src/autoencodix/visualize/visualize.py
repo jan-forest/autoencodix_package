@@ -6,21 +6,10 @@ from autoencodix.utils._result import Result
 from autoencodix.base._base_visualizer import BaseVisualizer
 from autoencodix.utils.default_config import DefaultConfig
 
-def show_figure(fig):
-
-    # create a dummy figure and use its
-    # manager to display "fig"
-
-    dummy = plt.figure()
-    new_manager = dummy.canvas.manager
-    new_manager.canvas.figure = fig
-    fig.set_canvas(new_manager.canvas)
 
 
 class Visualizer(BaseVisualizer):
-    def __init__(self):
-        ## Dictionary of plots as figure handles
-        self.plots = dict()
+
 
     def visualize(self, result: Result, config: DefaultConfig) -> Result:
 
@@ -28,12 +17,12 @@ class Visualizer(BaseVisualizer):
         loss_df_melt = self.make_loss_format(result=result,config=config)
 
         ## Make plot loss absolute
-        self.plots["loss_absolute"] = self.make_loss_plot(df_plot=loss_df_melt, type="absolute")
+        result.plots["loss_absolute"] = self.make_loss_plot(df_plot=loss_df_melt, type="absolute")
         ## Make plot loss relative
-        self.plots["loss_relative"] = self.make_loss_plot(df_plot=loss_df_melt, type="relative")
+        result.plots["loss_relative"] = self.make_loss_plot(df_plot=loss_df_melt, type="relative")
 
-        print(self.plots.keys())
         return result
+    
     
     def make_loss_plot(self, df_plot, type):
         if type=="absolute":

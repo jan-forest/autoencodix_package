@@ -2,8 +2,10 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, Dict
 
 import torch
+from matplotlib import pyplot as plt
 
 from autoencodix.data import DatasetContainer
+from autoencodix.utils._utils  import show_figure
 
 from ._traindynamics import TrainingDynamics
 
@@ -106,6 +108,67 @@ class Result:
     datasets: Optional[DatasetContainer] = field(
         default_factory=lambda: DatasetContainer(train=None, valid=None, test=None)
     )
+    plots: Dict[str, Any] = field(default_factory=dict) ## Dictionary of plots as figure handles
+
+    def save_plots(self, path: str, which: str='all', format: str='png') -> None:
+        """
+        Save specified plots to the given path in the specified format.
+
+        Parameters:
+        path (str): The directory path where the plots will be saved.
+        which (list or str): A list of plot names to save or a string specifying which plots to save.
+                             If 'all', all plots in the plots dictionary will be saved.
+                             If a single plot name is provided as a string, only that plot will be saved.
+        format (str): The file format in which to save the plots (e.g., 'png', 'jpg').
+
+        Returns:
+        None
+
+        Raises:
+        ValueError: If the 'which' parameter is not a list or a string.
+        """
+        if type(which) != list:
+            ## Case when which is a string
+            if which == "all":
+                ## Case when all plots are to be saved
+                if len(self.plots) == 0:
+                    print("No plots found in the plots dictionary")
+                    print("You need to run  visualize() method first")
+                else:
+                    for key, fig in self.plots.items():
+                        fig.savefig(f"{path}/{key}.{format}")
+            else:
+                ## Case when a single plot is provided as string
+                if which not in self.plots.keys():
+                    print(f"Plot {which} not found in the plots dictionary")
+                    print(f"All available plots are: {list(self.plots.keys())}")
+                else:
+                    fig = self.plots[which]
+                    fig.savefig(f"{path}/{which}.{format}")
+        else:
+            ## Case when which is a list of plot specified as strings
+            for key in which:
+                if key not in self.plots.keys():
+                    print(f"Plot {key} not found in the plots dictionary")
+                    print(f"All available plots are: {list(self.plots.keys())}")
+                    continue
+                else:
+                    fig = self.plots[key]
+                    fig.savefig(f"{path}/{key}.{format}")
+
+
+    def  show_loss(self, type="absolute") -> None:
+        if type=="absolute":
+            fig = self.plots['loss_absolute']
+            show_figure(fig)
+            plt.show()
+        if type=="relative":
+            fig = self.plots['loss_relative']
+            show_figure(fig)
+            plt.show()
+        
+        if type not in ["absolute", "relative"]:
+            print("Type of loss plot not recognized. Please use 'absolute' or 'relative'")
 
     def __getitem__(self, key: str) -> Any:
         """

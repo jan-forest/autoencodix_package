@@ -7,9 +7,19 @@ import inspect
 from functools import wraps
 from typing import Any, Callable, Optional, get_type_hints
 
+from matplotlib import pyplot as plt
 
 from .default_config import DefaultConfig
 
+def show_figure(fig):
+
+    # create a dummy figure and use its
+    # manager to display "fig"
+
+    dummy = plt.figure()
+    new_manager = dummy.canvas.manager
+    new_manager.canvas.figure = fig
+    fig.set_canvas(new_manager.canvas)
 
 # internal check done
 # write tests: done

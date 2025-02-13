@@ -1,5 +1,20 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import Literal, Dict, Any, Optional
+from enum import Enum
+from typing import Any, Dict, Literal, Optional
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+class DataCase(str, Enum):
+    MULTI_SINGLE_CELL = "Multi Single Cell"
+    MULTI_BULK = "Multi Bulk"
+    BULK_TO_BULK = "Bulk<->Bulk"
+    IMG_TO_BULK = "IMG<->Bulk"
+    SINGLE_CELL_TO_SINGLE_CELL = "Single Cell<->Single Cell"
+    SINGLE_CELL_TO_IMG = "Single Cell<->IMG"
+
+
+class ConfigValidationError(Exception):
+    pass
 
 
 class DataInfo(BaseModel):
@@ -10,7 +25,6 @@ class DataInfo(BaseModel):
     scaling: Literal["STANDARD", "MINMAX", "ROBUST", "NONE"] = Field(default="STANDARD")
     filtering: Literal["VAR", "MAD", "CORR", "VARCORR"] = Field(default="VAR")
     is_single_cell: bool = Field(default=False)
-    data_object: Optional[Any] = Field(default=None)
     min_cells: Optional[float] = Field(default=None, ge=0, le=1)
     min_genes: Optional[float] = Field(default=None, ge=0, le=1)
     translate_direction: Optional[Literal["from", "to"]] = Field(default=None)
@@ -18,12 +32,12 @@ class DataInfo(BaseModel):
     is_X: Optional[bool] = Field(default=None)  # only for single cell data
     sep: Optional[str] = Field(default=None)  # for pandas read_csv
     extra_anno_file: Optional[str] = Field(default=None)
+    img_width_resize: Optional[int] = None
+    img_height_resize: Optional[int] = None
 
 
 class DataConfig(BaseModel):
     data_info: Dict[str, DataInfo]
-    patient_id_column: str = "patient_id"
-    output_h5ad: str = "multiomics.h5ad"
 
 
 # internal check done
@@ -50,9 +64,10 @@ class DefaultConfig(BaseModel):
     # Datasets configuration --------------------------------------------------
     data_config: DataConfig = DataConfig(data_info={})
     paired_translation: bool = False
-    img_width_resize: Optional[int] = None
-    img_height_resize: Optional[int] = None
 
+    data_case: Optional[DataCase] = Field(
+        None, description="Data case for the model, will be determined automatically"
+    )
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(
         default=16, ge=1, description="Dimension of the latent space"
@@ -150,6 +165,132 @@ class DefaultConfig(BaseModel):
     )
     global_seed: int = Field(default=1, ge=0, description="Global random seed")
 
+    ##### VALIDATION ##### -----------------------------------------------------
+    ##### ----------------- -----------------------------------------------------
+    @field_validator("data_config")
+    @classmethod
+    def validate_data_config(cls, data_config: DataConfig):
+        """Main validation logic for dataset consistency and translation."""
+        data_info = data_config.data_info
+
+        numeric_count = sum(
+            1 for info in data_info.values() if info.data_type == "NUMERIC"
+        )
+        img_count = sum(1 for info in data_info.values() if info.data_type == "IMG")
+
+        if numeric_count == 0:
+            raise ConfigValidationError("At least one NUMERIC dataset is required.")
+
+        numeric_datasets = [
+            info for info in data_info.values() if info.data_type == "NUMERIC"
+        ]
+        if numeric_datasets:
+            is_single_cell = numeric_datasets[0].is_single_cell
+            if any(info.is_single_cell != is_single_cell for info in numeric_datasets):
+                raise ConfigValidationError(
+                    "All numeric datasets must be either single cell or bulk."
+                )
+
+        from_dataset = next(
+            (
+                (name, info)
+                for name, info in data_info.items()
+                if info.translate_direction == "from"
+            ),
+            None,
+        )
+        to_dataset = next(
+            (
+                (name, info)
+                for name, info in data_info.items()
+                if info.translate_direction == "to"
+            ),
+            None,
+        )
+
+        if bool(from_dataset) != bool(to_dataset):
+            raise ConfigValidationError(
+                "Translation requires exactly one 'from' and one 'to' dataset."
+            )
+
+        if from_dataset and to_dataset:
+            from_info, to_info = from_dataset[1], to_dataset[1]
+            if from_info.data_type == "NUMERIC" and to_info.data_type == "NUMERIC":
+                if from_info.is_single_cell != to_info.is_single_cell:
+                    raise ConfigValidationError(
+                        "Cannot translate between single cell and bulk data."
+                    )
+
+        return data_config
+
+    @model_validator(mode="after")
+    def determine_case(self) -> "DefaultConfig":
+        """Assign the correct DataCase after model validation."""
+        data_info = self.data_config.data_info
+
+        # Handle empty data_info case
+        if not data_info:
+            return self
+
+        # Find 'from' and 'to' datasets
+        from_dataset = next(
+            (
+                (name, info)
+                for name, info in data_info.items()
+                if info.translate_direction == "from"
+            ),
+            None,
+        )
+        to_dataset = next(
+            (
+                (name, info)
+                for name, info in data_info.items()
+                if info.translate_direction == "to"
+            ),
+            None,
+        )
+
+        try:
+            if from_dataset and to_dataset:
+                from_info, to_info = from_dataset[1], to_dataset[1]
+                if from_info.data_type == "NUMERIC" and to_info.data_type == "NUMERIC":
+                    self.data_case = (
+                        DataCase.SINGLE_CELL_TO_SINGLE_CELL
+                        if from_info.is_single_cell
+                        else DataCase.BULK_TO_BULK
+                    )
+                elif "IMG" in {from_info.data_type, to_info.data_type}:
+                    numeric_dataset = (
+                        from_info if from_info.data_type == "NUMERIC" else to_info
+                    )
+                    self.data_case = (
+                        DataCase.SINGLE_CELL_TO_IMG
+                        if numeric_dataset.is_single_cell
+                        else DataCase.IMG_TO_BULK
+                    )
+            else:
+                # Find any numeric dataset
+                numeric_datasets = [
+                    info for info in data_info.values() if info.data_type == "NUMERIC"
+                ]
+
+                if not numeric_datasets:
+                    raise ValueError("No numeric datasets found in data_info")
+
+                numeric_dataset = numeric_datasets[0]
+                self.data_case = (
+                    DataCase.MULTI_SINGLE_CELL
+                    if numeric_dataset.is_single_cell
+                    else DataCase.MULTI_BULK
+                )
+        except Exception as e:
+            # Log the error but don't fail validation
+            import warnings
+
+            warnings.warn(f"Could not determine data_case: {str(e)}")
+
+        return self
+
     @field_validator("test_ratio", "valid_ratio")
     def validate_ratios(cls, v, values):
         total = (
@@ -164,26 +305,7 @@ class DefaultConfig(BaseModel):
         return v
 
     # model specific validation
-    paired_translation: bool = False
-
-    # this should validate that extra_anno_file is not None if paired_translation is True
-    # and othweise it has to be None if paired_translation is False
-    @field_validator("paired_translation")
-    def validate_paired_translation(cls, v, values):
-        extra_anno_file = (
-            values.data.get("data_config", {})
-            .get("data_info", {})
-            .get("extra_anno_file")
-        )
-        if v and not extra_anno_file:
-            raise ValueError(
-                "extra_anno_file is required when paired_translation is True"
-            )
-        if not v and extra_anno_file:
-            raise ValueError(
-                "extra_anno_file must be None when paired_translation is False"
-            )
-        return v
+    paired_translation: bool = True
 
     # TODO test if other float precisions work with MPS
     @field_validator("float_precision")
@@ -201,6 +323,10 @@ class DefaultConfig(BaseModel):
         if device == "mps" and v != "auto":
             raise ValueError("MPS backend only supports GPU strategy 'auto'")
 
+    #### END VALIDATION #### --------------------------------------------------
+
+    #### READIBILITY #### ------------------------------------------------------
+    #### ------------ #### ------------------------------------------------------
     @classmethod
     def get_params(cls) -> Dict[str, Dict[str, Any]]:
         """

@@ -79,7 +79,7 @@ class ImageDataReader:
             If the image format is unsupported or an unexpected error occurs during processing.
         """
 
-        if not ImageDataReader.validate_image_path(image_path):
+        if not self.validate_image_path(image_path):
             raise FileNotFoundError(f"Invalid image path: {image_path}")
         image_path = Path(image_path)
         SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
@@ -155,9 +155,7 @@ class ImageDataReader:
         if "img_path" not in annotation_df.columns:
             raise ValueError("img_path column is missing in the annotation_df")
         for p in paths:
-            img = ImageDataReader.parse_image_to_tensor(
-                image_path=p, to_h=to_h, to_w=to_w
-            )
+            img = self.parse_image_to_tensor(image_path=p, to_h=to_h, to_w=to_w)
             img_path = os.path.basename(p)
             subset = annotation_df[annotation_df["img_path"] == img_path]
             imgs.append(
@@ -166,14 +164,15 @@ class ImageDataReader:
         return imgs
 
     def read_annotation_file(self, anno_info) -> pd.DataFrame:
-        anno_file = Path(anno_info)
+        anno_file = os.path.join(anno_info.file_path)
+        print(f"reading annotation file: {anno_file}")
         sep = anno_info.sep
         if anno_file.endswith(".parquet"):
             annotation = pd.read_parquet(anno_file)
         elif anno_file.endswith((".csv", ".txt", ".tsv")):
             annotation = pd.read_csv(anno_file, sep=sep)
         else:
-            raise ValueError(f"Unsupported file type for): {anno_file}")
+            raise ValueError(f"Unsupported file type for: {anno_file}")
         return annotation
 
     def read_data(self, config: DefaultConfig) -> List[ImgData]:
@@ -191,11 +190,11 @@ class ImageDataReader:
             if f.data_type == "ANNOTATION"
         )
         if img_info.extra_anno_file is not None:
-            annotation = self.read_annotation_file(img_info.extra_anno_file)
+            annotation = self.read_annotation_file(img_info)
         else:
-            annotation = self.read_annotation_file(anno_info.file_path)
-            raise ValueError(f"Unsupported file type for): {anno_info}")
-        images = ImageDataReader.read_all_images_from_dir(
+            annotation = self.read_annotation_file(anno_info)
+
+        images = self.read_all_images_from_dir(
             img_dir=img_dir, to_h=to_h, to_w=to_w, annotation_df=annotation
         )
         return images

@@ -1,19 +1,22 @@
 import abc
-from typing import List, Optional, Type, Union, Tuple
+from typing import List, Optional, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
 import torch
 from anndata import AnnData  # type: ignore
 
+from autoencodix.data._datapackage import DataPackage
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.utils._bulkreader import BulkDataReader
+from autoencodix.utils._imgreader import ImageDataReader
+from autoencodix.utils._screader import SingleCellDataReader
+from autoencodix.utils.default_config import DataCase, DefaultConfig
 
 
 class BasePreprocessor(abc.ABC):
     def __init__(self):
-
         pass
 
     def preprocess(
@@ -65,6 +68,71 @@ class BasePreprocessor(abc.ABC):
         if split:
             self._build_datasets()  # populates self._datasets
         return self._datasets, self._features
+
+    def _fill_dataclass(config: DefaultConfig) -> DataPackage:
+        """
+        Fills a DataPackage object based on the provided configuration.
+
+        Args:
+            config (DefaultConfig): Configuration object containing the data case and other settings.
+
+        Returns:
+            DataPackage: An object containing the loaded data based on the specified data case.
+
+        Raises:
+            ValueError: If the data case is not supported or if unpaired translation is requested.
+
+        Supported Data Cases:
+            - DataCase.MULTI_SINGLE_CELL
+            - DataCase.SINGLE_CELL_TO_SINGLE_CELL
+            - DataCase.MULTI_BULK
+            - DataCase.BULK_TO_BULK
+            - DataCase.IMG_TO_BULK
+            - DataCase.SINGLE_CELL_TO_IMG
+        """
+        result = DataPackage()
+        bulkreader = BulkDataReader()
+        screader = SingleCellDataReader()
+        imgreader = ImageDataReader()
+        datacase = config.data_case
+        print(f"datacase: {datacase}")
+        if not config.paired_translation:
+            raise ValueError("Unpaired translation is not supported as of now")
+
+        # even if reading is the same for these two cases the validation is different, thats why we have them separated
+        if (
+            datacase == DataCase.MULTI_SINGLE_CELL
+            or datacase == DataCase.SINGLE_CELL_TO_SINGLE_CELL
+        ):
+            adata = screader.read_data(config=config)
+            result.multi_sc = adata
+            return result
+
+        # even if reading is the same for these two cases the validation is different, thats why we have them separated
+        elif datacase == DataCase.MULTI_BULK or DataCase.BULK_TO_BULK:
+            bulk_dfs, annotation = bulkreader.read_data(config=config)
+            result.multi_bulk = bulk_dfs
+            result.annotation = annotation
+            return result
+
+        # TRANSLATION CASES
+        elif datacase == DataCase.IMG_TO_BULK:
+            bulk_dfs, annotation = bulkreader.read_data(config=config)
+            images = imgreader.read_data(config=config)
+            result.multi_bulk = bulk_dfs
+            result.annotation = annotation
+            result.img = images
+            return result
+        elif datacase == DataCase.SINGLE_CELL_TO_IMG:
+            adata = screader.read_data(config=config)
+            images = imgreader.read_data(config=config)
+            annotation = adata.obs
+            result.multi_sc = adata
+            result.img = images
+            result.annotation = annotation
+            return result
+        else:
+            raise ValueError("Non valid data case")
 
     def _preprocess_numpy(self, data: np.ndarray) -> torch.Tensor:
         t = torch.from_numpy(data)

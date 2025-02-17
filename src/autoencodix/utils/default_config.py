@@ -178,7 +178,7 @@ class DefaultConfig(BaseModel):
         )
         img_count = sum(1 for info in data_info.values() if info.data_type == "IMG")
 
-        if numeric_count == 0:
+        if numeric_count == 0 and img_count == 0:
             raise ConfigValidationError("At least one NUMERIC dataset is required.")
 
         numeric_datasets = [

@@ -99,6 +99,7 @@ class BasePipeline(abc.ABC):
 
     def __init__(
         self,
+        data: Union[pd.DataFrame, AnnData, np.ndarray, List[np.ndarray]],
         dataset_type: Type[BaseDataset],
         trainer_type: Type[BaseTrainer],
         model_type: Type[BaseAutoencoder],
@@ -109,9 +110,6 @@ class BasePipeline(abc.ABC):
         evaluator: Evaluator,
         result: Result,
         config: DefaultConfig = DefaultConfig(),
-        data: Optional[
-            Union[pd.DataFrame, AnnData, np.ndarray, List[np.ndarray]]
-        ] = None,
         custom_split: Optional[Dict[str, np.ndarray]] = None,
         **kwargs: dict,
     ) -> None:
@@ -127,7 +125,7 @@ class BasePipeline(abc.ABC):
             raise TypeError(
                 f"Expected data type to be one of np.ndarray, AnnData, or pd.DataFrame, got {type(data)}."
             )
-        self._validate_data(data)
+
         self.data: Union[np.ndarray, AnnData, pd.DataFrame] = data
         self.config = config
         self._trainer_type = trainer_type
@@ -153,16 +151,6 @@ class BasePipeline(abc.ABC):
         self._datasets: Optional[DatasetContainer] = None
 
     # config parameter will be self.config if not provided, decorator will handle this
-    def _validate_data(self) -> None:
-        """
-        Checks if either a data attribute is given, or can be derived from the config
-        """
-        attribute_check = self.data is None
-        config_check = len(self.config.data_config.data_info) == 0
-        # if both are true, raise an error
-        if attribute_check and config_check:
-            raise ValueError("No data provided or specified in the config")
-
     @config_method(valid_params={"config"})
     def preprocess(
         self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs: dict

@@ -158,6 +158,16 @@ class Result:
 
 
     def  show_loss(self, type="absolute") -> None:
+        """
+        Display the loss plot.
+        Parameters:
+        type (str): The type of loss plot to display. 
+                    Options are "absolute" for the absolute loss plot and 
+                    "relative" for the relative loss plot. 
+                    Defaults to "absolute".
+        Returns:
+        None
+        """
         if type=="absolute":
             fig = self.plots['loss_absolute']
             show_figure(fig)

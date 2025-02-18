@@ -1,27 +1,9 @@
 import os
-from dataclasses import dataclass
-from typing import Dict, List, Set, Tuple
+from typing import Dict, Set, Tuple
 
-import numpy as np
 import pandas as pd
-from anndata import AnnData
 
 from autoencodix.utils.default_config import DefaultConfig
-
-
-@dataclass
-class ImgData:
-    img: np.ndarray
-    sample_id: str
-    annotation: pd.DataFrame
-
-
-@dataclass
-class MyData:
-    multi_sc: AnnData | None = None
-    multi_bulk: Dict[str, pd.DataFrame] = None
-    annotation: pd.DataFrame | None = None
-    img: List[ImgData] | None = None
 
 
 class BulkDataReader:
@@ -64,7 +46,9 @@ class BulkDataReader:
 
                 elif info.data_type == "ANNOTATION":
                     has_annotation = True
+                    print(f"anno df in reading: {df.head()}")
                     annotation_df = df
+                    current_samples = set(df.index)
 
             except Exception as e:
                 print(f"Error loading {file_path}: {str(e)}")

@@ -17,8 +17,8 @@ from autoencodix.utils.default_config import DataCase, DefaultConfig
 
 
 class BasePreprocessor(abc.ABC):
-    def __init__(self):
-        pass
+    def __init__(self, config: Optional[DefaultConfig] = None):
+        self.config = config
 
     def preprocess(
         self,
@@ -74,7 +74,7 @@ class BasePreprocessor(abc.ABC):
     def _filter_sc_data(adata: AnnData) -> AnnData:
         sc.pp.filter_genes(adata, min_cells=int(adata.shape[0] * 0.01))
 
-    def _fill_dataclass(config: DefaultConfig) -> DataPackage:
+    def _fill_dataclass(self) -> DataPackage:
         """
         Fills a DataPackage object based on the provided configuration.
 
@@ -99,9 +99,9 @@ class BasePreprocessor(abc.ABC):
         bulkreader = BulkDataReader()
         screader = SingleCellDataReader()
         imgreader = ImageDataReader()
-        datacase = config.data_case
+        datacase = self.config.data_case
         print(f"datacase: {datacase}")
-        if not config.paired_translation:
+        if not self.config.paired_translation:
             raise ValueError("Unpaired translation is not supported as of now")
 
         # even if reading is the same for these two cases the validation is different, thats why we have them separated
@@ -109,28 +109,28 @@ class BasePreprocessor(abc.ABC):
             datacase == DataCase.MULTI_SINGLE_CELL
             or datacase == DataCase.SINGLE_CELL_TO_SINGLE_CELL
         ):
-            adata = screader.read_data(config=config)
+            adata = screader.read_data(config=self.config)
             result.multi_sc = adata
             return result
 
         # even if reading is the same for these two cases the validation is different, thats why we have them separated
         elif datacase == DataCase.MULTI_BULK or DataCase.BULK_TO_BULK:
-            bulk_dfs, annotation = bulkreader.read_data(config=config)
+            bulk_dfs, annotation = bulkreader.read_data(config=self.config)
             result.multi_bulk = bulk_dfs
             result.annotation = annotation
             return result
 
         # TRANSLATION CASES
         elif datacase == DataCase.IMG_TO_BULK:
-            bulk_dfs, annotation = bulkreader.read_data(config=config)
-            images = imgreader.read_data(config=config)
+            bulk_dfs, annotation = bulkreader.read_data(config=self.config)
+            images = imgreader.read_data(config=self.config)
             result.multi_bulk = bulk_dfs
             result.annotation = annotation
             result.img = images
             return result
         elif datacase == DataCase.SINGLE_CELL_TO_IMG:
-            adata = screader.read_data(config=config)
-            images = imgreader.read_data(config=config)
+            adata = screader.read_data(config=self.config)
+            images = imgreader.read_data(config=self.config)
             annotation = adata.obs
             result.multi_sc = adata
             result.img = images

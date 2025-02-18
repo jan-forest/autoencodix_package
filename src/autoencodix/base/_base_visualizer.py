@@ -1,5 +1,5 @@
 import abc
-from autoencodix.utils._result import Result
+# from autoencodix.utils._result import Result
 
 
 class BaseVisualizer(abc.ABC):
@@ -7,5 +7,6 @@ class BaseVisualizer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def visualize(self, result: Result) -> Result:
+    # def visualize(self, result: Result) -> Result:
+    def visualize(self, result):
         pass

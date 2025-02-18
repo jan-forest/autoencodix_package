@@ -337,9 +337,12 @@ class BasePipeline(abc.ABC):
         show_figure(fig)
         plt.show()
 
-        fig = self.result.plots['loss_relative']
-        show_figure(fig)
-        plt.show()
+        # fig = self.result.plots['loss_relative']
+        # show_figure(fig)
+        # plt.show()
+        self.result.show_latent_space(type="Ridgeline")
+
+        self.result.show_latent_space(type="2D-scatter")
 
 
     def run(

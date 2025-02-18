@@ -2,7 +2,7 @@
 Stores utility functions for the autoencodix package.
 Uuse of OOP would be overkill for the simple functions in this module.
 """
-
+from collections import defaultdict
 import inspect
 from functools import wraps
 from typing import Any, Callable, Optional, get_type_hints
@@ -11,11 +11,47 @@ from matplotlib import pyplot as plt
 
 from .default_config import DefaultConfig
 
+def nested_dict():
+    """
+    Creates a nested defaultdict.
+
+    This function returns a defaultdict where each value is another defaultdict
+    of the same type. This allows for the creation of arbitrarily deep nested
+    dictionaries without having to explicitly define each level.
+
+    Returns:
+        defaultdict: A nested defaultdict where each value is another nested defaultdict.
+    """
+    return defaultdict(nested_dict)
+
+def nested_to_tuple(d, base=()):
+    """
+    Recursively converts a nested dictionary into tuples.
+
+    Args:
+        d (dict): The dictionary to convert.
+        base (tuple, optional): The base tuple to start with. Defaults to ().
+
+    Yields:
+        tuple: Tuples representing the nested dictionary structure, where each tuple
+               contains the keys leading to a value and the value itself.
+    """
+    for k, v in d.items():
+        if isinstance(v, dict):
+            yield from nested_to_tuple(v, base + (k,))
+        else:
+            yield base + (k, v)
+
 def show_figure(fig):
+    """
+    Display a given Matplotlib figure in a new window.
 
-    # create a dummy figure and use its
-    # manager to display "fig"
+    Parameters:
+    fig (matplotlib.figure.Figure): The figure to be displayed.
 
+    Returns:
+    None
+    """
     dummy = plt.figure()
     new_manager = dummy.canvas.manager
     new_manager.canvas.figure = fig

@@ -1,14 +1,20 @@
 from dataclasses import dataclass, field
 from typing import Any, Optional, Dict
 
+import os
 import torch
+import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
+from umap import UMAP
 
 from autoencodix.data import DatasetContainer
 from autoencodix.utils._utils  import show_figure
 
 from ._traindynamics import TrainingDynamics
+from ._utils import nested_dict, nested_to_tuple
 
+from autoencodix.visualize import Visualizer
 
 @dataclass
 class LossRegistry:
@@ -108,8 +114,10 @@ class Result:
     datasets: Optional[DatasetContainer] = field(
         default_factory=lambda: DatasetContainer(train=None, valid=None, test=None)
     )
-    plots: Dict[str, Any] = field(default_factory=dict) ## Dictionary of plots as figure handles
+    plots: Dict[str, Any] = field(default_factory=nested_dict) ## Nested dictionary of plots as figure handles
 
+    ## Plotting methods ##
+    
     def save_plots(self, path: str, which: str='all', format: str='png') -> None:
         """
         Save specified plots to the given path in the specified format.
@@ -135,16 +143,22 @@ class Result:
                     print("No plots found in the plots dictionary")
                     print("You need to run  visualize() method first")
                 else:
-                    for key, fig in self.plots.items():
-                        fig.savefig(f"{path}/{key}.{format}")
+                    for item in nested_to_tuple(self.plots):
+                        fig = item[-1] ## Figure is in last element of the tuple
+                        filename = '_'.join(str(x) for x in item[0:-1])
+                        fullpath = os.path.join(path, filename)
+                        fig.savefig(f"{fullpath}.{format}")
             else:
                 ## Case when a single plot is provided as string
                 if which not in self.plots.keys():
                     print(f"Plot {which} not found in the plots dictionary")
                     print(f"All available plots are: {list(self.plots.keys())}")
                 else:
-                    fig = self.plots[which]
-                    fig.savefig(f"{path}/{which}.{format}")
+                    for item in nested_to_tuple(self.plots[which]): # Plot all epochs and splits of type which
+                        fig = item[-1] ## Figure is in last element of the tuple
+                        filename = which + "_" + '_'.join(str(x) for x in item[0:-1])
+                        fullpath = os.path.join(path, filename)
+                        fig.savefig(f"{fullpath}.{format}")
         else:
             ## Case when which is a list of plot specified as strings
             for key in which:
@@ -153,8 +167,11 @@ class Result:
                     print(f"All available plots are: {list(self.plots.keys())}")
                     continue
                 else:
-                    fig = self.plots[key]
-                    fig.savefig(f"{path}/{key}.{format}")
+                    for item in nested_to_tuple(self.plots[key]): # Plot all epochs and splits of type key
+                        fig = item[-1] ## Figure is in last element of the tuple
+                        filename = key + "_" + '_'.join(str(x) for x in item[0:-1])
+                        fullpath = os.path.join(path, filename)
+                        fig.savefig(f"{fullpath}.{format}")
 
 
     def  show_loss(self, type="absolute") -> None:
@@ -179,6 +196,92 @@ class Result:
         
         if type not in ["absolute", "relative"]:
             print("Type of loss plot not recognized. Please use 'absolute' or 'relative'")
+    
+    def show_latent_space(self, type="2D-scatter", label_list=None, param="all", epoch=None, split="all"):
+        if type=="2D-scatter":
+            # Set Defaults		
+            if epoch is None:
+                # Infer total epochs from losses
+                epoch = len(self.losses.get())-1
+            
+            if split == "all":
+                df_latent = pd.DataFrame(
+                    np.concatenate([
+                        self.latentspaces.get(epoch=epoch, split='train'),
+                        self.latentspaces.get(epoch=epoch, split='valid'),
+                        self.latentspaces.get(epoch=-1, split='test')
+                        ])
+                    )
+            else:
+                if split == "test":		
+                    df_latent = pd.DataFrame(self.latentspaces.get(epoch=-1, split=split))
+                else:
+                    df_latent = pd.DataFrame(self.latentspaces.get(epoch=epoch, split=split))
+            
+            if label_list is None:
+                label_list = ["all"] * df_latent.shape[0]
+
+            ## Make 2D Embedding with UMAP
+            if df_latent.shape[1] > 2:
+                reducer = UMAP(n_components=2)
+                embedding = pd.DataFrame(reducer.fit_transform(df_latent))
+            else:
+                embedding = df_latent
+
+            if 	not self.plots['2D-scatter'][epoch][split][param]:	## Create when not exist
+                self.plots['2D-scatter'][epoch][split][param] = Visualizer.plot_2D(
+                    embedding=embedding,
+                    labels=label_list,
+                    param=param,
+                    layer=f'2D latent space (epoch {epoch})',
+                    figsize=(12, 8),
+                    center=True,
+                )	
+                
+            fig = self.plots['2D-scatter'][epoch][split][param]	
+            show_figure(fig)
+            plt.show()
+        
+        if type=="Ridgeline":
+            if epoch is None:
+                # Infer total epochs from losses
+                epoch = len(self.losses.get())-1
+            
+            if split == "all":
+                df_latent = pd.DataFrame(
+                    np.concatenate([
+                        self.latentspaces.get(epoch=epoch, split='train'),
+                        self.latentspaces.get(epoch=epoch, split='valid'),
+                        self.latentspaces.get(epoch=-1, split='test')
+                        ])
+                    )
+            else:
+                if split == "test":		
+                    df_latent = pd.DataFrame(self.latentspaces.get(epoch=-1, split=split))
+                else:
+                    df_latent = pd.DataFrame(self.latentspaces.get(epoch=epoch, split=split))	
+            
+            if label_list is None:
+                label_list = ["all"] * df_latent.shape[0]
+            
+            ## Make ridgeline plot
+            if 	not self.plots['Ridgeline'][epoch][split][param]:	## Create when not exist
+                self.plots['Ridgeline'][epoch][split][param] = Visualizer.plot_latent_ridge(lat_space=df_latent, label_list=label_list, param=param)
+            
+            fig = self.plots['Ridgeline'][epoch][split][param].figure
+            show_figure(fig)
+            plt.show()
+        
+        if type=="Coverage-Correlation":
+            ## TODO
+            print("Not implemented yet, empty figure will be shown instead")
+            fig = plt.figure()
+            self.plots['Coverage-Correlation'] = fig
+            show_figure(fig)
+            plt.show()
+
+
+    ## End of Plotting methods ##	
 
     def __getitem__(self, key: str) -> Any:
         """

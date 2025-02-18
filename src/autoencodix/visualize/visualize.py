@@ -15,6 +15,9 @@ class Visualizer(BaseVisualizer):
     # def visualize(self, result: Result, config: DefaultConfig) -> Result:
     def visualize(self, result, config: DefaultConfig):
 
+        ## Make Model Weights plot
+        result.plots["ModelWeights"] = self.plot_model_weights(model=result.model)
+
         ## Make long format of losses 
         loss_df_melt = self.make_loss_format(result=result,config=config)
 
@@ -25,6 +28,68 @@ class Visualizer(BaseVisualizer):
 
         return result
     
+    @staticmethod
+    def plot_model_weights(model):
+        """
+        Visualization of model weights in encoder and decoder layers as heatmap for each layer as subplot.
+        ARGS:
+            model (torch.nn.Module): PyTorch model instance.
+            filepath (str): Path specifying save name and location.
+        RETURNS:
+            fig (matplotlib.figure): Figure handle (of last plot)
+        """
+        all_weights = []
+        names = []
+        for name, param in model.named_parameters():
+            if "weight" in name and len(param.shape) == 2:
+                if not "var" in name:  ## For VAE plot only mu weights
+                    all_weights.append(param.detach().cpu().numpy())
+                    names.append(name[:-7])
+
+        layers = int(len(all_weights) / 2)
+        fig, axes = plt.subplots(2, layers, sharex=False, figsize=(20, 10))
+
+        for l in range(layers):
+            ## Encoder Layer
+            if layers > 1:
+                sns.heatmap(
+                    all_weights[l],
+                    cmap=sns.color_palette("Spectral", as_cmap=True),
+                    ax=axes[0, l],
+                ).set(title=names[l])
+                ## Decoder Layer
+                sns.heatmap(
+                    all_weights[layers + l],
+                    cmap=sns.color_palette("Spectral", as_cmap=True),
+                    ax=axes[1, l],
+                ).set(title=names[layers + l])
+                axes[1, l].set_xlabel("In Node", size=12)
+            else:
+                sns.heatmap(
+                    all_weights[l],
+                    cmap=sns.color_palette("Spectral", as_cmap=True),
+                    ax=axes[l],
+                ).set(title=names[l])
+                ## Decoder Layer
+                sns.heatmap(
+                    all_weights[l + 2],
+                    cmap=sns.color_palette("Spectral", as_cmap=True),
+                    ax=axes[l + 1],
+                ).set(title=names[l + 2])
+                axes[1].set_xlabel("In Node", size=12)
+
+        if layers > 1:
+            axes[1, 0].set_ylabel("Out Node", size=12)
+            axes[0, 0].set_ylabel("Out Node", size=12)
+        else:
+            axes[1].set_ylabel("Out Node", size=12)
+            axes[0].set_ylabel("Out Node", size=12)
+
+        ## Add title
+        fig.suptitle("Model Weights", size=20)
+        plt.close()
+        return fig
+
     def plot_2D(
         embedding,
         labels,

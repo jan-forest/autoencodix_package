@@ -174,6 +174,23 @@ class Result:
                         fig.savefig(f"{fullpath}.{format}")
 
 
+    def show_weights(self) -> None:
+        """
+        Display the model weights plot if it exists in the plots dictionary.
+        Parameters:
+        None
+        Returns:
+        None
+
+        """
+        if 'ModelWeights' not in self.plots.keys():
+            print("Model weights not found in the plots dictionary")
+            print("You need to run visualize() method first")
+        else:
+            fig = self.plots['ModelWeights']
+            show_figure(fig)
+            plt.show()
+
     def  show_loss(self, type="absolute") -> None:
         """
         Display the loss plot.
@@ -186,13 +203,21 @@ class Result:
         None
         """
         if type=="absolute":
-            fig = self.plots['loss_absolute']
-            show_figure(fig)
-            plt.show()
+            if 'loss_absolute' not in self.plots.keys():
+                print("Absolute loss plot not found in the plots dictionary")
+                print("You need to run visualize() method first")
+            else:
+                fig = self.plots['loss_absolute']
+                show_figure(fig)
+                plt.show()
         if type=="relative":
-            fig = self.plots['loss_relative']
-            show_figure(fig)
-            plt.show()
+            if 'relative_absolute' not in self.plots.keys():
+                print("Relative loss plot not found in the plots dictionary")
+                print("You need to run visualize() method first")
+            else:
+                fig = self.plots['loss_relative']
+                show_figure(fig)
+                plt.show()
         
         if type not in ["absolute", "relative"]:
             print("Type of loss plot not recognized. Please use 'absolute' or 'relative'")

@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import torch
 from anndata import AnnData  # type: ignore
+import scanpy as sc
 
 from autoencodix.data._datapackage import DataPackage
 from autoencodix.data._datasetcontainer import DatasetContainer
@@ -62,12 +63,16 @@ class BasePreprocessor(abc.ABC):
             )
         self._data_splitter = data_splitter
         self.config = config
-        self._extract_metadata_numpy(data=data)
         self._features = self._preprocess_numpy(data=data)
+        self._data_package = self._fill_dataclass(config=self.config)
         self._dataset_type = dataset_type
         if split:
             self._build_datasets()  # populates self._datasets
+
         return self._datasets, self._features
+
+    def _filter_sc_data(adata: AnnData) -> AnnData:
+        sc.pp.filter_genes(adata, min_cells=int(adata.shape[0] * 0.01))
 
     def _fill_dataclass(config: DefaultConfig) -> DataPackage:
         """
@@ -134,32 +139,6 @@ class BasePreprocessor(abc.ABC):
         else:
             raise ValueError("Non valid data case")
 
-    def _preprocess_numpy(self, data: np.ndarray) -> torch.Tensor:
-        t = torch.from_numpy(data)
-        return t
-
-    def _align_numpy_data(self, data: List[np.ndarray]) -> np.ndarray:
-        # TODO
-        return np.array(data)
-
-    def align_ann_data(self, data: AnnData) -> np.ndarray:
-        # TODO
-        return np.array(data)
-
-    def _extract_metadata_pandas(
-        self, data: Union[pd.DataFrame, AnnData]
-    ) -> np.ndarray:
-        # TODO
-        return np.array(data)
-
-    def _extract_metadata_anndata(self, data: AnnData) -> np.ndarray:
-        # TODO
-        return np.array(data)
-
-    def _extract_metadata_numpy(self, data: np.ndarray) -> np.ndarray:
-        self._ids = None  # TODO
-        # TODO
-        return np.array(data)
 
     def _build_datasets(self) -> None:
         """

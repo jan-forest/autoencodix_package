@@ -25,8 +25,15 @@ class DataInfo(BaseModel):
     scaling: Literal["STANDARD", "MINMAX", "ROBUST", "NONE"] = Field(default="STANDARD")
     filtering: Literal["VAR", "MAD", "CORR", "VARCORR"] = Field(default="VAR")
     is_single_cell: bool = Field(default=False)
-    min_cells: Optional[float] = Field(default=None, ge=0, le=1)
-    min_genes: Optional[float] = Field(default=None, ge=0, le=1)
+    min_cells: Optional[float] = Field(
+        default=1, ge=0, le=1, description="Fraction of cells to keep"
+    )
+    min_genes: Optional[float] = Field(
+        default=1, ge=0, le=1, description="Fraction of genes to keep"
+    )
+    k_filter_sc: Optional[int] = Field(
+        default=None, description="Number of top highly variable genes to keep"
+    )
     translate_direction: Optional[Literal["from", "to"]] = Field(default=None)
     img_root: Optional[str] = Field(default=None)
     is_X: Optional[bool] = Field(default=None)  # only for single cell data

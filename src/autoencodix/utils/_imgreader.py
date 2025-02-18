@@ -152,12 +152,12 @@ class ImageDataReader:
             if Path(f).suffix.lower() in SUPPORTED_EXTENSIONS
         ]
         imgs = []
-        if "img_path" not in annotation_df.columns:
-            raise ValueError("img_path column is missing in the annotation_df")
+        if "img_paths" not in annotation_df.columns:
+            raise ValueError("img_paths column is missing in the annotation_df")
         for p in paths:
             img = self.parse_image_to_tensor(image_path=p, to_h=to_h, to_w=to_w)
             img_path = os.path.basename(p)
-            subset = annotation_df[annotation_df["img_path"] == img_path]
+            subset = annotation_df[annotation_df["img_paths"] == img_path]
             imgs.append(
                 ImgData(img=img, sample_id=subset["sample_ids"], annotation=subset)
             )
@@ -176,8 +176,6 @@ class ImageDataReader:
         return annotation
 
     def read_data(self, config: DefaultConfig) -> List[ImgData]:
-        print(f"reading data in imgreader")
-        # get IMG datainfo
         img_info = next(
             f for f in config.data_config.data_info.values() if f.data_type == "IMG"
         )

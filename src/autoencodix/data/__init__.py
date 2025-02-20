@@ -4,6 +4,9 @@ from ._datasetcontainer import DatasetContainer
 from .preprocessor import Preprocessor
 from ._datapackage import DataPackage
 from ._imgdataclass import ImgData
+from ._datapackage_splitter import DataPackageSplitter
+from ._filter import DataFilter
+from ._nanremover import NaNRemover
 
 __all__ = [
     "DataSplitter",
@@ -12,6 +15,9 @@ __all__ = [
     "Preprocessor",
     "ImgData",
     "DataPackage",
+    "DataPackageSplitter",
+    "DataFilter",
+    "NaNRemover",
 ]
 
 # data dir V0 tests done

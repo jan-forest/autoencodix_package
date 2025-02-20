@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Literal, Optional, List
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -18,12 +18,22 @@ class ConfigValidationError(Exception):
 
 
 class DataInfo(BaseModel):
+    # general -------------------------------------
     file_path: str
     data_type: Literal["NUMERIC", "CATEGORICAL", "IMG", "ANNOTATION"] = Field(
         default="NUMERIC"
     )
     scaling: Literal["STANDARD", "MINMAX", "ROBUST", "NONE"] = Field(default="STANDARD")
-    filtering: Literal["VAR", "MAD", "CORR", "VARCORR"] = Field(default="VAR")
+    filtering: Literal["VAR", "MAD", "CORR", "VARCORR", "NOFILT", "NONZEROVAR"] = Field(
+        default="VAR"
+    )
+    k_filter: Optional[int] = Field(
+        default=None, description="Number of top genes to keep"
+    )
+    sep: Optional[str] = Field(default=None)  # for pandas read_csv
+    extra_anno_file: Optional[str] = Field(default=None)
+
+    # single cell specific -------------------------
     is_single_cell: bool = Field(default=False)
     min_cells: Optional[float] = Field(
         default=1, ge=0, le=1, description="Fraction of cells to keep"
@@ -34,18 +44,23 @@ class DataInfo(BaseModel):
     k_filter_sc: Optional[int] = Field(
         default=None, description="Number of top highly variable genes to keep"
     )
-    translate_direction: Optional[Literal["from", "to"]] = Field(default=None)
-    img_root: Optional[str] = Field(default=None)
+    selected_layers: Optional[List[str]] = Field(
+        default=None
+    )  # if None, only X is used
     is_X: Optional[bool] = Field(default=None)  # only for single cell data
-    sep: Optional[str] = Field(default=None)  # for pandas read_csv
-    extra_anno_file: Optional[str] = Field(default=None)
-    img_width_resize: Optional[int] = None
-    img_height_resize: Optional[int] = None
+    # image specific ------------------------------
+    img_root: Optional[str] = Field(default=None)
+    img_width_resize: Optional[int] = Field(default=None)
+    img_height_resize: Optional[int] = Field(default=None)
+    # annotation specific -------------------------
+    # xmodalix specific -------------------------
+    translate_direction: Optional[Literal["from", "to"]] = Field(default=None)
 
 
 class DataConfig(BaseModel):
     data_info: Dict[str, DataInfo]
-
+    require_common_cells: Optional[bool] = Field(default=False)
+    annotation_columns: Optional[List[str]] = Field(default=None)
 
 # internal check done
 # write tests: done

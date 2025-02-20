@@ -1,60 +1,46 @@
 import scanpy as sc
+import mudata as md
 from anndata import AnnData
-
+from typing import Dict
 from autoencodix.utils.default_config import DefaultConfig
 
 
 class SingleCellDataReader:
+    """Reader class for multi-modal single-cell data."""
+
     @staticmethod
-    def read_data(config: DefaultConfig) -> AnnData:
-        data_info = config.data_config.data_info
-        adatas = {}
-        for k, v in data_info.items():
-            if v.is_single_cell:
-                adata = sc.read_h5ad(v.file_path)
-                print(f"adata after reading: {adata}")
-                print(f"type of adata after reading: {type(adata)}")
-            if v.min_cells is not None:
-                sc.pp.filter_genes(adata, min_cells=int(v.min_cells * adata.shape[0]))
-                print(f"type of adata after filtering: {type(adata)}")
-            if v.min_genes is not None:
-                sc.pp.filter_genes(adata, min_cells=int(v.min_genes * adata.shape[1]))
-            if v.k_filter_sc is not None:
-                sc.pp.highly_variable_genes(
-                    adata, n_top_genes=v.k_filter_sc, subset=True, inplace=True)
-                print(f"type of adata after filtering: {type(adata)}")
-            adatas[k] = adata
+    def read_data(config: DefaultConfig) -> md.MuData:
+        """
+        Read multiple single-cell modalities into a MuData object.
 
-        adatas = {
-            k: sc.read_h5ad(v.file_path)
-            for k, v in data_info.items()
-            if v.is_single_cell
-        }
+        Parameters
+        ----------
+        config : DefaultConfig
+            Configuration object containing data paths and parameters.
 
-        common_genes = list(
-            set.intersection(*(set(adata.var_names) for adata in adatas.values()))
-        )
+        Returns
+        -------
+        MuData
+            Multi-modal data object containing all modalities.
+        """
+        modalities: Dict[str, AnnData] = {}
 
-        first_key = next(iter(adatas))
-        adata = adatas[first_key][:, common_genes].copy()
+        # Process each modality
+        for mod_key, mod_info in config.data_config.data_info.items():
+            if not mod_info.is_single_cell:
+                continue
+            adata = sc.read_h5ad(mod_info.file_path)
+            modalities[mod_key] = adata
 
-        X_set = False
-        for k, v in data_info.items():
-            if v.is_single_cell:
-                sliced_data = adatas[k][:, common_genes]
+        mdata = md.MuData(modalities)
 
-                if v.is_X:
-                    X_set = True
-                    adata.X = sliced_data.X
+        if not config.paired_translation:
+            common_cells = list(
+                set.intersection(
+                    *(set(adata.obs_names) for adata in modalities.values())
+                )
+            )
+            print(f"Number of common cells: {len(common_cells)}")
+            mdata = mdata[common_cells]
 
-        if not X_set:
-            print(f"Warning: No dataset marked as X, using {first_key} as X")
-
-        for k, v in adatas.items():
-            sliced_data = v[:, common_genes]
-            adata.layers[k] = sliced_data.X
-
-            for col in sliced_data.obs.columns:
-                adata.obs[f"{k}_{col}"] = sliced_data.obs[col]
-
-        return adata
+        return mdata

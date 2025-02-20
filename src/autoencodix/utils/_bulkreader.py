@@ -8,7 +8,13 @@ from autoencodix.utils.default_config import DefaultConfig
 
 class BulkDataReader:
     @staticmethod
-    def read_data(
+    def read_data(config: DefaultConfig) -> Tuple[Dict[str, pd.DataFrame], pd.DataFrame]:
+        if config.paired_translation:
+            return BulkDataReader.read_paired_data(config=config)
+        else:
+            return BulkDataReader.read_unpaired_data(config=config)
+    @staticmethod
+    def read_paired_data(
         config: DefaultConfig,
     ) -> Tuple[Dict[str, pd.DataFrame], pd.DataFrame]:
         """
@@ -66,3 +72,37 @@ class BulkDataReader:
         else:
             annotation = annotation_df
         return bulk_dfs, annotation
+
+    @staticmethod
+    def read_unpaired_data(
+        config: DefaultConfig,
+    ) -> Dict[str, pd.DataFrame]:
+        """
+        Read all data according to config without building common samples.
+        """
+        bulk_dfs: Dict[str, pd.DataFrame] = {}
+
+        for key, info in config.data_config.data_info.items():
+            print(info.data_type)
+            if info.data_type == "IMG":
+                continue
+
+            file_path = os.path.join(info.file_path)
+
+            try:
+                if file_path.endswith(".parquet"):
+                    df = pd.read_parquet(file_path)
+                elif file_path.endswith((".csv", ".txt", ".tsv")):
+                    df = pd.read_csv(file_path, sep=info.sep, index_col=0)
+                else:
+                    print(f"Unsupported file type for {file_path}")
+                    continue
+
+                if info.data_type == "NUMERIC" and not info.is_single_cell:
+                    bulk_dfs[key] = df
+
+            except Exception as e:
+                print(f"Error loading {file_path}: {str(e)}")
+                continue
+
+        return bulk_dfs

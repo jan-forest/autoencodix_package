@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 import pandas as pd
 from anndata import AnnData
@@ -17,6 +17,19 @@ class DataPackage:
     multi_bulk: Optional[Dict[str, pd.DataFrame]] = None
     annotation: Optional[pd.DataFrame] = None
     img: Optional[List[ImgData]] = None
+    to_modality: Optional[Any] = field(default=None, repr=False)
+    from_modality: Optional[Any] = field(default=None, repr=False)
+
+    def is_empty(self) -> bool:
+        """Check if the data package is empty."""
+        return all(
+            [
+                self.multi_sc is None,
+                self.multi_bulk is None,
+                self.annotation is None,
+                self.img is None,
+            ]
+        )
 
     def get_n_samples(
         self, is_paired: bool

@@ -4,17 +4,9 @@ from typing import List, Literal, Optional, Union
 
 import cv2
 import numpy as np
-import torch
 import pandas as pd
-from dataclasses import dataclass
 from autoencodix.utils.default_config import DefaultConfig
-
-
-@dataclass
-class ImgData:
-    img: np.ndarray
-    sample_id: str
-    annotation: pd.DataFrame
+from autoencodix.data._imgdataclass import ImgData
 
 
 class ImageProcessingError(Exception):
@@ -187,9 +179,14 @@ class ImageDataReader:
             for f in config.data_config.data_info.values()
             if f.data_type == "ANNOTATION"
         )
+        print(f"----anno_info-------: {anno_info}")
         if img_info.extra_anno_file is not None:
             annotation = self.read_annotation_file(img_info)
         else:
+            if not config.paired_translation:
+                raise ValueError(
+                    "Img specific annotation file is required for unpaired translation."
+                )
             annotation = self.read_annotation_file(anno_info)
 
         images = self.read_all_images_from_dir(

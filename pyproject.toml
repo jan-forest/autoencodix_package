@@ -15,6 +15,7 @@ dependencies = [
     "scikit-learn>=1.6.1",
     "scipy>=1.13.1",
     "torch>=2.1.0,<2.4.0",
+    "mudata>=0.2.4",
 ]
 
 [dependency-groups]

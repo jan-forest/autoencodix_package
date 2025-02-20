@@ -1,6 +1,8 @@
-from typing import Optional
+from typing import Optional, List
+import numpy as np
 import torch
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.data._datapackage import DataPackage
 from autoencodix.utils.default_config import DefaultConfig
 
 # internal check done
@@ -16,7 +18,9 @@ class NumericDataset(BaseDataset):
         self,
         data: torch.Tensor,
         config: DefaultConfig,
-        ids: Optional[torch.Tensor] = None,
+        ids: Optional[List] = None,
+        data_package: DataPackage = None,
+        split_ids: Optional[np.ndarray] = None,
     ):
         """
         Initialize the dataset
@@ -27,14 +31,15 @@ class NumericDataset(BaseDataset):
             Input features
         labels : Optional[torch.Tensor]
             Optional labels for supervised learning
+
         """
         super().__init__(data=data, ids=ids, config=config)
         if self.config is None:
             raise ValueError("config cannot be None")
         dtype = self._map_float_precision_to_dtype(self.config.float_precision)
-
-        # Convert or clone data to the specified dtype
         self.data = self._to_tensor(data, dtype)
+        self.data_package = data_package
+        self.split_ids = split_ids
 
     @staticmethod
     def _to_tensor(tensor: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:

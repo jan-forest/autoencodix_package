@@ -1,24 +1,36 @@
 import abc
-from typing import List, Optional, Tuple, Type, Union
+from typing import List, Optional, Tuple, Type, Union, Dict
 
 import numpy as np
 import pandas as pd
 import torch
 from anndata import AnnData  # type: ignore
-import scanpy as sc
+from scipy.sparse import issparse
 
 from autoencodix.data._datapackage import DataPackage
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
+from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.utils._bulkreader import BulkDataReader
 from autoencodix.utils._imgreader import ImageDataReader
+from autoencodix.data._datapackage_splitter import DataPackageSplitter
 from autoencodix.utils._screader import SingleCellDataReader
 from autoencodix.utils.default_config import DataCase, DefaultConfig
+from autoencodix.data._filter import DataFilter
+from autoencodix.data._nanremover import NaNRemover
 
 
 class BasePreprocessor(abc.ABC):
     def __init__(self, config: Optional[DefaultConfig] = None):
         self.config = config
+
+    def _validata_data(self) -> None:
+        pass
+
+    def _unspecific_preprocess(self) -> None:
+        #
+        self._data_package = self._fill_dataclass()
+        self._data_package = self._nanremover.remove_nans(data=self._data_package)
 
     def preprocess(
         self,
@@ -28,51 +40,47 @@ class BasePreprocessor(abc.ABC):
         dataset_type: Type,
         split: bool = True,
     ) -> Tuple[DatasetContainer, torch.Tensor]:
-        """
-        Main method of the class. Handles the following steps:
-        1. align the data (in case we have multiple datasets with different sample ids)
-        2. split the data into training and validation sets
-        3. deals with missing values in each split and dataset
-        4. normalizes or standardizes the data in each split and dataset
-        5. applies filtering (like variance thresholding) in each split and dataset
-
-        Parameters:
-            data : Union[pd.DataFrame, AnnData, np.ndarray, List[np.ndarray]]
-                Input data from the user
-            data_splitter : Optional[DataSplitter]
-                DataSplitter object to split the data into train, validation, and test sets
-            config : Optional[DefaultConfig]
-                Configuration object containing customizations for the pipeline
-
-        Returns:
-            DatasetContainer: Container for train, validation, and test datasets (preprocessed)
-
-        """
-        # not implemented yet for pandas, AnnData, or List[np.ndarray]
-        if isinstance(data, pd.DataFrame):
-            raise NotImplementedError(
-                "Preprocessing for pandas DataFrames is not implemented yet, only numpy arrays are supported."
-            )
-        if isinstance(data, AnnData):
-            raise NotImplementedError(
-                "Preprocessing for AnnData objects is not implemented yet, only numpy arrays are supported."
-            )
-        if isinstance(data, List):
-            raise NotImplementedError(
-                "Preprocessing for List of numpy arrays is not implemented yet, only single numpy arrays are supported."
-            )
         self._data_splitter = data_splitter
-        self.config = config
-        self._features = self._preprocess_numpy(data=data)
-        self._data_package = self._fill_dataclass(config=self.config)
         self._dataset_type = dataset_type
-        if split:
-            self._build_datasets()  # populates self._datasets
+        self.config = config
+        self._data_package = self._fill_dataclass()
+        self._nanremover = NaNRemover(
+            relevant_cols=self.config.data_config.annotation_columns
+        )
+        self._data_package = self._nanremover.remove_nans(data=self._data_package)
+        if not self.config.paired_translation:
+            raise ValueError("Unpaired translation is not supported as of now")
+        n_samples = self._data_package.get_n_samples(
+            is_paired=self.config.paired_translation
+        )
 
-        return self._datasets, self._features
+        self._split_indicies = self._data_splitter.split(
+            n_samples=n_samples["paired_count"]
+        )
+        if self.config.paired_translation:
+            self._package_splitter = DataPackageSplitter(
+                data_package=self._data_package, indicies=self._split_indicies
+            )
+        else:
+            raise NotImplementedError(
+                "Unpaired translation is not supported as of now"
+            )  # TODO
 
-    def _filter_sc_data(adata: AnnData) -> AnnData:
-        sc.pp.filter_genes(adata, min_cells=int(adata.shape[0] * 0.01))
+        self._train_packge = self._package_splitter._split_data_package(
+            indices=self._split_indicies["train"]
+        )
+        self._test_package = self._package_splitter._split_data_package(
+            indices=self._split_indicies["test"]
+        )
+        self._valid_package = self._package_splitter._split_data_package(
+            indices=self._split_indicies["valid"]
+        )
+        self._filter_and_scale()  # applies filtering and scaling to each split
+        if self.config.data_case == DataCase.MULTI_BULK:
+            self._build_numeric_datasets()
+            return self._datasets
+
+        return self._datasets
 
     def _fill_dataclass(self) -> DataPackage:
         """
@@ -100,21 +108,27 @@ class BasePreprocessor(abc.ABC):
         screader = SingleCellDataReader()
         imgreader = ImageDataReader()
         datacase = self.config.data_case
-        print(f"datacase: {datacase}")
+
+        from_key, to_key = None, None
+        for k, v in self.config.data_config.data_info.items():
+            if v.translate_direction is None:
+                continue
+            if v.translate_direction == "from":
+                from_key = k
+            if v.translate_direction == "to":
+                to_key = k
         if not self.config.paired_translation:
             raise ValueError("Unpaired translation is not supported as of now")
 
         # even if reading is the same for these two cases the validation is different, thats why we have them separated
-        if (
-            datacase == DataCase.MULTI_SINGLE_CELL
-            or datacase == DataCase.SINGLE_CELL_TO_SINGLE_CELL
-        ):
+        if datacase == DataCase.MULTI_SINGLE_CELL:
+            # UNPAIRED case done via required_common_cells = False in config
             adata = screader.read_data(config=self.config)
             result.multi_sc = adata
             return result
 
         # even if reading is the same for these two cases the validation is different, thats why we have them separated
-        elif datacase == DataCase.MULTI_BULK or DataCase.BULK_TO_BULK:
+        elif datacase == DataCase.MULTI_BULK:
             bulk_dfs, annotation = bulkreader.read_data(config=self.config)
             result.multi_bulk = bulk_dfs
             result.annotation = annotation
@@ -123,10 +137,17 @@ class BasePreprocessor(abc.ABC):
         # TRANSLATION CASES
         elif datacase == DataCase.IMG_TO_BULK:
             bulk_dfs, annotation = bulkreader.read_data(config=self.config)
+
             images = imgreader.read_data(config=self.config)
             result.multi_bulk = bulk_dfs
             result.annotation = annotation
             result.img = images
+            if from_key in bulk_dfs.keys():
+                result.from_modality = bulk_dfs[from_key]
+                result.to_modality = result.img
+            elif to_key in bulk_dfs.keys():
+                result.to_modality = bulk_dfs[to_key]
+                result.from_modality = result.img
             return result
         elif datacase == DataCase.SINGLE_CELL_TO_IMG:
             adata = screader.read_data(config=self.config)
@@ -135,10 +156,95 @@ class BasePreprocessor(abc.ABC):
             result.multi_sc = adata
             result.img = images
             result.annotation = annotation
+            if from_key in adata.mod.keys():
+                result.from_modality = adata.mod[from_key]
+                result.to_modality = result.img
+            elif to_key in adata.mod.keys():
+                result.to_modality = adata.mod[to_key]
+                result.from_modality = result.img
+            return result
+        elif datacase == DataCase.SINGLE_CELL_TO_SINGLE_CELL:
+            adata = screader.read_data(config=self.config)
+            result.multi_sc = adata
+            result.to_modality = adata.mod[to_key]
+            result.from_modality = adata.mod[from_key]
+            return result
+        elif datacase == DataCase.BULK_TO_BULK:
+            bulk_dfs, annotation = bulkreader.read_data(config=self.config)
+            result.multi_bulk = bulk_dfs
+            result.annotation = annotation
+            result.from_modality = bulk_dfs[from_key]
+            result.to_modality = bulk_dfs[to_key]
             return result
         else:
             raise ValueError("Non valid data case")
 
+    def _filter_and_scale(self):
+        if (
+            self.config.data_case == DataCase.MULTI_BULK
+            or self.config.data_case == DataCase.BULK_TO_BULK
+            or self.config.data_case == DataCase.IMG_TO_BULK
+        ):
+            if not self._train_packge.is_empty():
+                self._train_packge = self.scale_filter_multi_bulk(
+                    package=self._train_packge
+                )
+            if not self._valid_package.is_empty():
+                self._valid_package = self.scale_filter_multi_bulk(
+                    package=self._valid_package
+                )
+            if not self._test_package.is_empty():
+                self._test_package = self.scale_filter_multi_bulk(
+                    package=self._test_package
+                )
+
+    def scale_filter_multi_bulk(self, package: DataPackage):
+        filtered_multi_bulk = {}
+        for k, v in self.config.data_config.data_info.items():
+            print(k)
+            if v.data_type == "ANNOTATION" or v.data_type == "IMG":
+                continue
+            elif v.data_type == "NUMERIC":
+                df = package.multi_bulk[k]
+                # v.k_filter = 4
+                data_filter = DataFilter(df=df, data_info=v)
+                filtered_df = data_filter.filter()
+                print(f"filtered_df k{k}.shape: {filtered_df.shape}")
+                scaled_df = data_filter.scale(filtered_df)
+                filtered_multi_bulk[k] = scaled_df
+                # filtered_multi_bulk[k] = filtered_df
+        package.multi_bulk = filtered_multi_bulk
+        return package
+
+    def _build_numeric_datasets(self) -> None:
+        packages = {
+            "train": self._train_packge,
+            "valid": self._valid_package,
+            "test": self._test_package,
+        }
+        helper = {}
+        for k, v in packages.items():
+            if v.is_empty():
+                helper[k] = None
+                continue
+            dfs = [v.multi_bulk[key].values for key in v.multi_bulk.keys()]
+            # concatenate all dfs
+            features = np.concatenate(dfs, axis=1)
+            labels = v.annotation.index.to_list()
+            indices = self._split_indicies[k]
+            # features to torch tensor
+            features = torch.tensor(features, dtype=torch.float32)
+            dataset = NumericDataset(
+                data=features,
+                config=self.config,
+                ids=labels,
+                split_ids=indices,
+                data_package=v,
+            )
+            helper[k] = dataset
+        self._datasets = DatasetContainer(
+            train=helper["train"], valid=helper["valid"], test=helper["test"]
+        )
 
     def _build_datasets(self) -> None:
         """

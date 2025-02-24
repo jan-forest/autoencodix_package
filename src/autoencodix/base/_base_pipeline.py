@@ -18,10 +18,11 @@ from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._utils import config_method
 
-from autoencodix.utils._utils  import show_figure
+from autoencodix.utils._utils import show_figure
 
 import matplotlib.pyplot as plt
 from matplotlib import _pylab_helpers
+
 
 # tests: done
 # internal check done
@@ -328,17 +329,16 @@ class BasePipeline(abc.ABC):
         if self._features is None:
             raise ValueError("No data available for visualization")
 
-        self._visualizer.visualize(result=self.result,config=self.config)
+        self._visualizer.visualize(result=self.result, config=self.config)
 
     def show_result(self) -> None:
         print("Make plots")
 
-        self.result.show_loss(type='absolute')
+        self._visualizer.show_loss(type="absolute")
 
-        self.result.show_latent_space(type="Ridgeline")
+        self._visualizer.show_latent_space(result=self.result, type="Ridgeline")
 
-        self.result.show_latent_space(type="2D-scatter")
-
+        self._visualizer.show_latent_space(result=self.result, type="2D-scatter")
 
     def run(
         self, data: Optional[Union[pd.DataFrame, np.ndarray, AnnData]] = None

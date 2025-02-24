@@ -2,6 +2,7 @@
 Stores utility functions for the autoencodix package.
 Uuse of OOP would be overkill for the simple functions in this module.
 """
+
 from collections import defaultdict
 import inspect
 from functools import wraps
@@ -10,6 +11,7 @@ from typing import Any, Callable, Optional, get_type_hints
 from matplotlib import pyplot as plt
 
 from .default_config import DefaultConfig
+
 
 def nested_dict():
     """
@@ -23,6 +25,7 @@ def nested_dict():
         defaultdict: A nested defaultdict where each value is another nested defaultdict.
     """
     return defaultdict(nested_dict)
+
 
 def nested_to_tuple(d, base=()):
     """
@@ -42,6 +45,7 @@ def nested_to_tuple(d, base=()):
         else:
             yield base + (k, v)
 
+
 def show_figure(fig):
     """
     Display a given Matplotlib figure in a new window.
@@ -56,6 +60,7 @@ def show_figure(fig):
     new_manager = dummy.canvas.manager
     new_manager.canvas.figure = fig
     fig.set_canvas(new_manager.canvas)
+
 
 # internal check done
 # write tests: done

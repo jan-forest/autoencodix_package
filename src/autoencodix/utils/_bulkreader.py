@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Set, Tuple
+from typing import Dict, Set, Tuple, Optional, Union
 
 import pandas as pd
 
@@ -7,102 +7,172 @@ from autoencodix.utils.default_config import DefaultConfig
 
 
 class BulkDataReader:
-    @staticmethod
-    def read_data(config: DefaultConfig) -> Tuple[Dict[str, pd.DataFrame], pd.DataFrame]:
-        if config.paired_translation:
-            return BulkDataReader.read_paired_data(config=config)
+    """
+    Class for reading bulk data from files based on configuration.
+    Supports both paired and unpaired data reading strategies.
+    """
+
+    def __init__(self, config: DefaultConfig):
+        """
+        Initialize the BulkDataReader with a configuration.
+
+        Parameters
+        ----------
+        config : DefaultConfig
+            Configuration object containing data paths and specifications.
+        """
+        self.config = config
+
+    def read_data(self) -> Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]:
+        """
+        Read all data according to the configuration.
+
+        Returns
+        -------
+        Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]
+            A tuple containing (bulk_dataframes, annotation_dataframes)
+        """
+        if self.config.paired_translation:
+            print("Reading paired data")
+            return self.read_paired_data()
         else:
-            return BulkDataReader.read_unpaired_data(config=config)
-    @staticmethod
+            print("Reading unpaired data")
+            return self.read_unpaired_data()
+
     def read_paired_data(
-        config: DefaultConfig,
-    ) -> Tuple[Dict[str, pd.DataFrame], pd.DataFrame]:
+        self,
+    ) -> Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]:
         """
-        Read all data according to config and return a MyData object in a single pass.
+        Read data where samples are paired across modalities.
+        Finds common samples across all data sources.
+
+        Returns
+        -------
+        Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]
+            A tuple containing (bulk_dataframes, annotation_dataframes)
         """
-        common_samples: Set[str] | None = None
+        common_samples: Optional[Set[str]] = None
         bulk_dfs: Dict[str, pd.DataFrame] = {}
         annotation_df = pd.DataFrame()
         has_annotation = False
 
-        for key, info in config.data_config.data_info.items():
-            print(info.data_type)
+        # First pass: read all data files and track common samples
+        for key, info in self.config.data_config.data_info.items():
+            print(f"Processing data source: {key} (type: {info.data_type})")
+
             if info.data_type == "IMG":
-                continue
+                continue  # Skip image data in this reader
 
             file_path = os.path.join(info.file_path)
+            df = self._read_tabular_data(file_path, info.sep)
 
-            try:
-                if file_path.endswith(".parquet"):
-                    df = pd.read_parquet(file_path)
-                elif file_path.endswith((".csv", ".txt", ".tsv")):
-                    df = pd.read_csv(file_path, sep=info.sep, index_col=0)
-                else:
-                    print(f"Unsupported file type for {file_path}")
-                    continue
-
-                if info.data_type == "NUMERIC" and not info.is_single_cell:
-                    current_samples = set(df.index)
-                    if common_samples is None:
-                        common_samples = current_samples
-                    else:
-                        common_samples &= current_samples
-
-                    bulk_dfs[key] = df
-
-                elif info.data_type == "ANNOTATION":
-                    has_annotation = True
-                    print(f"anno df in reading: {df.head()}")
-                    annotation_df = df
-                    current_samples = set(df.index)
-
-            except Exception as e:
-                print(f"Error loading {file_path}: {str(e)}")
+            if df is None:
                 continue
 
+            if info.data_type == "NUMERIC" and not info.is_single_cell:
+                current_samples = set(df.index)
+                if common_samples is None:
+                    common_samples = current_samples
+                else:
+                    common_samples &= current_samples
+
+                bulk_dfs[key] = df
+
+            elif info.data_type == "ANNOTATION":
+                has_annotation = True
+                print(f"Annotation dataframe preview: {df.head()}")
+                annotation_df = df
+
+        # Second pass: filter to common samples
         if common_samples:
-            print("common samples")
-            for key, df in bulk_dfs.items():
-                bulk_dfs[key] = df.reindex(list(common_samples))
+            print(f"Found {len(common_samples)} common samples across all datasets")
+            common_samples_list = list(common_samples)
+
+            # Reindex bulk dataframes to common samples
+            for key in bulk_dfs:
+                bulk_dfs[key] = bulk_dfs[key].reindex(common_samples_list)
+
+            # Handle annotation dataframe
             if has_annotation:
-                annotation = annotation_df.reindex(list(common_samples))
+                annotation = annotation_df.reindex(common_samples_list)
             else:
-                annotation_df.index = list(common_samples)
+                # Create empty annotation with common sample indices
+                annotation_df = pd.DataFrame(index=common_samples_list)
                 annotation = annotation_df
         else:
+            print("Warning: No common samples found across datasets")
             annotation = annotation_df
-        return bulk_dfs, annotation
 
-    @staticmethod
+        return bulk_dfs, {"paired": annotation}
+
     def read_unpaired_data(
-        config: DefaultConfig,
-    ) -> Dict[str, pd.DataFrame]:
+        self,
+    ) -> Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]:
         """
-        Read all data according to config without building common samples.
+        Read data without enforcing sample alignment across modalities.
+
+        Returns
+        -------
+        Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]
+            A tuple containing (bulk_dataframes, annotation_dataframes)
         """
         bulk_dfs: Dict[str, pd.DataFrame] = {}
+        annotations: Dict[str, pd.DataFrame] = {}
 
-        for key, info in config.data_config.data_info.items():
-            print(info.data_type)
-            if info.data_type == "IMG":
-                continue
+        for key, info in self.config.data_config.data_info.items():
+            print(f"Processing data source: {key} (type: {info.data_type})")
 
+            if info.data_type == "IMG" or info.is_single_cell:
+                continue  # Skip image and single-cell data
+
+            # Read main data file
             file_path = os.path.join(info.file_path)
+            df = self._read_tabular_data(file_path, info.sep)
 
-            try:
-                if file_path.endswith(".parquet"):
-                    df = pd.read_parquet(file_path)
-                elif file_path.endswith((".csv", ".txt", ".tsv")):
-                    df = pd.read_csv(file_path, sep=info.sep, index_col=0)
-                else:
-                    print(f"Unsupported file type for {file_path}")
-                    continue
-
-                if info.data_type == "NUMERIC" and not info.is_single_cell:
-                    bulk_dfs[key] = df
-
-            except Exception as e:
-                print(f"Error loading {file_path}: {str(e)}")
+            if df is None:
                 continue
 
-        return bulk_dfs
+            if info.data_type == "NUMERIC":
+                bulk_dfs[key] = df
+
+                # Handle extra annotation file if specified
+                if hasattr(info, "extra_anno_file") and info.extra_anno_file:
+                    extra_anno_file = os.path.join(info.extra_anno_file)
+                    extra_anno_df = self._read_tabular_data(extra_anno_file, info.sep)
+                    if extra_anno_df is not None:
+                        annotations[key] = extra_anno_df
+
+            elif info.data_type == "ANNOTATION":
+                annotations[key] = df
+
+        return bulk_dfs, annotations
+
+    def _read_tabular_data(self, file_path: str, sep: str) -> Optional[pd.DataFrame]:
+        """
+        Read tabular data from a file with error handling.
+
+        Parameters
+        ----------
+        file_path : str
+            Path to the data file.
+        sep : str
+            Separator character for CSV/TSV files.
+
+        Returns
+        -------
+        Optional[pd.DataFrame]
+            The loaded DataFrame or None if loading failed.
+        """
+        try:
+            if file_path.endswith(".parquet"):
+                return pd.read_parquet(file_path)
+            elif file_path.endswith((".csv", ".txt", ".tsv")):
+                return pd.read_csv(file_path, sep=sep, index_col=0)
+            else:
+                print(
+                    f"Unsupported file type for {file_path}. Supported formats: .parquet, .csv, .txt, .tsv"
+                )
+                return None
+        except Exception as e:
+            print(f"Error loading {file_path}: {str(e)}")
+            return None

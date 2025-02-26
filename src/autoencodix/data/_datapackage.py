@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Union
 
 import pandas as pd
 from anndata import AnnData
+from mudata import MuData
 
 from autoencodix.data._imgdataclass import ImgData
 
@@ -13,12 +14,17 @@ class DataPackage:
     A class to represent a data package containing multiple types of data.
     """
 
-    multi_sc: Optional[AnnData] = None
+    multi_sc: Optional[MuData] = None
     multi_bulk: Optional[Dict[str, pd.DataFrame]] = None
-    annotation: Optional[pd.DataFrame] = None
-    img: Optional[List[ImgData]] = None
-    to_modality: Optional[Any] = field(default=None, repr=False)
-    from_modality: Optional[Any] = field(default=None, repr=False)
+    annotation: Optional[Dict[str, pd.DataFrame]] = None
+    img: Optional[Dict[str, List[ImgData]]] = None
+
+    from_modality: Optional[Union[List[ImgData] | MuData | pd.DataFrame]] = field(
+        default=None, repr=False
+    )
+    to_modality: Optional[Union[List[ImgData] | MuData | pd.DataFrame]] = field(
+        default=None, repr=False
+    )
 
     def is_empty(self) -> bool:
         """Check if the data package is empty."""
@@ -31,35 +37,44 @@ class DataPackage:
             ]
         )
 
-    def get_n_samples(
-        self, is_paired: bool
-    ) -> Dict[str, int | Dict[str, int]]:
+    def get_n_samples(self, is_paired: bool) -> Dict[str, int | Dict[str, int]]:
         """Get the number of samples for each data type."""
+        if not is_paired:
+            return {
+                "from": self._get_n_samples(self.from_modality),
+                "to": self._get_n_samples(self.to_modality),
+            }
 
         n_samples = {}
-
         for attr_name in self.__annotations__.keys():
             attr_value = getattr(self, attr_name)
-            if attr_value is not None:
-                if isinstance(attr_value, pd.DataFrame):
-                    n_samples[attr_name] = attr_value.shape[0]
-                elif isinstance(attr_value, AnnData):
-                    n_samples[attr_name] = attr_value.obs.shape[0]
-                elif isinstance(attr_value, list):
-                    n_samples[attr_name] = len(attr_value)
-                elif isinstance(attr_value, dict):
-                    n_samples[attr_name] = {
-                        key: df.shape[0] for key, df in attr_value.items()
-                    }
+            if attr_value is None:
+                continue
+            n_samples[attr_name] = self._get_n_samples(attr_value)
+        n_samples["paired_count"] = max(n_samples.values())
+        return n_samples
 
-        if is_paired:
-            # For paired data, return the first available count or raise an error
-            for key in self.__annotations__.keys():
-                if key in n_samples:
-                    if isinstance(n_samples[key], dict):  # Handle multi_bulk case
-                        return {"paired_count": next(iter(n_samples[key].values()))}
-                    else:
-                        return {"paired_count": n_samples[key]}
-            raise ValueError("No data found for paired data package.")
-        else:
-            return n_samples  # Always return a dictionary
+    def _get_n_samples(
+        self, dataobj: Union[MuData | pd.DataFrame | List[ImgData] | AnnData]
+    ) -> int:
+        """Get the number of samples for a specific attribute."""
+        if dataobj is not None:
+            if isinstance(dataobj, pd.DataFrame):
+                return dataobj.shape[0]
+            elif isinstance(dataobj, dict):
+                first_value = next(iter(dataobj.values()))
+                return self._get_n_samples(first_value)
+
+            elif isinstance(dataobj, list):
+                return len(dataobj)
+            elif isinstance(dataobj, AnnData):
+                return dataobj.obs.shape[0]
+            elif isinstance(dataobj, MuData):
+                first_key = next(iter(dataobj.mod.keys()))
+                first_anno = dataobj.mod[first_key].obs
+                return first_anno.shape[0]
+
+            else:
+                raise ValueError(
+                    f"Unknown data type {type(dataobj)} for dataobj, Probably you've implemented a new attribute in the DataPackage class or changed the data type of an existing attribute."
+                )

@@ -64,6 +64,8 @@ class NaNRemover:
             ]
 
         # Process obs annotations
+        if self.relevant_cols is None:
+            return adata
         for col in self.relevant_cols:
             if col in adata.obs.columns:
                 valid_obs = ~adata.obs[col].isna()
@@ -100,12 +102,20 @@ class NaNRemover:
 
         # Handle annotation data
         if data.annotation is not None:
+            non_na = {}
             print("\nProcessing annotation data")
-            print(f"Original shape: {data.annotation.shape}")
-            for col in self.relevant_cols:
-                if col in data.annotation.columns:
-                    data.annotation.dropna(subset=[col], inplace=True)
-            print(f"New shape: {data.annotation.shape}")
+            for k,v in data.annotation.items():
+                if v is None:
+                    continue
+                print(f"\nProcessing annotation data: {k}")
+                print(f"Original shape: {v.shape}")
+                if self.relevant_cols is not None:
+                    for col in self.relevant_cols:
+                        if col in v.columns:
+                            v.dropna(subset=[col], inplace=True)
+                    print(f"New shape: {data.annotation.shape}")
+                non_na[k] = v
+            data.annotation = non_na
 
         # Handle MuData
         if data.multi_sc is not None:

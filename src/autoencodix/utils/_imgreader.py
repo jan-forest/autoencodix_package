@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import List, Literal, Optional, Union
+from typing import List, Literal, Optional, Union, Dict
 
 import cv2
 import numpy as np
@@ -124,6 +124,7 @@ class ImageDataReader:
         to_h: Optional[int],
         to_w: Optional[int],
         annotation_df: Optional[pd.DataFrame],
+        is_paired: bool = False,
     ) -> List[ImgData]:
         """
         Reads all images from the specified directory, processes them, and returns a list of ImgData objects.
@@ -143,6 +144,8 @@ class ImageDataReader:
             for f in os.listdir(img_dir)
             if Path(f).suffix.lower() in SUPPORTED_EXTENSIONS
         ]
+        if is_paired:
+            paths = [p for p in paths if os.path.basename(p) in annotation_df["img_paths"]]
         imgs = []
         if "img_paths" not in annotation_df.columns:
             raise ValueError("img_paths column is missing in the annotation_df")
@@ -155,10 +158,14 @@ class ImageDataReader:
             )
         return imgs
 
-    def read_annotation_file(self, anno_info) -> pd.DataFrame:
-        anno_file = os.path.join(anno_info.file_path)
+    def read_annotation_file(self, data_info) -> pd.DataFrame:
+        anno_file = (
+            os.path.join(data_info.file_path)
+            if data_info.extra_anno_file is None
+            else os.path.join(data_info.extra_anno_file)
+        )
         print(f"reading annotation file: {anno_file}")
-        sep = anno_info.sep
+        sep = data_info.sep
         if anno_file.endswith(".parquet"):
             annotation = pd.read_parquet(anno_file)
         elif anno_file.endswith((".csv", ".txt", ".tsv")):
@@ -167,31 +174,98 @@ class ImageDataReader:
             raise ValueError(f"Unsupported file type for: {anno_file}")
         return annotation
 
-    def read_data(self, config: DefaultConfig) -> List[ImgData]:
-        img_info = next(
-            f for f in config.data_config.data_info.values() if f.data_type == "IMG"
-        )
+    def read_data(self, config: DefaultConfig) -> Dict[str, List[ImgData]]:
+        """
+        Read image data from the specified directory based on configuration.
+
+        Parameters
+        ----------
+        config : DefaultConfig
+            The configuration object containing the data configuration.
+
+        Returns
+        -------
+        Dict[str, List[ImgData]]
+            A dictionary mapping data keys to lists of ImgData objects.
+            If only one image source is found, returns a list of ImgData objects directly.
+
+        Raises
+        ------
+        ValueError
+            If no image data is found in the configuration or other validation errors occur.
+        """
+        # Find all image data sources in config
+        image_sources = {
+            k: v
+            for k, v in config.data_config.data_info.items()
+            if v.data_type == "IMG"
+        }
+
+        if not image_sources:
+            raise ValueError("No image data found in the configuration.")
+
+        # If only one image source, return the data directly
+        if len(image_sources) == 1:
+            key = next(iter(image_sources))
+            return {key: self._read_data(config, image_sources[key])}
+
+        # Otherwise, process each image source
+        result = {}
+        for key, img_info in image_sources.items():
+            try:
+                result[key] = self._read_data(config, img_info)
+                print(f"Successfully loaded {len(result[key])} images for {key}")
+            except Exception as e:
+                print(f"Error loading images for {key}: {str(e)}")
+                # Decide whether to raise or continue based on your requirements
+
+        return result
+
+    def _read_data(self, config: DefaultConfig, img_info) -> List[ImgData]:
+        """
+        Read data for a specific image source.
+
+        Parameters
+        ----------
+        config : DefaultConfig
+            The configuration object containing the data configuration.
+        img_info :
+            The specific image info configuration.
+
+        Returns
+        -------
+        List[ImgData]
+            List of ImgData objects for this image source.
+        """
         img_dir = img_info.file_path
         to_h = img_info.img_height_resize
         to_w = img_info.img_width_resize
-        anno_info = next(
-            f
-            for f in config.data_config.data_info.values()
-            if f.data_type == "ANNOTATION"
-        )
-        print(f"----anno_info-------: {anno_info}")
+
+        # Get annotation data
         if img_info.extra_anno_file is not None:
+            # Use image-specific annotation file if provided
             annotation = self.read_annotation_file(img_info)
         else:
-            if not config.paired_translation:
-                raise ValueError(
-                    "Img specific annotation file is required for unpaired translation."
+            # Otherwise use the global annotation file
+            try:
+                anno_info = next(
+                    f
+                    for f in config.data_config.data_info.values()
+                    if f.data_type == "ANNOTATION"
                 )
-            annotation = self.read_annotation_file(anno_info)
+                if not config.paired_translation:
+                    raise ValueError(
+                        "Img specific annotation file is required for unpaired translation."
+                    )
+                annotation = self.read_annotation_file(anno_info)
+            except StopIteration:
+                raise ValueError("No annotation data found in the configuration.")
 
+        # Read and process the images
         images = self.read_all_images_from_dir(
-            img_dir=img_dir, to_h=to_h, to_w=to_w, annotation_df=annotation
+            img_dir=img_dir, to_h=to_h, to_w=to_w, annotation_df=annotation, is_paired=config.paired_translation
         )
+
         return images
 
 

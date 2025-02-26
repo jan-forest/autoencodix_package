@@ -11,6 +11,7 @@ class DataCase(str, Enum):
     IMG_TO_BULK = "IMG<->Bulk"
     SINGLE_CELL_TO_SINGLE_CELL = "Single Cell<->Single Cell"
     SINGLE_CELL_TO_IMG = "Single Cell<->IMG"
+    IMG_TO_IMG = "IMG<->IMG"
 
 
 class ConfigValidationError(Exception):
@@ -37,12 +38,9 @@ class DataInfo(BaseModel):
     is_single_cell: bool = Field(default=False)
     min_cells: Optional[float] = Field(
         default=1, ge=0, le=1, description="Fraction of cells to keep"
-    )
+    )  # min_cells analog to k-filter auf sample
     min_genes: Optional[float] = Field(
         default=1, ge=0, le=1, description="Fraction of genes to keep"
-    )
-    k_filter_sc: Optional[int] = Field(
-        default=None, description="Number of top highly variable genes to keep"
     )
     selected_layers: Optional[List[str]] = Field(
         default=None
@@ -61,6 +59,7 @@ class DataConfig(BaseModel):
     data_info: Dict[str, DataInfo]
     require_common_cells: Optional[bool] = Field(default=False)
     annotation_columns: Optional[List[str]] = Field(default=None)
+
 
 # internal check done
 # write tests: done
@@ -85,7 +84,10 @@ class DefaultConfig(BaseModel):
 
     # Datasets configuration --------------------------------------------------
     data_config: DataConfig = DataConfig(data_info={})
-    paired_translation: bool = False
+    paired_translation: bool = Field(
+        True,
+        description="Indicator if the samples for the xmodalix are paired, based on some sample id",
+    )
 
     data_case: Optional[DataCase] = Field(
         None, description="Data case for the model, will be determined automatically"
@@ -285,11 +287,15 @@ class DefaultConfig(BaseModel):
                     numeric_dataset = (
                         from_info if from_info.data_type == "NUMERIC" else to_info
                     )
-                    self.data_case = (
-                        DataCase.SINGLE_CELL_TO_IMG
-                        if numeric_dataset.is_single_cell
-                        else DataCase.IMG_TO_BULK
-                    )
+                    # check for IMG_IMG
+                    if from_info.data_type == "IMG" and to_info.data_type == "IMG":
+                        self.data_case = DataCase.IMG_TO_IMG
+                    else:
+                        self.data_case = (
+                            DataCase.SINGLE_CELL_TO_IMG
+                            if numeric_dataset.is_single_cell
+                            else DataCase.IMG_TO_BULK
+                        )
             else:
                 # Find any numeric dataset
                 numeric_datasets = [

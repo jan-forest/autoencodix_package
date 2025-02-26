@@ -1,5 +1,5 @@
 import abc
-from typing import List, Optional, Tuple, Type, Union, Dict
+from typing import Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -8,16 +8,16 @@ from anndata import AnnData  # type: ignore
 from scipy.sparse import issparse
 
 from autoencodix.data._datapackage import DataPackage
+from autoencodix.data._datapackage_splitter import DataPackageSplitter
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
+from autoencodix.data._filter import DataFilter
+from autoencodix.data._nanremover import NaNRemover
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.utils._bulkreader import BulkDataReader
 from autoencodix.utils._imgreader import ImageDataReader
-from autoencodix.data._datapackage_splitter import DataPackageSplitter
 from autoencodix.utils._screader import SingleCellDataReader
 from autoencodix.utils.default_config import DataCase, DefaultConfig
-from autoencodix.data._filter import DataFilter
-from autoencodix.data._nanremover import NaNRemover
 
 
 class BasePreprocessor(abc.ABC):
@@ -48,39 +48,34 @@ class BasePreprocessor(abc.ABC):
             relevant_cols=self.config.data_config.annotation_columns
         )
         self._data_package = self._nanremover.remove_nans(data=self._data_package)
-        if not self.config.paired_translation:
-            raise ValueError("Unpaired translation is not supported as of now")
         n_samples = self._data_package.get_n_samples(
             is_paired=self.config.paired_translation
         )
 
-        self._split_indicies = self._data_splitter.split(
-            n_samples=n_samples["paired_count"]
-        )
         if self.config.paired_translation:
-            self._package_splitter = DataPackageSplitter(
-                data_package=self._data_package, indicies=self._split_indicies
+            self._split_indicies = self._data_splitter.split(
+                n_samples=n_samples["paired_count"]
             )
+            self._package_splitter = DataPackageSplitter(
+                data_package=self._data_package,
+                indices=self._split_indicies,
+                config=self.config,
+            )
+            self._split_packages = self._package_splitter.split()
         else:
-            raise NotImplementedError(
-                "Unpaired translation is not supported as of now"
-            )  # TODO
-
-        self._train_packge = self._package_splitter._split_data_package(
-            indices=self._split_indicies["train"]
-        )
-        self._test_package = self._package_splitter._split_data_package(
-            indices=self._split_indicies["test"]
-        )
-        self._valid_package = self._package_splitter._split_data_package(
-            indices=self._split_indicies["valid"]
-        )
-        self._filter_and_scale()  # applies filtering and scaling to each split
-        if self.config.data_case == DataCase.MULTI_BULK:
-            self._build_numeric_datasets()
-            return self._datasets
-
-        return self._datasets
+            self._from_indices = self._data_splitter.split(
+                n_samples=n_samples["from"], is_paired=False
+            )
+            self._to_indices = self._data_splitter.split(
+                n_samples=n_samples["to"], is_paired=False
+            )
+            self._package_splitter = DataPackageSplitter(
+                data_package=self._data_package,
+                config=self.config,
+                from_indices=self._from_indices,
+                to_indices=self._to_indices,
+            )
+            self._split_packages = self._package_splitter.split()
 
     def _fill_dataclass(self) -> DataPackage:
         """
@@ -104,7 +99,7 @@ class BasePreprocessor(abc.ABC):
             - DataCase.SINGLE_CELL_TO_IMG
         """
         result = DataPackage()
-        bulkreader = BulkDataReader()
+        bulkreader = BulkDataReader(config=self.config)
         screader = SingleCellDataReader()
         imgreader = ImageDataReader()
         datacase = self.config.data_case
@@ -117,8 +112,6 @@ class BasePreprocessor(abc.ABC):
                 from_key = k
             if v.translate_direction == "to":
                 to_key = k
-        if not self.config.paired_translation:
-            raise ValueError("Unpaired translation is not supported as of now")
 
         # even if reading is the same for these two cases the validation is different, thats why we have them separated
         if datacase == DataCase.MULTI_SINGLE_CELL:
@@ -129,33 +122,41 @@ class BasePreprocessor(abc.ABC):
 
         # even if reading is the same for these two cases the validation is different, thats why we have them separated
         elif datacase == DataCase.MULTI_BULK:
-            bulk_dfs, annotation = bulkreader.read_data(config=self.config)
+            bulk_dfs, annotation = bulkreader.read_data()
             result.multi_bulk = bulk_dfs
             result.annotation = annotation
             return result
 
         # TRANSLATION CASES
         elif datacase == DataCase.IMG_TO_BULK:
-            bulk_dfs, annotation = bulkreader.read_data(config=self.config)
+            bulk_dfs, annotation = bulkreader.read_data()
 
             images = imgreader.read_data(config=self.config)
             result.multi_bulk = bulk_dfs
-            result.annotation = annotation
             result.img = images
             if from_key in bulk_dfs.keys():
+                # direction BULK -> IMG
                 result.from_modality = bulk_dfs[from_key]
                 result.to_modality = result.img
+                # I know that I have only one bulk data so I can use the first key
+                from_annotation = next(iter(annotation.keys()))
+                result.annotation = {"from": annotation[from_annotation], "to": None}
+
             elif to_key in bulk_dfs.keys():
+                # direction IMG -> BULK
                 result.to_modality = bulk_dfs[to_key]
                 result.from_modality = result.img
+                # I know that I have only one bulk data so I can use the first key
+                to_annotation = next(iter(annotation.keys()))
+                result.annotation = {"from": None, "to": annotation[to_annotation]}
+                print(f"annotation keys: {annotation.keys()}")
+
             return result
         elif datacase == DataCase.SINGLE_CELL_TO_IMG:
             adata = screader.read_data(config=self.config)
             images = imgreader.read_data(config=self.config)
-            annotation = adata.obs
             result.multi_sc = adata
             result.img = images
-            result.annotation = annotation
             if from_key in adata.mod.keys():
                 result.from_modality = adata.mod[from_key]
                 result.to_modality = result.img
@@ -170,11 +171,19 @@ class BasePreprocessor(abc.ABC):
             result.from_modality = adata.mod[from_key]
             return result
         elif datacase == DataCase.BULK_TO_BULK:
-            bulk_dfs, annotation = bulkreader.read_data(config=self.config)
+            bulk_dfs, annotation = bulkreader.read_data()
             result.multi_bulk = bulk_dfs
-            result.annotation = annotation
+            to_annotation = annotation[to_key]
+            from_annotation = annotation[from_key]
+            result.annotation = {"to": to_annotation, "from": from_annotation}
             result.from_modality = bulk_dfs[from_key]
             result.to_modality = bulk_dfs[to_key]
+            return result
+        elif datacase == DataCase.IMG_TO_IMG:
+            images = imgreader.read_data(config=self.config)
+            result.img = images
+            result.from_modality = images[from_key]
+            result.to_modality = images[to_key]
             return result
         else:
             raise ValueError("Non valid data case")

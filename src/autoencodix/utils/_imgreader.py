@@ -145,7 +145,11 @@ class ImageDataReader:
             if Path(f).suffix.lower() in SUPPORTED_EXTENSIONS
         ]
         if is_paired:
-            paths = [p for p in paths if os.path.basename(p) in annotation_df["img_paths"]]
+            paths = [
+                p
+                for p in paths
+                if os.path.basename(p) in annotation_df["img_paths"].tolist()
+            ]
         imgs = []
         if "img_paths" not in annotation_df.columns:
             raise ValueError("img_paths column is missing in the annotation_df")
@@ -205,9 +209,9 @@ class ImageDataReader:
             raise ValueError("No image data found in the configuration.")
 
         # If only one image source, return the data directly
-        if len(image_sources) == 1:
-            key = next(iter(image_sources))
-            return {key: self._read_data(config, image_sources[key])}
+        if len(image_sources.keys()) == 1:
+            key = next(iter(image_sources.keys()))
+            return {key: self._read_data(config=config, img_info=image_sources[key])}
 
         # Otherwise, process each image source
         result = {}
@@ -263,7 +267,11 @@ class ImageDataReader:
 
         # Read and process the images
         images = self.read_all_images_from_dir(
-            img_dir=img_dir, to_h=to_h, to_w=to_w, annotation_df=annotation, is_paired=config.paired_translation
+            img_dir=img_dir,
+            to_h=to_h,
+            to_w=to_w,
+            annotation_df=annotation,
+            is_paired=config.paired_translation,
         )
 
         return images

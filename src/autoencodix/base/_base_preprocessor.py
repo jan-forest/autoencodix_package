@@ -21,7 +21,7 @@ from autoencodix.utils.default_config import DataCase, DefaultConfig
 
 
 class BasePreprocessor(abc.ABC):
-    def __init__(self, config: Optional[DefaultConfig] = None):
+    def __init__(self, config: DefaultConfig):
         self.config = config
 
     def _validata_data(self) -> None:
@@ -34,20 +34,18 @@ class BasePreprocessor(abc.ABC):
 
     def preprocess(
         self,
-        data: Union[pd.DataFrame, AnnData, np.ndarray, List[np.ndarray]],
-        data_splitter: DataSplitter,
-        config: Optional[DefaultConfig],
-        dataset_type: Type,
+        data: Union[pd.DataFrame, AnnData, np.ndarray, List[np.ndarray]] = None,
+        data_splitter: DataSplitter = None,
+        dataset_type: Type = NumericDataset,
         split: bool = True,
     ) -> Tuple[DatasetContainer, torch.Tensor]:
-        self._data_splitter = data_splitter
+        self._data_splitter = DataSplitter(config=self.config) if data_splitter is None else data_splitter
         self._dataset_type = dataset_type
-        self.config = config
         self._data_package = self._fill_dataclass()
         self._nanremover = NaNRemover(
             relevant_cols=self.config.data_config.annotation_columns
         )
-        self._data_package = self._nanremover.remove_nans(data=self._data_package)
+        self._data_package = self._nanremover.remove_nan(data=self._data_package)
         n_samples = self._data_package.get_n_samples(
             is_paired=self.config.paired_translation
         )
@@ -151,6 +149,9 @@ class BasePreprocessor(abc.ABC):
                 result.annotation = {"from": None, "to": annotation[to_annotation]}
                 print(f"annotation keys: {annotation.keys()}")
 
+            # to keep unambigous remove on translation relevant and duplicate data
+            result.multi_bulk = None
+            result.img = None
             return result
         elif datacase == DataCase.SINGLE_CELL_TO_IMG:
             adata = screader.read_data(config=self.config)
@@ -163,12 +164,18 @@ class BasePreprocessor(abc.ABC):
             elif to_key in adata.mod.keys():
                 result.to_modality = adata.mod[to_key]
                 result.from_modality = result.img
+
+            # to keep unambigous remove on translation relevant and duplicate data
+            result.annotation = None
+            result.img = None
+            result.multi_sc = None
             return result
         elif datacase == DataCase.SINGLE_CELL_TO_SINGLE_CELL:
             adata = screader.read_data(config=self.config)
             result.multi_sc = adata
             result.to_modality = adata.mod[to_key]
             result.from_modality = adata.mod[from_key]
+            result.mulit_sc = None
             return result
         elif datacase == DataCase.BULK_TO_BULK:
             bulk_dfs, annotation = bulkreader.read_data()
@@ -178,12 +185,14 @@ class BasePreprocessor(abc.ABC):
             result.annotation = {"to": to_annotation, "from": from_annotation}
             result.from_modality = bulk_dfs[from_key]
             result.to_modality = bulk_dfs[to_key]
+            result.multi_bulk = None
             return result
         elif datacase == DataCase.IMG_TO_IMG:
             images = imgreader.read_data(config=self.config)
             result.img = images
             result.from_modality = images[from_key]
             result.to_modality = images[to_key]
+            result.img = None
             return result
         else:
             raise ValueError("Non valid data case")

@@ -29,19 +29,18 @@ class DataInfo(BaseModel):
         default="VAR"
     )
     k_filter: Optional[int] = Field(
-        default=None, description="Number of top genes to keep"
+        default=None,
+        description="Number of features (columns) to keep, default keeps all",
+    )
+    n_filter: Optional[int] = Field(
+        default=None, description="Number of samples (rows) to keep, default: keeps all"
     )
     sep: Optional[str] = Field(default=None)  # for pandas read_csv
     extra_anno_file: Optional[str] = Field(default=None)
 
     # single cell specific -------------------------
     is_single_cell: bool = Field(default=False)
-    min_cells: Optional[float] = Field(
-        default=1, ge=0, le=1, description="Fraction of cells to keep"
-    )  # min_cells analog to k-filter auf sample
-    min_genes: Optional[float] = Field(
-        default=1, ge=0, le=1, description="Fraction of genes to keep"
-    )
+    
     selected_layers: Optional[List[str]] = Field(
         default=None
     )  # if None, only X is used

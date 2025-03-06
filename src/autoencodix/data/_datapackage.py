@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any, Iterator, Tuple
 
 import pandas as pd
 from anndata import AnnData
@@ -26,7 +26,22 @@ class DataPackage:
         default=None, repr=False
     )
 
-    # to keep unambigous remove on translation relevant and duplicate data
+    def __iter__(self) -> Iterator[Tuple[str, Any]]:
+        """
+        Make DataPackage iterable, yielding (key, value) pairs.
+        For dictionary attributes, yields nested items as (parent_key.child_key, value).
+        """
+        for attr_name in self.__annotations__.keys():
+            attr_value = getattr(self, attr_name)
+
+            if attr_value is None:
+                continue
+            if isinstance(attr_value, dict):
+                for sub_key, sub_value in attr_value.items():
+                    yield f"{attr_name}.{sub_key}", sub_value
+            else:
+                yield attr_name, attr_value
+
     def format_shapes(self) -> str:
         """Format the shape dictionary in a clean, readable way."""
         shapes = self.shape()

@@ -29,23 +29,39 @@ class DataInfo(BaseModel):
         default="VAR"
     )
     k_filter: Optional[int] = Field(
-        default=None,
-        description="Number of features (columns) to keep, default keeps all",
-    )
-    n_filter: Optional[int] = Field(
-        default=None, description="Number of samples (rows) to keep, default: keeps all"
+        default=None, description="Number of top genes to keep"
     )
     sep: Optional[str] = Field(default=None)  # for pandas read_csv
     extra_anno_file: Optional[str] = Field(default=None)
 
     # single cell specific -------------------------
     is_single_cell: bool = Field(default=False)
-    
+
+    min_cells: float = Field(
+        default=0.05,
+        ge=0,
+        le=1,
+        description="Minimum fraction of cells a gene must be expressed in to be kept. Genes expressed in fewer cells will be filtered out.",
+    )  # Controls gene filtering based on expression prevalence
+
+    min_genes: float = Field(
+        default=0.01,
+        ge=0,
+        le=1,
+        description="Minimum fraction of genes a cell must express to be kept. Cells expressing fewer genes will be filtered out.",
+    )  # Controls cell quality filtering
     selected_layers: Optional[List[str]] = Field(
         default=None
     )  # if None, only X is used
     is_X: Optional[bool] = Field(default=None)  # only for single cell data
+    normalize_counts: bool = Field(
+        default=True, description="Whether to normalize by total counts"
+    )
+    log_transform: bool = Field(
+        default=True, description="Whether to apply log1p transformation"
+    )
     # image specific ------------------------------
+
     img_root: Optional[str] = Field(default=None)
     img_width_resize: Optional[int] = Field(default=None)
     img_height_resize: Optional[int] = Field(default=None)

@@ -2,6 +2,7 @@ import pandas as pd
 from scipy.sparse import issparse, csr_matrix
 from mudata import MuData
 from autoencodix.utils.default_config import DataInfo
+from autoencodix.data._filter import DataFilter
 
 import scanpy as sc
 
@@ -9,7 +10,8 @@ import scanpy as sc
 class SingleCellFilter:
     """
     Preprocessor for MuData single-cell data.
-    Handles initial filtering and preprocessing, returning updated MuData.
+    Handles initial filtering and preprocessing, then applies standard
+    DataFilter scaling and filtering, returning updated MuData.
     """
 
     def __init__(self, mudata: MuData, data_info: DataInfo):
@@ -18,18 +20,25 @@ class SingleCellFilter:
 
     def preprocess(self) -> MuData:
         """
-        Apply basic single-cell filtering and preprocessing.
+        Apply complete preprocessing pipeline:
+        1. Single-cell specific filtering and preprocessing
+        2. Standard DataFilter filtering and scaling
 
         Returns:
             Processed MuData object with updated matrices
         """
-        print("Applying basic filtering to single-cell data")
+        print("Applying single-cell preprocessing and standard filtering/scaling")
         mudata_filtered = self.mudata.copy()
 
         for mod_key, mod_data in mudata_filtered.mod.items():
             print(f"Processing modality: {mod_key}")
 
+            # STEP 1: Single-cell specific preprocessing
+            # ------------------------------------------
+
             # Apply filtering based on config
+            print("data infor -------#####")
+            print(self.data_info)
             min_genes_count = int(self.data_info.min_genes * mod_data.n_vars)
             min_cells_count = int(self.data_info.min_cells * mod_data.n_obs)
 
@@ -88,19 +97,60 @@ class SingleCellFilter:
                 if dfs:
                     combined_df = pd.concat(dfs, axis=1)
 
-                    if issparse(mod_data.X):
-                        mod_data.X = csr_matrix(combined_df.values)
+                    # STEP 2: Apply standard DataFilter filtering and scaling
+                    # -----------------------------------------------------
+                    # Convert sparse to dense if needed
+                    if hasattr(combined_df, "sparse"):
+                        df_to_process = combined_df.sparse.to_dense()
                     else:
-                        mod_data.X = combined_df.values
+                        df_to_process = combined_df
 
-                    mod_data.var_names = pd.Index(combined_df.columns)
+                    # Apply DataFilter
+                    data_filter = DataFilter(df=df_to_process, data_info=self.data_info)
+                    filtered_df = data_filter.filter()
+                    print(f"Filtered with DataFilter: shape {filtered_df.shape}")
+                    scaled_df = data_filter.scale(filtered_df)
+                    print(f"Scaled with DataFilter: shape {scaled_df.shape}")
+
+                    # Update MuData with filtered/scaled data
+                    if issparse(mod_data.X):
+                        mod_data.X = csr_matrix(scaled_df.values)
+                    else:
+                        mod_data.X = scaled_df.values
+
+                    # Update var_names to match the filtered columns
+                    mod_data.var_names = pd.Index(scaled_df.columns)
             else:
+                # No layers specified, process the main X matrix
                 if issparse(mod_data.X):
-                    temp_df = pd.DataFrame.sparse.from_spmatrix(
+                    df = pd.DataFrame.sparse.from_spmatrix(
+                        mod_data.X, index=mod_data.obs_names, columns=mod_data.var_names
+                    )
+                    # Convert to dense for DataFilter
+                    if hasattr(df, "sparse"):
+                        df = df.sparse.to_dense()
+                else:
+                    df = pd.DataFrame(
                         mod_data.X, index=mod_data.obs_names, columns=mod_data.var_names
                     )
 
-                    mod_data.X = csr_matrix(temp_df.values)
+                # STEP 2: Apply standard DataFilter filtering and scaling
+                # -----------------------------------------------------
+                data_filter = DataFilter(df=df, data_info=self.data_info)
+                filtered_df = data_filter.filter()
+                print(f"Filtered with DataFilter: shape {filtered_df.shape}")
+                scaled_df = data_filter.scale(filtered_df)
+                print(f"Scaled with DataFilter: shape {scaled_df.shape}")
+
+                # Update MuData with filtered/scaled data
+                # First subset to match filtered columns
+                mod_data._inplace_subset_var(filtered_df.columns)
+
+                # Then update X with the filtered/scaled values
+                if issparse(mod_data.X):
+                    mod_data.X = csr_matrix(scaled_df.values)
+                else:
+                    mod_data.X = scaled_df.values
 
         print(f"Processed MuData with {len(mudata_filtered.mod)} modalities")
         return mudata_filtered

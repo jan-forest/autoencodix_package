@@ -1,156 +1,102 @@
-import pandas as pd
-from scipy.sparse import issparse, csr_matrix
-from mudata import MuData
-from autoencodix.utils.default_config import DataInfo
-from autoencodix.data._filter import DataFilter
-
 import scanpy as sc
+import numpy as np
+from mudata import MuData
+from anndata import AnnData
+from scipy.sparse import issparse
 
 
 class SingleCellFilter:
-    """
-    Preprocessor for MuData single-cell data.
-    Handles initial filtering and preprocessing, then applies standard
-    DataFilter scaling and filtering, returning updated MuData.
-    """
+    """Filter single-cell data."""
 
-    def __init__(self, mudata: MuData, data_info: DataInfo):
+    def __init__(self, mudata, data_info):
+        """
+        Initialize single-cell filter.
+
+        Parameters
+        ----------
+        mudata : MuData
+            Multi-modal data to be filtered
+        data_info : DataInfo
+            Information about the data modality
+        """
         self.mudata = mudata
         self.data_info = data_info
 
-    def preprocess(self) -> MuData:
+    def _ensure_no_nans(self, adata):
+        """Ensure there are no NaN values in the AnnData object."""
+        X = adata.X
+        if issparse(X):
+            X_dense = X.data
+        else:
+            X_dense = X
+
+        if np.isnan(X_dense).any():
+            print("Warning: Found NaN values in data matrix. Replacing with zeros.")
+            if issparse(X):
+                X.data[np.isnan(X.data)] = 0
+            else:
+                X[np.isnan(X)] = 0
+            adata.X = X
+
+        for layer_name, layer_data in adata.layers.items():
+            if issparse(layer_data):
+                layer_dense = layer_data.data
+            else:
+                layer_dense = layer_data
+
+            if np.isnan(layer_dense).any():
+                print(
+                    f"Warning: Found NaN values in layer {layer_name}. Replacing with zeros."
+                )
+                if issparse(layer_data):
+                    layer_data.data[np.isnan(layer_data.data)] = 0
+                else:
+                    layer_data[np.isnan(layer_data)] = 0
+                adata.layers[layer_name] = layer_data
+
+        return adata
+
+    def preprocess(self):
         """
-        Apply complete preprocessing pipeline:
-        1. Single-cell specific filtering and preprocessing
-        2. Standard DataFilter filtering and scaling
+        Preprocess the data.
 
-        Returns:
-            Processed MuData object with updated matrices
+        Returns
+        -------
+        MuData
+            Preprocessed data
         """
-        print("Applying single-cell preprocessing and standard filtering/scaling")
-        mudata_filtered = self.mudata.copy()
+        mudata = self.mudata.copy()
 
-        for mod_key, mod_data in mudata_filtered.mod.items():
-            print(f"Processing modality: {mod_key}")
+        for mod_key, mod_data in mudata.mod.items():
+            print(f"Processing modality {mod_key}")
+            mod_data = self._ensure_no_nans(mod_data)
 
-            # STEP 1: Single-cell specific preprocessing
-            # ------------------------------------------
+            if self.data_info.min_genes > 0:
+                print(
+                    f"Filtering cells with fewer than {self.data_info.min_genes} genes in modality {mod_key}"
+                )
+                sc.pp.filter_cells(mod_data, min_genes=self.data_info.min_genes)
 
-            # Apply filtering based on config
-            print("data infor -------#####")
-            print(self.data_info)
-            min_genes_count = int(self.data_info.min_genes * mod_data.n_vars)
-            min_cells_count = int(self.data_info.min_cells * mod_data.n_obs)
+            if self.data_info.min_cells > 0:
+                print(
+                    f"Filtering genes detected in fewer than {self.data_info.min_cells} cells in modality {mod_key}"
+                )
+                sc.pp.filter_genes(mod_data, min_cells=self.data_info.min_cells)
 
-            print(f"Filtering cells with fewer than {min_genes_count} genes")
-            sc.pp.filter_cells(mod_data, min_genes=min_genes_count)
-
-            print(f"Filtering genes expressed in fewer than {min_cells_count} cells")
-            sc.pp.filter_genes(mod_data, min_cells=min_cells_count)
-
-            # Apply normalization based on config
             if self.data_info.normalize_counts:
-                print(f"Normalizing counts in modality {mod_key}")
-                sc.pp.normalize_total(mod_data, target_sum=1e4)
+                print(f"Normalizing in modality {mod_key}")
+                sc.pp.normalize_total(mod_data)
 
             if self.data_info.log_transform:
                 print(f"Applying log transformation in modality {mod_key}")
                 sc.pp.log1p(mod_data)
 
-            # Process specific layers if requested
             if self.data_info.selected_layers:
-                print(
-                    f"Using selected layers for modality {mod_key}: {self.data_info.selected_layers}"
-                )
+                for layer in self.data_info.selected_layers:
+                    if layer in mod_data.layers:
+                        print(f"Processing layer {layer} in modality {mod_key}")
+                        # Implement layer-specific processing here
 
-                dfs = []
-                for layer_name in self.data_info.selected_layers:
-                    if layer_name == "X":
-                        layer_data = mod_data.X
-                    else:
-                        if layer_name not in mod_data.layers:
-                            print(
-                                f"Warning: Layer {layer_name} not found in modality {mod_key}"
-                            )
-                            continue
-                        layer_data = mod_data.layers[layer_name]
+            mudata.mod[mod_key] = mod_data
 
-                    if issparse(layer_data):
-                        temp_df = pd.DataFrame.sparse.from_spmatrix(
-                            layer_data,
-                            index=mod_data.obs_names,
-                            columns=[
-                                f"{layer_name}_{gene}" for gene in mod_data.var_names
-                            ],
-                        )
-                    else:
-                        temp_df = pd.DataFrame(
-                            layer_data,
-                            index=mod_data.obs_names,
-                            columns=[
-                                f"{layer_name}_{gene}" for gene in mod_data.var_names
-                            ],
-                        )
-
-                    dfs.append(temp_df)
-
-                if dfs:
-                    combined_df = pd.concat(dfs, axis=1)
-
-                    # STEP 2: Apply standard DataFilter filtering and scaling
-                    # -----------------------------------------------------
-                    # Convert sparse to dense if needed
-                    if hasattr(combined_df, "sparse"):
-                        df_to_process = combined_df.sparse.to_dense()
-                    else:
-                        df_to_process = combined_df
-
-                    # Apply DataFilter
-                    data_filter = DataFilter(df=df_to_process, data_info=self.data_info)
-                    filtered_df = data_filter.filter()
-                    print(f"Filtered with DataFilter: shape {filtered_df.shape}")
-                    scaled_df = data_filter.scale(filtered_df)
-                    print(f"Scaled with DataFilter: shape {scaled_df.shape}")
-
-                    # Update MuData with filtered/scaled data
-                    if issparse(mod_data.X):
-                        mod_data.X = csr_matrix(scaled_df.values)
-                    else:
-                        mod_data.X = scaled_df.values
-
-                    # Update var_names to match the filtered columns
-                    mod_data.var_names = pd.Index(scaled_df.columns)
-            else:
-                # No layers specified, process the main X matrix
-                if issparse(mod_data.X):
-                    df = pd.DataFrame.sparse.from_spmatrix(
-                        mod_data.X, index=mod_data.obs_names, columns=mod_data.var_names
-                    )
-                    # Convert to dense for DataFilter
-                    if hasattr(df, "sparse"):
-                        df = df.sparse.to_dense()
-                else:
-                    df = pd.DataFrame(
-                        mod_data.X, index=mod_data.obs_names, columns=mod_data.var_names
-                    )
-
-                # STEP 2: Apply standard DataFilter filtering and scaling
-                # -----------------------------------------------------
-                data_filter = DataFilter(df=df, data_info=self.data_info)
-                filtered_df = data_filter.filter()
-                print(f"Filtered with DataFilter: shape {filtered_df.shape}")
-                scaled_df = data_filter.scale(filtered_df)
-                print(f"Scaled with DataFilter: shape {scaled_df.shape}")
-
-                # Update MuData with filtered/scaled data
-                # First subset to match filtered columns
-                mod_data._inplace_subset_var(filtered_df.columns)
-
-                # Then update X with the filtered/scaled values
-                if issparse(mod_data.X):
-                    mod_data.X = csr_matrix(scaled_df.values)
-                else:
-                    mod_data.X = scaled_df.values
-
-        print(f"Processed MuData with {len(mudata_filtered.mod)} modalities")
-        return mudata_filtered
+        return mudata

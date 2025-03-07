@@ -2,13 +2,19 @@ import pandas as pd
 import numpy as np
 from typing import Optional, Dict, List, Callable
 from scipy.stats import median_abs_deviation
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, MaxAbsScaler
+from sklearn.preprocessing import (
+    MinMaxScaler,
+    StandardScaler,
+    RobustScaler,
+    MaxAbsScaler,
+)
 from enum import Enum
 from autoencodix.utils.default_config import DataInfo
 
 
 class FilterMethod(Enum):
     """Supported filtering methods"""
+
     VARCORR = "VARCORR"
     NOFILT = "NOFILT"
     VAR = "VAR"
@@ -113,7 +119,13 @@ class DataFilter:
     def filter(self) -> pd.DataFrame:
         """Apply the configured filtering method."""
 
+        MIN_FILTER = 10
         print(f"Applying {self.data_info.filtering} filtering")
+        if self.df.shape[0] < MIN_FILTER or self.df.empty:
+            print(
+                f"WARNING: df is too small for filtering, needs to have at least {MIN_FILTER}"
+            )
+            return self.df
 
         filtered_df = self.df.copy()
         mapped_filtering = FilterMethod(self.data_info.filtering)
@@ -123,9 +135,8 @@ class DataFilter:
             filtered_df = filter_step(filtered_df)
             print(f"Shape changed from {prev_shape} to {filtered_df.shape}")
 
-
         return filtered_df
-    
+
     def scale(self, df: pd.DataFrame) -> pd.DataFrame:
         """Apply the configured scaling method."""
 

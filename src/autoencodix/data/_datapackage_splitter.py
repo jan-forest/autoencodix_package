@@ -1,174 +1,4 @@
-# from typing import Dict, List, Union, Literal
-
-# import numpy as np
-# import pandas as pd
-# from anndata import AnnData
-# from mudata import MuData
-
-# from autoencodix.data._datapackage import DataPackage
-# from autoencodix.data._imgdataclass import ImgData
-# from autoencodix.utils.default_config import DefaultConfig
-
-
-# class DataPackageSplitter:
-#     def __init__(
-#         self,
-#         data_package: DataPackage,
-#         indicies: Dict[str, np.ndarray],
-#         config: DefaultConfig,
-#         to_indicies: Dict[str, np.ndarray] = None,  # for unpaired translation
-#         from_indicies: Dict[str, np.ndarray] = None,
-#     ) -> None:
-#         self._data_package = data_package
-#         self.indicies = indicies
-#         self.config = config
-#         self.to_indicies = to_indicies
-#         self.from_indicies = from_indicies
-
-#     def _split_data_package(self, indices: np.ndarray) -> DataPackage:
-#         """
-#         Split the data package according to the provided indices.
-
-#         Parameters
-#         ----------
-#         indices : np.ndarray
-#             Indices to use for splitting the data.
-
-#         Returns
-#         -------
-#         DataPackage
-#             A new DataPackage containing the split data.
-#         """
-#         split = {}
-#         for key, value in self._data_package.__dict__.items():
-#             split[key] = self._package_splitter(value, indices)
-#         return DataPackage(**split)
-
-#     def _package_splitter(
-#         self,
-#         dataobj: Union[MuData | pd.DataFrame | List[ImgData] | AnnData],
-#         indices: np.ndarray,
-#     ) -> Union[MuData | pd.DataFrame | List[ImgData] | AnnData]:
-#         if len(indices) == 0:
-#             return DataPackage()
-#         if dataobj is not None:
-#             if isinstance(dataobj, pd.DataFrame):
-#                 return dataobj.iloc[indices]
-#             elif isinstance(dataobj, dict):
-#                 if isinstance(next(iter(dataobj.values())), list):
-#                     return {
-#                         key: [value[i] for i in indices]
-#                         for key, value in dataobj.items()
-#                     }
-#                 if isinstance(next(iter(dataobj.values())), pd.DataFrame):
-#                     return {key: value.iloc[indices] for key, value in dataobj.items()}
-#             elif isinstance(dataobj, list):
-#                 return [value for i, value in enumerate(dataobj) if i in indices]
-#             elif isinstance(dataobj, AnnData):
-#                 return dataobj[indices]
-#             elif isinstance(dataobj, MuData):
-#                 return dataobj[indices]
-#             else:
-#                 return dataobj
-
-#     def _split_translation(
-#         self,
-#         indices: np.ndarray,
-#         data,
-#         direction: Literal["to", "from"],
-#         datapackage: DataPackage,
-#     ) -> DataPackage:
-#         if direction == "to":
-#             dataobj = data.to_modality
-#             annotation = data.annotation["to"]
-#             split_data = self._package_splitter(dataobj=dataobj, indices=indices)
-#             split_anno = self._package_splitter(dataobj=annotation, indices=indices)
-#             datapackage.to_modality = split_data
-#             datapackage.annotation["to"] = split_anno
-
-#         elif direction == "from":
-#             dataobj = data.from_modality
-#             annotation = data.annotation["from"]
-#             split_data = self._package_splitter(dataobj=dataobj, indices=indices)
-#             split_anno = self._package_splitter(dataobj=annotation, indices=indices)
-#             datapackage.from_modality = split_data
-#             datapackage.annotation["from"] = split_anno
-#         else:
-#             raise ValueError(f"Invalid direction: {direction}, use 'to' or 'from'")
-#         return datapackage
-
-#     def split(self) -> None:
-#         """
-#         Build datasets for training, validation, and testing from a DataPackage.
-#         Uses pre-aligned IDs to split the data.
-
-#         Raises
-#         ------
-#         ValueError
-#             If no data is available for splitting.
-#         """
-#         if self._data_package is None:
-#             raise ValueError("No data package available for splitting")
-
-#         # Get split indices based on aligned IDs
-#         if not self.config.is_paired:
-#             train_package = self._split_translation(
-#                 indices=self.indicies["train"],
-#                 data=self._data_package,
-#                 direction="to",
-#                 datapackage=self._data_package,
-#             )
-#             train_package = self._split_translation(
-#                 indices=self.indicies["train"],
-#                 data=train_package,
-#                 direction="from",
-#                 datapackage=train_package,
-#             )
-#             valid_package = self._split_translation(
-#                 indices=self.indicies["valid"],
-#                 data=self._data_package,
-#                 direction="to",
-#                 datapackage=self._data_package,
-#             )
-#             valid_package = self._split_translation(
-#                 indices=self.indicies["valid"],
-#                 data=valid_package,
-#                 direction="from",
-#                 datapackage=valid_package,
-#             )
-#             test_package = self._split_translation(
-#                 indices=self.indicies["test"],
-#                 data=self._data_package,
-#                 direction="to",
-#                 datapackage=self._data_package,
-#             )
-#             test_package = self._split_translation(
-#                 indices=self.indicies["test"],
-#                 data=test_package,
-#                 direction="from",
-#                 datapackage=test_package,
-#             )
-#             return {
-#                 "train": {"data": train_package, "indices": self.indicies["train"]},
-#                 "valid": {
-#                     "data": valid_package,
-#                     "indices": self.indicies["valid"],
-#                 },
-#                 "test": {
-#                     "data": test_package,
-#                     "indices": self.indicies["test"],
-#                 },
-#             }
-#         train_data = self._split_data_package(self.indicies["train"])
-#         valid_data = self._split_data_package(self.indicies["valid"])
-#         test_data = self._split_data_package(self.indicies["test"])
-#         return {
-#             "train": {"data": train_data, "indices": self.indicies["train"]},
-#             "valid": {"data": valid_data, "indices": self.indicies["valid"]},
-#             "test": {"data": test_data, "indices": self.indicies["test"]},
-#         }
-
-from typing import Dict, List, Union, Literal, Optional, Any, TypeVar
+from typing import Any, Dict, List, Literal, Optional, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -396,7 +226,10 @@ class DataPackageSplitter:
 
                 result[split_name] = {
                     "data": split_package,
-                    "indices": {"from": self.from_indices[split_name], "to": self.to_indices[split_name]},
+                    "indices": {
+                        "from": self.from_indices[split_name],
+                        "to": self.to_indices[split_name],
+                    },
                 }
         else:
             # For paired data, split the entire package at once
@@ -404,7 +237,7 @@ class DataPackageSplitter:
                 split_data = self._split_data_package(self.indices[split_name])
                 result[split_name] = {
                     "data": split_data,
-                    "indices": {"paired":self.indices[split_name]},
+                    "indices": {"paired": self.indices[split_name]},
                 }
 
         return result

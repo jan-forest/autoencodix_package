@@ -17,7 +17,7 @@ class DataPackage:
     A class to represent a data package containing multiple types of data.
     """
 
-    multi_sc: Optional[MuData] = None
+    multi_sc: Optional[Dict[str, MuData]] = None
     multi_bulk: Optional[Dict[str, pd.DataFrame]] = None
     annotation: Optional[Dict[str, pd.DataFrame]] = None
     img: Optional[Dict[str, List[ImgData]]] = None
@@ -106,22 +106,24 @@ class DataPackage:
             ]
         )
 
-    def get_n_samples(self, is_paired: bool) -> Dict[str, Union[int, Dict[str, int]]]:
+    def get_n_samples(
+        self, is_paired: Union[bool, None]
+    ) -> Dict[str, Union[int, Dict[str, int]]]:
         """Get the number of samples for each data type."""
-        if not is_paired:
-            return {
-                "from": self._get_n_samples(self.from_modality),
-                "to": self._get_n_samples(self.to_modality),
-            }
 
-        n_samples = {}
-        for attr_name in self.__annotations__.keys():
-            attr_value = getattr(self, attr_name)
-            if attr_value is None:
-                continue
-            n_samples[attr_name] = self._get_n_samples(attr_value)
-        n_samples["paired_count"] = max(n_samples.values())
-        return n_samples
+        if is_paired or is_paired is None:
+            n_samples = {}
+            for attr_name in self.__annotations__.keys():
+                attr_value = getattr(self, attr_name)
+                if attr_value is None:
+                    continue
+                n_samples[attr_name] = self._get_n_samples(attr_value)
+            n_samples["paired_count"] = max(n_samples.values())
+            return n_samples
+        return {
+            "from": self._get_n_samples(self.from_modality),
+            "to": self._get_n_samples(self.to_modality),
+        }
 
     def _get_n_samples(
         self, dataobj: Union[MuData, pd.DataFrame, List[ImgData], AnnData, Dict]
@@ -225,124 +227,3 @@ class DataPackage:
             return None
 
         return next(iter(modality_dict.keys()), None)
-
-    def get_modality_data(self, direction: str) -> Any:
-        """
-        Get the data for a specific direction's modality.
-
-        Args:
-            direction: Either 'from' or 'to'
-
-        Returns:
-            Data object for the specified modality or None if not available
-        """
-        key = self.get_modality_key(direction)
-        if not key:
-            return None
-
-        modality_dict = self.from_modality if direction == "from" else self.to_modality
-        return modality_dict.get(key)
-
-    def set_modality_data(self, direction: str, data: Any) -> None:
-        """
-        Set the data for a specific direction's modality.
-
-        Args:
-            direction: Either 'from' or 'to'
-            data: The data to set
-        """
-        key = self.get_modality_key(direction)
-        if not key:
-            return
-
-        modality_dict = self.from_modality if direction == "from" else self.to_modality
-        modality_dict[key] = data
-
-    def process_modality(
-        self, direction: str, processor_func: Callable[[Any, str], Any]
-    ) -> None:
-        """
-        Process a specific modality with the given processor function.
-
-        Args:
-            direction: Either 'from' or 'to'
-            processor_func: Function that takes (data, key) and returns processed data
-        """
-        key = self.get_modality_key(direction)
-        if not key:
-            return
-
-        data = self.get_modality_data(direction)
-        if data is not None:
-            processed_data = processor_func(data, key)
-            self.set_modality_data(direction, processed_data)
-
-    def process_multi_bulk(
-        self, processor_func: Callable[[pd.DataFrame, str], pd.DataFrame]
-    ) -> None:
-        """
-        Process all DataFrames in multi_bulk with the given processor function.
-
-        Args:
-            processor_func: Function that takes (dataframe, key) and returns processed dataframe
-        """
-        if not self.multi_bulk:
-            return
-
-        processed = {}
-        for key, df in self.multi_bulk.items():
-            processed[key] = processor_func(df, key)
-        self.multi_bulk = processed
-
-    def process_multi_sc(self, processor_func: Callable[[MuData], MuData]) -> None:
-        """
-        Process single-cell data with the given processor function.
-
-        Args:
-            processor_func: Function that takes MuData and returns processed MuData
-        """
-        if not self.multi_sc:
-            return
-
-        self.multi_sc = processor_func(self.multi_sc)
-
-    def process_images(
-        self, processor_func: Callable[[List[ImgData], str], List[ImgData]]
-    ) -> None:
-        """
-        Process all image data with the given processor function.
-
-        Args:
-            processor_func: Function that takes (image_list, key) and returns processed image_list
-        """
-        if not self.img:
-            return
-
-        processed = {}
-        for key, img_list in self.img.items():
-            processed[key] = processor_func(img_list, key)
-        self.img = processed
-
-    def detect_modality_type(self, direction: str) -> Optional[str]:
-        """
-        Detect the type of a modality ('dataframe', 'image', 'anndata', 'mudata').
-
-        Args:
-            direction: Either 'from' or 'to'
-
-        Returns:
-            String indicating the data type or None if not detected
-        """
-        data = self.get_modality_data(direction)
-        if data is None:
-            return None
-
-        if isinstance(data, pd.DataFrame):
-            return "dataframe"
-        elif isinstance(data, list) and data and hasattr(data[0], "img"):
-            return "image"
-        elif isinstance(data, AnnData):
-            return "anndata"
-        elif isinstance(data, MuData):
-            return "mudata"
-        return None

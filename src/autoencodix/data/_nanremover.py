@@ -121,19 +121,20 @@ class NaNRemover:
         # Handle MuData in multi_sc
         if data.multi_sc is not None:
             print("\nProcessing MuData object in multi_sc")
+            mudata = data.multi_sc["multi_sc"]
             # Process each modality
-            for mod_name, mod_data in data.multi_sc.mod.items():
+            for mod_name, mod_data in mudata.mod.items():
                 processed_mod = self._process_modality(mod_data, mod_name)
-                data.multi_sc.mod[mod_name] = processed_mod
+                data.multi_sc["multi_sc"].mod[mod_name] = processed_mod
 
             # Ensure cell alignment across modalities
             common_cells = list(
                 set.intersection(
-                    *(set(mod.obs_names) for mod in data.multi_sc.mod.values())
+                    *(set(mod.obs_names) for mod in mudata.mod.values())
                 )
             )
             print(f"\nFound {len(common_cells)} common cells across all modalities")
-            data.multi_sc = data.multi_sc[common_cells]
+            data.multi_sc = data.multi_sc["multi_sc"][common_cells]
 
         # Handle from_modality and to_modality (for translation cases)
         for direction in ["from_modality", "to_modality"]:

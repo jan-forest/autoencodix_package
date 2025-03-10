@@ -124,7 +124,7 @@ class ImageDataReader:
         to_h: Optional[int],
         to_w: Optional[int],
         annotation_df: Optional[pd.DataFrame],
-        is_paired: bool = False,
+        is_paired: Union[bool, None] = None,
     ) -> List[ImgData]:
         """
         Reads all images from the specified directory, processes them, and returns a list of ImgData objects.
@@ -144,7 +144,7 @@ class ImageDataReader:
             for f in os.listdir(img_dir)
             if Path(f).suffix.lower() in SUPPORTED_EXTENSIONS
         ]
-        if is_paired:
+        if is_paired or is_paired is None:
             paths = [
                 p
                 for p in paths
@@ -258,8 +258,10 @@ class ImageDataReader:
                     if f.data_type == "ANNOTATION"
                 )
                 if not config.paired_translation:
-                    raise ValueError(
-                        "Img specific annotation file is required for unpaired translation."
+                    if config.paired_translation is not None:
+                        
+                        raise ValueError(
+                            "Img specific annotation file is required for unpaired translation."
                     )
                 annotation = self.read_annotation_file(anno_info)
             except StopIteration:

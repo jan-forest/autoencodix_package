@@ -98,8 +98,8 @@ class DefaultConfig(BaseModel):
 
     # Datasets configuration --------------------------------------------------
     data_config: DataConfig = DataConfig(data_info={})
-    paired_translation: bool = Field(
-        True,
+    paired_translation: Union[bool, None] = Field(
+        None,
         description="Indicator if the samples for the xmodalix are paired, based on some sample id",
     )
 
@@ -346,8 +346,6 @@ class DefaultConfig(BaseModel):
             raise ValueError(f"Data split ratios must sum to 1.0 or less (got {total})")
         return v
 
-    # model specific validation
-    paired_translation: bool = True
 
     # TODO test if other float precisions work with MPS
     @field_validator("float_precision")

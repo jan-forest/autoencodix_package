@@ -69,6 +69,10 @@ class DataPackageSplitter:
         # Create a new package with split data
         split_data = {}
         for key, value in self._data_package.__dict__.items():
+            if key == "annotation":
+                print("processing ANNOTATION")
+                print(self._data_package)
+
             split_result = self._package_splitter(value, indices)
             if split_result is not None:  # Only include non-None results
                 split_data[key] = split_result
@@ -77,7 +81,7 @@ class DataPackageSplitter:
 
     def _package_splitter(
         self,
-        dataobj: Optional[T],
+        dataobj: Dict,
         indices: np.ndarray,
     ) -> Optional[T]:
         """
@@ -92,17 +96,12 @@ class DataPackageSplitter:
 
         Returns
         -------
-        Optional[Union[MuData, pd.DataFrame, List[ImgData], AnnData, dict, list]]
+        Optional[Dict]
             The split data object, or None if input is None.
         """
         if dataobj is None:
             return None
 
-        # Handle DataFrame
-        if isinstance(dataobj, pd.DataFrame):
-            return dataobj.iloc[indices]
-
-        # Handle dictionary of lists or DataFrames
         elif isinstance(dataobj, dict):
             # Get the first value to determine the type
             if not dataobj:  # Empty dictionary
@@ -117,23 +116,14 @@ class DataPackageSplitter:
                 }
             elif isinstance(first_value, pd.DataFrame):
                 return {key: value.iloc[indices] for key, value in dataobj.items()}
+            elif isinstance(first_value, (AnnData, MuData)):
+                return  {key: value[indices] for key, value in dataobj.items()}
             else:
-                return dataobj  # Return unchanged if values are not list or DataFrame
-
-        # Handle list - use numpy's take for efficiency
-        elif isinstance(dataobj, list):
-            # Filter indices that are within range
-            valid_indices = [i for i in indices if i < len(dataobj)]
-            if not valid_indices:
-                return []
-            return [dataobj[i] for i in valid_indices]
-
-        # Handle AnnData and MuData
-        elif isinstance(dataobj, (AnnData, MuData)):
-            return dataobj[indices]
-
-        # Return unchanged for other types
-        return dataobj
+                raise TypeError(
+                    f"Expected dataobj to be pd.DataFrame, list or MuData, got {type(dataobj)}"
+                )
+        else:
+            raise TypeError(f" dataobj should be dict or None, got {type(dataobj)}")
 
     def _split_modality_and_annotation(
         self,
@@ -185,6 +175,7 @@ class DataPackageSplitter:
             result.annotation[modality_type] = self._package_splitter(
                 data_package.annotation[modality_type], indices
             )
+            print("splitting unpaired annotations")
 
         return result
 
@@ -194,8 +185,9 @@ class DataPackageSplitter:
 
         Returns
         -------
-        Dict[str, Dict[str, Any]]
+        Dict[str, Dict[str, Dict[str, Any]]
             Dictionary containing data and indices for train, valid, and test splits.
+            Exmaple: {"train": {"data": DataPackage(), "indicies": {"paired": np.ndarray}}, "valid" ...}
 
         Raises
         ------
@@ -207,32 +199,7 @@ class DataPackageSplitter:
 
         result = {}
 
-        # Handle paired vs unpaired data
-        if not self.config.paired_translation:
-            # For unpaired data, split "to" and "from" modalities separately
-            for split_name in ["train", "valid", "test"]:
-                # Create an empty DataPackage
-                split_package = DataPackage()
-
-                # Split "to" modality
-                split_package = self._split_modality_and_annotation(
-                    self._data_package, self.to_indices[split_name], "to"
-                )
-
-                # Split "from" modality
-                split_package = self._split_modality_and_annotation(
-                    split_package, self.from_indices[split_name], "from"
-                )
-
-                result[split_name] = {
-                    "data": split_package,
-                    "indices": {
-                        "from": self.from_indices[split_name],
-                        "to": self.to_indices[split_name],
-                    },
-                }
-        else:
-            # For paired data, split the entire package at once
+        if self.config.paired_translation is None or self.config.paired_translation:
             for split_name in ["train", "valid", "test"]:
                 split_data = self._split_data_package(self.indices[split_name])
                 result[split_name] = {
@@ -240,4 +207,24 @@ class DataPackageSplitter:
                     "indices": {"paired": self.indices[split_name]},
                 }
 
+            print(f" splitting result train : {result['train']['data']}")
+            return result
+        # UNPAIRED CASE
+        for split_name in ["train", "valid", "test"]:
+            split_package = DataPackage()
+            split_package = self._split_modality_and_annotation(
+                self._data_package, self.to_indices[split_name], "to"
+            )
+
+            split_package = self._split_modality_and_annotation(
+                split_package, self.from_indices[split_name], "from"
+            )
+            result[split_name] = {
+                "data": split_package,
+                "indices": {
+                    "from": self.from_indices[split_name],
+                    "to": self.to_indices[split_name],
+                },
+            }
+        print(f" splitting result train : {result['train']['data']}")
         return result

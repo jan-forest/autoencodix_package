@@ -1,6 +1,7 @@
 from typing import List
 
 import anndata as ad
+import pandas as pd
 import mudata as md  # Add explicit import for mudata
 import numpy as np
 from scipy.sparse import issparse
@@ -180,6 +181,10 @@ class NaNRemover:
                             processed_mod = self._process_modality(sub_value, f"{mod_key}.{sub_key}")
                             mod_value[sub_key] = processed_mod
                             
+                elif isinstance(mod_value, pd.DataFrame):
+                    mod_value.dropna(axis=1, inplace=True)
+                    modality_dict[mod_key] = mod_value
+
                 else:
                     print(f"Skipping unknown type in {direction}.{mod_key}: {type(mod_value)}")
 

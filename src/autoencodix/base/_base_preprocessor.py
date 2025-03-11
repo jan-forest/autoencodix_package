@@ -26,6 +26,7 @@ class BasePreprocessor(abc.ABC):
     Subclasses should implement the `preprocess` method to perform
     specific preprocessing steps.
     """
+
     def __init__(self, config: DefaultConfig):
         """
         Initializes the BasePreprocessor with a configuration object.
@@ -39,12 +40,19 @@ class BasePreprocessor(abc.ABC):
             DataCase.MULTI_BULK: BulkDataReader(config=self.config),
             DataCase.BULK_TO_BULK: BulkDataReader(config=self.config),
             DataCase.SINGLE_CELL_TO_SINGLE_CELL: SingleCellDataReader(),
-            DataCase.IMG_TO_BULK: {"bulk": BulkDataReader(config=self.config), "img": ImageDataReader()},
-            DataCase.SINGLE_CELL_TO_IMG: {"sc": SingleCellDataReader(), "img": ImageDataReader()},
+            DataCase.IMG_TO_BULK: {
+                "bulk": BulkDataReader(config=self.config),
+                "img": ImageDataReader(),
+            },
+            DataCase.SINGLE_CELL_TO_IMG: {
+                "sc": SingleCellDataReader(),
+                "img": ImageDataReader(),
+            },
             DataCase.IMG_TO_IMG: ImageDataReader(),
         }
-        self.from_key, self.to_key = self._get_translation_keys() # Set as attributes in init
-
+        self.from_key, self.to_key = (
+            self._get_translation_keys()
+        )  # Set as attributes in init
 
     def _general_preprocess(self) -> Dict[str, DataPackage]:
         """
@@ -64,7 +72,7 @@ class BasePreprocessor(abc.ABC):
 
         process_function = self._get_process_function(datacase)
         if process_function:
-            return process_function() # No need to pass from_key, to_key anymore
+            return process_function()  # No need to pass from_key, to_key anymore
         else:
             raise ValueError(f"Unsupported data case: {datacase}")
 
@@ -77,7 +85,9 @@ class BasePreprocessor(abc.ABC):
         """
         pass
 
-    def _get_process_function(self, datacase: DataCase) -> Optional[Callable[[], Dict[str, DataPackage]]]:
+    def _get_process_function(
+        self, datacase: DataCase
+    ) -> Optional[Callable[[], Dict[str, DataPackage]]]:
         """
         Returns the appropriate processing function based on the data case.
 
@@ -99,7 +109,11 @@ class BasePreprocessor(abc.ABC):
         }
         return process_map.get(datacase)
 
-    def _process_data_case(self, data_package: DataPackage, modality_processors: Dict[str, Callable[[DataPackage], DataPackage]]) -> Dict[str, DataPackage]:
+    def _process_data_case(
+        self,
+        data_package: DataPackage,
+        modality_processors: Dict[str, Callable[[DataPackage], DataPackage]],
+    ) -> Dict[str, DataPackage]:
         """
         Generic method to process a data case.
 
@@ -145,7 +159,9 @@ class BasePreprocessor(abc.ABC):
         def process_sc_modality(modality_data: md.MuData) -> md.MuData:
             """Processes single-cell modality data with filtering."""
             if modality_data is not None:
-                sc_key = list(self.config.data_config.data_info.keys())[0] # Assuming single sc_key for multi_sc
+                sc_key = list(self.config.data_config.data_info.keys())[
+                    0
+                ]  # Assuming single sc_key for multi_sc
                 data_info = self.config.data_config.data_info[sc_key]
                 sc_filter = SingleCellFilter(mudata=modality_data, data_info=data_info)
                 return sc_filter.preprocess()
@@ -172,7 +188,9 @@ class BasePreprocessor(abc.ABC):
         data_package.multi_bulk = bulk_dfs
         data_package.annotation = annotation
 
-        def process_bulk_modality(modality_data: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
+        def process_bulk_modality(
+            modality_data: Dict[str, pd.DataFrame],
+        ) -> Dict[str, pd.DataFrame]:
             """Processes multi-bulk modality data with filtering and scaling."""
             if modality_data:
                 processed_bulk = {}
@@ -199,25 +217,39 @@ class BasePreprocessor(abc.ABC):
         bulk_dfs, annotation = bulkreader.read_data()
 
         data_package = DataPackage()
-        data_package.from_modality = {self.from_key: bulk_dfs[self.from_key]} # Use self.from_key
-        data_package.to_modality = {self.to_key: bulk_dfs[self.to_key]} # Use self.to_key
+        data_package.from_modality = {
+            self.from_key: bulk_dfs[self.from_key]
+        }  # Use self.from_key
+        data_package.to_modality = {
+            self.to_key: bulk_dfs[self.to_key]
+        }  # Use self.to_key
         data_package.multi_bulk = None  # to avoid redundancy
         data_package.annotation = {
-            "from": annotation[self.from_key], # Use self.from_key
-            "to": annotation[self.to_key], # Use self.to_key
+            "from": annotation[self.from_key],  # Use self.from_key
+            "to": annotation[self.to_key],  # Use self.to_key
         }
 
-        def process_bulk_to_bulk_modality(modality_data: Dict[str, pd.DataFrame], modality_key: str) -> Dict[str, pd.DataFrame]:
+        def process_bulk_to_bulk_modality(
+            modality_data: Dict[str, pd.DataFrame], modality_key: str
+        ) -> Dict[str, pd.DataFrame]:
             """Processes bulk-to-bulk modality data with filtering and scaling."""
             if modality_data and modality_key in modality_data:
-                return {modality_key: self._filter_and_scale_dataframe(modality_data[modality_key], modality_key)}
+                return {
+                    modality_key: self._filter_and_scale_dataframe(
+                        modality_data[modality_key], modality_key
+                    )
+                }
             return modality_data
 
         return self._process_data_case(
             data_package,
             modality_processors={
-                "from_modality": lambda data: process_bulk_to_bulk_modality(data, self.from_key), # Use self.from_key
-                "to_modality": lambda data: process_bulk_to_bulk_modality(data, self.to_key), # Use self.to_key
+                "from_modality": lambda data: process_bulk_to_bulk_modality(
+                    data, self.from_key
+                ),  # Use self.from_key
+                "to_modality": lambda data: process_bulk_to_bulk_modality(
+                    data, self.to_key
+                ),  # Use self.to_key
             },
         )
 
@@ -235,22 +267,32 @@ class BasePreprocessor(abc.ABC):
         mudata = screader.read_data(config=self.config)
 
         data_package = DataPackage()
-        data_package.from_modality = {self.from_key: mudata[self.from_key]} # Use self.from_key
-        data_package.to_modality = {self.to_key: mudata[self.to_key]} # Use self.to_key
+        data_package.from_modality = {
+            self.from_key: mudata[self.from_key]
+        }  # Use self.from_key
+        data_package.to_modality = {self.to_key: mudata[self.to_key]}  # Use self.to_key
 
-        def process_sc_to_sc_modality(modality_data: Dict[str, md.MuData], modality_key: str) -> Dict[str, md.MuData]:
+        def process_sc_to_sc_modality(
+            modality_data: Dict[str, md.MuData], modality_key: str
+        ) -> Dict[str, md.MuData]:
             """Processes sc-to-sc modality data with single-cell filtering."""
             if modality_data and modality_key in modality_data:
                 data_info = self.config.data_config.data_info[modality_key]
-                sc_filter = SingleCellFilter(mudata=modality_data[modality_key], data_info=data_info)
+                sc_filter = SingleCellFilter(
+                    mudata=modality_data[modality_key], data_info=data_info
+                )
                 return {modality_key: sc_filter.preprocess()}
             return modality_data
 
         return self._process_data_case(
             data_package,
             modality_processors={
-                "from_modality": lambda data: process_sc_to_sc_modality(data, self.from_key), # Use self.from_key
-                "to_modality": lambda data: process_sc_to_sc_modality(data, self.to_key), # Use self.to_key
+                "from_modality": lambda data: process_sc_to_sc_modality(
+                    data, self.from_key
+                ),  # Use self.from_key
+                "to_modality": lambda data: process_sc_to_sc_modality(
+                    data, self.to_key
+                ),  # Use self.to_key
             },
         )
 
@@ -273,40 +315,56 @@ class BasePreprocessor(abc.ABC):
 
         data_package = DataPackage()
 
-        if self.to_key in bulk_dfs.keys(): # IMG -> BULK direction (Corrected condition) # Use self.to_key
-            data_package.from_modality = {self.from_key: images[self.from_key]} # Use self.from_key
-            data_package.to_modality = {self.to_key: bulk_dfs[self.to_key]} # Use self.to_key
+        if self.to_key in bulk_dfs.keys():
+            # IMG -> BULK direction (Corrected condition) # Use self.to_key
+            data_package.from_modality = {
+                self.from_key: images[self.from_key]
+            }  # Use self.from_key
+            data_package.to_modality = {
+                self.to_key: bulk_dfs[self.to_key]
+            }  # Use self.to_key
             to_annotation = next(iter(annotation.keys()))
             data_package.annotation = {"from": None, "to": annotation[to_annotation]}
-        else: # BULK -> IMG direction (Corrected condition order)
-            data_package.from_modality = {self.from_key: bulk_dfs[self.from_key]} # Use self.from_key
-            data_package.to_modality = {self.to_key: images[self.to_key]} # Use self.to_key
+        else:  # BULK -> IMG direction (Corrected condition order)
+            data_package.from_modality = {
+                self.from_key: bulk_dfs[self.from_key]
+            }  # Use self.from_key
+            data_package.to_modality = {
+                self.to_key: images[self.to_key]
+            }  # Use self.to_key
             from_annotation = next(iter(annotation.keys()))
             data_package.annotation = {"from": annotation[from_annotation], "to": None}
 
-
-        def process_img_to_bulk_modality(modality_data: Dict[str, Union[pd.DataFrame, List]], modality_key: str) -> Dict[str, Union[pd.DataFrame, List]]:
+        def process_img_to_bulk_modality(
+            modality_data: Dict[str, Union[pd.DataFrame, List]], modality_key: str
+        ) -> Dict[str, Union[pd.DataFrame, List]]:
             """Processes img-to-bulk modality data with normalization for images and filtering/scaling for dataframes."""
             if modality_data and modality_key in modality_data:
                 data = modality_data[modality_key]
                 if isinstance(data, pd.DataFrame):
-                    return {modality_key: self._filter_and_scale_dataframe(data, modality_key)}
+                    return {
+                        modality_key: self._filter_and_scale_dataframe(
+                            data, modality_key
+                        )
+                    }
                 elif self._is_image_data(data):
-                    return {modality_key: self._normalize_image_data(data, modality_key)}
+                    return {
+                        modality_key: self._normalize_image_data(data, modality_key)
+                    }
             return modality_data
 
-        print("datapackage before processing:")
-        print(data_package)
         dp = self._process_data_case(
             data_package,
             modality_processors={
-                "from_modality": lambda data: process_img_to_bulk_modality(data, self.from_key),
-                "to_modality": lambda data: process_img_to_bulk_modality(data, self.to_key),
+                "from_modality": lambda data: process_img_to_bulk_modality(
+                    data, self.from_key
+                ),
+                "to_modality": lambda data: process_img_to_bulk_modality(
+                    data, self.to_key
+                ),
             },
         )
-        print(f"dp train after processing: {dp['train']}")
         return dp
-
 
     def _process_sc_to_img_case(self) -> Dict[str, DataPackage]:
         """
@@ -328,14 +386,20 @@ class BasePreprocessor(abc.ABC):
 
         data_package = DataPackage()
 
-        if self.from_key in images.keys(): # IMG -> SC case (Corrected condition) # Use self.from_key
-            data_package.from_modality = {self.from_key: images[self.from_key]} # Use self.from_key
-            data_package.to_modality = {self.to_key: mudata} # Use self.to_key
-        else: # SC -> IMG case (Corrected condition order)
-            data_package.from_modality = {self.from_key: mudata} # Use self.from_key
-            data_package.to_modality = {self.to_key: images[self.to_key]} # Use self.to_key
+        if self.from_key in images.keys():
+            data_package.from_modality = {
+                self.from_key: images[self.from_key]
+            }  # Use self.from_key
+            data_package.to_modality = {self.to_key: mudata}  # Use self.to_key
+        else:  # SC -> IMG case (Corrected condition order)
+            data_package.from_modality = {self.from_key: mudata}  # Use self.from_key
+            data_package.to_modality = {
+                self.to_key: images[self.to_key]
+            }  # Use self.to_key
 
-        def process_sc_to_img_modality(modality_data: Dict[str, Union[md.MuData, List]], modality_key: str) -> Dict[str, Union[md.MuData, List]]:
+        def process_sc_to_img_modality(
+            modality_data: Dict[str, Union[md.MuData, List]], modality_key: str
+        ) -> Dict[str, Union[md.MuData, List]]:
             """Processes sc-to-img modality data with single-cell filtering for mudata and normalization for images."""
             if modality_data and modality_key in modality_data:
                 data = modality_data[modality_key]
@@ -344,14 +408,20 @@ class BasePreprocessor(abc.ABC):
                     sc_filter = SingleCellFilter(mudata=data, data_info=data_info)
                     return {modality_key: sc_filter.preprocess()}
                 elif self._is_image_data(data):
-                    return {modality_key: self._normalize_image_data(data, modality_key)}
+                    return {
+                        modality_key: self._normalize_image_data(data, modality_key)
+                    }
             return modality_data
 
         return self._process_data_case(
             data_package,
             modality_processors={
-                "from_modality": lambda data: process_sc_to_img_modality(data, self.from_key), # Use self.from_key
-                "to_modality": lambda data: process_sc_to_img_modality(data, self.to_key), # Use self.to_key
+                "from_modality": lambda data: process_sc_to_img_modality(
+                    data, self.from_key
+                ),
+                "to_modality": lambda data: process_sc_to_img_modality(
+                    data, self.to_key
+                ),
             },
         )
 
@@ -369,26 +439,34 @@ class BasePreprocessor(abc.ABC):
         images = imgreader.read_data(config=self.config)
 
         data_package = DataPackage()
-        data_package.from_modality = {self.from_key: images[self.from_key]} # Use self.from_key
-        data_package.to_modality = {self.to_key: images[self.to_key]} # Use self.to_key
+        data_package.from_modality = {
+            self.from_key: images[self.from_key]
+        }  # Use self.from_key
+        data_package.to_modality = {self.to_key: images[self.to_key]}  # Use self.to_key
 
-        def process_img_to_img_modality(modality_data: Dict[str, List], modality_key: str) -> Dict[str, List]:
+        def process_img_to_img_modality(
+            modality_data: Dict[str, List], modality_key: str
+        ) -> Dict[str, List]:
             """Processes img-to-img modality data with normalization for images."""
             if modality_data and modality_key in modality_data:
                 data = modality_data[modality_key]
                 if self._is_image_data(data):
-                    return {modality_key: self._normalize_image_data(data, modality_key)}
+                    return {
+                        modality_key: self._normalize_image_data(data, modality_key)
+                    }
             return modality_data
-
 
         return self._process_data_case(
             data_package,
             modality_processors={
-                "from_modality": lambda data: process_img_to_img_modality(data, self.from_key), # Use self.from_key
-                "to_modality": lambda data: process_img_to_img_modality(data, self.to_key), # Use self.to_key
+                "from_modality": lambda data: process_img_to_img_modality(
+                    data, self.from_key
+                ),  # Use self.from_key
+                "to_modality": lambda data: process_img_to_img_modality(
+                    data, self.to_key
+                ),  # Use self.to_key
             },
         )
-
 
     def _split_data_package(self, data_package: DataPackage) -> Dict[str, Dict]:
         """
@@ -409,24 +487,29 @@ class BasePreprocessor(abc.ABC):
 
         split_indices_config = {}
         if self.config.paired_translation or self.config.paired_translation is None:
-            split_indices_config['n_samples'] = n_samples["paired_count"]
-            print(f"n_samples: {n_samples}")
+            split_indices_config["n_samples"] = n_samples["paired_count"]
         else:
-            split_indices_config['from_indices'] = data_splitter.split(n_samples=n_samples["from"])
-            split_indices_config['to_indices'] = data_splitter.split(n_samples=n_samples["to"])
-            split_indices_config['n_samples'] = None # Explicitly set to None for unpaired case
-
+            split_indices_config["from_indices"] = data_splitter.split(
+                n_samples=n_samples["from"]
+            )
+            split_indices_config["to_indices"] = data_splitter.split(
+                n_samples=n_samples["to"]
+            )
+            split_indices_config["n_samples"] = (
+                None  # Explicitly set to None for unpaired case
+            )
 
         data_splitter_instance = DataPackageSplitter(
             data_package=data_package,
             config=self.config,
-            indices = data_splitter.split(n_samples=split_indices_config['n_samples']) if split_indices_config['n_samples'] is not None else None, # Conditionally pass indices
-            from_indices = split_indices_config.get('from_indices'),
-            to_indices = split_indices_config.get('to_indices')
+            indices=data_splitter.split(n_samples=split_indices_config["n_samples"])
+            if split_indices_config["n_samples"] is not None
+            else None,  # Conditionally pass indices
+            from_indices=split_indices_config.get("from_indices"),
+            to_indices=split_indices_config.get("to_indices"),
         )
 
         return data_splitter_instance.split()
-
 
     def _is_image_data(self, data: List) -> bool:
         """
@@ -461,7 +544,9 @@ class BasePreprocessor(abc.ABC):
         )
         return nanremover.remove_nan(data=data_package)
 
-    def _filter_and_scale_dataframe(self, df: pd.DataFrame, info_key: str) -> Optional[pd.DataFrame]:
+    def _filter_and_scale_dataframe(
+        self, df: pd.DataFrame, info_key: str
+    ) -> Optional[pd.DataFrame]:
         """
         Process a dataframe with filtering and scaling.
 
@@ -486,7 +571,7 @@ class BasePreprocessor(abc.ABC):
         filtered_df = filter_obj.filter()
 
         if filtered_df.empty or filtered_df.shape[1] == 0:
-            filtered_df = df # Return original if filter makes it empty
+            filtered_df = df  # Return original if filter makes it empty
 
         scaled_df = filter_obj.scale(filtered_df)
         return scaled_df
@@ -507,11 +592,11 @@ class BasePreprocessor(abc.ABC):
         """
         scaling_method = self.config.data_config.data_info[info_key].scaling
         processed_images = []
-        normalizer = ImageNormalizer() # Instance created once here
+        normalizer = ImageNormalizer()  # Instance created once here
 
         for img in images:
             img_copy = copy.deepcopy(img)
-            img_copy.img = normalizer.normalize_image( # Use instance here
+            img_copy.img = normalizer.normalize_image(  # Use instance here
                 image=img_copy.img, method=scaling_method
             )
             processed_images.append(img_copy)

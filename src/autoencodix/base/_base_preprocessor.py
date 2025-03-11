@@ -1,6 +1,6 @@
 import abc
 import copy
-from typing import Dict, List, Optional, Tuple, Type, Union, Callable
+from typing import Dict, List, Optional, Tuple, Union, Callable
 
 import mudata as md
 import pandas as pd
@@ -76,9 +76,11 @@ class BasePreprocessor(abc.ABC):
         else:
             raise ValueError(f"Unsupported data case: {datacase}")
 
+    @abc.abstractmethod
     def preprocess(self):
         """
         Abstract method to be implemented by subclasses for specific preprocessing steps.
+        Mostly
 
         This method should contain the subclass-specific preprocessing logic
         and is called after the general preprocessing steps are completed.
@@ -159,11 +161,9 @@ class BasePreprocessor(abc.ABC):
         def process_sc_modality(modality_data: md.MuData) -> md.MuData:
             """Processes single-cell modality data with filtering."""
             if modality_data is not None:
-                sc_key = list(self.config.data_config.data_info.keys())[
-                    0
-                ]  # Assuming single sc_key for multi_sc
-                data_info = self.config.data_config.data_info[sc_key]
-                sc_filter = SingleCellFilter(mudata=modality_data, data_info=data_info)
+                sc_filter = SingleCellFilter(
+                    mudata=modality_data, data_info=self.config.data_config.data_info
+                )
                 return sc_filter.preprocess()
             return modality_data
 
@@ -246,10 +246,10 @@ class BasePreprocessor(abc.ABC):
             modality_processors={
                 "from_modality": lambda data: process_bulk_to_bulk_modality(
                     data, self.from_key
-                ),  # Use self.from_key
+                ),
                 "to_modality": lambda data: process_bulk_to_bulk_modality(
                     data, self.to_key
-                ),  # Use self.to_key
+                ),
             },
         )
 
@@ -267,10 +267,8 @@ class BasePreprocessor(abc.ABC):
         mudata = screader.read_data(config=self.config)
 
         data_package = DataPackage()
-        data_package.from_modality = {
-            self.from_key: mudata[self.from_key]
-        }  # Use self.from_key
-        data_package.to_modality = {self.to_key: mudata[self.to_key]}  # Use self.to_key
+        data_package.from_modality = {self.from_key: mudata[self.from_key]}
+        data_package.to_modality = {self.to_key: mudata[self.to_key]}
 
         def process_sc_to_sc_modality(
             modality_data: Dict[str, md.MuData], modality_key: str
@@ -317,21 +315,13 @@ class BasePreprocessor(abc.ABC):
 
         if self.to_key in bulk_dfs.keys():
             # IMG -> BULK direction (Corrected condition) # Use self.to_key
-            data_package.from_modality = {
-                self.from_key: images[self.from_key]
-            }  # Use self.from_key
-            data_package.to_modality = {
-                self.to_key: bulk_dfs[self.to_key]
-            }  # Use self.to_key
+            data_package.from_modality = {self.from_key: images[self.from_key]}
+            data_package.to_modality = {self.to_key: bulk_dfs[self.to_key]}
             to_annotation = next(iter(annotation.keys()))
             data_package.annotation = {"from": None, "to": annotation[to_annotation]}
         else:  # BULK -> IMG direction (Corrected condition order)
-            data_package.from_modality = {
-                self.from_key: bulk_dfs[self.from_key]
-            }  # Use self.from_key
-            data_package.to_modality = {
-                self.to_key: images[self.to_key]
-            }  # Use self.to_key
+            data_package.from_modality = {self.from_key: bulk_dfs[self.from_key]}
+            data_package.to_modality = {self.to_key: images[self.to_key]}
             from_annotation = next(iter(annotation.keys()))
             data_package.annotation = {"from": annotation[from_annotation], "to": None}
 

@@ -33,10 +33,8 @@ class BulkDataReader:
             A tuple containing (bulk_dataframes, annotation_dataframes)
         """
         if self.config.paired_translation or self.config.paired_translation is None:
-            print("Reading paired data")
             return self.read_paired_data()
         else:
-            print("Reading unpaired data")
             return self.read_unpaired_data()
 
     def read_paired_data(
@@ -58,7 +56,6 @@ class BulkDataReader:
 
         # First pass: read all data files and track common samples
         for key, info in self.config.data_config.data_info.items():
-            print(f"Processing data source: {key} (type: {info.data_type})")
 
             if info.data_type == "IMG":
                 continue  # Skip image data in this reader
@@ -80,12 +77,10 @@ class BulkDataReader:
 
             elif info.data_type == "ANNOTATION":
                 has_annotation = True
-                print(f"Annotation dataframe preview: {df.head()}")
                 annotation_df = df
 
         # Second pass: filter to common samples
         if common_samples:
-            print(f"Found {len(common_samples)} common samples across all datasets")
             common_samples_list = list(common_samples)
 
             # Reindex bulk dataframes to common samples
@@ -120,7 +115,6 @@ class BulkDataReader:
         annotations: Dict[str, pd.DataFrame] = {}
 
         for key, info in self.config.data_config.data_info.items():
-            print(f"Processing data source: {key} (type: {info.data_type})")
 
             if info.data_type == "IMG" or info.is_single_cell:
                 continue  # Skip image and single-cell data

@@ -36,21 +36,19 @@ class DataPackageSplitter:
         except Exception:
             return value
 
-    def _safe_indexing(self, obj: Any, indices: np.ndarray) -> Any:
+    def _indexing(self, obj: Any, indices: np.ndarray) -> Any:
         """
-        Indexes objects safely. For recognized types (DataFrame, list, AnnData/MuData),
-        returns a subset based on valid indices. For other types, returns the object unchanged.
+        Indexes objects based on valid indices. For recognized types (DataFrame, list, AnnData/MuData),
+        returns a subset based on the indices. For other types, returns the object unchanged.
         """
         if obj is None:
             return None
         if isinstance(obj, pd.DataFrame):
-            valid = [i for i in indices if i < len(obj)]
-            return obj.iloc[valid] if valid else obj.iloc[0:0].copy()
+            return obj.iloc[indices]
         if isinstance(obj, list):
-            return [obj[i] for i in indices if i < len(obj)]
+            return [obj[i] for i in indices]
         if isinstance(obj, (AnnData, MuData)):
-            valid = [i for i in indices if i < len(obj)]
-            return obj[valid] if valid else obj[0:0]
+            return obj[indices]
         return obj
 
     def _split_data_package(self, indices: np.ndarray) -> DataPackage:
@@ -69,20 +67,21 @@ class DataPackageSplitter:
             if key == "multi_sc":
                 if isinstance(value, dict):
                     split_data[key] = {
-                        k: self._safe_indexing(v, indices) for k, v in value.items()
+                        k: self._indexing(v, indices) for k, v in value.items()
                     }
                 elif isinstance(value, (AnnData, MuData)):
-                    split_data[key] = self._safe_indexing(value, indices)
+                    split_data[key] = self._indexing(value, indices)
             elif isinstance(value, dict):
                 first_val = next(iter(value.values()), None)
                 if isinstance(first_val, (pd.DataFrame, list, AnnData, MuData)):
                     split_data[key] = {
-                        k: self._safe_indexing(v, indices) for k, v in value.items()
+                        k: self._indexing(v, indices) for k, v in value.items()
                     }
                 else:
                     split_data[key] = dict(value)
             else:
                 split_data[key] = self._shallow_copy(value)
+
         return DataPackage(**split_data)
 
     def _create_modality_specific_package(
@@ -102,10 +101,10 @@ class DataPackageSplitter:
         if multi_sc is not None:
             if isinstance(multi_sc, dict):
                 result.multi_sc = {
-                    k: self._safe_indexing(v, indices) for k, v in multi_sc.items()
+                    k: self._indexing(v, indices) for k, v in multi_sc.items()
                 }
             elif isinstance(multi_sc, (AnnData, MuData)):
-                result.multi_sc = self._safe_indexing(multi_sc, indices)
+                result.multi_sc = self._indexing(multi_sc, indices)
 
         # Process modalities
         to_mod = getattr(original_package, "to_modality", None)
@@ -113,14 +112,14 @@ class DataPackageSplitter:
         if to_mod is not None:
             if modality_type == "to":
                 result.to_modality = {
-                    k: self._safe_indexing(v, indices) for k, v in to_mod.items()
+                    k: self._indexing(v, indices) for k, v in to_mod.items()
                 }
             else:
                 result.to_modality = dict(to_mod)
         if from_mod is not None:
             if modality_type == "from":
                 result.from_modality = {
-                    k: self._safe_indexing(v, indices) for k, v in from_mod.items()
+                    k: self._indexing(v, indices) for k, v in from_mod.items()
                 }
             else:
                 result.from_modality = dict(from_mod)
@@ -130,7 +129,7 @@ class DataPackageSplitter:
             result.annotation = dict(original_package.annotation)
             ann = original_package.annotation.get(modality_type)
             if ann is not None:
-                result.annotation[modality_type] = self._safe_indexing(ann, indices)
+                result.annotation[modality_type] = self._indexing(ann, indices)
         return result
 
     def _merge_packages(self, packages: List[DataPackage]) -> DataPackage:

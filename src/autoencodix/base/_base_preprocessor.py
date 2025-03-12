@@ -1,4 +1,5 @@
 import abc
+import numpy as np
 import copy
 from typing import Dict, List, Optional, Tuple, Union, Callable
 
@@ -131,7 +132,7 @@ class BasePreprocessor(abc.ABC):
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
         """
-        split_packages = self._split_data_package(data_package)
+        split_packages, indices = self._split_data_package(data_package)
         processed_splits = {}
         for split_name, split_package in split_packages.items():
             clean_package = self._remove_nans(split_package["data"])
@@ -140,7 +141,18 @@ class BasePreprocessor(abc.ABC):
                 if modality_data:
                     processed_modality_data = processor(modality_data)
                     setattr(clean_package, modality_key, processed_modality_data)
-            processed_splits[split_name] = clean_package
+            split_indices = {
+                name: {
+                    split: idx
+                    for split, idx in indices[name].items()
+                    if split == split_name
+                }
+                for name in indices.keys()
+            }
+            processed_splits[split_name] = {
+                "data": clean_package,
+                "indices": split_indices,
+            }
         return processed_splits
 
     def _process_multi_single_cell(self) -> Dict[str, DataPackage]:
@@ -458,7 +470,9 @@ class BasePreprocessor(abc.ABC):
             },
         )
 
-    def _split_data_package(self, data_package: DataPackage) -> Dict[str, Dict]:
+    def _split_data_package(
+        self, data_package: DataPackage
+    ) -> Tuple[Dict[str, Dict], Dict[str, np.ndarray]]:
         """
         Split data package into train/validation/test sets.
 
@@ -471,13 +485,17 @@ class BasePreprocessor(abc.ABC):
         Returns:
             A dictionary containing the split DataPackages, keyed by split names
             ('train', 'validation', 'test').
+
+            split_indiced_config - (dict): the actual indicies used for splitting
         """
         data_splitter = DataSplitter(config=self.config)
         n_samples = data_package.get_n_samples(is_paired=self.config.paired_translation)
 
         split_indices_config = {}
         if self.config.paired_translation or self.config.paired_translation is None:
-            split_indices_config["n_samples"] = n_samples["paired_count"]
+            split_indices_config["paired"] = data_splitter.split(
+                n_samples=n_samples["paired_count"]
+            )
         else:
             split_indices_config["from_indices"] = data_splitter.split(
                 n_samples=n_samples["from"]
@@ -485,21 +503,15 @@ class BasePreprocessor(abc.ABC):
             split_indices_config["to_indices"] = data_splitter.split(
                 n_samples=n_samples["to"]
             )
-            split_indices_config["n_samples"] = (
-                None  # Explicitly set to None for unpaired case
-            )
-
         data_splitter_instance = DataPackageSplitter(
             data_package=data_package,
             config=self.config,
-            indices=data_splitter.split(n_samples=split_indices_config["n_samples"])
-            if split_indices_config["n_samples"] is not None
-            else None,  # Conditionally pass indices
+            indices=split_indices_config.get("paired"),
             from_indices=split_indices_config.get("from_indices"),
             to_indices=split_indices_config.get("to_indices"),
         )
 
-        return data_splitter_instance.split()
+        return data_splitter_instance.split(), split_indices_config
 
     def _is_image_data(self, data: List) -> bool:
         """

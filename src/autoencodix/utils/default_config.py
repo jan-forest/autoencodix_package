@@ -50,9 +50,7 @@ class DataInfo(BaseModel):
         le=1,
         description="Minimum fraction of genes a cell must express to be kept. Cells expressing fewer genes will be filtered out.",
     )  # Controls cell quality filtering
-    selected_layers: Union[List[str], None] = Field(
-        default=None
-    )  # if None, only X is used
+    selected_layers: List[str] = Field(default=["X"])
     is_X: bool = Field(default=False)  # only for single cell data
     normalize_counts: bool = Field(
         default=True, description="Whether to normalize by total counts"
@@ -345,7 +343,6 @@ class DefaultConfig(BaseModel):
         if total > 1.0:
             raise ValueError(f"Data split ratios must sum to 1.0 or less (got {total})")
         return v
-
 
     # TODO test if other float precisions work with MPS
     @field_validator("float_precision")

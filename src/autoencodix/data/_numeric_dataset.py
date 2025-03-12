@@ -1,5 +1,6 @@
 from typing import Optional, List
 import numpy as np
+import pandas as pd
 import torch
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.data._datapackage import DataPackage
@@ -19,7 +20,7 @@ class NumericDataset(BaseDataset):
         data: torch.Tensor,
         config: DefaultConfig,
         ids: Optional[List] = None,
-        data_package: DataPackage = None,
+        metadata: Optional[pd.DataFrame] = None,
         split_ids: Optional[np.ndarray] = None,
     ):
         """
@@ -38,7 +39,7 @@ class NumericDataset(BaseDataset):
             raise ValueError("config cannot be None")
         dtype = self._map_float_precision_to_dtype(self.config.float_precision)
         self.data = self._to_tensor(data, dtype)
-        self.data_package = data_package
+        self.metadta = metadata
         self.split_ids = split_ids
 
     @staticmethod

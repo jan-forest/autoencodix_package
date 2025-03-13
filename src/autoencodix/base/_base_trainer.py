@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, Union, Type, List
+from typing import Optional, Union, Type, List, cast
 
 import torch
 from lightning_fabric import Fabric
@@ -65,28 +65,28 @@ class BaseTrainer(abc.ABC):
     def __init__(
         self,
         trainset: Optional[BaseDataset],
-        validset: Optional[Union[BaseDataset, None]],
+        validset: Optional[BaseDataset],
         result: Result,
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
     ):
-        # passed attributes --------------------------
         self._trainset = trainset
         self._model_type = model_type
         self._validset = validset
         self._result = result
         self._config = config
-        # call this first for tests to work
+        
+        # Call this first for tests to work
         self._input_validation()
         self._handle_reproducibility()
 
         self._loss_fn = loss_type(config=self._config)
-        # internal data handling ----------------------
-
+        
+        # Internal data handling
         self._model: BaseAutoencoder
         self._trainloader = DataLoader(
-            self._trainset,  # type: ignore
+            cast(BaseDataset, self._trainset),
             batch_size=self._config.batch_size,
             shuffle=True,  # best practice to shuffle in training
             num_workers=self._config.n_workers,
@@ -98,17 +98,18 @@ class BaseTrainer(abc.ABC):
                 shuffle=False,
                 num_workers=self._config.n_workers,
             )
+        else:
+            self._validloader = None
 
-        # model and optimizer setup --------------------------------
-        # type ignore because mypy does not understand that I use self._input_validation to ensure that self._trainset is not None
-        self._input_dim = self._trainset.get_input_dim()  # type: ignore
+        # Model and optimizer setup
+        self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
         self._init_model_architecture()
 
         self._fabric = Fabric(
             accelerator=self._config.device,
             devices=self._config.n_gpus,
-            precision=self._config.float_precision,  # TODO see issue github
-            strategy=self._config.gpu_strategy,  # TODO allow non-auto and handle based on available devices
+            precision=self._config.float_precision,
+            strategy=self._config.gpu_strategy,
         )
 
         self._optimizer = torch.optim.AdamW(
@@ -118,31 +119,30 @@ class BaseTrainer(abc.ABC):
         )
 
         self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
-        self._trainloader = self._fabric.setup_dataloaders(self._trainloader)  # type: ignore
-        if self._validset:
-            self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
+        self._trainloader = self._fabric.setup_dataloaders(self._trainloader)
+        if self._validloader is not None:
+            self._validloader = self._fabric.setup_dataloaders(self._validloader)
         self._fabric.launch()
 
-    def _input_validation(self):
+    def _input_validation(self) -> None:
         if self._trainset is None:
             raise ValueError(
                 "Trainset cannot be None. Check the indices you provided with a custom split or be sure that the train_ratio attribute of the config is >0."
             )
-        if not isinstance(self._trainset, (BaseDataset)):
+        if not isinstance(self._trainset, BaseDataset):
             raise TypeError(
                 f"Expected train type to be an instance of BaseDataset, got {type(self._trainset)}."
             )
         if self._validset is None:
             print("training without validation")
-        if self._validset:
-            if not isinstance(self._validset, (BaseDataset)):
-                raise TypeError(
-                    f"Expected valid type to be an instance of BaseDataset, got {type(self._validset)}."
-                )
+        elif not isinstance(self._validset, BaseDataset):
+            raise TypeError(
+                f"Expected valid type to be an instance of BaseDataset, got {type(self._validset)}."
+            )
         if self._config is None:
             raise ValueError("Config cannot be None.")
 
-    def _handle_reproducibility(self):
+    def _handle_reproducibility(self) -> None:
         """Sets all relevant seeds for reproducibility"""
         if self._config.reproducible:
             torch.use_deterministic_algorithms(True)
@@ -157,7 +157,7 @@ class BaseTrainer(abc.ABC):
             else:
                 print("cpu not relevant here")
 
-    def _init_model_architecture(self):
+    def _init_model_architecture(self) -> None:
         self._model = self._model_type(config=self._config, input_dim=self._input_dim)
 
     @abc.abstractmethod

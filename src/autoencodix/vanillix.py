@@ -5,14 +5,16 @@ import pandas as pd
 from anndata import AnnData  # type: ignore
 
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.base._base_preprocessor import BasePreprocessor
 from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.base._base_visualizer import BaseVisualizer
 from autoencodix.base._base_autoencoder import BaseAutoencoder
+from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data._numeric_dataset import NumericDataset
-from autoencodix.data.preprocessor import Preprocessor
+from autoencodix.data.general_preprocessor import GeneralPreprocessor
 from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
 from autoencodix.trainers._general_trainer import GeneralTrainer
@@ -51,12 +53,12 @@ class Vanillix(BasePipeline):
 
     def __init__(
         self,
-        data: Union[np.ndarray, AnnData, pd.DataFrame],
+        preprocessed_data: Union[np.ndarray, AnnData, pd.DataFrame, DatasetContainer],
         trainer_type: Type[BaseTrainer] = GeneralTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
         model_type: Type[BaseAutoencoder] = VanillixArchitecture,
         loss_type: Type[BaseLoss] = VanillixLoss,
-        preprocessor: Optional[Preprocessor] = None,
+        preprocessor_type: Type[BasePreprocessor] = GeneralPreprocessor,
         visualizer: Optional[BaseVisualizer] = None,
         evaluator: Optional[Evaluator] = None,
         result: Optional[Result] = None,
@@ -71,14 +73,14 @@ class Vanillix(BasePipeline):
 
         Parameters
         ----------
-        data : Union[np.ndarray, AnnData, pd.DataFrame]
-            Input data to be processed
+        preprocessed_data : Union[np.ndarray, AnnData, pd.DataFrame, DatasetContainer]
+            Input data from the user or a DatasetContainer
         trainer_type : Type[BaseTrainer]
             Type of trainer to be instantiated during fit step, default is GeneralTrainer
         dataset_type : Type[BaseDataset]
             Type of dataset to be instantiated post-preprocessing, default is NumericDataset
         loss_type : Type[BaseLoss], which loss to use for Vanillix, default is VanillaAutoencoderLoss
-        preprocessor : Optional[Preprocessor]
+        preprocessor_type : Type[BasePreprocessor]
             For data preprocessing, default creates new Preprocessor
         visualizer : Optional[Visualizer]
             For result visualization, default creates new Visualizer
@@ -93,13 +95,22 @@ class Vanillix(BasePipeline):
         config : Optional[DefaultConfig]
             Configuration for all pipeline components
         """
+        if isinstance(preprocessed_data, DatasetContainer):
+            data_container = preprocessed_data
+        else:
+            data_container = DatasetContainer(
+                train=preprocessed_data,
+                valid=None,
+                test=None
+            )
+
         super().__init__(
-            data=data,
+            processed_data=data_container,
             dataset_type=dataset_type,
             trainer_type=trainer_type,
             model_type=model_type,
             loss_type=loss_type,
-            preprocessor=preprocessor or Preprocessor(),
+            preprocessor_type=preprocessor_type,
             visualizer=visualizer or Visualizer(),
             evaluator=evaluator or Evaluator(),
             result=result or Result(),

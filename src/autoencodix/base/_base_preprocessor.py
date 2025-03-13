@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple, Union, Callable
 import mudata as md
 import pandas as pd
 
+from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datapackage import DataPackage
 from autoencodix.data._datapackage_splitter import DataPackageSplitter
 from autoencodix.data._datasplitter import DataSplitter
@@ -53,7 +54,19 @@ class BasePreprocessor(abc.ABC):
         }
         self.from_key, self.to_key = (
             self._get_translation_keys()
-        )  # Set as attributes in init
+        )
+
+    @abc.abstractmethod
+    def preprocess(self) -> DatasetContainer:
+        """
+        Abstract method to be implemented by subclasses for specific preprocessing steps.
+        Mostly
+
+        This method should contain the subclass-specific preprocessing logic
+        and is called after the general preprocessing steps are completed.
+        """
+        pass
+
 
     def _general_preprocess(self) -> Dict[str, DataPackage]:
         """
@@ -76,17 +89,6 @@ class BasePreprocessor(abc.ABC):
             return process_function()  # No need to pass from_key, to_key anymore
         else:
             raise ValueError(f"Unsupported data case: {datacase}")
-
-    @abc.abstractmethod
-    def preprocess(self):
-        """
-        Abstract method to be implemented by subclasses for specific preprocessing steps.
-        Mostly
-
-        This method should contain the subclass-specific preprocessing logic
-        and is called after the general preprocessing steps are completed.
-        """
-        pass
 
     def _get_process_function(
         self, datacase: DataCase
@@ -193,7 +195,8 @@ class BasePreprocessor(abc.ABC):
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
         """
-        bulkreader = self.data_readers[DataCase.MULTI_BULK]
+        if self.data_readers is not None:
+            bulkreader = self.data_readers[DataCase.MULTI_BULK]
         bulk_dfs, annotation = bulkreader.read_data()
 
         data_package = DataPackage()

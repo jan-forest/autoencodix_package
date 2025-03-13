@@ -14,7 +14,7 @@ class TestBasePipeline:
 
         for data in valid_data_types:
             pipeline = BasePipeline(
-                data=data,
+                processed_data=data,
                 dataset_type=Mock(),
                 trainer_type=Mock(),
                 loss_type=Mock(),
@@ -34,7 +34,7 @@ class TestBasePipeline:
     def test_initialization_raises_error_for_invalid_data(self, invalid_data):
         with pytest.raises(TypeError):
             BasePipeline(
-                data=invalid_data,
+                processed_data=invalid_data,
                 dataset_type=Mock(),
                 trainer_type=Mock(),
                 loss_type=Mock(),
@@ -49,7 +49,7 @@ class TestBasePipeline:
 
     def test_preprocess_raises_error_without_preprocessor(self):
         pipeline = BasePipeline(
-            data=np.random.rand(100, 10),
+            processed_data=np.random.rand(100, 10),
             dataset_type=Mock(),
             trainer_type=Mock(),
             model_type=Mock(),
@@ -67,7 +67,7 @@ class TestBasePipeline:
 
     def test_fit_without_preprocessed_data_raises_error(self):
         pipeline = BasePipeline(
-            data=np.random.rand(100, 10),
+            processed_data=np.random.rand(100, 10),
             dataset_type=Mock(),
             trainer_type=Mock(),
             loss_type=Mock(),
@@ -85,7 +85,7 @@ class TestBasePipeline:
 
     def test_predict_without_fitted_model_raises_error(self):
         pipeline = BasePipeline(
-            data=np.random.rand(100, 10),
+            processed_data=np.random.rand(100, 10),
             dataset_type=Mock(),
             trainer_type=Mock(),
             model_type=Mock(),

@@ -1,6 +1,6 @@
 import scanpy as sc
-import mudata as md
-from anndata import AnnData
+import mudata as md # type ignore
+from anndata import AnnData # type ignore
 from typing import Dict
 from autoencodix.utils.default_config import DefaultConfig
 
@@ -34,7 +34,7 @@ class SingleCellDataReader:
             modalities[mod_key] = adata
 
         if config.paired_translation is None:
-            mdata = md.MuData(modalities)
+            mdata = md.MuData(modalities, join_vars=False)
             common_cells = list(
                 set.intersection(
                     *(set(adata.obs_names) for adata in modalities.values())

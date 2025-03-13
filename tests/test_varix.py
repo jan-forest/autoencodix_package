@@ -18,7 +18,7 @@ def large_sample_data():
 
 class TestVarix:
     def test_varix_initialization(self, sample_data):
-        varix = Varix(data=sample_data)
+        varix = Varix(preprocessed_data=sample_data)
         assert varix.data is not None
         assert varix.config is not None
         assert varix._preprocessor is not None
@@ -28,11 +28,11 @@ class TestVarix:
             epochs=1, checkpoint_interval=1, device="cpu", batch_size=1
         )
 
-        varix = Varix(data=sample_data, config=custom_config)
+        varix = Varix(preprocessed_data=sample_data, config=custom_config)
         assert varix.config.batch_size == 1
 
     def test_full_pipeline_workflow(self, large_sample_data):
-        varix = Varix(data=large_sample_data, config=DefaultConfig(epochs=1))
+        varix = Varix(preprocessed_data=large_sample_data, config=DefaultConfig(epochs=1))
         result = varix.run()
 
         assert result.preprocessed_data is not None
@@ -47,13 +47,13 @@ class TestVarix:
         if isinstance(data, pd.DataFrame):
             pytest.skip("Pandas DataFrame not implemented")
         else:
-            varix = Varix(data=data, config=DefaultConfig(epochs=1))
+            varix = Varix(preprocessed_data=data, config=DefaultConfig(epochs=1))
             result = varix.run()
 
         assert result is not None
 
     def test_prediction_with_new_data(self, sample_data):
-        varix = Varix(data=sample_data)
+        varix = Varix(preprocessed_data=sample_data)
         result = varix.run()
         old_reconstruction = result.reconstructions.get(split="test", epoch=-1)
 

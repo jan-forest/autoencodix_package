@@ -1,6 +1,6 @@
-import scanpy as sc
-import mudata as md # type ignore
-from anndata import AnnData # type ignore
+import scanpy as sc # type: ignore
+import mudata as md # type: ignore
+from anndata import AnnData # type: ignore
 from typing import Dict
 from autoencodix.utils.default_config import DefaultConfig
 

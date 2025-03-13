@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Union, Any, Iterator, Tuple, Callable, TypeVar
 
 import pandas as pd
-from anndata import AnnData
-from mudata import MuData
+from anndata import AnnData  # type: ignore
+from mudata import MuData  # type: ignore
 
 from autoencodix.data._imgdataclass import ImgData
 
@@ -112,7 +112,7 @@ class DataPackage:
         """Get the number of samples for each data type."""
 
         if is_paired or is_paired is None:
-            n_samples = {}
+            n_samples: dict = {}
             for attr_name in self.__annotations__.keys():
                 attr_value = getattr(self, attr_name)
                 if attr_value is None:
@@ -156,7 +156,9 @@ class DataPackage:
 
     def shape(self) -> Dict[str, Dict[str, Any]]:
         """Get the shape of the data for each data type."""
-        shapes = {k: {"shape": None} for k in self.__annotations__.keys()}
+        shapes: Dict[str, Dict[str, Union[None, Tuple, int]]] = {
+            k: {"shape": None} for k in self.__annotations__.keys()
+        }
         for attr_name in self.__annotations__.keys():
             attr_value = getattr(self, attr_name)
             if attr_value is not None:
@@ -188,7 +190,7 @@ class DataPackage:
         Returns:
             Dictionary with shapes information
         """
-        result = {}
+        result: Dict[str, Any] = {}
         for key, value in data_dict.items():
             if isinstance(value, pd.DataFrame):
                 result[key] = value.shape

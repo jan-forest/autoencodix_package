@@ -1,25 +1,25 @@
-import mudata as md
-import scanpy as sc
-import pandas as pd
+from typing import List, Dict
+
+import mudata as md # type: ignore
 import numpy as np
-from pydantic import BaseModel
-from typing import Dict, Union, List
+import pandas as pd
+import scanpy as sc # type: ignore
+
 from autoencodix.data._filter import DataFilter
+from autoencodix.utils.default_config import DataInfo
 
 
 class SingleCellFilter:
     """Filter and scale single-cell data, returning a MuData object with synchronized metadata."""
 
-    def __init__(
-        self, mudata: md.MuData, data_info: Union[BaseModel, Dict[str, BaseModel]]
-    ):
+    def __init__(self, mudata: md.MuData, data_info: Dict[str,DataInfo]):
         """
         Initialize single-cell filter.
         Parameters
         ----------
         mudata : MuData
             Multi-modal data to be filtered
-        data_info : Union[BaseModel, Dict[str, BaseModel]]
+        data_info : Union[SCDataInfo, Dict[str, SCDataInfo]]
             Either a single data_info object for all modalities or a dictionary of data_info objects
             for each modality.
         """
@@ -27,7 +27,7 @@ class SingleCellFilter:
         self.data_info = data_info
         self._is_data_info_dict = isinstance(data_info, dict)
 
-    def _get_data_info_for_modality(self, mod_key: str) -> BaseModel:
+    def _get_data_info_for_modality(self, mod_key: str) -> DataInfo:
         """
         Get the data_info configuration for a specific modality.
         Parameters
@@ -36,13 +36,15 @@ class SingleCellFilter:
             The modality key (e.g., "RNA", "METH")
         Returns
         -------
-        BaseModel
+        SCDataInfo
             The data_info configuration for the modality
         """
         if self._is_data_info_dict:
-            return self.data_info.get(mod_key)
-        else:
-            return self.data_info
+            info = self.data_info.get(mod_key)  # type: ignore
+            if info is None:
+                raise ValueError(f"No data info found for modality {mod_key}")
+            return info
+        return self.data_info  # type: ignore
 
     def _get_layers_for_modality(self, mod_key: str, mod_data) -> List[str]:
         """

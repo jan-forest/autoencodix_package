@@ -1,10 +1,10 @@
-from typing import List
+from typing import List, Union
 
-import anndata as ad
+import anndata as ad # type: ignore
 import pandas as pd
-import mudata as md  # Add explicit import for mudata
+import mudata as md # type: ignore
 import numpy as np
-from scipy.sparse import issparse
+from scipy.sparse import issparse # type: ignore
 
 from autoencodix.data._datapackage import DataPackage
 
@@ -12,15 +12,22 @@ from autoencodix.data._datapackage import DataPackage
 class NaNRemover:
     """Class to handle NaN removal from multi-modal data."""
 
-    def __init__(self, relevant_cols: List[str] = None):
+    def __init__(
+        self,
+        data: Union[pd.DataFrame, ad.AnnData, md.MuData],
+        relevant_cols: List[str] = [],  # Changed from None to empty list as default
+    ) -> None:
         """
-        Initialize NaN remover.
+        Initialize NaNRemover with data and optional relevant columns.
 
         Parameters
         ----------
+        data : Union[pd.DataFrame, AnnData, md.MuData]
+            Data to process
         relevant_cols : List[str], optional
-            List of columns to check for NaNs in observations
+            Columns to check for NaN values, by default empty list
         """
+        self.data = data
         self.relevant_cols = relevant_cols
 
     def _process_sparse_matrix(self, matrix) -> np.ndarray:

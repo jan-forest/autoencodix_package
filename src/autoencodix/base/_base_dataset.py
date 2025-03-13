@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Tuple, Optional
+from typing import Any, Tuple, Optional, Union, List
 
 from torch.utils.data import Dataset
 import torch
@@ -25,7 +25,7 @@ class BaseDataset(abc.ABC, Dataset):
         self,
         data: torch.Tensor,
         config: Optional[Any] = None,
-        ids: Optional[torch.Tensor] = None,
+        ids: Union[None, List[Any]] = None,
     ):
         """
         Initialize the dataset.
@@ -54,7 +54,7 @@ class BaseDataset(abc.ABC, Dataset):
             The sample and its label.
         """
         if self.ids is not None:
-            label = int(self.ids[index].item())
+            label = int(self.ids[index].item()) # TODO
         else:
             label = index
         return self.data[index], label

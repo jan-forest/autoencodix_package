@@ -1,17 +1,21 @@
+"""
+Ignoring types for scipy and sklearn, because it stubs require Python > 3.9, which we want to allow
+"""
+
 import pandas as pd
 import numpy as np
 from typing import Optional, Dict, List, Callable
-from scipy.stats import median_abs_deviation
-from sklearn.preprocessing import (
+from scipy.stats import median_abs_deviation  # type: ignore
+from sklearn.preprocessing import (  # type: ignore
     MinMaxScaler,
     StandardScaler,
     RobustScaler,
     MaxAbsScaler,
-)
+)  # type: ignore
 from enum import Enum
 from autoencodix.utils.default_config import DataInfo
-from sklearn.cluster import AgglomerativeClustering
-from scipy.spatial.distance import pdist, squareform
+from sklearn.cluster import AgglomerativeClustering  # type: ignore
+from scipy.spatial.distance import pdist, squareform  # type: ignore
 
 
 class FilterMethod(Enum):

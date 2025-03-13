@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Union, Any
 import numpy as np
 import pandas as pd
 import torch
@@ -19,7 +19,7 @@ class NumericDataset(BaseDataset):
         self,
         data: torch.Tensor,
         config: DefaultConfig,
-        ids: Optional[List] = None,
+        ids: Union[None, List[Any]] = None,
         metadata: Optional[pd.DataFrame] = None,
         split_ids: Optional[np.ndarray] = None,
     ):

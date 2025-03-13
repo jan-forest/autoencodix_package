@@ -101,10 +101,9 @@ class DefaultConfig(BaseModel):
         description="Indicator if the samples for the xmodalix are paired, based on some sample id",
     )
 
-    data_case: DataCase = Field(
-
+    data_case: Union[DataCase, None] = Field(
         default_factory=lambda: None,
-         description="Data case for the model, will be determined automatically"
+        description="Data case for the model, will be determined automatically",
     )
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(

@@ -1,12 +1,11 @@
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 import copy
 import numpy as np
 import pandas as pd
-from anndata import AnnData
-from mudata import MuData
+from anndata import AnnData  # type: ignore
+from mudata import MuData  # type: ignore
 
 from autoencodix.data._datapackage import DataPackage
-from autoencodix.data._imgdataclass import ImgData
 from autoencodix.utils.default_config import DefaultConfig
 
 
@@ -20,9 +19,9 @@ class DataPackageSplitter:
         self,
         data_package: DataPackage,
         config: DefaultConfig,
-        indices: Dict[str, np.ndarray] = None,
-        to_indices: Optional[Dict[str, np.ndarray]] = None,
-        from_indices: Optional[Dict[str, np.ndarray]] = None,
+        indices: Union[None, Dict[str, np.ndarray]] = None,
+        to_indices: Union[Dict[str, np.ndarray], None] = None,
+        from_indices: Union[Dict[str, np.ndarray], None] = None,
     ) -> None:
         self._data_package = data_package
         self.indices = indices
@@ -169,6 +168,8 @@ class DataPackageSplitter:
         result = {}
 
         if self.config.paired_translation is None or self.config.paired_translation:
+            if self.indices is None:
+                raise ValueError("In paired/normal case we need split indices")
             result = {
                 split: {
                     "data": self._split_data_package(self.indices[split]),
@@ -177,6 +178,11 @@ class DataPackageSplitter:
                 for split in splits
             }
         else:
+            if self.to_indices is None:
+                raise TypeError("For Unpaired Case we need to_indices")
+            if self.from_indices is None:
+                raise TypeError("For Unpaired Case we need from_indices")
+
             for split in splits:
                 package_split = self._create_modality_specific_package(
                     self._data_package, self.to_indices[split], "to"

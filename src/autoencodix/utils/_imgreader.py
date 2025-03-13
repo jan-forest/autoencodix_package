@@ -123,7 +123,7 @@ class ImageDataReader:
         img_dir: str,
         to_h: Optional[int],
         to_w: Optional[int],
-        annotation_df: Optional[pd.DataFrame],
+        annotation_df: pd.DataFrame,
         is_paired: Union[bool, None] = None,
     ) -> List[ImgData]:
         """
@@ -133,10 +133,27 @@ class ImageDataReader:
         ----------
         img_dir : str
             The directory containing the images.
-        to_h : Optional[int], optional
-            The desired height of the output tensors, by default Non
+        to_h : Optional[int]
+            The desired height of the output tensors.
+        to_w : Optional[int]
+            The desired width of the output tensors.
+        annotation_df : pd.DataFrame
+            DataFrame containing image annotations.
+        is_paired : Union[bool, None]
+            Whether the images are paired with annotations.
+
+        Returns
+        -------
+        List[ImgData]
+            List of processed image data objects.
+
+        Raises
+        ------
+        ValueError
             If the annotation DataFrame is missing required columns.
         """
+        if "img_paths" not in annotation_df.columns:
+            raise ValueError("img_paths column is missing in the annotation_df")
 
         SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
         paths = [
@@ -151,15 +168,14 @@ class ImageDataReader:
                 if os.path.basename(p) in annotation_df["img_paths"].tolist()
             ]
         imgs = []
-        if "img_paths" not in annotation_df.columns:
-            raise ValueError("img_paths column is missing in the annotation_df")
         for p in paths:
             img = self.parse_image_to_tensor(image_path=p, to_h=to_h, to_w=to_w)
             img_path = os.path.basename(p)
             subset = annotation_df[annotation_df["img_paths"] == img_path]
-            imgs.append(
-                ImgData(img=img, sample_id=subset["sample_ids"], annotation=subset)
-            )
+            if not subset.empty:
+                imgs.append(
+                    ImgData(img=img, sample_id=subset["sample_ids"].iloc[0], annotation=subset)
+                )
         return imgs
 
     def read_annotation_file(self, data_info) -> pd.DataFrame:
@@ -289,14 +305,17 @@ class ImageNormalizer:
                 return image
 
             if method == "MINMAX":
-                return cv2.normalize(
-                    image,
-                    None,
+                # Create a copy of the image for normalization
+                normalized = image.astype(np.float32)
+                cv2.normalize(
+                    normalized,
+                    normalized,
                     alpha=0,
                     beta=1,
                     norm_type=cv2.NORM_MINMAX,
                     dtype=cv2.CV_32F,
                 )
+                return normalized
 
             elif method == "STANDARD":
                 mean = np.mean(image, axis=(1, 2), keepdims=True)

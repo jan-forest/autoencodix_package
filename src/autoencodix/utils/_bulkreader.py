@@ -56,12 +56,11 @@ class BulkDataReader:
 
         # First pass: read all data files and track common samples
         for key, info in self.config.data_config.data_info.items():
-
             if info.data_type == "IMG":
                 continue  # Skip image data in this reader
 
             file_path = os.path.join(info.file_path)
-            df = self._read_tabular_data(file_path, info.sep)
+            df = self._read_tabular_data(file_path, info.sep or "\t")
 
             if df is None:
                 continue
@@ -115,13 +114,12 @@ class BulkDataReader:
         annotations: Dict[str, pd.DataFrame] = {}
 
         for key, info in self.config.data_config.data_info.items():
-
             if info.data_type == "IMG" or info.is_single_cell:
                 continue  # Skip image and single-cell data
 
             # Read main data file
             file_path = os.path.join(info.file_path)
-            df = self._read_tabular_data(file_path, info.sep)
+            df = self._read_tabular_data(file_path=file_path, sep=info.sep)
 
             if df is None:
                 continue
@@ -132,7 +130,9 @@ class BulkDataReader:
                 # Handle extra annotation file if specified
                 if hasattr(info, "extra_anno_file") and info.extra_anno_file:
                     extra_anno_file = os.path.join(info.extra_anno_file)
-                    extra_anno_df = self._read_tabular_data(extra_anno_file, info.sep)
+                    extra_anno_df = self._read_tabular_data(
+                        file_path=extra_anno_file, sep=info.sep
+                    )
                     if extra_anno_df is not None:
                         annotations[key] = extra_anno_df
 
@@ -141,7 +141,9 @@ class BulkDataReader:
 
         return bulk_dfs, annotations
 
-    def _read_tabular_data(self, file_path: str, sep: str) -> Optional[pd.DataFrame]:
+    def _read_tabular_data(
+        self, file_path: str, sep: Union[str, None] = None
+    ) -> pd.DataFrame:
         """
         Read tabular data from a file with error handling.
 
@@ -163,10 +165,8 @@ class BulkDataReader:
             elif file_path.endswith((".csv", ".txt", ".tsv")):
                 return pd.read_csv(file_path, sep=sep, index_col=0)
             else:
-                print(
+                raise ValueError(
                     f"Unsupported file type for {file_path}. Supported formats: .parquet, .csv, .txt, .tsv"
                 )
-                return None
         except Exception as e:
-            print(f"Error loading {file_path}: {str(e)}")
-            return None
+            raise e

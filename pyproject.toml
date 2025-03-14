@@ -1,7 +1,7 @@
 [project]
 name = "autoencodix"
 version = "0.1.0"
-description = "A flexible autoencoder toolkit"
+description = "A flexible autoencoder toolkit."
 requires-python = ">=3.9,<3.13"
 dependencies = [
     "anndata>=0.10.9",

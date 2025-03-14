@@ -1,0 +1,12 @@
+data_config:
+  data_info:
+   RNA:
+     file_path: "data/raw/data_mrna_seq_v2_rsem_formatted.parquet"
+     sep: ","
+     k_filter: 100
+   METHYLATION:
+     file_path: "data/raw/data_methylation_per_gene_formatted.parquet"
+   CLIN:
+     file_path: "data/raw/data_clinical_formatted.parquet"
+     data_type: "ANNOTATION"
+

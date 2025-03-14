@@ -1,0 +1,13 @@
+data_config:
+  data_info:
+   RNA:
+     file_path: "data/raw/mini/bulk/rna_sample_data.csv"
+     is_single_cell: false
+     sep: ","
+   METHYLATION:
+     file_path: "data/raw/mini/bulk/meth_sample_data.tsv"
+     sep: "\t"
+     is_single_cell: true #invalid
+   CLINICAL:
+     file_path: "data/raw/mini/bulk/clinical_sample_data.parquet"
+     data_type: "ANNOTATION"

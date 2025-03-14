@@ -53,7 +53,7 @@ class Vanillix(BasePipeline):
 
     def __init__(
         self,
-        preprocessed_data: Union[np.ndarray, AnnData, pd.DataFrame, DatasetContainer],
+        preprocessed_data: DatasetContainer,
         trainer_type: Type[BaseTrainer] = GeneralTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
         model_type: Type[BaseAutoencoder] = VanillixArchitecture,
@@ -99,9 +99,7 @@ class Vanillix(BasePipeline):
             data_container = preprocessed_data
         else:
             data_container = DatasetContainer(
-                train=preprocessed_data,
-                valid=None,
-                test=None
+                train=preprocessed_data.train, valid=None, test=None
             )
 
         super().__init__(

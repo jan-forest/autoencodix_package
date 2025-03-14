@@ -1,9 +1,9 @@
-from typing import List, Dict
+from typing import List, Dict, Union
 
-import mudata as md # type: ignore
+import mudata as md  # type: ignore
 import numpy as np
 import pandas as pd
-import scanpy as sc # type: ignore
+import scanpy as sc  # type: ignore
 
 from autoencodix.data._filter import DataFilter
 from autoencodix.utils.default_config import DataInfo
@@ -12,7 +12,9 @@ from autoencodix.utils.default_config import DataInfo
 class SingleCellFilter:
     """Filter and scale single-cell data, returning a MuData object with synchronized metadata."""
 
-    def __init__(self, mudata: md.MuData, data_info: Dict[str,DataInfo]):
+    def __init__(
+        self, mudata: md.MuData, data_info: Union[Dict[str, DataInfo], DataInfo]
+    ):
         """
         Initialize single-cell filter.
         Parameters

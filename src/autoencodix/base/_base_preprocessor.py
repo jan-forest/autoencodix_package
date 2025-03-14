@@ -1,5 +1,7 @@
 import abc
 import numpy as np
+
+from enum import Enum
 import copy
 from typing import (
     Dict,
@@ -9,9 +11,6 @@ from typing import (
     Union,
     Callable,
     Any,
-    Enum,
-    TypeVar,
-    Protocol,
 )
 
 import mudata as md  # type: ignore
@@ -28,14 +27,6 @@ from autoencodix.utils._bulkreader import BulkDataReader
 from autoencodix.utils._imgreader import ImageDataReader, ImageNormalizer
 from autoencodix.utils._screader import SingleCellDataReader
 from autoencodix.utils.default_config import DataCase, DefaultConfig, DataInfo
-
-T = TypeVar("T")
-
-
-class DataProcessor(Protocol):
-    """Protocol for data processors that can read data."""
-
-    def read_data(self, config: DefaultConfig) -> Any: ...
 
 
 class BasePreprocessor(abc.ABC):
@@ -71,9 +62,7 @@ class BasePreprocessor(abc.ABC):
             },
             DataCase.IMG_TO_IMG: ImageDataReader(),
         }
-        self.from_key, self.to_key = (
-            self._get_translation_keys()
-        )  # Set as attributes in init
+        self.from_key, self.to_key = self._get_translation_keys()
 
     @abc.abstractmethod
     def preprocess(self) -> DatasetContainer:
@@ -86,7 +75,7 @@ class BasePreprocessor(abc.ABC):
         """
         pass
 
-    def _general_preprocess(self) -> Dict[str, DataPackage]:
+    def _general_preprocess(self) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
         """
         Main preprocessing method that orchestrates the process flow.
 
@@ -110,9 +99,7 @@ class BasePreprocessor(abc.ABC):
         else:
             raise ValueError(f"Unsupported data case: {datacase}")
 
-    def _get_process_function(
-        self, datacase: DataCase
-    ) -> Optional[Callable[[], Dict[str, DataPackage]]]:
+    def _get_process_function(self, datacase: DataCase) -> Any:
         """
         Returns the appropriate processing function based on the data case.
 
@@ -135,10 +122,8 @@ class BasePreprocessor(abc.ABC):
         return process_map.get(datacase)
 
     def _process_data_case(
-        self,
-        data_package: DataPackage,
-        modality_processors: Dict[str, Callable[[DataPackage], DataPackage]],
-    ) -> Dict[str, Any]:
+        self, data_package: DataPackage, modality_processors: Dict[Any, Any]
+    ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
         """
         Generic method to process a data case.
 
@@ -177,7 +162,9 @@ class BasePreprocessor(abc.ABC):
             }
         return processed_splits
 
-    def _process_multi_single_cell(self) -> Dict[str, DataPackage]:
+    def _process_multi_single_cell(
+        self,
+    ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
         """
         Process MULTI_SINGLE_CELL case end-to-end.
 
@@ -187,7 +174,7 @@ class BasePreprocessor(abc.ABC):
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
         """
-        screader = self.data_readers[DataCase.MULTI_SINGLE_CELL] # type: ignore
+        screader = self.data_readers[DataCase.MULTI_SINGLE_CELL]  # type: ignore
 
         mudata = screader.read_data(config=self.config)
         data_package = DataPackage()
@@ -206,7 +193,7 @@ class BasePreprocessor(abc.ABC):
             data_package, modality_processors={"multi_sc": process_sc_modality}
         )
 
-    def _process_multi_bulk_case(self) -> Dict[str, DataPackage]:
+    def _process_multi_bulk_case(self) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
         """
         Process MULTI_BULK case end-to-end.
 
@@ -225,13 +212,16 @@ class BasePreprocessor(abc.ABC):
         data_package.annotation = annotation
 
         def process_bulk_modality(
-            modality_data: Dict[str, pd.DataFrame],
-        ) -> Dict[str, pd.DataFrame]:
+            modality_data: Dict[str, pd.DataFrame | None],
+        ) -> Dict[str, pd.DataFrame | None]:
             """Processes multi-bulk modality data with filtering and scaling."""
             if modality_data:
                 processed_bulk = {}
                 for key, df in modality_data.items():
-                    processed_bulk[key] = self._filter_and_scale_dataframe(df, key)
+                    processed_bulk[key] = self._filter_and_scale_dataframe(
+                        df=df,  # type: ignore
+                        info_key=key,  # type: ignore
+                    )
                 return processed_bulk
             return modality_data
 
@@ -249,6 +239,9 @@ class BasePreprocessor(abc.ABC):
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
         """
+        if self.from_key is None or self.to_key is None:
+            raise TypeError("from_key and to_key cannot be None for Translation")
+
         bulkreader = self.data_readers[DataCase.BULK_TO_BULK]
         bulk_dfs, annotation = bulkreader.read_data()
 
@@ -265,6 +258,11 @@ class BasePreprocessor(abc.ABC):
             modality_data: Dict[str, pd.DataFrame], modality_key: str
         ) -> Dict[str, pd.DataFrame]:
             """Processes bulk-to-bulk modality data with filtering and scaling."""
+            if not isinstance(modality_data, str):
+                raise TypeError(
+                    f"Modality key as to be string got {type(modality_key)}"
+                )
+
             if modality_data and modality_key in modality_data:
                 return {
                     modality_key: self._filter_and_scale_dataframe(
@@ -277,15 +275,17 @@ class BasePreprocessor(abc.ABC):
             data_package,
             modality_processors={
                 "from_modality": lambda data: process_bulk_to_bulk_modality(
-                    data, self.from_key
+                    data,
+                    self.from_key,  # type: ignore
                 ),
                 "to_modality": lambda data: process_bulk_to_bulk_modality(
-                    data, self.to_key
+                    data,
+                    self.to_key,  # type: ignore
                 ),
             },
         )
 
-    def _process_sc_to_sc_case(self) -> Dict[str, DataPackage]:
+    def _process_sc_to_sc_case(self) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
         """
         Process SC_TO_SC case end-to-end.
 
@@ -295,6 +295,9 @@ class BasePreprocessor(abc.ABC):
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
         """
+        if self.from_key is None or self.to_key is None:
+            raise TypeError("from_key and to_key cannot be None for Translation")
+
         screader = self.data_readers[DataCase.SINGLE_CELL_TO_SINGLE_CELL]
         mudata = screader.read_data(config=self.config)
 
@@ -326,7 +329,9 @@ class BasePreprocessor(abc.ABC):
             },
         )
 
-    def _process_img_to_bulk_case(self) -> Dict[str, DataPackage]:
+    def _process_img_to_bulk_case(
+        self,
+    ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
         """
         Process IMG_TO_BULK case end-to-end.
 
@@ -337,6 +342,9 @@ class BasePreprocessor(abc.ABC):
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
         """
+        if self.from_key is None or self.to_key is None:
+            raise TypeError("from_key and to_key cannot be None for Translation")
+
         bulkreader = self.data_readers[DataCase.IMG_TO_BULK]["bulk"]
         imgreader = self.data_readers[DataCase.IMG_TO_BULK]["img"]
 
@@ -347,13 +355,13 @@ class BasePreprocessor(abc.ABC):
 
         if self.to_key in bulk_dfs.keys():
             # IMG -> BULK direction (Corrected condition) # Use self.to_key
-            data_package.from_modality = {self.from_key: images[self.from_key]}
+            data_package.from_modality = {self.from_key: images[self.from_key]}  # type: ignore
             data_package.to_modality = {self.to_key: bulk_dfs[self.to_key]}
             to_annotation = next(iter(annotation.keys()))
             data_package.annotation = {"from": None, "to": annotation[to_annotation]}
         else:  # BULK -> IMG direction (Corrected condition order)
             data_package.from_modality = {self.from_key: bulk_dfs[self.from_key]}
-            data_package.to_modality = {self.to_key: images[self.to_key]}
+            data_package.to_modality = {self.to_key: images[self.to_key]}  # type: ignore
             from_annotation = next(iter(annotation.keys()))
             data_package.annotation = {"from": annotation[from_annotation], "to": None}
 
@@ -361,17 +369,21 @@ class BasePreprocessor(abc.ABC):
             modality_data: Dict[str, Union[pd.DataFrame, List]], modality_key: str
         ) -> Dict[str, Union[pd.DataFrame, List]]:
             """Processes img-to-bulk modality data with normalization for images and filtering/scaling for dataframes."""
+            if modality_key is None:
+                raise TypeError("modality_key cannot be None")
             if modality_data and modality_key in modality_data:
                 data = modality_data[modality_key]
                 if isinstance(data, pd.DataFrame):
                     return {
-                        modality_key: self._filter_and_scale_dataframe(
-                            data, modality_key
+                        modality_key: self._filter_and_scale_dataframe(  # type: ignore
+                            df=data, info_key=modality_key
                         )
                     }
                 elif self._is_image_data(data):
                     return {
-                        modality_key: self._normalize_image_data(data, modality_key)
+                        modality_key: self._normalize_image_data(
+                            images=data, info_key=modality_key
+                        )
                     }
             return modality_data
 
@@ -387,7 +399,7 @@ class BasePreprocessor(abc.ABC):
             },
         )
 
-    def _process_sc_to_img_case(self) -> Dict[str, DataPackage]:
+    def _process_sc_to_img_case(self) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
         """
         Process SC_TO_IMG case end-to-end.
 
@@ -398,6 +410,8 @@ class BasePreprocessor(abc.ABC):
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
         """
+        if self.from_key is None or self.to_key is None:
+            raise TypeError("to and from keys cant be None for SC-to-Img")
         screader = self.data_readers[DataCase.SINGLE_CELL_TO_IMG]["sc"]
         imgreader = self.data_readers[DataCase.SINGLE_CELL_TO_IMG]["img"]
 
@@ -418,6 +432,10 @@ class BasePreprocessor(abc.ABC):
             modality_data: Dict[str, Union[md.MuData, List]], modality_key: str
         ) -> Dict[str, Union[md.MuData, List]]:
             """Processes sc-to-img modality data with single-cell filtering for mudata and normalization for images."""
+            if not isinstance(modality_key, str):
+                raise TypeError(
+                    f"Modality key as to be string, got {type(modality_key)}"
+                )
             if modality_data and modality_key in modality_data:
                 data = modality_data[modality_key]
                 if isinstance(data, md.MuData):
@@ -452,6 +470,8 @@ class BasePreprocessor(abc.ABC):
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
         """
+        if self.from_key is None or self.to_key is None:
+            raise TypeError("from_key and to_key cannot be None for Translation")
         imgreader = self.data_readers[DataCase.IMG_TO_IMG]
         images = imgreader.read_data(config=self.config)
 
@@ -463,6 +483,8 @@ class BasePreprocessor(abc.ABC):
             modality_data: Dict[str, List], modality_key: str
         ) -> Dict[str, List]:
             """Processes img-to-img modality data with normalization for images."""
+            if modality_key is None:
+                raise TypeError("modality_key cannot be None for translation")
             if modality_data and modality_key in modality_data:
                 data = modality_data[modality_key]
                 if self._is_image_data(data):
@@ -475,10 +497,12 @@ class BasePreprocessor(abc.ABC):
             data_package,
             modality_processors={
                 "from_modality": lambda data: process_img_to_img_modality(
-                    data, self.from_key
+                    data,
+                    self.from_key,  # type: ignore
                 ),
                 "to_modality": lambda data: process_img_to_img_modality(
-                    data, self.to_key
+                    data,
+                    self.to_key,  # type: ignore
                 ),
             },
         )
@@ -526,7 +550,7 @@ class BasePreprocessor(abc.ABC):
 
         return data_splitter_instance.split(), split_indices_config
 
-    def _is_image_data(self, data: List) -> bool:
+    def _is_image_data(self, data: Any) -> bool:
         """
         Check if data is image data.
 
@@ -539,7 +563,11 @@ class BasePreprocessor(abc.ABC):
         Returns:
             True if the data is image data, False otherwise.
         """
-        return isinstance(data, list) and data and hasattr(data[0], "img")
+        if data is None:
+            return False
+        if isinstance(data, list) and hasattr(data[0], "img"):
+            return True
+        return False
 
     def _remove_nans(self, data_package: DataPackage) -> DataPackage:
         """

@@ -99,7 +99,7 @@ class BaseTrainer(abc.ABC):
                 num_workers=self._config.n_workers,
             )
         else:
-            self._validloader = None
+            self._validloader = None # type: ignore
 
         # Model and optimizer setup
         self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
@@ -119,9 +119,9 @@ class BaseTrainer(abc.ABC):
         )
 
         self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
-        self._trainloader = self._fabric.setup_dataloaders(self._trainloader)
+        self._trainloader = self._fabric.setup_dataloaders(self._trainloader) # type: ignore
         if self._validloader is not None:
-            self._validloader = self._fabric.setup_dataloaders(self._validloader)
+            self._validloader = self._fabric.setup_dataloaders(self._validloader) # type: ignore
         self._fabric.launch()
 
     def _input_validation(self) -> None:

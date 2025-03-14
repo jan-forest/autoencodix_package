@@ -19,7 +19,7 @@ class DataPackage:
 
     multi_sc: Optional[Dict[str, MuData]] = None
     multi_bulk: Optional[Dict[str, pd.DataFrame]] = None
-    annotation: Optional[Dict[str, pd.DataFrame]] = None
+    annotation: Optional[Dict[str, Union[pd.DataFrame, None]]] = None
     img: Optional[Dict[str, List[ImgData]]] = None
 
     from_modality: Optional[
@@ -106,9 +106,7 @@ class DataPackage:
             ]
         )
 
-    def get_n_samples(
-        self, is_paired: Union[bool, None]
-    ) -> Dict[str, Union[int, Dict[str, int]]]:
+    def get_n_samples(self, is_paired: Union[bool, None]) -> Dict[str, int]:
         """Get the number of samples for each data type."""
 
         if is_paired or is_paired is None:

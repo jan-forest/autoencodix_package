@@ -1,10 +1,10 @@
 from typing import List, Union
 
-import anndata as ad # type: ignore
+import anndata as ad  # type: ignore
 import pandas as pd
-import mudata as md # type: ignore
+import mudata as md  # type: ignore
 import numpy as np
-from scipy.sparse import issparse # type: ignore
+from scipy.sparse import issparse  # type: ignore
 
 from autoencodix.data._datapackage import DataPackage
 
@@ -14,8 +14,9 @@ class NaNRemover:
 
     def __init__(
         self,
-        data: Union[pd.DataFrame, ad.AnnData, md.MuData],
-        relevant_cols: List[str] = [],  # Changed from None to empty list as default
+        relevant_cols: Union[
+            List[str], None
+        ] = [],  # Changed from None to empty list as default
     ) -> None:
         """
         Initialize NaNRemover with data and optional relevant columns.
@@ -27,7 +28,6 @@ class NaNRemover:
         relevant_cols : List[str], optional
             Columns to check for NaN values, by default empty list
         """
-        self.data = data
         self.relevant_cols = relevant_cols
 
     def _process_sparse_matrix(self, matrix) -> np.ndarray:
@@ -109,7 +109,7 @@ class NaNRemover:
                         if col in v.columns:
                             v.dropna(subset=[col], inplace=True)
                 non_na[k] = v
-            data.annotation = non_na
+            data.annotation = non_na  # type: ignore
 
         # Handle MuData in multi_sc
         if data.multi_sc is not None:
@@ -121,9 +121,7 @@ class NaNRemover:
 
             # Ensure cell alignment across modalities
             common_cells = list(
-                set.intersection(
-                    *(set(mod.obs_names) for mod in mudata.mod.values())
-                )
+                set.intersection(*(set(mod.obs_names) for mod in mudata.mod.values()))
             )
             data.multi_sc = data.multi_sc["multi_sc"][common_cells]
 
@@ -132,16 +130,17 @@ class NaNRemover:
             modality_dict = getattr(data, direction)
             if not modality_dict:
                 continue
-                
+
             for mod_key, mod_value in modality_dict.items():
-                
                 # Handle MuData objects - use the proper import
                 if isinstance(mod_value, md.MuData):
                     # Process each modality in the MuData
                     for inner_mod_name, inner_mod_data in mod_value.mod.items():
-                        processed_mod = self._process_modality(inner_mod_data, f"{mod_key}.{inner_mod_name}")
+                        processed_mod = self._process_modality(
+                            inner_mod_data, f"{mod_key}.{inner_mod_name}"
+                        )
                         mod_value.mod[inner_mod_name] = processed_mod
-                    
+
                     # Ensure cell alignment if there are multiple modalities
                     if len(mod_value.mod) > 1:
                         common_cells = list(
@@ -150,26 +149,30 @@ class NaNRemover:
                             )
                         )
                         mod_value = mod_value[common_cells]
-                        
+
                     modality_dict[mod_key] = mod_value
-                    
+
                 # Handle AnnData objects directly
                 elif isinstance(mod_value, ad.AnnData):
                     processed_mod = self._process_modality(mod_value, mod_key)
                     modality_dict[mod_key] = processed_mod
-                    
+
                 # Handle other types of data (e.g., dictionaries of AnnData objects)
                 elif isinstance(mod_value, dict):
                     for sub_key, sub_value in mod_value.items():
                         if isinstance(sub_value, ad.AnnData):
-                            processed_mod = self._process_modality(sub_value, f"{mod_key}.{sub_key}")
+                            processed_mod = self._process_modality(
+                                sub_value, f"{mod_key}.{sub_key}"
+                            )
                             mod_value[sub_key] = processed_mod
-                            
+
                 elif isinstance(mod_value, pd.DataFrame):
                     mod_value.dropna(axis=1, inplace=True)
                     modality_dict[mod_key] = mod_value
 
                 else:
-                    print(f"Skipping unknown type in {direction}.{mod_key}: {type(mod_value)}")
+                    print(
+                        f"Skipping unknown type in {direction}.{mod_key}: {type(mod_value)}"
+                    )
 
         return data

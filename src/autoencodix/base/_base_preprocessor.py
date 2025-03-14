@@ -1,155 +1,667 @@
 import abc
-from typing import List, Optional, Type, Union, Tuple
-
 import numpy as np
+
+from enum import Enum
+import copy
+from typing import (
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    Callable,
+    Any,
+)
+
+import mudata as md  # type: ignore
 import pandas as pd
-import torch
-from anndata import AnnData  # type: ignore
 
 from autoencodix.data._datasetcontainer import DatasetContainer
+from autoencodix.data._datapackage import DataPackage
+from autoencodix.data._datapackage_splitter import DataPackageSplitter
 from autoencodix.data._datasplitter import DataSplitter
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.data._filter import DataFilter
+from autoencodix.data._nanremover import NaNRemover
+from autoencodix.data._sc_filter import SingleCellFilter
+from autoencodix.utils._bulkreader import BulkDataReader
+from autoencodix.utils._imgreader import ImageDataReader, ImageNormalizer
+from autoencodix.utils._screader import SingleCellDataReader
+from autoencodix.utils.default_config import DataCase, DefaultConfig, DataInfo
 
 
 class BasePreprocessor(abc.ABC):
-    def __init__(self):
+    """
+    Abstract base class for data preprocessors.
 
+    This class defines the general preprocessing workflow and provides
+    methods for handling different data modalities and data cases.
+    Subclasses should implement the `preprocess` method to perform
+    specific preprocessing steps.
+    """
+
+    def __init__(self, config: DefaultConfig):
+        """
+        Initializes the BasePreprocessor with a configuration object.
+
+        Args:
+            config: A DefaultConfig object containing preprocessing configurations.
+        """
+        self.config = config
+        self.data_readers: Dict[Enum, Any] = {
+            DataCase.MULTI_SINGLE_CELL: SingleCellDataReader(),
+            DataCase.MULTI_BULK: BulkDataReader(config=self.config),
+            DataCase.BULK_TO_BULK: BulkDataReader(config=self.config),
+            DataCase.SINGLE_CELL_TO_SINGLE_CELL: SingleCellDataReader(),
+            DataCase.IMG_TO_BULK: {
+                "bulk": BulkDataReader(config=self.config),
+                "img": ImageDataReader(),
+            },
+            DataCase.SINGLE_CELL_TO_IMG: {
+                "sc": SingleCellDataReader(),
+                "img": ImageDataReader(),
+            },
+            DataCase.IMG_TO_IMG: ImageDataReader(),
+        }
+        self.from_key, self.to_key = self._get_translation_keys()
+
+    @abc.abstractmethod
+    def preprocess(self) -> DatasetContainer:
+        """
+        Abstract method to be implemented by subclasses for specific preprocessing steps.
+        Mostly
+
+        This method should contain the subclass-specific preprocessing logic
+        and is called after the general preprocessing steps are completed.
+        """
         pass
 
-    def preprocess(
-        self,
-        data: Union[pd.DataFrame, AnnData, np.ndarray, List[np.ndarray]],
-        data_splitter: DataSplitter,
-        config: Optional[DefaultConfig],
-        dataset_type: Type,
-        split: bool = True,
-    ) -> Tuple[DatasetContainer, torch.Tensor]:
+    def _general_preprocess(self) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
         """
-        Main method of the class. Handles the following steps:
-        1. align the data (in case we have multiple datasets with different sample ids)
-        2. split the data into training and validation sets
-        3. deals with missing values in each split and dataset
-        4. normalizes or standardizes the data in each split and dataset
-        5. applies filtering (like variance thresholding) in each split and dataset
+        Main preprocessing method that orchestrates the process flow.
 
-        Parameters:
-            data : Union[pd.DataFrame, AnnData, np.ndarray, List[np.ndarray]]
-                Input data from the user
-            data_splitter : Optional[DataSplitter]
-                DataSplitter object to split the data into train, validation, and test sets
-            config : Optional[DefaultConfig]
-                Configuration object containing customizations for the pipeline
+        This method determines the data case from the configuration and calls
+        the appropriate processing function for that data case.
 
         Returns:
-            DatasetContainer: Container for train, validation, and test datasets (preprocessed)
+            A dictionary containing processed DataPackage objects for each data split
+            (e.g., 'train', 'validation', 'test').
 
+        Raises:
+            ValueError: If an unsupported data case is encountered.
         """
-        # not implemented yet for pandas, AnnData, or List[np.ndarray]
-        if isinstance(data, pd.DataFrame):
-            raise NotImplementedError(
-                "Preprocessing for pandas DataFrames is not implemented yet, only numpy arrays are supported."
-            )
-        if isinstance(data, AnnData):
-            raise NotImplementedError(
-                "Preprocessing for AnnData objects is not implemented yet, only numpy arrays are supported."
-            )
-        if isinstance(data, List):
-            raise NotImplementedError(
-                "Preprocessing for List of numpy arrays is not implemented yet, only single numpy arrays are supported."
-            )
-        self._data_splitter = data_splitter
-        self.config = config
-        self._extract_metadata_numpy(data=data)
-        self._features = self._preprocess_numpy(data=data)
-        self._dataset_type = dataset_type
-        if split:
-            self._build_datasets()  # populates self._datasets
-        return self._datasets, self._features
+        datacase = self.config.data_case
+        if datacase is None:
+            raise TypeError("datacase can't be None")
 
-    def _preprocess_numpy(self, data: np.ndarray) -> torch.Tensor:
-        t = torch.from_numpy(data)
-        return t
-
-    def _align_numpy_data(self, data: List[np.ndarray]) -> np.ndarray:
-        # TODO
-        return np.array(data)
-
-    def align_ann_data(self, data: AnnData) -> np.ndarray:
-        # TODO
-        return np.array(data)
-
-    def _extract_metadata_pandas(
-        self, data: Union[pd.DataFrame, AnnData]
-    ) -> np.ndarray:
-        # TODO
-        return np.array(data)
-
-    def _extract_metadata_anndata(self, data: AnnData) -> np.ndarray:
-        # TODO
-        return np.array(data)
-
-    def _extract_metadata_numpy(self, data: np.ndarray) -> np.ndarray:
-        self._ids = None  # TODO
-        # TODO
-        return np.array(data)
-
-    def _build_datasets(self) -> None:
-        """
-        Build datasets for training, validation, and testing.
-
-        Raises
-        ------
-        NotImplementedError
-            If the data splitter is not initialized.
-        ValueError
-            If self._features is None.
-        """
-
-        if self._features is None:
-            raise ValueError("No data available for splitting")
-
-        split_indices = self._data_splitter.split(self._features)
-        if self._ids is None:
-            train_ids, valid_ids, test_ids = None, None, None
+        process_function = self._get_process_function(datacase=datacase)
+        if process_function:
+            return process_function()  # No need to pass from_key, to_key anymore
         else:
-            train_ids = (
-                None
-                if len(split_indices["train"]) == 0
-                else self._ids[split_indices["train"]]
-            )
-            valid_ids = (
-                None
-                if len(split_indices["valid"]) == 0 or self._ids is None
-                else self._ids[split_indices["valid"]]
-            )
-            test_ids = (
-                None
-                if len(split_indices["test"]) == 0 or self._ids is None
-                else self._ids[split_indices["test"]]
-            )
+            raise ValueError(f"Unsupported data case: {datacase}")
 
-        train_data = (
-            None
-            if len(split_indices["train"]) == 0
-            else self._features[split_indices["train"]]
-        )
-        valid_data = (
-            None
-            if len(split_indices["valid"]) == 0
-            else self._features[split_indices["valid"]]
+    def _get_process_function(self, datacase: DataCase) -> Any:
+        """
+        Returns the appropriate processing function based on the data case.
+
+        Args:
+            datacase: The DataCase enum value representing the current data case.
+
+        Returns:
+            A callable function that performs the preprocessing for the given data case,
+            or None if the data case is not supported.
+        """
+        process_map = {
+            DataCase.MULTI_SINGLE_CELL: self._process_multi_single_cell,
+            DataCase.MULTI_BULK: self._process_multi_bulk_case,
+            DataCase.BULK_TO_BULK: self._process_bulk_to_bulk_case,
+            DataCase.SINGLE_CELL_TO_SINGLE_CELL: self._process_sc_to_sc_case,
+            DataCase.IMG_TO_BULK: self._process_img_to_bulk_case,
+            DataCase.SINGLE_CELL_TO_IMG: self._process_sc_to_img_case,
+            DataCase.IMG_TO_IMG: self._process_img_to_img_case,
+        }
+        return process_map.get(datacase)
+
+    def _process_data_case(
+        self, data_package: DataPackage, modality_processors: Dict[Any, Any]
+    ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
+        """
+        Generic method to process a data case.
+
+        This method handles the common preprocessing steps for different data cases,
+        including splitting the data package, removing NaNs, and applying
+        modality-specific processors.
+
+        Args:
+            data_package: The DataPackage object to be processed.
+            modality_processors: A dictionary mapping modality keys (e.g., 'multi_sc', 'from_modality')
+                to callable processor functions that will be applied to the corresponding modality data.
+
+        Returns:
+            A dictionary containing processed DataPackage objects for each data split.
+        """
+        split_packages, indices = self._split_data_package(data_package)
+        processed_splits = {}
+        for split_name, split_package in split_packages.items():
+            clean_package = self._remove_nans(split_package["data"])
+            for modality_key, processor in modality_processors.items():
+                modality_data = getattr(clean_package, modality_key, None)
+                if modality_data:
+                    processed_modality_data = processor(modality_data)
+                    setattr(clean_package, modality_key, processed_modality_data)
+            split_indices = {
+                name: {
+                    split: idx
+                    for split, idx in indices[name].items()
+                    if split == split_name
+                }
+                for name in indices.keys()
+            }
+            processed_splits[split_name] = {
+                "data": clean_package,
+                "indices": split_indices,
+            }
+        return processed_splits
+
+    def _process_multi_single_cell(
+        self,
+    ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
+        """
+        Process MULTI_SINGLE_CELL case end-to-end.
+
+        Reads multi-single-cell data, performs data splitting, NaN removal,
+        and applies single-cell specific filtering.
+
+        Returns:
+            A dictionary containing processed DataPackage objects for each data split.
+        """
+        screader = self.data_readers[DataCase.MULTI_SINGLE_CELL]  # type: ignore
+
+        mudata = screader.read_data(config=self.config)
+        data_package = DataPackage()
+        data_package.multi_sc = mudata
+
+        def process_sc_modality(modality_data: md.MuData) -> md.MuData:
+            """Processes single-cell modality data with filtering."""
+            if modality_data is not None:
+                sc_filter = SingleCellFilter(
+                    mudata=modality_data, data_info=self.config.data_config.data_info
+                )
+                return sc_filter.preprocess()
+            return modality_data
+
+        return self._process_data_case(
+            data_package, modality_processors={"multi_sc": process_sc_modality}
         )
 
-        test_data = (
-            None
-            if len(split_indices["test"]) == 0
-            else self._features[split_indices["test"]]
+    def _process_multi_bulk_case(self) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
+        """
+        Process MULTI_BULK case end-to-end.
+
+        Reads multi-bulk data, performs data splitting, NaN removal,
+        and applies filtering and scaling to bulk dataframes.
+
+        Returns:
+            A dictionary containing processed DataPackage objects for each data split.
+        """
+        if self.data_readers is not None:
+            bulkreader = self.data_readers[DataCase.MULTI_BULK]
+        bulk_dfs, annotation = bulkreader.read_data()
+
+        data_package = DataPackage()
+        data_package.multi_bulk = bulk_dfs
+        data_package.annotation = annotation
+
+        def process_bulk_modality(
+            modality_data: Dict[str, pd.DataFrame | None],
+        ) -> Dict[str, pd.DataFrame | None]:
+            """Processes multi-bulk modality data with filtering and scaling."""
+            if modality_data:
+                processed_bulk = {}
+                for key, df in modality_data.items():
+                    processed_bulk[key] = self._filter_and_scale_dataframe(
+                        df=df,  # type: ignore
+                        info_key=key,  # type: ignore
+                    )
+                return processed_bulk
+            return modality_data
+
+        return self._process_data_case(
+            data_package, modality_processors={"multi_bulk": process_bulk_modality}
         )
-        self._datasets = DatasetContainer(
-            train=self._dataset_type(
-                data=train_data, config=self.config, ids=train_ids
-            ),
-            valid=self._dataset_type(
-                data=valid_data, config=self.config, ids=valid_ids
-            ),
-            test=self._dataset_type(data=test_data, config=self.config, ids=test_ids),
+
+    def _process_bulk_to_bulk_case(self) -> Dict[str, DataPackage]:
+        """
+        Process BULK_TO_BULK case end-to-end.
+
+        Reads bulk data, prepares from/to modalities, performs data splitting,
+        NaN removal, and applies filtering and scaling to from and to bulk dataframes.
+
+        Returns:
+            A dictionary containing processed DataPackage objects for each data split.
+        """
+        if self.from_key is None or self.to_key is None:
+            raise TypeError("from_key and to_key cannot be None for Translation")
+
+        bulkreader = self.data_readers[DataCase.BULK_TO_BULK]
+        bulk_dfs, annotation = bulkreader.read_data()
+
+        data_package = DataPackage()
+        data_package.from_modality = {self.from_key: bulk_dfs[self.from_key]}
+        data_package.to_modality = {self.to_key: bulk_dfs[self.to_key]}
+        data_package.multi_bulk = None
+        data_package.annotation = {
+            "from": annotation[self.from_key],
+            "to": annotation[self.to_key],
+        }
+
+        def process_bulk_to_bulk_modality(
+            modality_data: Dict[str, pd.DataFrame], modality_key: str
+        ) -> Dict[str, pd.DataFrame]:
+            """Processes bulk-to-bulk modality data with filtering and scaling."""
+            if not isinstance(modality_data, str):
+                raise TypeError(
+                    f"Modality key as to be string got {type(modality_key)}"
+                )
+
+            if modality_data and modality_key in modality_data:
+                return {
+                    modality_key: self._filter_and_scale_dataframe(
+                        modality_data[modality_key], modality_key
+                    )
+                }
+            return modality_data
+
+        return self._process_data_case(
+            data_package,
+            modality_processors={
+                "from_modality": lambda data: process_bulk_to_bulk_modality(
+                    data,
+                    self.from_key,  # type: ignore
+                ),
+                "to_modality": lambda data: process_bulk_to_bulk_modality(
+                    data,
+                    self.to_key,  # type: ignore
+                ),
+            },
         )
+
+    def _process_sc_to_sc_case(self) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
+        """
+        Process SC_TO_SC case end-to-end.
+
+        Reads single-cell data, prepares from/to modalities, performs data splitting,
+        NaN removal, and applies single-cell specific filtering to from and to mudata objects.
+
+        Returns:
+            A dictionary containing processed DataPackage objects for each data split.
+        """
+        if self.from_key is None or self.to_key is None:
+            raise TypeError("from_key and to_key cannot be None for Translation")
+
+        screader = self.data_readers[DataCase.SINGLE_CELL_TO_SINGLE_CELL]
+        mudata = screader.read_data(config=self.config)
+
+        data_package = DataPackage()
+        data_package.from_modality = {self.from_key: mudata[self.from_key]}
+        data_package.to_modality = {self.to_key: mudata[self.to_key]}
+
+        def process_sc_to_sc_modality(
+            modality_data: Dict[str, md.MuData], modality_key: str
+        ) -> Dict[str, md.MuData]:
+            """Processes sc-to-sc modality data with single-cell filtering."""
+            if modality_data and modality_key in modality_data:
+                data_info = self.config.data_config.data_info[modality_key]
+                sc_filter = SingleCellFilter(
+                    mudata=modality_data[modality_key], data_info=data_info
+                )
+                return {modality_key: sc_filter.preprocess()}
+            return modality_data
+
+        return self._process_data_case(
+            data_package,
+            modality_processors={
+                "from_modality": lambda data: process_sc_to_sc_modality(
+                    data, self.from_key
+                ),
+                "to_modality": lambda data: process_sc_to_sc_modality(
+                    data, self.to_key
+                ),
+            },
+        )
+
+    def _process_img_to_bulk_case(
+        self,
+    ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
+        """
+        Process IMG_TO_BULK case end-to-end.
+
+        Reads image and bulk data, prepares from/to modalities (IMG->BULK or BULK->IMG),
+        performs data splitting, NaN removal, and applies normalization to image data
+        and filtering/scaling to bulk dataframes.
+
+        Returns:
+            A dictionary containing processed DataPackage objects for each data split.
+        """
+        if self.from_key is None or self.to_key is None:
+            raise TypeError("from_key and to_key cannot be None for Translation")
+
+        bulkreader = self.data_readers[DataCase.IMG_TO_BULK]["bulk"]
+        imgreader = self.data_readers[DataCase.IMG_TO_BULK]["img"]
+
+        bulk_dfs, annotation = bulkreader.read_data()
+        images = imgreader.read_data(config=self.config)
+
+        data_package = DataPackage()
+
+        if self.to_key in bulk_dfs.keys():
+            # IMG -> BULK direction (Corrected condition) # Use self.to_key
+            data_package.from_modality = {self.from_key: images[self.from_key]}  # type: ignore
+            data_package.to_modality = {self.to_key: bulk_dfs[self.to_key]}
+            to_annotation = next(iter(annotation.keys()))
+            data_package.annotation = {"from": None, "to": annotation[to_annotation]}
+        else:  # BULK -> IMG direction (Corrected condition order)
+            data_package.from_modality = {self.from_key: bulk_dfs[self.from_key]}
+            data_package.to_modality = {self.to_key: images[self.to_key]}  # type: ignore
+            from_annotation = next(iter(annotation.keys()))
+            data_package.annotation = {"from": annotation[from_annotation], "to": None}
+
+        def process_img_to_bulk_modality(
+            modality_data: Dict[str, Union[pd.DataFrame, List]], modality_key: str
+        ) -> Dict[str, Union[pd.DataFrame, List]]:
+            """Processes img-to-bulk modality data with normalization for images and filtering/scaling for dataframes."""
+            if modality_key is None:
+                raise TypeError("modality_key cannot be None")
+            if modality_data and modality_key in modality_data:
+                data = modality_data[modality_key]
+                if isinstance(data, pd.DataFrame):
+                    return {
+                        modality_key: self._filter_and_scale_dataframe(  # type: ignore
+                            df=data, info_key=modality_key
+                        )
+                    }
+                elif self._is_image_data(data):
+                    return {
+                        modality_key: self._normalize_image_data(
+                            images=data, info_key=modality_key
+                        )
+                    }
+            return modality_data
+
+        return self._process_data_case(
+            data_package,
+            modality_processors={
+                "from_modality": lambda data: process_img_to_bulk_modality(
+                    data, self.from_key
+                ),
+                "to_modality": lambda data: process_img_to_bulk_modality(
+                    data, self.to_key
+                ),
+            },
+        )
+
+    def _process_sc_to_img_case(self) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
+        """
+        Process SC_TO_IMG case end-to-end.
+
+        Reads single-cell and image data, prepares from/to modalities (SC->IMG or IMG->SC),
+        performs data splitting, NaN removal, and applies single-cell specific filtering
+        to single-cell data and normalization to image data.
+
+        Returns:
+            A dictionary containing processed DataPackage objects for each data split.
+        """
+        if self.from_key is None or self.to_key is None:
+            raise TypeError("to and from keys cant be None for SC-to-Img")
+        screader = self.data_readers[DataCase.SINGLE_CELL_TO_IMG]["sc"]
+        imgreader = self.data_readers[DataCase.SINGLE_CELL_TO_IMG]["img"]
+
+        # only one mudata type in this case we know this
+        mudata = next(iter(screader.read_data(config=self.config).values()))
+        images = imgreader.read_data(config=self.config)
+
+        data_package = DataPackage()
+
+        if self.from_key in images.keys():
+            data_package.from_modality = {self.from_key: images[self.from_key]}
+            data_package.to_modality = {self.to_key: mudata}  # Use self.to_key
+        else:  # SC -> IMG case (Corrected condition order)
+            data_package.from_modality = {self.from_key: mudata}  # Use self.from_key
+            data_package.to_modality = {self.to_key: images[self.to_key]}
+
+        def process_sc_to_img_modality(
+            modality_data: Dict[str, Union[md.MuData, List]], modality_key: str
+        ) -> Dict[str, Union[md.MuData, List]]:
+            """Processes sc-to-img modality data with single-cell filtering for mudata and normalization for images."""
+            if not isinstance(modality_key, str):
+                raise TypeError(
+                    f"Modality key as to be string, got {type(modality_key)}"
+                )
+            if modality_data and modality_key in modality_data:
+                data = modality_data[modality_key]
+                if isinstance(data, md.MuData):
+                    data_info = self.config.data_config.data_info[modality_key]
+                    sc_filter = SingleCellFilter(mudata=data, data_info=data_info)
+                    return {modality_key: sc_filter.preprocess()}
+                elif self._is_image_data(data):
+                    return {
+                        modality_key: self._normalize_image_data(data, modality_key)
+                    }
+            return modality_data
+
+        return self._process_data_case(
+            data_package,
+            modality_processors={
+                "from_modality": lambda data: process_sc_to_img_modality(
+                    data, self.from_key
+                ),
+                "to_modality": lambda data: process_sc_to_img_modality(
+                    data, self.to_key
+                ),
+            },
+        )
+
+    def _process_img_to_img_case(self) -> Dict[str, DataPackage]:
+        """
+        Process IMG_TO_IMG case end-to-end.
+
+        Reads image data for from/to modalities, performs data splitting,
+        NaN removal, and applies normalization to both from and to image data.
+
+        Returns:
+            A dictionary containing processed DataPackage objects for each data split.
+        """
+        if self.from_key is None or self.to_key is None:
+            raise TypeError("from_key and to_key cannot be None for Translation")
+        imgreader = self.data_readers[DataCase.IMG_TO_IMG]
+        images = imgreader.read_data(config=self.config)
+
+        data_package = DataPackage()
+        data_package.from_modality = {self.from_key: images[self.from_key]}
+        data_package.to_modality = {self.to_key: images[self.to_key]}
+
+        def process_img_to_img_modality(
+            modality_data: Dict[str, List], modality_key: str
+        ) -> Dict[str, List]:
+            """Processes img-to-img modality data with normalization for images."""
+            if modality_key is None:
+                raise TypeError("modality_key cannot be None for translation")
+            if modality_data and modality_key in modality_data:
+                data = modality_data[modality_key]
+                if self._is_image_data(data):
+                    return {
+                        modality_key: self._normalize_image_data(data, modality_key)
+                    }
+            return modality_data
+
+        return self._process_data_case(
+            data_package,
+            modality_processors={
+                "from_modality": lambda data: process_img_to_img_modality(
+                    data,
+                    self.from_key,  # type: ignore
+                ),
+                "to_modality": lambda data: process_img_to_img_modality(
+                    data,
+                    self.to_key,  # type: ignore
+                ),
+            },
+        )
+
+    def _split_data_package(
+        self, data_package: DataPackage
+    ) -> Tuple[Dict[str, Dict], Dict[str, Dict[str, np.ndarray]]]:
+        """
+        Split data package into train/validation/test sets.
+
+        Uses DataSplitter and DataPackageSplitter to divide the DataPackage
+        into training, validation, and test sets based on the configuration.
+
+        Args:
+            data_package: The DataPackage to be split.
+
+        Returns:
+            A dictionary containing the split DataPackages, keyed by split names
+            ('train', 'validation', 'test').
+
+            split_indiced_config - (dict): the actual indicies used for splitting
+        """
+        data_splitter = DataSplitter(config=self.config)
+        n_samples = data_package.get_n_samples(is_paired=self.config.paired_translation)
+
+        split_indices_config: dict = {}
+        if self.config.paired_translation or self.config.paired_translation is None:
+            split_indices_config["paired"] = data_splitter.split(
+                n_samples=n_samples["paired_count"]
+            )
+        else:
+            split_indices_config["from_indices"] = data_splitter.split(
+                n_samples=n_samples["from"]
+            )
+            split_indices_config["to_indices"] = data_splitter.split(
+                n_samples=n_samples["to"]
+            )
+        data_splitter_instance = DataPackageSplitter(
+            data_package=data_package,
+            config=self.config,
+            indices=split_indices_config.get("paired"),
+            from_indices=split_indices_config.get("from_indices"),
+            to_indices=split_indices_config.get("to_indices"),
+        )
+
+        return data_splitter_instance.split(), split_indices_config
+
+    def _is_image_data(self, data: Any) -> bool:
+        """
+        Check if data is image data.
+
+        Determines if the provided data is a list of objects that are considered
+        image data based on having an 'img' attribute.
+
+        Args:
+            data: The data to check.
+
+        Returns:
+            True if the data is image data, False otherwise.
+        """
+        if data is None:
+            return False
+        if isinstance(data, list) and hasattr(data[0], "img"):
+            return True
+        return False
+
+    def _remove_nans(self, data_package: DataPackage) -> DataPackage:
+        """
+        Remove NaN values from the data package.
+
+        Utilizes NaNRemover to identify and remove rows containing NaN values
+        in relevant annotation columns within the DataPackage.
+
+        Args:
+            data_package: The DataPackage from which to remove NaNs.
+
+        Returns:
+            The DataPackage with NaN values removed.
+        """
+        nanremover = NaNRemover(
+            relevant_cols=self.config.data_config.annotation_columns
+        )
+        return nanremover.remove_nan(data=data_package)
+
+    def _filter_and_scale_dataframe(
+        self, df: pd.DataFrame, info_key: str
+    ) -> Optional[pd.DataFrame]:
+        """
+        Process a dataframe with filtering and scaling.
+
+        Applies filtering based on DataFilter and scaling to a pandas DataFrame
+        according to the data information specified by info_key.
+
+        Args:
+            df: The DataFrame to be processed.
+            info_key: The key referencing data information in the configuration for filtering and scaling.
+
+        Returns:
+            The processed DataFrame after filtering and scaling, or None if the input DataFrame is None.
+        """
+        if df is None:
+            return None
+
+        data_info = self.config.data_config.data_info[info_key]
+        if data_info.data_type == "ANNOTATION":
+            return df
+
+        filter_obj = DataFilter(df=df, data_info=data_info)
+        filtered_df = filter_obj.filter()
+
+        if filtered_df.empty or filtered_df.shape[1] == 0:
+            filtered_df = df  # Return original if filter makes it empty
+
+        scaled_df = filter_obj.scale(filtered_df)
+        return scaled_df
+
+    def _normalize_image_data(self, images: List, info_key: str) -> List:
+        """
+        Process images with normalization.
+
+        Normalizes a list of image data objects using ImageNormalizer based on
+        the scaling method specified in the configuration for the given info_key.
+
+        Args:
+            images: A list of image data objects (each having an 'img' attribute).
+            info_key: The key referencing data information in the configuration to get the scaling method.
+
+        Returns:
+            A list of processed image data objects with normalized image data.
+        """
+        scaling_method = self.config.data_config.data_info[info_key].scaling
+        processed_images = []
+        normalizer = ImageNormalizer()  # Instance created once here
+
+        for img in images:
+            img_copy = copy.deepcopy(img)
+            img_copy.img = normalizer.normalize_image(  # Use instance here
+                image=img_copy.img, method=scaling_method
+            )
+            processed_images.append(img_copy)
+
+        return processed_images
+
+    def _get_translation_keys(self) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Extract from and to keys from config.
+
+        Retrieves the 'from' and 'to' modality keys from the data configuration
+        based on the 'translate_direction' setting.
+
+        Returns:
+            A tuple containing the from_key and to_key as strings, or None if not found.
+        """
+        from_key, to_key = None, None
+        for k, v in self.config.data_config.data_info.items():
+            if v.translate_direction is None:
+                continue
+            if v.translate_direction == "from":
+                from_key = k
+            if v.translate_direction == "to":
+                to_key = k
+        return from_key, to_key

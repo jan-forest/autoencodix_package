@@ -1,10 +1,10 @@
 import abc
-from typing import Optional, Union, Dict, Type, List
+from typing import Optional, Union, Dict, Type
 
 import numpy as np
 import pandas as pd
-import torch
-from anndata import AnnData  # type: ignore
+from torch.utils.data import Dataset
+from anndata import AnnData # type: ignore
 from ._base_dataset import BaseDataset
 from ._base_autoencoder import BaseAutoencoder
 from ._base_trainer import BaseTrainer
@@ -40,15 +40,16 @@ class BasePipeline(abc.ABC):
     config : DefaultConfig
         The configuration for the pipeline. Handles preprocessing, training, and
         other settings.
-    data : Union[np.ndarray, AnnData, pd.DataFrame]
-        User input data.
+    processed_data : Optional[DatasetContainer]
+        User input data, only used is used over datapaths defined in config, normal workflow is to set this None
+        and pass data information via config.
     data_splitter : Optional[DataSplitter]
         Returns train, validation, and test indices; users can provide a custom splitter.
     result : Result
         Dataclass to store all results from the pipeline.
     _features : Optional[torch.Tensor]
         The preprocessed data, output of the former `make_data`.
-    _preprocessor : Optional[Preprocessor]
+    _preprocessor_type : Type[Preprocessor]
         The preprocessor filters, scales, matches, and cleans the data.
         Specific implementations for this will be used in subclasses.
     _datasets : Optional[DatasetContainer]
@@ -104,16 +105,16 @@ class BasePipeline(abc.ABC):
 
     def __init__(
         self,
-        data: Union[pd.DataFrame, AnnData, np.ndarray, List[np.ndarray]],
         dataset_type: Type[BaseDataset],
         trainer_type: Type[BaseTrainer],
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
         datasplitter_type: Type[DataSplitter],
-        preprocessor: BasePreprocessor,
+        preprocessor_type: Type[BasePreprocessor],
         visualizer: BaseVisualizer,
         evaluator: Evaluator,
         result: Result,
+        processed_data: Optional[DatasetContainer],
         config: DefaultConfig = DefaultConfig(),
         custom_split: Optional[Dict[str, np.ndarray]] = None,
         **kwargs: dict,
@@ -126,17 +127,18 @@ class BasePipeline(abc.ABC):
         config : DefaultConfig, optional
             The configuration dictionary for the model.
         """
-        if not isinstance(data, (np.ndarray, AnnData, pd.DataFrame)):
+        if not isinstance(processed_data, (np.ndarray, AnnData, pd.DataFrame)):
             raise TypeError(
-                f"Expected data type to be one of np.ndarray, AnnData, or pd.DataFrame, got {type(data)}."
+                f"Expected data type to be one of np.ndarray, AnnData, or pd.DataFrame, got {type(processed_data)}."
             )
 
-        self.data: Union[np.ndarray, AnnData, pd.DataFrame] = data
+        self.preprocessed_data: DatasetContainer = processed_data
         self.config = config
         self._trainer_type = trainer_type
         self._model_type = model_type
         self._loss_type = loss_type
-        self._preprocessor = preprocessor
+        self._preprocessor_type = preprocessor_type
+        self._preprocessor: Optional[BasePreprocessor] = None
         self._visualizer = visualizer
         self._dataset_type = dataset_type
         self._evaluator = evaluator
@@ -152,17 +154,110 @@ class BasePipeline(abc.ABC):
                 )
             self.config = config
 
-        self._features: Optional[torch.Tensor] = None
         self._datasets: Optional[DatasetContainer] = None
 
-    # config parameter will be self.config if not provided, decorator will handle this
+    def _validate_user_data(self) -> None:
+        """
+        Validates the data provided by the user.
+
+        If the user passed preprocessed_data as dataset container, this function calls _validate_container().
+        If the user only passed a config with data configuration, this function calls _validate_config_data().
+        """
+        if self._datasets is not None:
+            self._validate_container()
+        else:
+            self._validate_config_data()
+
+    def _validate_container(self) -> None:
+        """
+        Validates a DatasetContainer object to ensure it contains valid datasets.
+
+        Ensures that the container has at least a training dataset.
+
+        Raises:
+            ValueError: If the container validation fails.
+        """
+        if self.preprocessed_data is None:
+            raise ValueError("DatasetContainer is None. Please provide valid datasets.")
+        none_count = 0
+        if not isinstance(self.preprocessed_data.train, Dataset):
+            if self.preprocessed_data.train is not None:
+                raise ValueError(
+                    f"Train dataset has to be either None or Dataset, got {type(self.preprocessed_data.valid)}"
+                )
+            none_count += 1
+
+        if not isinstance(self.preprocessed_data.test, Dataset):
+            if self.preprocessed_data.test is not None:
+                raise ValueError(
+                    f"Test dataset has to be either None or Dataset, got {type(self.preprocessed_data.valid)}"
+                )
+            none_count += 1
+
+        if not isinstance(self.preprocessed_data.valid, Dataset):
+            if self.preprocessed_data.valid is not None:
+                raise ValueError(
+                    f"Valid dataset has to be either None or Dataset, got {type(self.preprocessed_data.valid)}"
+                )
+            none_count += 1
+        if none_count == 3:
+            raise ValueError("At lest one split needs to be provided")
+
+    def _validate_config_data(self) -> None:
+        """
+        Validates the data configuration provided via config.data_config.data_info.
+
+        Ensures that:
+        1. There is at least one non-annotation file
+        2. When working with non-single-cell data, there must be an annotation file
+
+        Raises:
+            ValueError: If the data configuration validation fails.
+        """
+
+        data_info_dict = self.config.data_config.data_info
+        if not data_info_dict:
+            raise ValueError("data_info dictionary is empty.")
+
+        # Check if there's at least one non-annotation file
+        non_annotation_files = {
+            key: info
+            for key, info in data_info_dict.items()
+            if info.data_type != "ANNOTATION"
+        }
+
+        if not non_annotation_files:
+            raise ValueError("At least one non-annotation file must be provided.")
+
+        # Check if there's any non-single-cell data
+        non_single_cell_data = {
+            key: info
+            for key, info in data_info_dict.items()
+            if not info.is_single_cell and info.data_type != "ANNOTATION"
+        }
+
+        # If there's non-single-cell data, check for annotation file
+        if non_single_cell_data:
+            annotation_files = {
+                key: info
+                for key, info in data_info_dict.items()
+                if info.data_type == "ANNOTATION"
+            }
+
+            if not annotation_files:
+                raise ValueError(
+                    "When working with non-single-cell data, an annotation file must be provided."
+                )
+
     @config_method(valid_params={"config"})
     def preprocess(
         self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs: dict
     ) -> None:
         """
         Takes the user input data and filters, norrmalizes and cleans the data.
-        Populates the self._features attribute with the preprocessed data as a numpy array.
+        Populates the self._datasets attribute with the preprocessed data as DatasetContainer,
+        containing the splits as a child of PyTorch Dataset, depending on which preprocessor was used
+        for the pipeline.
 
         Parameters:
             config: DefaultConfig, optional (default: None)
@@ -174,17 +269,17 @@ class BasePipeline(abc.ABC):
                 If the preprocessor is not initialized.
 
         """
-        if self._preprocessor is None:
+        if self._preprocessor_type is None:
             raise NotImplementedError("Preprocessor not initialized")
-
-        self._datasets, self._features = self._preprocessor.preprocess(
-            data=self.data,
-            data_splitter=self._data_splitter,
-            config=self.config,
-            dataset_type=self._dataset_type,
-        )
-        self.result.preprocessed_data = self._features
-        self.result.datasets = self._datasets
+        self._validate_user_data()
+        if self.preprocessed_data is None:
+            self._preprocessor = self._preprocessor_type(config=self.config)
+            self._datasets = self._preprocessor.preprocess()
+            self.result.datasets = self._datasets
+        else:
+            self._validate_user_data()
+            self._datasets = self.preprocessed_data
+            self.result.datasets = self.preprocessed_data
 
     @config_method(
         valid_params={
@@ -222,8 +317,6 @@ class BasePipeline(abc.ABC):
                 If the datasets are not built. Please run the preprocess method first.
 
         """
-        if self._features is None:
-            raise ValueError("No data available for training, please preprocess first")
 
         if self._datasets is None:
             raise ValueError(
@@ -244,7 +337,7 @@ class BasePipeline(abc.ABC):
     @config_method(valid_params={"config"})
     def predict(
         self,
-        data: Union[np.ndarray, pd.DataFrame, AnnData] = None,
+        data: DatasetContainer,
         config: Optional[Union[None, DefaultConfig]] = None,
         **kwargs,
     ) -> None:
@@ -254,8 +347,8 @@ class BasePipeline(abc.ABC):
         Populates the self.result attribute with the inference results.
 
         Parameters:
-            data: Union[np.ndarray, pd.DataFrame, AnnData], optional (default: None)
-                User input data to run inference on.
+            data: 
+                User input data to run inference as DatasetContainer, we will use the test split here.
             config: DefaultConfig, optional (default: None)
                 allows to pass a custom configuration for the prediction step.
             **kwargs:
@@ -270,7 +363,7 @@ class BasePipeline(abc.ABC):
             NotImplementedError:
                 If the model is not trained. Please run the fit method first.
         """
-        if self._preprocessor is None:
+        if self._preprocessor is None:  # type ignore
             raise NotImplementedError("Preprocessor not initialized")
         if self._datasets is None:
             raise NotImplementedError(
@@ -281,17 +374,9 @@ class BasePipeline(abc.ABC):
                 "Model not trained. Please run the fit method first"
             )
 
-        if data is not None:
-            _, processed_data = self._preprocessor.preprocess(
-                data=data,
-                data_splitter=self._data_splitter,
-                config=self.config,
-                dataset_type=self._dataset_type,
-                split=False,
-            )
-            input_data = self._dataset_type(data=processed_data, config=self.config)
+        if data.test is not None:
             predictor_results = self._trainer.predict(
-                data=input_data, model=self.result.model
+                data=data.test, model=self.result.model
             )
         else:
             if self._datasets.test is None:
@@ -326,10 +411,10 @@ class BasePipeline(abc.ABC):
         if self._visualizer is None:
             raise NotImplementedError("Visualizer not initialized")
 
-        if self._features is None:
-            raise ValueError("No data available for visualization")
+        self._visualizer.visualize(self.result)
 
         self._visualizer.visualize(result=self.result, config=self.config)
+
 
     def show_result(self) -> None:
         print("Make plots")

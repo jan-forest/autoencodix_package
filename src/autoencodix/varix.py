@@ -9,10 +9,12 @@ from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.base._base_visualizer import BaseVisualizer
+from autoencodix.base._base_preprocessor import BasePreprocessor
 from autoencodix.base._base_autoencoder import BaseAutoencoder
+from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data._numeric_dataset import NumericDataset
-from autoencodix.data.preprocessor import Preprocessor
+from autoencodix.data.general_preprocessor import GeneralPreprocessor
 from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.trainers._general_trainer import GeneralTrainer
@@ -29,8 +31,8 @@ class Varix(BasePipeline):
 
     Attributes
     ----------
-    data : Union[np.ndarray, AnnData, pd.DataFrame]
-        Input data from the user
+    preprocessed_data : DatasetContainer
+        User data if no datafiles in the config are provided. We expect these to be processed.
     config : Optional[Union[None, DefaultConfig]]
         Configuration object containing customizations for the pipeline
     _preprocessor : Preprocessor
@@ -59,12 +61,12 @@ class Varix(BasePipeline):
 
     def __init__(
         self,
-        data: Union[np.ndarray, AnnData, pd.DataFrame],
+        preprocessed_data: DatasetContainer,
         trainer_type: Type[BaseTrainer] = GeneralTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,
-        preprocessor: Optional[Preprocessor] = None,
+        preprocessor_type: Type[BasePreprocessor] = GeneralPreprocessor,
         visualizer: Optional[BaseVisualizer] = None,
         evaluator: Optional[Evaluator] = None,
         result: Optional[Result] = None,
@@ -79,7 +81,7 @@ class Varix(BasePipeline):
 
         Parameters
         ----------
-        data : Union[np.ndarray, AnnData, pd.DataFrame]
+        preprocessed_data : Union[np.ndarray, AnnData, pd.DataFrame, DatasetContainer]
             Input data to be processed
         trainer_type : Type[BaseTrainer]
             Type of trainer to be instantiated during fit step, default is GeneralTrainer
@@ -101,13 +103,22 @@ class Varix(BasePipeline):
         config : Optional[DefaultConfig]
             Configuration for all pipeline components
         """
+        if isinstance(preprocessed_data, DatasetContainer):
+            data_container = preprocessed_data
+        else:
+            data_container = DatasetContainer(
+                train=preprocessed_data.train,
+                valid=None,
+                test=None
+            )
+
         super().__init__(
-            data=data,
+            processed_data=data_container,
             dataset_type=dataset_type,
             trainer_type=trainer_type,
             model_type=model_type,
             loss_type=loss_type,
-            preprocessor=preprocessor or Preprocessor(),
+            preprocessor_type=preprocessor_type,
             visualizer=visualizer or Visualizer(),
             evaluator=evaluator or Evaluator(),
             result=result or Result(),
@@ -126,7 +137,7 @@ class Varix(BasePipeline):
             z: torch.Tensor - The sampled latent space points
 
         """
-        if self._trainer is None:
+        if not hasattr(self, '_trainer') or self._trainer is None:
             raise ValueError("Model is not trained yet. Please train the model first.")
         if self.result.mus is None or self.result.sigmas is None:
             raise ValueError("Model has not learned the latent space distribution yet.")

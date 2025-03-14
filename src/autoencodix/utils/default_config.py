@@ -1,8 +1,79 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import Literal, Dict, Any, Optional
+from enum import Enum
+from typing import Any, Dict, Literal, Optional, List, Union
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
-# internal check done
+class DataCase(str, Enum):
+    MULTI_SINGLE_CELL = "Multi Single Cell"
+    MULTI_BULK = "Multi Bulk"
+    BULK_TO_BULK = "Bulk<->Bulk"
+    IMG_TO_BULK = "IMG<->Bulk"
+    SINGLE_CELL_TO_SINGLE_CELL = "Single Cell<->Single Cell"
+    SINGLE_CELL_TO_IMG = "Single Cell<->IMG"
+    IMG_TO_IMG = "IMG<->IMG"
+
+
+class ConfigValidationError(Exception):
+    pass
+
+
+class DataInfo(BaseModel):
+    # general -------------------------------------
+    file_path: str
+    data_type: Literal["NUMERIC", "CATEGORICAL", "IMG", "ANNOTATION"] = Field(
+        default="NUMERIC"
+    )
+    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "NONE"] = Field(default="STANDARD")
+    filtering: Literal["VAR", "MAD", "CORR", "VARCORR", "NOFILT", "NONZEROVAR"] = Field(
+        default="VAR"
+    )
+    k_filter: Union[int, None] = Field(
+        default=None, description="Number of top genes to keep"
+    )
+    sep: Union[str, None] = Field(default=None)  # for pandas read_csv
+    extra_anno_file: Union[str, None] = Field(default=None)
+
+    # single cell specific -------------------------
+    is_single_cell: bool = Field(default=False)
+
+    min_cells: float = Field(
+        default=0.05,
+        ge=0,
+        le=1,
+        description="Minimum fraction of cells a gene must be expressed in to be kept. Genes expressed in fewer cells will be filtered out.",
+    )  # Controls gene filtering based on expression prevalence
+
+    min_genes: float = Field(
+        default=0.01,
+        ge=0,
+        le=1,
+        description="Minimum fraction of genes a cell must express to be kept. Cells expressing fewer genes will be filtered out.",
+    )  # Controls cell quality filtering
+    selected_layers: List[str] = Field(default=["X"])
+    is_X: bool = Field(default=False)  # only for single cell data
+    normalize_counts: bool = Field(
+        default=True, description="Whether to normalize by total counts"
+    )
+    log_transform: bool = Field(
+        default=True, description="Whether to apply log1p transformation"
+    )
+    # image specific ------------------------------
+
+    img_root: Union[str, None] = Field(default=None)
+    img_width_resize: Union[int, None] = Field(default=None)
+    img_height_resize: Union[int, None] = Field(default=None)
+    # annotation specific -------------------------
+    # xmodalix specific -------------------------
+    translate_direction: Union[Literal["from", "to"], None] = Field(default=None)
+
+
+class DataConfig(BaseModel):
+    data_info: Dict[str, DataInfo]
+    require_common_cells: Optional[bool] = Field(default=False)
+    annotation_columns: Optional[List[str]] = Field(default=None)
+
+
 # write tests: done
 class DefaultConfig(BaseModel):
     """
@@ -23,6 +94,17 @@ class DefaultConfig(BaseModel):
 
     """
 
+    # Datasets configuration --------------------------------------------------
+    data_config: DataConfig = DataConfig(data_info={})
+    paired_translation: Union[bool, None] = Field(
+        default_factory=lambda: None,
+        description="Indicator if the samples for the xmodalix are paired, based on some sample id",
+    )
+
+    data_case: Union[DataCase, None] = Field(
+        default_factory=lambda: None,
+        description="Data case for the model, will be determined automatically",
+    )
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(
         default=16, ge=1, description="Dimension of the latent space"
@@ -120,6 +202,136 @@ class DefaultConfig(BaseModel):
     )
     global_seed: int = Field(default=1, ge=0, description="Global random seed")
 
+    ##### VALIDATION ##### -----------------------------------------------------
+    ##### ----------------- -----------------------------------------------------
+    @field_validator("data_config")
+    @classmethod
+    def validate_data_config(cls, data_config: DataConfig):
+        """Main validation logic for dataset consistency and translation."""
+        data_info = data_config.data_info
+
+        numeric_count = sum(
+            1 for info in data_info.values() if info.data_type == "NUMERIC"
+        )
+        img_count = sum(1 for info in data_info.values() if info.data_type == "IMG")
+
+        if numeric_count == 0 and img_count == 0:
+            raise ConfigValidationError("At least one NUMERIC dataset is required.")
+
+        numeric_datasets = [
+            info for info in data_info.values() if info.data_type == "NUMERIC"
+        ]
+        if numeric_datasets:
+            is_single_cell = numeric_datasets[0].is_single_cell
+            if any(info.is_single_cell != is_single_cell for info in numeric_datasets):
+                raise ConfigValidationError(
+                    "All numeric datasets must be either single cell or bulk."
+                )
+
+        from_dataset = next(
+            (
+                (name, info)
+                for name, info in data_info.items()
+                if info.translate_direction == "from"
+            ),
+            None,
+        )
+        to_dataset = next(
+            (
+                (name, info)
+                for name, info in data_info.items()
+                if info.translate_direction == "to"
+            ),
+            None,
+        )
+
+        if bool(from_dataset) != bool(to_dataset):
+            raise ConfigValidationError(
+                "Translation requires exactly one 'from' and one 'to' dataset."
+            )
+
+        if from_dataset and to_dataset:
+            from_info, to_info = from_dataset[1], to_dataset[1]
+            if from_info.data_type == "NUMERIC" and to_info.data_type == "NUMERIC":
+                if from_info.is_single_cell != to_info.is_single_cell:
+                    raise ConfigValidationError(
+                        "Cannot translate between single cell and bulk data."
+                    )
+
+        return data_config
+
+    @model_validator(mode="after")
+    def determine_case(self) -> "DefaultConfig":
+        """Assign the correct DataCase after model validation."""
+        data_info = self.data_config.data_info
+
+        # Handle empty data_info case
+        if not data_info:
+            return self
+
+        # Find 'from' and 'to' datasets
+        from_dataset = next(
+            (
+                (name, info)
+                for name, info in data_info.items()
+                if info.translate_direction == "from"
+            ),
+            None,
+        )
+        to_dataset = next(
+            (
+                (name, info)
+                for name, info in data_info.items()
+                if info.translate_direction == "to"
+            ),
+            None,
+        )
+
+        try:
+            if from_dataset and to_dataset:
+                from_info, to_info = from_dataset[1], to_dataset[1]
+                if from_info.data_type == "NUMERIC" and to_info.data_type == "NUMERIC":
+                    self.data_case = (
+                        DataCase.SINGLE_CELL_TO_SINGLE_CELL
+                        if from_info.is_single_cell
+                        else DataCase.BULK_TO_BULK
+                    )
+                elif "IMG" in {from_info.data_type, to_info.data_type}:
+                    numeric_dataset = (
+                        from_info if from_info.data_type == "NUMERIC" else to_info
+                    )
+                    # check for IMG_IMG
+                    if from_info.data_type == "IMG" and to_info.data_type == "IMG":
+                        self.data_case = DataCase.IMG_TO_IMG
+                    else:
+                        self.data_case = (
+                            DataCase.SINGLE_CELL_TO_IMG
+                            if numeric_dataset.is_single_cell
+                            else DataCase.IMG_TO_BULK
+                        )
+            else:
+                # Find any numeric dataset
+                numeric_datasets = [
+                    info for info in data_info.values() if info.data_type == "NUMERIC"
+                ]
+
+                if not numeric_datasets:
+                    raise ValueError("No numeric datasets found in data_info")
+
+                numeric_dataset = numeric_datasets[0]
+                self.data_case = (
+                    DataCase.MULTI_SINGLE_CELL
+                    if numeric_dataset.is_single_cell
+                    else DataCase.MULTI_BULK
+                )
+        except Exception as e:
+            # Log the error but don't fail validation
+            import warnings
+
+            warnings.warn(f"Could not determine data_case: {str(e)}")
+
+        return self
+
     @field_validator("test_ratio", "valid_ratio")
     def validate_ratios(cls, v, values):
         total = (
@@ -149,6 +361,10 @@ class DefaultConfig(BaseModel):
         if device == "mps" and v != "auto":
             raise ValueError("MPS backend only supports GPU strategy 'auto'")
 
+    #### END VALIDATION #### --------------------------------------------------
+
+    #### READIBILITY #### ------------------------------------------------------
+    #### ------------ #### ------------------------------------------------------
     @classmethod
     def get_params(cls) -> Dict[str, Dict[str, Any]]:
         """

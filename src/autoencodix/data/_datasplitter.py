@@ -1,8 +1,7 @@
 import itertools
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 
 import numpy as np
-import torch
 from sklearn.model_selection import train_test_split  # type: ignore
 
 from autoencodix.utils.default_config import DefaultConfig
@@ -83,7 +82,6 @@ class DataSplitter:
 
         """
         if not 0 <= self._test_ratio <= 1:
-
             raise ValueError(
                 f"Test ratio must be between 0 and 1, got {self._test_ratio}"
             )
@@ -183,13 +181,13 @@ class DataSplitter:
 
     def split(
         self,
-        X: Union[torch.Tensor, np.ndarray],
+        n_samples: int,
     ) -> Dict[str, np.ndarray]:
         """
         Split data into train, validation, and test sets.
 
         Parameters:
-            X: Input data to split (torch.Tensor or np.ndarray)
+            n_samples: Total number of samples in the dataset
 
         Returns:
             Dict[str, np.ndarray]: Dictionary containing indices for each split,
@@ -198,12 +196,11 @@ class DataSplitter:
         Raises:
             ValueError: If resulting splits would violate size constraints
         """
-        if isinstance(X, torch.Tensor):
-            X = X.numpy()
+        self._validate_split_sizes(n_samples)
+        indices = np.arange(n_samples)
 
         if self._custom_splits:
-            # check if indices are out of range
-            max_index = X.shape[0] - 1
+            max_index = n_samples - 1
             for split in self._custom_splits.values():
                 if len(split) > 0:
                     if np.max(split) > max_index:
@@ -215,10 +212,6 @@ class DataSplitter:
                             f"Custom split indices must be within range [0, {max_index}]"
                         )
             return self._custom_splits
-
-        n_samples = len(X)
-        self._validate_split_sizes(n_samples)
-        indices = np.arange(n_samples)
 
         # all three 0 case already handled in _validate_ratios (sum to 1)
         if self._test_ratio == 0 and self._valid_ratio == 0:
@@ -240,7 +233,6 @@ class DataSplitter:
                 "test": np.array([], dtype=int),
             }
 
-        # this case does not make to much sense, but maybe the user has some specific use case
         if self._train_ratio == 0:
             valid_indices, test_indices = train_test_split(
                 indices,

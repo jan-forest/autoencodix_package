@@ -1,25 +1,22 @@
-from dataclasses import dataclass, field
-from typing import Any, Optional, Dict, Union
-
 import os
+from dataclasses import field
+from typing import Any, Dict, Optional, Union
 
+import matplotlib.figure
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
-import matplotlib.figure
-import seaborn as sns
-from umap import UMAP
+import seaborn as sns  # type: ignore
 import torch
+from matplotlib import pyplot as plt
+from umap import UMAP  # type: ignore
 
-from autoencodix.utils._result import Result
 from autoencodix.base._base_visualizer import BaseVisualizer
-from autoencodix.utils.default_config import DefaultConfig
-
+from autoencodix.utils._result import Result
 from autoencodix.utils._utils import nested_dict, nested_to_tuple, show_figure
+from autoencodix.utils.default_config import DefaultConfig
 
 
 class Visualizer(BaseVisualizer):
-
     plots: Dict[str, Any] = field(
         default_factory=nested_dict
     )  ## Nested dictionary of plots as figure handles
@@ -31,8 +28,6 @@ class Visualizer(BaseVisualizer):
         self.plots[key] = elem
 
     def visualize(self, result: Result, config: DefaultConfig) -> Result:
-        # def visualize(self, result, config: DefaultConfig):
-
         ## Make Model Weights plot
         self.plots["ModelWeights"] = self.plot_model_weights(model=result.model)
 
@@ -41,18 +36,20 @@ class Visualizer(BaseVisualizer):
 
         ## Make plot loss absolute
         self.plots["loss_absolute"] = self.make_loss_plot(
-            df_plot=loss_df_melt, type="absolute"
+            df_plot=loss_df_melt, plot_type="absolute"
         )
         ## Make plot loss relative
         self.plots["loss_relative"] = self.make_loss_plot(
-            df_plot=loss_df_melt, type="relative"
+            df_plot=loss_df_melt, plot_type="relative"
         )
 
         return result
 
     ## Plotting methods ##
 
-    def save_plots(self, path: str, which: str = "all", format: str = "png") -> None:
+    def save_plots(
+        self, path: str, which: Union[str, list] = "all", format: str = "png"
+    ) -> None:
         """
         Save specified plots to the given path in the specified format.
 
@@ -69,7 +66,7 @@ class Visualizer(BaseVisualizer):
         Raises:
         ValueError: If the 'which' parameter is not a list or a string.
         """
-        if type(which) != list:
+        if not isinstance(which, list):
             ## Case when which is a string
             if which == "all":
                 ## Case when all plots are to be saved
@@ -111,7 +108,7 @@ class Visualizer(BaseVisualizer):
                         fullpath = os.path.join(path, filename)
                         fig.savefig(f"{fullpath}.{format}")
 
-    def show_loss(self, type: str = "absolute") -> None:
+    def show_loss(self, plot_type: str = "absolute") -> None:
         """
         Display the loss plot.
         Parameters:
@@ -122,7 +119,7 @@ class Visualizer(BaseVisualizer):
         Returns:
         None
         """
-        if type == "absolute":
+        if plot_type == "absolute":
             if "loss_absolute" not in self.plots.keys():
                 print("Absolute loss plot not found in the plots dictionary")
                 print("You need to run visualize() method first")
@@ -130,7 +127,7 @@ class Visualizer(BaseVisualizer):
                 fig = self.plots["loss_absolute"]
                 show_figure(fig)
                 plt.show()
-        if type == "relative":
+        if plot_type == "relative":
             if "relative_absolute" not in self.plots.keys():
                 print("Relative loss plot not found in the plots dictionary")
                 print("You need to run visualize() method first")
@@ -139,7 +136,7 @@ class Visualizer(BaseVisualizer):
                 show_figure(fig)
                 plt.show()
 
-        if type not in ["absolute", "relative"]:
+        if plot_type not in ["absolute", "relative"]:
             print(
                 "Type of loss plot not recognized. Please use 'absolute' or 'relative'"
             )
@@ -147,10 +144,10 @@ class Visualizer(BaseVisualizer):
     def show_latent_space(
         self,
         result: Result,
-        type: str = "2D-scatter",
+        plot_type: str = "2D-scatter",
         label_list: Optional[Union[list, None]] = None,
         param: str = "all",
-        epoch: Optional[Union[int, None]]  = None,
+        epoch: Optional[Union[int, None]] = None,
         split: str = "all",
     ) -> None:
         """
@@ -175,7 +172,7 @@ class Visualizer(BaseVisualizer):
         --------
         None
         """
-        if type == "2D-scatter":
+        if plot_type == "2D-scatter":
             # Set Defaults
             if epoch is None:
                 # Infer total epochs from losses
@@ -227,7 +224,7 @@ class Visualizer(BaseVisualizer):
             show_figure(fig)
             plt.show()
 
-        if type == "Ridgeline":
+        if plot_type == "Ridgeline":
             if epoch is None:
                 # Infer total epochs from losses
                 epoch = len(result.losses.get()) - 1
@@ -267,7 +264,7 @@ class Visualizer(BaseVisualizer):
             show_figure(fig)
             plt.show()
 
-        if type == "Coverage-Correlation":
+        if plot_type == "Coverage-Correlation":
             ## TODO
             print("Not implemented yet, empty figure will be shown instead")
             fig = plt.figure()
@@ -307,40 +304,40 @@ class Visualizer(BaseVisualizer):
         names = []
         for name, param in model.named_parameters():
             if "weight" in name and len(param.shape) == 2:
-                if not "var" in name:  ## For VAE plot only mu weights
+                if "var" not in name:  ## For VAE plot only mu weights
                     all_weights.append(param.detach().cpu().numpy())
                     names.append(name[:-7])
 
         layers = int(len(all_weights) / 2)
         fig, axes = plt.subplots(2, layers, sharex=False, figsize=(20, 10))
 
-        for l in range(layers):
+        for layer in range(layers):
             ## Encoder Layer
             if layers > 1:
                 sns.heatmap(
-                    all_weights[l],
+                    all_weights[layer],
                     cmap=sns.color_palette("Spectral", as_cmap=True),
-                    ax=axes[0, l],
-                ).set(title=names[l])
+                    ax=axes[0, layer],
+                ).set(title=names[layer])
                 ## Decoder Layer
                 sns.heatmap(
-                    all_weights[layers + l],
+                    all_weights[layers + layer],
                     cmap=sns.color_palette("Spectral", as_cmap=True),
-                    ax=axes[1, l],
-                ).set(title=names[layers + l])
-                axes[1, l].set_xlabel("In Node", size=12)
+                    ax=axes[1, layer],
+                ).set(title=names[layers + layer])
+                axes[1, layer].set_xlabel("In Node", size=12)
             else:
                 sns.heatmap(
-                    all_weights[l],
+                    all_weights[layer],
                     cmap=sns.color_palette("Spectral", as_cmap=True),
-                    ax=axes[l],
-                ).set(title=names[l])
+                    ax=axes[layer],
+                ).set(title=names[layer])
                 ## Decoder Layer
                 sns.heatmap(
-                    all_weights[l + 2],
+                    all_weights[layer + 2],
                     cmap=sns.color_palette("Spectral", as_cmap=True),
-                    ax=axes[l + 1],
-                ).set(title=names[l + 2])
+                    ax=axes[layer + 1],
+                ).set(title=names[layer + 2])
                 axes[1].set_xlabel("In Node", size=12)
 
         if layers > 1:
@@ -390,14 +387,16 @@ class Visualizer(BaseVisualizer):
         """
 
         numeric = False
-        if not (type(labels[0]) is str):
+        if not isinstance(labels[0], str):
             if len(np.unique(labels)) > 3:
                 if not plot_numeric:
                     print(
-                        f"The provided label column is numeric and converted to categories."
+                        "The provided label column is numeric and converted to categories."
                     )
                     labels = pd.qcut(
-                        x=pd.Series(labels), q=4, labels=["1stQ", "2ndQ", "3rdQ", "4thQ"]
+                        x=pd.Series(labels),
+                        q=4,
+                        labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
                     ).astype(str)
                 else:
                     center = False  ## Disable centering for numeric params
@@ -456,13 +455,13 @@ class Visualizer(BaseVisualizer):
                 ax=ax2,
             )
 
-        if not xlim == None:
+        if xlim is not None:
             ax2.set_xlim(xlim[0], xlim[1])
 
-        if not ylim == None:
+        if ylim is not None:
             ax2.set_ylim(ylim[0], ylim[1])
 
-        if not scale == None:
+        if scale is not None:
             plt.yscale(scale)
             plt.xscale(scale)
         ax2.set_xlabel("Dim 1")
@@ -493,7 +492,8 @@ class Visualizer(BaseVisualizer):
     def plot_latent_ridge(
         lat_space: pd.DataFrame,
         label_list: Optional[Union[list, None]] = None,
-        param: Optional[Union[str, None]]=None) -> sns.FacetGrid:
+        param: Optional[Union[str, None]] = None,
+    ) -> sns.FacetGrid:
         """
         Creates a ridge line plot of latent space dimension where each row shows the density of a latent dimension and groups (ridges).
         ARGS:
@@ -515,14 +515,17 @@ class Visualizer(BaseVisualizer):
             label_list = ["all"] * len(df)
 
         # print(labels[0])
-        if not (type(label_list[0]) is str):
+        if not isinstance(label_list[0], str):
             if len(np.unique(label_list)) > 3:
                 label_list = pd.qcut(
-                    x=pd.Series(label_list), q=4, labels=["1stQ", "2ndQ", "3rdQ", "4thQ"]
+                    x=pd.Series(label_list),
+                    q=4,
+                    labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
                 ).astype(str)
             else:
                 label_list = [str(x) for x in label_list]
-        df[param] = len(lat_space.columns) * label_list
+
+        df[param] = len(lat_space.columns) * label_list  # type: ignore
 
         exclude_missing_info = (df[param] == "unknown") | (df[param] == "nan")
 
@@ -595,7 +598,9 @@ class Visualizer(BaseVisualizer):
         plt.close()
         return g
 
-    def make_loss_plot(self, df_plot: pd.DataFrame, type: str) -> matplotlib.figure.Figure:
+    def make_loss_plot(
+        self, df_plot: pd.DataFrame, plot_type: str
+    ) -> matplotlib.figure.Figure:
         """
         Generates a plot for visualizing loss values from a DataFrame.
 
@@ -618,7 +623,7 @@ class Visualizer(BaseVisualizer):
         matplotlib.figure.Figure
             The generated matplotlib figure containing the loss plots.
         """
-        if type == "absolute":
+        if plot_type == "absolute":
             fig, axes = plt.subplots(
                 1, len(df_plot["Loss Term"].unique()), figsize=(15, 5), sharey=False
             )
@@ -635,7 +640,7 @@ class Visualizer(BaseVisualizer):
 
             plt.close()
 
-        if type == "relative":
+        if plot_type == "relative":
             exclude = df_plot["Loss Term"] != "total_loss"
 
             fig, axes = plt.subplots(1, 2, figsize=(15, 5), sharey=True)
@@ -659,34 +664,32 @@ class Visualizer(BaseVisualizer):
         return fig
 
     def make_loss_format(self, result: Result, config: DefaultConfig) -> pd.DataFrame:
-        """
-        Formats the loss results into a pandas DataFrame for visualization.
-
-        Args:
-            result (Result): An object containing the loss results and sub-losses.
-            config (DefaultConfig): Configuration object containing parameters such as beta for weighting.
-
-        Returns:
-            pd.DataFrame: A DataFrame containing the formatted loss values with columns:
-                          - 'Epoch': The epoch number.
-                          - 'Loss Term': The type of loss (e.g., 'var_loss', 'total_loss').
-                          - 'Split': The data split (e.g., 'train', 'validation').
-                          - 'Loss Value': The value of the loss.
-        """
         loss_df_melt = pd.DataFrame()
-
         for term in result.sub_losses.keys():
-            loss_df = pd.DataFrame.from_dict(
-                result.sub_losses.get(key=term).get(), orient="index"
-            )
-            ## Make weighting of loss terms
+            # Get the loss values and ensure it's a dictionary
+            loss_values = result.sub_losses.get(key=term).get()
+
+            # Add explicit type checking/conversion
+            if not isinstance(loss_values, dict):
+                # If it's not a dict, try to convert it or handle appropriately
+                if hasattr(loss_values, "to_dict"):
+                    loss_values = loss_values.to_dict()
+                else:
+                    # For non-convertible types, you might need a custom solution
+                    # For numpy arrays, you could do something like:
+                    if hasattr(loss_values, "shape"):
+                        # For numpy arrays, create a dict with indices as keys
+                        loss_values = {i: val for i, val in enumerate(loss_values)}
+
+            # Now create the DataFrame
+            loss_df = pd.DataFrame.from_dict(loss_values, orient="index") # type: ignore
+
+            # Rest of your code remains the same
             if term == "var_loss":
                 loss_df = loss_df * config.beta
-
             loss_df["Epoch"] = loss_df.index + 1
             loss_df["Loss Term"] = term
 
-            # print(loss_df)
             loss_df_melt = pd.concat(
                 [
                     loss_df_melt,
@@ -699,9 +702,19 @@ class Visualizer(BaseVisualizer):
                 axis=0,
             ).reset_index(drop=True)
 
-        loss_df = pd.DataFrame.from_dict(result.losses.get(), orient="index")
+        # Similar handling for the total losses
+        loss_values = result.losses.get()
+        if not isinstance(loss_values, dict):
+            if hasattr(loss_values, "to_dict"):
+                loss_values = loss_values.to_dict()
+            else:
+                if hasattr(loss_values, "shape"):
+                    loss_values = {i: val for i, val in enumerate(loss_values)}
+
+        loss_df = pd.DataFrame.from_dict(loss_values, orient="index") # type: ignore
         loss_df["Epoch"] = loss_df.index + 1
         loss_df["Loss Term"] = "total_loss"
+
         loss_df_melt = pd.concat(
             [
                 loss_df_melt,
@@ -715,5 +728,4 @@ class Visualizer(BaseVisualizer):
         ).reset_index(drop=True)
 
         loss_df_melt["Loss Value"] = loss_df_melt["Loss Value"].astype(float)
-
         return loss_df_melt

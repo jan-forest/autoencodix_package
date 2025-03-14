@@ -4,7 +4,7 @@ from typing import Optional, Union, Dict, Type
 import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset
-from anndata import AnnData # type: ignore
+from anndata import AnnData  # type: ignore
 from ._base_dataset import BaseDataset
 from ._base_autoencoder import BaseAutoencoder
 from ._base_trainer import BaseTrainer
@@ -347,7 +347,7 @@ class BasePipeline(abc.ABC):
         Populates the self.result attribute with the inference results.
 
         Parameters:
-            data: 
+            data:
                 User input data to run inference as DatasetContainer, we will use the test split here.
             config: DefaultConfig, optional (default: None)
                 allows to pass a custom configuration for the prediction step.
@@ -411,10 +411,7 @@ class BasePipeline(abc.ABC):
         if self._visualizer is None:
             raise NotImplementedError("Visualizer not initialized")
 
-        self._visualizer.visualize(self.result)
-
         self._visualizer.visualize(result=self.result, config=self.config)
-
 
     def show_result(self) -> None:
         print("Make plots")

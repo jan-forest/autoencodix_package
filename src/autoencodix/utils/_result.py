@@ -4,7 +4,6 @@ from typing import Any, Optional, Dict
 import torch
 
 from autoencodix.data import DatasetContainer
-
 from ._traindynamics import TrainingDynamics
 
 
@@ -106,6 +105,9 @@ class Result:
     datasets: Optional[DatasetContainer] = field(
         default_factory=lambda: DatasetContainer(train=None, valid=None, test=None)
     )
+    # plots: Dict[str, Any] = field(
+    #     default_factory=nested_dict
+    # )  ## Nested dictionary of plots as figure handles
 
     def __getitem__(self, key: str) -> Any:
         """

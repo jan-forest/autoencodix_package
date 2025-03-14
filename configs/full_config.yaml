@@ -1,0 +1,43 @@
+data_config:
+  data_info:
+   RNA:
+     file_path: "data/raw/mini/bulk/rna_sample_data.csv"
+     sep: ","
+   METHYLATION:
+     file_path: "data/raw/mini/bulk/meth_sample_data.tsv"
+     sep: "\t"
+   CLINICAL:
+     file_path: "data/raw/mini/bulk/clinical_sample_data.parquet"
+     data_type: "ANNOTATION"
+data_case: null  # Will be determined automatically
+
+latent_dim: 16  # >=1
+n_layers: 3  # >=0
+enc_factor: 4  # >=1
+input_dim: 10000  # >=1
+drop_p: 0.1  # Range: 0.0 to 1.0
+
+learning_rate: 0.001  # >0
+batch_size: 32  # >=1
+epochs: 3  # >=1
+weight_decay: 0.01  # >=0
+reconstruction_loss: "mse"  # Allowed: "mse", "bce"
+default_vae_loss: "kl"  # Allowed: "kl", "mmd"
+loss_reduction: "mean"  # Allowed: "sum", "mean"
+beta: 0.1  # >=0
+min_samples_per_split: 1  # >=1
+
+device: "auto"  # Allowed: "cpu", "cuda", "gpu", "tpu", "mps", "auto"
+n_gpus: 1  # >=1
+n_workers: 2  # >=0
+checkpoint_interval: 1  # >=1
+float_precision: "32"  # Allowed values per config
+gpu_strategy: "auto"  # Allowed values per config
+
+train_ratio: 0.7  # Range: 0 to 1
+test_ratio: 0.2  # Range: 0 to 1
+valid_ratio: 0.1  # Range: 0 to 1
+
+reproducible: true
+global_seed: 1  # >=0
+

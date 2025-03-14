@@ -1,0 +1,13 @@
+data_config:
+  data_info:
+   IMG:
+     file_path: "data/raw/mini/img"
+     is_single_cell: false
+     translate_direction: "from"
+   IMG:
+     file_path: "data/raw/mini/img/"
+     is_single_cell: false
+     translate_direction: "to"
+   MAPPING:
+     file_path: "data/raw/mini/tcga_mappings"
+     data_type: "ANNOTATION"

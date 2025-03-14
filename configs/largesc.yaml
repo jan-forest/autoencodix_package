@@ -1,0 +1,21 @@
+data_config:
+ data_info:
+   RNA:
+     file_path: "data/raw/Sc-1-mini.h5ad"
+     is_single_cell: true
+     min_cells: 0.15
+     min_genes: 0.10
+     is_X: true
+     k_filter: 100
+     selected_layers:
+       - "X"
+       - "log_X"
+       - "log2_X"
+   METH:
+     file_path: "data/raw/Sc-2-mini.h5ad"
+     is_single_cell: true
+     min_cells: 0.01
+     selected_layers:
+       - "X"
+       - "log_X"
+

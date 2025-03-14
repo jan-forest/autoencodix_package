@@ -131,7 +131,7 @@ class GeneralTrainer(BaseTrainer):
                     if self._validset:
                         self._capture_dynamics(
                             epoch=epoch,
-                            model_outputs=valid_model_outputs,
+                            model_outputs=valid_outputs,
                             split="valid",
                         )
 

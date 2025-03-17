@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Union, Any, Iterator, Tuple, Callable, TypeVar
+from typing import Dict, List, Optional, Union, Any, Iterator, Tuple, TypeVar
 
 import pandas as pd
 from anndata import AnnData  # type: ignore
@@ -182,7 +182,7 @@ class DataPackage:
         """
         Recursively process dictionary to extract shapes of contained data objects.
 
-        Args:
+        Parameters:
             data_dict: Dictionary containing data objects
 
         Returns:
@@ -213,7 +213,7 @@ class DataPackage:
         """
         Get the first key for a specific direction's modality.
 
-        Args:
+        Parameters:
             direction: Either 'from' or 'to'
 
         Returns:

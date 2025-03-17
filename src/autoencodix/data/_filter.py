@@ -53,7 +53,7 @@ class DataFilter:
     def __init__(self, df: pd.DataFrame, data_info: DataInfo):
         """Initialize the DataFilter with a dataframe and configuration.
 
-        Args:
+        Parameters:
             df (pd.DataFrame): Input dataframe to be filtered.
             data_info (DataInfo): Configuration object containing filtering parameters.
         """
@@ -104,7 +104,7 @@ class DataFilter:
     def _filter_nonzero_variance(df: pd.DataFrame) -> pd.DataFrame:
         """Remove features with zero variance.
 
-        Args:
+        Parameters:
             df (pd.DataFrame): Input dataframe.
 
         Returns:
@@ -117,7 +117,7 @@ class DataFilter:
     def _filter_by_variance(df: pd.DataFrame, k: Optional[int]) -> pd.DataFrame:
         """Keep top k features by variance.
 
-        Args:
+        Parameters:
             df (pd.DataFrame): Input dataframe.
             k (Optional[int]): Number of top variance features to keep. If None or greater
                               than number of columns, all features are kept.
@@ -134,7 +134,7 @@ class DataFilter:
     def _filter_by_mad(df: pd.DataFrame, k: Optional[int]) -> pd.DataFrame:
         """Keep top k features by median absolute deviation.
 
-        Args:
+        Parameters:
             df (pd.DataFrame): Input dataframe.
             k (Optional[int]): Number of top MAD features to keep. If None or greater
                               than number of columns, all features are kept.
@@ -152,7 +152,7 @@ class DataFilter:
     ) -> pd.DataFrame:
         """Filter features using correlation-based clustering.
 
-        Args:
+        Parameters:
             df (pd.DataFrame): Input dataframe.
             k (Optional[int]): Number of clusters to create. If None or greater
                               than number of columns, all features are kept.
@@ -175,7 +175,7 @@ class DataFilter:
         This method clusters features based on their correlation distance and
         selects a representative feature (medoid) from each cluster.
 
-        Args:
+        Parameters:
             df (pd.DataFrame): Input dataframe.
             k (Optional[int]): Number of clusters to create. If None or greater
                               than number of columns, all features are kept.
@@ -216,7 +216,7 @@ class DataFilter:
     def _scale_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """Scale data using the specified method in data_info.
 
-        Args:
+        Parameters:
             df (pd.DataFrame): Input dataframe to be scaled.
 
         Returns:
@@ -267,7 +267,7 @@ class DataFilter:
     def scale(self, df: pd.DataFrame) -> pd.DataFrame:
         """Apply the configured scaling method to the dataframe.
 
-        Args:
+        Parameters:
             df (pd.DataFrame): Input dataframe to be scaled.
 
         Returns:

@@ -112,7 +112,7 @@ class Visualizer(BaseVisualizer):
         """
         Display the loss plot.
         Parameters:
-        type (str): The type of loss plot to display.
+        plot_type (str): The type of loss plot to display.
                     Options are "absolute" for the absolute loss plot and
                     "relative" for the relative loss plot.
                     Defaults to "absolute".
@@ -157,7 +157,7 @@ class Visualizer(BaseVisualizer):
         -----------
         result : Result
             The result object containing latent spaces and losses.
-        type : str, optional
+        plot_type : str, optional
             The type of plot to generate. Options are "2D-scatter", "Ridgeline", and "Coverage-Correlation". Default is "2D-scatter".
         label_list : list, optional
             List of labels for the data points in the latent space. Default is None.
@@ -613,7 +613,7 @@ class Visualizer(BaseVisualizer):
             - "Loss Value": The value of the loss.
             - "Split": The data split (e.g., "train", "validation").
 
-        type : str
+        plot_type : str
             The type of plot to generate. It can be either "absolute" or "relative".
             - "absolute": Generates a line plot for each unique loss term.
             - "relative": Generates a density plot for each data split, excluding the "total_loss" term.

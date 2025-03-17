@@ -2,9 +2,7 @@ import abc
 from typing import Optional, Union, Dict, Type
 
 import numpy as np
-import pandas as pd
 from torch.utils.data import Dataset
-from anndata import AnnData  # type: ignore
 from ._base_dataset import BaseDataset
 from ._base_autoencoder import BaseAutoencoder
 from ._base_trainer import BaseTrainer
@@ -13,15 +11,11 @@ from ._base_preprocessor import BasePreprocessor
 from ._base_loss import BaseLoss
 from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.data._datasetcontainer import DatasetContainer
+from autoencodix.data._datapackage import DataPackage
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._utils import config_method
-
-from autoencodix.utils._utils import show_figure
-
-import matplotlib.pyplot as plt
-from matplotlib import _pylab_helpers
 
 
 # tests: done
@@ -40,9 +34,11 @@ class BasePipeline(abc.ABC):
     config : DefaultConfig
         The configuration for the pipeline. Handles preprocessing, training, and
         other settings.
-    processed_data : Optional[DatasetContainer]
-        User input data, only used is used over datapaths defined in config, normal workflow is to set this None
-        and pass data information via config.
+    preprocessed_data : Optional[DatasetContainer]
+            User data if no datafiles in the config are provided. We expect these to be split and processed.
+    raw_user_data : Optional[DataPackage]
+        We give users the option to populate a DataPacke with raw data i.e. pd.DataFrames, MuData.
+        We will process this data as we would do wit raw files specified in the config.
     data_splitter : Optional[DataSplitter]
         Returns train, validation, and test indices; users can provide a custom splitter.
     result : Result
@@ -78,6 +74,7 @@ class BasePipeline(abc.ABC):
         Allows users to provide a custom data split for training, validation, and testing.
     _data_splitter : DataSplitter
         The instance of the DataSplitter used for dividing data into training, validation, and testing sets.
+
 
     Methods
     -------
@@ -115,6 +112,7 @@ class BasePipeline(abc.ABC):
         evaluator: Evaluator,
         result: Result,
         processed_data: Optional[DatasetContainer],
+        raw_user_data: Optional[DataPackage],
         config: DefaultConfig = DefaultConfig(),
         custom_split: Optional[Dict[str, np.ndarray]] = None,
         **kwargs: dict,
@@ -127,18 +125,23 @@ class BasePipeline(abc.ABC):
         config : DefaultConfig, optional
             The configuration dictionary for the model.
         """
-        if not isinstance(processed_data, (np.ndarray, AnnData, pd.DataFrame)):
+        if processed_data is not None and not isinstance(processed_data, DatasetContainer):
             raise TypeError(
-                f"Expected data type to be one of np.ndarray, AnnData, or pd.DataFrame, got {type(processed_data)}."
-            )
+                        f"Expected data type to be DatasetContainer, got {type(processed_data)}."
+                    )
+
 
         self.preprocessed_data: DatasetContainer = processed_data
+        self.raw_user_data: DataPackage = raw_user_data
         self.config = config
         self._trainer_type = trainer_type
         self._model_type = model_type
         self._loss_type = loss_type
         self._preprocessor_type = preprocessor_type
-        self._preprocessor: Optional[BasePreprocessor] = None
+
+        self._preprocessor = self._preprocessor_type(
+            config=self.config,
+        )
         self._visualizer = visualizer
         self._dataset_type = dataset_type
         self._evaluator = evaluator
@@ -154,7 +157,12 @@ class BasePipeline(abc.ABC):
                 )
             self.config = config
 
-        self._datasets: Optional[DatasetContainer] = None
+        self._datasets: Optional[DatasetContainer] = (
+            processed_data  # None, or user input
+        )
+
+    def _validate_raw_user_data(self) -> None:
+        pass
 
     def _validate_user_data(self) -> None:
         """
@@ -163,10 +171,13 @@ class BasePipeline(abc.ABC):
         If the user passed preprocessed_data as dataset container, this function calls _validate_container().
         If the user only passed a config with data configuration, this function calls _validate_config_data().
         """
-        if self._datasets is not None:
-            self._validate_container()
+        if self.raw_user_data is None:
+            if self._datasets is not None:
+                self._validate_container()
+            else:
+                self._validate_config_data()
         else:
-            self._validate_config_data()
+            self._validate_raw_user_data()
 
     def _validate_container(self) -> None:
         """
@@ -273,11 +284,11 @@ class BasePipeline(abc.ABC):
             raise NotImplementedError("Preprocessor not initialized")
         self._validate_user_data()
         if self.preprocessed_data is None:
-            self._preprocessor = self._preprocessor_type(config=self.config)
-            self._datasets = self._preprocessor.preprocess()
+            self._datasets = self._preprocessor.preprocess(
+                raw_user_data=self.raw_user_data
+            )
             self.result.datasets = self._datasets
         else:
-            self._validate_user_data()
             self._datasets = self.preprocessed_data
             self.result.datasets = self.preprocessed_data
 
@@ -337,7 +348,7 @@ class BasePipeline(abc.ABC):
     @config_method(valid_params={"config"})
     def predict(
         self,
-        data: DatasetContainer,
+        data: DatasetContainer = DatasetContainer(),
         config: Optional[Union[None, DefaultConfig]] = None,
         **kwargs,
     ) -> None:
@@ -416,15 +427,13 @@ class BasePipeline(abc.ABC):
     def show_result(self) -> None:
         print("Make plots")
 
-        self._visualizer.show_loss(type="absolute")
+        self._visualizer.show_loss(plot_type="absolute")
 
-        self._visualizer.show_latent_space(result=self.result, type="Ridgeline")
+        self._visualizer.show_latent_space(result=self.result, plot_type="Ridgeline")
 
-        self._visualizer.show_latent_space(result=self.result, type="2D-scatter")
+        self._visualizer.show_latent_space(result=self.result, plot_type="2D-scatter")
 
-    def run(
-        self, data: Optional[Union[pd.DataFrame, np.ndarray, AnnData]] = None
-    ) -> Result:
+    def run(self, data: DatasetContainer = DatasetContainer()) -> Result:
         """
         Run the entire model pipeline (preprocess, fit, predict, evaluate, visualize).
         When predict step should be run on user input data, the data parameter should be provided.
@@ -432,7 +441,7 @@ class BasePipeline(abc.ABC):
         Populates the result attribute and returns it.
 
         Parameters:
-            data: Union[pd.DataFrame, np.ndarray, AnnData], optional (default: None)
+            data: Data
 
         Returns:
             Result:

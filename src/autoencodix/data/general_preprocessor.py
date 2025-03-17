@@ -1,12 +1,13 @@
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional
 import torch
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse # type: ignore
-import mudata as md # type: ignore
+from scipy.sparse import issparse  # type: ignore
+import mudata as md  # type: ignore
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data._datasetcontainer import DatasetContainer
+from autoencodix.data._datapackage import DataPackage
 from autoencodix.base._base_preprocessor import BasePreprocessor
 from autoencodix.utils.default_config import DefaultConfig
 
@@ -45,7 +46,7 @@ class GeneralPreprocessor(BasePreprocessor):
         """
         Initializes the GeneralPreprocessor with the given configuration.
 
-        Args:
+        Parameters:
             config (DefaultConfig): Configuration for the preprocessor.
         """
         super().__init__(config=config)
@@ -55,7 +56,7 @@ class GeneralPreprocessor(BasePreprocessor):
         """
         Extracts the primary data matrix (.X) from a modality and converts it to a dense array if sparse.
 
-        Args:
+        Parameters:
             modality_data (Any): The modality data (e.g., AnnData object).
 
         Returns:
@@ -66,7 +67,9 @@ class GeneralPreprocessor(BasePreprocessor):
             primary_data = primary_data.toarray()
         return primary_data
 
-    def _combine_layers(self, modality_name: str, modality_data: Any) -> List[np.ndarray]:
+    def _combine_layers(
+        self, modality_name: str, modality_data: Any
+    ) -> List[np.ndarray]:
         layer_list: List[np.ndarray] = []
         selected_layers = self.config.data_config.data_info[
             modality_name
@@ -93,7 +96,7 @@ class GeneralPreprocessor(BasePreprocessor):
         """
         Combines the primary data matrices (.X) and specified layers from all modalities in a MuData object.
 
-        Args:
+        Parameters:
             mudata (MuData): The MuData object containing multiple modalities.
 
         Returns:
@@ -120,7 +123,7 @@ class GeneralPreprocessor(BasePreprocessor):
         """
         Creates a NumericDataset from the given data and metadata.
 
-        Args:
+        Parameters:
             data (np.ndarray): The data matrix.
             config (Any): Configuration for the dataset.
             split_ids (np.ndarray): Indices for splitting the data.
@@ -143,12 +146,12 @@ class GeneralPreprocessor(BasePreprocessor):
         """
         Processes a data package based on its type (multi-bulk or multi-single-cell).
 
-        Args:
+        Parameters:
             data_dict (Dict[str, Any]): The data package containing data and metadata.
 
         Returns:
             BaseDataset: The created NumericDataset.
-        
+
         Raises:
             ValueError: If no data is found in the split.
         """
@@ -184,7 +187,7 @@ class GeneralPreprocessor(BasePreprocessor):
 
         raise ValueError("No data in the split")
 
-    def preprocess(self) -> DatasetContainer:
+    def preprocess(self, user_data: Optional[DataPackage] = None) -> DatasetContainer:
         """
         Executes the general preprocessing steps and returns the processed data package.
 
@@ -192,7 +195,7 @@ class GeneralPreprocessor(BasePreprocessor):
             Dict[str, Any]: The processed data package.
         """
 
-        self._datapackage = self._general_preprocess()
+        self._datapackage = self._general_preprocess(user_data=user_data)
         if self._datapackage is None:
             raise TypeError("Datapackage cannot be None")
         self._dataset_container = DatasetContainer()

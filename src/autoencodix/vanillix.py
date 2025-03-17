@@ -1,12 +1,11 @@
-from typing import Dict, Optional, Type, Union
+from typing import Dict, Optional, Type
 
 import numpy as np
-import pandas as pd
-from anndata import AnnData  # type: ignore
 
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_preprocessor import BasePreprocessor
 from autoencodix.base._base_loss import BaseLoss
+from autoencodix.data._datapackage import DataPackage
 from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.base._base_visualizer import BaseVisualizer
@@ -53,7 +52,8 @@ class Vanillix(BasePipeline):
 
     def __init__(
         self,
-        preprocessed_data: DatasetContainer,
+        preprocessed_data: Optional[DatasetContainer] = None,
+        raw_user_data: Optional[DataPackage] = None,
         trainer_type: Type[BaseTrainer] = GeneralTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
         model_type: Type[BaseAutoencoder] = VanillixArchitecture,
@@ -73,8 +73,11 @@ class Vanillix(BasePipeline):
 
         Parameters
         ----------
-        preprocessed_data : Union[np.ndarray, AnnData, pd.DataFrame, DatasetContainer]
-            Input data from the user or a DatasetContainer
+        preprocessed_data : Optional[DatasetContainer]
+            User data if no datafiles in the config are provided. We expect these to be split and processed.
+        raw_user_data : Optional[DataPackage]
+            We give users the option to populate a DataPacke with raw data i.e. pd.DataFrames, MuData.
+            We will process this data as we would do wit raw files specified in the config.
         trainer_type : Type[BaseTrainer]
             Type of trainer to be instantiated during fit step, default is GeneralTrainer
         dataset_type : Type[BaseDataset]
@@ -95,15 +98,10 @@ class Vanillix(BasePipeline):
         config : Optional[DefaultConfig]
             Configuration for all pipeline components
         """
-        if isinstance(preprocessed_data, DatasetContainer):
-            data_container = preprocessed_data
-        else:
-            data_container = DatasetContainer(
-                train=preprocessed_data.train, valid=None, test=None
-            )
 
         super().__init__(
-            processed_data=data_container,
+            processed_data=preprocessed_data,
+            raw_user_data=raw_user_data,
             dataset_type=dataset_type,
             trainer_type=trainer_type,
             model_type=model_type,

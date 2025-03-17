@@ -31,7 +31,7 @@ def nested_to_tuple(d, base=()):
     """
     Recursively converts a nested dictionary into tuples.
 
-    Args:
+    Parameters:
         d (dict): The dictionary to convert.
         base (tuple, optional): The base tuple to start with. Defaults to ().
 

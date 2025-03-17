@@ -62,7 +62,7 @@ class BaseLoss(nn.Module, ABC):
     ) -> torch.Tensor:
         """Compute Maximum Mean Discrepancy loss.
 
-        Args:
+        Parameters:
             z: Samples from the encoded distribution
             true_samples: Samples from the prior distribution (if None, generates from standard normal)
         """

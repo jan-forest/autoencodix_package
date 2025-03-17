@@ -1,8 +1,6 @@
-from typing import Dict, Optional, Type, Union
+from typing import Dict, Optional, Type
 import torch
 import numpy as np
-import pandas as pd
-from anndata import AnnData  # type: ignore
 
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_loss import BaseLoss
@@ -13,6 +11,7 @@ from autoencodix.base._base_preprocessor import BasePreprocessor
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
+from autoencodix.data._datapackage import DataPackage
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.general_preprocessor import GeneralPreprocessor
 from autoencodix.evaluate.evaluate import Evaluator
@@ -31,8 +30,11 @@ class Varix(BasePipeline):
 
     Attributes
     ----------
-    preprocessed_data : DatasetContainer
-        User data if no datafiles in the config are provided. We expect these to be processed.
+    preprocessed_data : Optional[DatasetContainer]
+        User data if no datafiles in the config are provided. We expect these to be split and processed.
+    raw_user_data : Optional[DataPackage]
+        We give users the option to populate a DataPacke with raw data i.e. pd.DataFrames, MuData.
+        We will process this data as we would do wit raw files specified in the config.
     config : Optional[Union[None, DefaultConfig]]
         Configuration object containing customizations for the pipeline
     _preprocessor : Preprocessor
@@ -61,7 +63,8 @@ class Varix(BasePipeline):
 
     def __init__(
         self,
-        preprocessed_data: DatasetContainer,
+        preprocessed_data: Optional[DatasetContainer] = None,
+        raw_user_data: Optional[DataPackage] = None,
         trainer_type: Type[BaseTrainer] = GeneralTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
@@ -107,9 +110,7 @@ class Varix(BasePipeline):
             data_container = preprocessed_data
         else:
             data_container = DatasetContainer(
-                train=preprocessed_data.train,
-                valid=None,
-                test=None
+                train=preprocessed_data.train, valid=None, test=None
             )
 
         super().__init__(
@@ -137,7 +138,7 @@ class Varix(BasePipeline):
             z: torch.Tensor - The sampled latent space points
 
         """
-        if not hasattr(self, '_trainer') or self._trainer is None:
+        if not hasattr(self, "_trainer") or self._trainer is None:
             raise ValueError("Model is not trained yet. Please train the model first.")
         if self.result.mus is None or self.result.sigmas is None:
             raise ValueError("Model has not learned the latent space distribution yet.")

@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, Union, Dict, Type
+from typing import Optional, Union, Dict, Type, Any
 
 import numpy as np
 from torch.utils.data import Dataset
@@ -14,7 +14,7 @@ from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datapackage import DataPackage
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.utils.default_config import DefaultConfig, DataInfo
 from autoencodix.utils._utils import config_method
 
 
@@ -125,11 +125,12 @@ class BasePipeline(abc.ABC):
         config : DefaultConfig, optional
             The configuration dictionary for the model.
         """
-        if processed_data is not None and not isinstance(processed_data, DatasetContainer):
+        if processed_data is not None and not isinstance(
+            processed_data, DatasetContainer
+        ):
             raise TypeError(
-                        f"Expected data type to be DatasetContainer, got {type(processed_data)}."
-                    )
-
+                f"Expected data type to be DatasetContainer, got {type(processed_data)}."
+            )
 
         self.preprocessed_data: DatasetContainer = processed_data
         self.raw_user_data: DataPackage = raw_user_data
@@ -160,9 +161,22 @@ class BasePipeline(abc.ABC):
         self._datasets: Optional[DatasetContainer] = (
             processed_data  # None, or user input
         )
+        if self.raw_user_data is not None:
+            self._fill_data_info()
 
     def _validate_raw_user_data(self) -> None:
         pass
+
+    def _fill_data_info(self):
+        all_keys = []
+        for k in self.raw_user_data.__annotations__:
+            attr_value = getattr(self.raw_user_data, k)
+            all_keys.append(k)
+            if isinstance(attr_value, dict):
+                all_keys.extend(attr_value.keys())
+        for k in all_keys:
+            if self.config.data_config.data_info.get(k) is None:
+                self.config.data_config.data_info[k] = DataInfo()
 
     def _validate_user_data(self) -> None:
         """
@@ -172,12 +186,13 @@ class BasePipeline(abc.ABC):
         If the user only passed a config with data configuration, this function calls _validate_config_data().
         """
         if self.raw_user_data is None:
-            if self._datasets is not None:
+            if self._datasets is not None:  # case when user passes preprocessed data
                 self._validate_container()
-            else:
+            else:  # user passes data via config
                 self._validate_config_data()
         else:
             self._validate_raw_user_data()
+            # self._fill_data_info()
 
     def _validate_container(self) -> None:
         """
@@ -260,7 +275,7 @@ class BasePipeline(abc.ABC):
                     "When working with non-single-cell data, an annotation file must be provided."
                 )
 
-    @config_method(valid_params={"config"})
+    @config_method(valid_params={"config"})  # TODO allow more config params
     def preprocess(
         self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs: dict
     ) -> None:
@@ -348,7 +363,7 @@ class BasePipeline(abc.ABC):
     @config_method(valid_params={"config"})
     def predict(
         self,
-        data: DatasetContainer = DatasetContainer(),
+        data: Optional[Union[DatasetContainer, DataPackage]] = None,
         config: Optional[Union[None, DefaultConfig]] = None,
         **kwargs,
     ) -> None:
@@ -376,25 +391,33 @@ class BasePipeline(abc.ABC):
         """
         if self._preprocessor is None:  # type ignore
             raise NotImplementedError("Preprocessor not initialized")
-        if self._datasets is None:
-            raise NotImplementedError(
-                "Datasets not built. Please run the fit method first."
-            )
         if self.result.model is None:
             raise NotImplementedError(
                 "Model not trained. Please run the fit method first"
             )
 
-        if data.test is not None:
-            predictor_results = self._trainer.predict(
-                data=data.test, model=self.result.model
-            )
-        else:
+        if data is None:
             if self._datasets.test is None:
                 raise ValueError("No test data available for prediction")
-            predictor_results = self._trainer.predict(
-                data=self._datasets.test, model=self.result.model
+            predict_data: DatasetContainer = self._datasets
+        elif isinstance(data, DataPackage):
+            predict_data: DatasetContainer = self._preprocessor.preprocess(
+                raw_user_data=data, predict_new_data=True
             )
+        elif isinstance(data, DatasetContainer):
+            predict_data = data
+        else:
+            raise ValueError(f"Unsupported data type: {type(data)}")
+
+        if predict_data.test is None:
+            raise ValueError(
+                f"The data for prediction need to be a DatasetContainer with a test attribute, got: {predict_data}"
+            )
+
+        predictor_results = self._trainer.predict(
+            data=predict_data.test, model=self.result.model
+        )
+
         self.result.update(predictor_results)
 
     @config_method(valid_params={"config"})
@@ -433,7 +456,9 @@ class BasePipeline(abc.ABC):
 
         self._visualizer.show_latent_space(result=self.result, plot_type="2D-scatter")
 
-    def run(self, data: DatasetContainer = DatasetContainer()) -> Result:
+    def run(
+        self, data: Optional[Union[DatasetContainer, DataPackage]] = None
+    ) -> Result:
         """
         Run the entire model pipeline (preprocess, fit, predict, evaluate, visualize).
         When predict step should be run on user input data, the data parameter should be provided.

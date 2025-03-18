@@ -187,7 +187,11 @@ class GeneralPreprocessor(BasePreprocessor):
 
         raise ValueError("No data in the split")
 
-    def preprocess(self, user_data: Optional[DataPackage] = None) -> DatasetContainer:
+    def preprocess(
+        self,
+        raw_user_data: Optional[DataPackage] = None,
+        predict_new_data: bool = False,
+    ) -> DatasetContainer:
         """
         Executes the general preprocessing steps and returns the processed data package.
 
@@ -195,11 +199,18 @@ class GeneralPreprocessor(BasePreprocessor):
             Dict[str, Any]: The processed data package.
         """
 
-        self._datapackage = self._general_preprocess(user_data=user_data)
+        self.predict_new_data = predict_new_data
+        self._datapackage = self._general_preprocess(
+            raw_user_data=raw_user_data, predict_new_data=predict_new_data
+        )
+        print(self._datapackage)
         if self._datapackage is None:
             raise TypeError("Datapackage cannot be None")
         self._dataset_container = DatasetContainer()
         for split in ["train", "test", "valid"]:
+            if self._datapackage[split]["data"] is None:
+                self._dataset_container[split] = None
+                continue
             dataset = self._process_data_package(data_dict=self._datapackage[split])
             self._dataset_container[split] = dataset
 

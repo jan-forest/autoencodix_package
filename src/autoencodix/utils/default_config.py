@@ -20,7 +20,7 @@ class ConfigValidationError(Exception):
 
 class DataInfo(BaseModel):
     # general -------------------------------------
-    file_path: str
+    file_path: str = Field(default="", description="Path to raw data file")
     data_type: Literal["NUMERIC", "CATEGORICAL", "IMG", "ANNOTATION"] = Field(
         default="NUMERIC"
     )

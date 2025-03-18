@@ -106,15 +106,10 @@ class Varix(BasePipeline):
         config : Optional[DefaultConfig]
             Configuration for all pipeline components
         """
-        if isinstance(preprocessed_data, DatasetContainer):
-            data_container = preprocessed_data
-        else:
-            data_container = DatasetContainer(
-                train=preprocessed_data.train, valid=None, test=None
-            )
 
         super().__init__(
-            processed_data=data_container,
+            processed_data=preprocessed_data,
+            raw_user_data=raw_user_data,
             dataset_type=dataset_type,
             trainer_type=trainer_type,
             model_type=model_type,

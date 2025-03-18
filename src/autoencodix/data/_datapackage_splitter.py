@@ -50,13 +50,13 @@ class DataPackageSplitter:
             return obj[indices]
         return obj
 
-    def _split_data_package(self, indices: np.ndarray) -> DataPackage:
+    def _split_data_package(self, indices: np.ndarray) -> Optional[DataPackage]:
         """
         Creates a new DataPackage where each attribute is indexed (if applicable)
-        by the given indices.
+        by the given indices. Returns None if indices are empty.
         """
         if len(indices) == 0:
-            return DataPackage()
+            return None
 
         split_data = {}
         for key, value in self._data_package.__dict__.items():
@@ -88,11 +88,14 @@ class DataPackageSplitter:
         original_package: DataPackage,
         indices: np.ndarray,
         modality_type: Literal["to", "from"],
-    ) -> DataPackage:
+    ) -> Optional[DataPackage]:
         """
         Returns a new DataPackage with the specified modality (either "to" or "from")
-        split using the given indices.
+        split using the given indices. Returns None if indices are empty.
         """
+        if len(indices) == 0:
+            return None
+
         result = DataPackage()
 
         # Process multi_sc (for single cell data)
@@ -173,7 +176,9 @@ class DataPackageSplitter:
             result = {
                 split: {
                     "data": self._split_data_package(self.indices[split]),
-                    "indices": {"paired": self.indices[split]},
+                    "indices": {"paired": self.indices[split]}
+                    if len(self.indices[split]) > 0
+                    else None,
                 }
                 for split in splits
             }
@@ -187,14 +192,22 @@ class DataPackageSplitter:
                 package_split = self._create_modality_specific_package(
                     self._data_package, self.to_indices[split], "to"
                 )
-                package_split = self._create_modality_specific_package(
-                    package_split, self.from_indices[split], "from"
+                package_split = (
+                    self._create_modality_specific_package(
+                        package_split, self.from_indices[split], "from"
+                    )
+                    if package_split is not None
+                    else None
                 )
                 result[split] = {
                     "data": package_split,
                     "indices": {
-                        "to": self.to_indices[split],
-                        "from": self.from_indices[split],
+                        "to": self.to_indices[split]
+                        if len(self.to_indices[split]) > 0
+                        else None,
+                        "from": self.from_indices[split]
+                        if len(self.from_indices[split]) > 0
+                        else None,
                     },
                 }
         return result

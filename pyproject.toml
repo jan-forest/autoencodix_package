@@ -22,8 +22,8 @@ dependencies = [
     "llvmlite>=0.43.0",
     "numba>=0.60.0",
     "umap-learn>=0.5.7",
-
     "pyarrow>=19.0.1",
+    "ipykernel>=6.29.5",
 ]
 
 [dependency-groups]

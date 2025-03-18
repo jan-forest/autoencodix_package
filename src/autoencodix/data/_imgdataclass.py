@@ -16,3 +16,8 @@ class ImgData:
     img: np.ndarray
     sample_id: str
     annotation: pd.DataFrame
+
+    def __repr__(self):
+        return (f"ImgData(sample_id={self.sample_id!r}, "
+                f"img_shape={self.img.shape}, "
+                f"annotation_shape={self.annotation.shape})")

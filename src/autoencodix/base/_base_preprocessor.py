@@ -61,18 +61,26 @@ class BasePreprocessor(abc.ABC):
         }
 
     @abc.abstractmethod
-    def preprocess(self, raw_user_data: Optional[DataPackage] = None) -> DatasetContainer:
+    def preprocess(
+        self,
+        raw_user_data: Optional[DataPackage] = None,
+        predict_new_data: bool = False,
+    ) -> DatasetContainer:
         """
         Abstract method to be implemented by subclasses for specific preprocessing steps.
         Parameters:
-            raw_user_data - (Optional[DataPackage]): Users can provide raw data. This is an alternative way of 
+            raw_user_data - (Optional[DataPackage]): Users can provide raw data. This is an alternative way of
                 provding to providing data via filepaths in the config. If this param is passed, we the data reading step.
+            is_predict - (bool): Indicates whether the user wants to predict with unseen data.
+                If this is the case, we don't split the data and only prerpocess.
 
         """
         pass
 
     def _general_preprocess(
-        self, raw_user_data: Optional[DataPackage] = None
+        self,
+        raw_user_data: Optional[DataPackage] = None,
+        predict_new_data: bool = False,
     ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
         """
         Main preprocessing method that orchestrates the process flow.
@@ -87,6 +95,7 @@ class BasePreprocessor(abc.ABC):
         Raises:
             ValueError: If an unsupported data case is encountered.
         """
+        self.predict_new_data = predict_new_data
         datacase = self.config.data_case
         if datacase is None:
             raise TypeError("datacase can't be None")
@@ -144,15 +153,36 @@ class BasePreprocessor(abc.ABC):
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
         """
-        split_packages, indices = self._split_data_package(data_package)
-        processed_splits = {}
-        for split_name, split_package in split_packages.items():
-            clean_package = self._remove_nans(split_package["data"])
+        if self.predict_new_data:
+            clean_package = self._remove_nans(data_package=data_package)
             for modality_key, processor in modality_processors.items():
                 modality_data = getattr(clean_package, modality_key, None)
                 if modality_data:
                     processed_modality_data = processor(modality_data)
                     setattr(clean_package, modality_key, processed_modality_data)
+            return {
+                "test": {"data": clean_package, "indices": []},
+                "train": {"data": None, "indices": None},  # Updated to return None
+                "valid": {"data": None, "indices": None},  # Updated to return None
+            }
+
+        split_packages, indices = self._split_data_package(data_package=data_package)
+        processed_splits = {}
+        for split_name, split_package in split_packages.items():
+            if split_package["data"] is None:  # Handle missing splits
+                processed_splits[split_name] = {
+                    "data": None,
+                    "indices": None,
+                }
+                continue
+
+            clean_package = self._remove_nans(data_package=split_package["data"])
+            for modality_key, processor in modality_processors.items():
+                modality_data = getattr(clean_package, modality_key, None)
+                if modality_data:
+                    processed_modality_data = processor(modality_data)
+                    setattr(clean_package, modality_key, processed_modality_data)
+
             split_indices = {
                 name: {
                     split: idx
@@ -188,7 +218,7 @@ class BasePreprocessor(abc.ABC):
         else:
             data_package = raw_user_data
 
-        def process_sc_modality(modality_data: md.MuData) -> md.MuData:
+        def process_sc_modality(modality_data: MuData) -> MuData:
             """Processes single-cell modality data with filtering."""
             if modality_data is not None:
                 sc_filter = SingleCellFilter(
@@ -469,7 +499,7 @@ class BasePreprocessor(abc.ABC):
                 )
             if modality_data and modality_key in modality_data:
                 data = modality_data[modality_key]
-                if isinstance(data, md.MuData):
+                if isinstance(data, MuData):
                     data_info = self.config.data_config.data_info[modality_key]
                     sc_filter = SingleCellFilter(mudata=data, data_info=data_info)
                     return {modality_key: sc_filter.preprocess()}
@@ -703,9 +733,17 @@ class BasePreprocessor(abc.ABC):
         return from_key, to_key
 
     def _get_user_translation_keys(self, raw_user_data: DataPackage):
-        if raw_user_data.from_modality is None:
+        if len(raw_user_data.from_modality) == 0:
+            return None, None
+        elif len(raw_user_data.to_modality) == 0:
             return None, None
         else:
-            return next(iter(raw_user_data.from_modality.keys())), next(
-                iter(raw_user_data.to_modality.keys())
-            )
+            try:
+                return next(iter(raw_user_data.from_modality.keys())), next(
+                    iter(raw_user_data.to_modality.keys())
+                )
+            except Exception as e:
+                print("error getting from or to keys")
+                print(e)
+                print("returning None")
+                return None, None

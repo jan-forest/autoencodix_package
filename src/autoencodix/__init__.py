@@ -8,5 +8,6 @@ except PackageNotFoundError:
 # Import key classes to make them directly accessible
 from .vanillix import Vanillix
 from .varix import Varix
+from .stackix import Stackix
 
-__all__ = ["Vanillix", "Varix"]
+__all__ = ["Vanillix", "Varix", "Stackix"]

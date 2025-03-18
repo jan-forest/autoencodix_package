@@ -7,6 +7,8 @@ from ._imgdataclass import ImgData
 from ._datapackage_splitter import DataPackageSplitter
 from ._filter import DataFilter
 from ._nanremover import NaNRemover
+from ._stackix_dataset import StackixDataset
+from ._stackix_preprocessor import StackixPreprocessor
 
 __all__ = [
     "DataSplitter",
@@ -18,6 +20,8 @@ __all__ = [
     "DataPackageSplitter",
     "DataFilter",
     "NaNRemover",
+    "StackixPreprocessor",
+    "StackixDataset",
 ]
 
 # data dir V0 tests done

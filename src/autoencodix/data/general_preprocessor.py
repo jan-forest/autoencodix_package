@@ -7,7 +7,7 @@ import mudata as md  # type: ignore
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data._datasetcontainer import DatasetContainer
-from autoencodix.data._datapackage import DataPackage
+from autoencodix.data.datapackage import DataPackage
 from autoencodix.base._base_preprocessor import BasePreprocessor
 from autoencodix.utils.default_config import DefaultConfig
 

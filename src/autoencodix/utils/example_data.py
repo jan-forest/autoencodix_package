@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.utils.default_config import DefaultConfig
-from autoencodix.data._datapackage import DataPackage
+from autoencodix.data.datapackage import DataPackage
 from autoencodix.utils.default_config import DataCase
 
 config = DefaultConfig()

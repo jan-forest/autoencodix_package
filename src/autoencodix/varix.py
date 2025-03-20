@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Type
+from typing import Dict, Optional, Type, Union
 import torch
 import numpy as np
 
@@ -11,7 +11,7 @@ from autoencodix.base._base_preprocessor import BasePreprocessor
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
-from autoencodix.data._datapackage import DataPackage
+from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.general_preprocessor import GeneralPreprocessor
 from autoencodix.evaluate.evaluate import Evaluator
@@ -63,8 +63,7 @@ class Varix(BasePipeline):
 
     def __init__(
         self,
-        preprocessed_data: Optional[DatasetContainer] = None,
-        raw_user_data: Optional[DataPackage] = None,
+        user_data: Optional[Union[DataPackage, DatasetContainer]] = None,
         trainer_type: Type[BaseTrainer] = GeneralTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
@@ -108,8 +107,7 @@ class Varix(BasePipeline):
         """
 
         super().__init__(
-            processed_data=preprocessed_data,
-            raw_user_data=raw_user_data,
+            user_data=user_data,
             dataset_type=dataset_type,
             trainer_type=trainer_type,
             model_type=model_type,

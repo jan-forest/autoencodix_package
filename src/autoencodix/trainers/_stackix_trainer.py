@@ -1,6 +1,7 @@
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Type, Tuple, Any, Union, cast
 import torch
 from torch.utils.data import DataLoader
+from lightning_fabric import Fabric
 
 from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.base._base_dataset import BaseDataset
@@ -12,30 +13,45 @@ from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.utils._model_output import ModelOutput
 
 
-class StackixTrainer(BaseTrainer):
+class StackixTrainer:
     """
     Trainer for Stackix architecture that handles training of multiple VAEs and stacking.
 
-    This trainer implements the stacking behavior:
-    1. Train individual VAEs for each modality
-    2. Extract latent spaces from these VAEs
-    3. Concatenate the latent spaces
-    4. Train a final VAE on the concatenated space
+    This trainer implements stacking behavior by:
+    1. Training individual VAEs for each modality
+    2. Extracting latent spaces from these VAEs
+    3. Concatenating the latent spaces
+    4. Training a final VAE on the concatenated space
 
-    Parameters
+    Unlike standard trainers that handle a single model, StackixTrainer manages
+    multiple models (one per modality) and a final stacked model.
+
+    Attributes
     ----------
-    trainset : BaseDataset
-        Training dataset (expected to be a StackixDataset)
-    validset : Optional[BaseDataset]
-        Validation dataset (expected to be a StackixDataset)
-    result : Result
-        Result object to store training outcomes
-    config : DefaultConfig
+    _trainset : BaseDataset
+        Training dataset with multiple modalities
+    _validset : Optional[BaseDataset]
+        Optional validation dataset with multiple modalities
+    _result : Result
+        Result object to store training dynamics and outcomes
+    _config : DefaultConfig
         Configuration for training
-    model_type : Type[BaseAutoencoder]
-        Type of autoencoder model to use for individual modalities and stacked model
-    loss_type : Type[BaseLoss]
-        Type of loss function to use for training
+    _model_type : Type[BaseAutoencoder]
+        Type of autoencoder to use for modality and stacked models
+    _loss_type : Type[BaseLoss]
+        Type of loss function to use
+    _fabric : Fabric
+        PyTorch Lightning Fabric for hardware acceleration
+    _loss_fn : BaseLoss
+        Loss function instance
+    modality_models : Dict[str, BaseAutoencoder]
+        Dictionary of trained models for each modality
+    modality_results : Dict[str, Result]
+        Dictionary of training results for each modality
+    concatenated_latent_spaces : Dict[str, torch.Tensor]
+        Dictionary of concatenated latent spaces for each data split
+    stacked_model : BaseAutoencoder
+        Final model trained on concatenated latent spaces
     """
 
     def __init__(
@@ -47,20 +63,51 @@ class StackixTrainer(BaseTrainer):
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
     ):
-        super().__init__(
-            trainset=trainset,
-            validset=validset,
-            result=result,
-            config=config,
-            model_type=model_type,
-            loss_type=loss_type,
+        """
+        Initialize the StackixTrainer.
+
+        Parameters
+        ----------
+        trainset : Optional[BaseDataset]
+            Training dataset with multiple modalities
+        validset : Optional[BaseDataset]
+            Optional validation dataset with multiple modalities
+        result : Result
+            Result object to store training outcomes
+        config : DefaultConfig
+            Configuration for training parameters
+        model_type : Type[BaseAutoencoder]
+            Type of autoencoder to use for individual modalities and stacked model
+        loss_type : Type[BaseLoss]
+            Type of loss function to use for training
+        """
+        # Store basic parameters
+        self._trainset = trainset
+        self._validset = validset
+        self._result = result
+        self._config = config
+        self._model_type = model_type
+        self._loss_type = loss_type
+
+        # Initialize Fabric for hardware acceleration
+        self._fabric = Fabric(
+            accelerator=self._config.device,
+            devices=self._config.n_gpus,
+            precision=self._config.float_precision,
+            strategy=self._config.gpu_strategy,
         )
 
-        # Attributes to store intermediate models and results
-        self.modality_models: Dict[str, BaseAutoencoder] = {}
-        self.modality_results: Dict[str, Result] = {}
-        self.concatenated_latent_spaces: Dict[str, torch.Tensor] = {}
-        self.stacked_model: Optional[BaseAutoencoder] = None
+        # Initialize loss function
+        self._loss_fn = self._loss_type(config=self._config)
+
+        # We don't need a model or optimizer yet since we'll create multiple ones
+        self._model = None
+
+        # Initialize containers for modality-specific components
+        self.modality_models = {}
+        self.modality_results = {}
+        self.concatenated_latent_spaces = {}
+        self.stacked_model = None
 
     def train(self) -> Result:
         """
@@ -134,7 +181,7 @@ class StackixTrainer(BaseTrainer):
 
                 # Create datasets for this modality
                 train_dataset = NumericDataset(
-                    data=train_tensor,
+                    data=train_tensor.cpu() if train_tensor.is_cuda else train_tensor,
                     config=self._config,
                     ids=self._trainset.ids_dict.get(modality, None),
                 )
@@ -142,7 +189,9 @@ class StackixTrainer(BaseTrainer):
                 valid_dataset = None
                 if valid_tensor is not None:
                     valid_dataset = NumericDataset(
-                        data=valid_tensor,
+                        data=valid_tensor.cpu()
+                        if valid_tensor.is_cuda
+                        else valid_tensor,
                         config=self._config,
                         ids=self._validset.ids_dict.get(modality, None),
                     )
@@ -153,6 +202,9 @@ class StackixTrainer(BaseTrainer):
                     batch_size=self._config.batch_size,
                     shuffle=True,
                     num_workers=self._config.n_workers,
+                    pin_memory=True
+                    if self._config.device in ["cuda", "gpu"]
+                    else False,
                 )
 
                 valid_loader = None
@@ -162,6 +214,9 @@ class StackixTrainer(BaseTrainer):
                         batch_size=self._config.batch_size,
                         shuffle=False,
                         num_workers=self._config.n_workers,
+                        pin_memory=True
+                        if self._config.device in ["cuda", "gpu"]
+                        else False,
                     )
 
                 # Set up Fabric for loaders
@@ -349,7 +404,7 @@ class StackixTrainer(BaseTrainer):
 
                     # Create dataloader
                     temp_dataset = NumericDataset(
-                        data=tensor_data,
+                        data=tensor_data.cpu() if tensor_data.is_cuda else tensor_data,
                         config=self._config,
                         ids=dataset.ids_dict.get(modality, None),
                     )
@@ -359,6 +414,9 @@ class StackixTrainer(BaseTrainer):
                         batch_size=self._config.batch_size,
                         shuffle=False,
                         num_workers=self._config.n_workers,
+                        pin_memory=True
+                        if self._config.device in ["cuda", "gpu"]
+                        else False,
                     )
                     dataloader = self._fabric.setup_dataloaders(dataloader)
 
@@ -419,23 +477,29 @@ class StackixTrainer(BaseTrainer):
         if "train" not in concat_spaces:
             raise ValueError("No training data in concatenated spaces")
 
-        # Create datasets
-        train_tensor = concat_spaces["train"]
-        valid_tensor = concat_spaces.get("valid", None)
+        # CRITICAL FIX: Force tensors to CPU and detach from computational graph
+        train_tensor = concat_spaces["train"].detach().clone().cpu()
 
+        valid_tensor = None
+        if "valid" in concat_spaces:
+            valid_tensor = concat_spaces["valid"].detach().clone().cpu()
+
+        print(f"Creating datasets with tensors - train shape: {train_tensor.shape}")
+        print(f"Train tensor device: {train_tensor.device}")
+
+        # Create datasets with CPU tensors
         train_dataset = NumericDataset(data=train_tensor, config=self._config)
-        valid_dataset = (
-            NumericDataset(data=valid_tensor, config=self._config)
-            if valid_tensor is not None
-            else None
-        )
+        valid_dataset = None
+        if valid_tensor is not None:
+            valid_dataset = NumericDataset(data=valid_tensor, config=self._config)
 
-        # Create data loaders
+        # CRITICAL FIX: Disable multiprocessing in DataLoader
         train_loader = DataLoader(
             train_dataset,
             batch_size=self._config.batch_size,
             shuffle=True,
-            num_workers=self._config.n_workers,
+            num_workers=0,  # Disable multiprocessing
+            pin_memory=False,
         )
 
         valid_loader = None
@@ -444,7 +508,8 @@ class StackixTrainer(BaseTrainer):
                 valid_dataset,
                 batch_size=self._config.batch_size,
                 shuffle=False,
-                num_workers=self._config.n_workers,
+                num_workers=0,  # Disable multiprocessing
+                pin_memory=False,
             )
 
         # Set up Fabric for loaders
@@ -473,6 +538,7 @@ class StackixTrainer(BaseTrainer):
             model.train()
             epoch_loss = 0.0
             train_outputs = []
+            epoch_sub_losses = {}
 
             for batch_idx, (features, _) in enumerate(train_loader):
                 optimizer.zero_grad()
@@ -484,23 +550,33 @@ class StackixTrainer(BaseTrainer):
                 epoch_loss += loss.item()
                 train_outputs.append(model_outputs)
 
+                # Track sub-losses
+                for name, value in sub_losses.items():
+                    if name not in epoch_sub_losses:
+                        epoch_sub_losses[name] = 0.0
+                    epoch_sub_losses[name] += value.item()
+
             # Record training loss
             self._result.losses.add(
                 epoch=epoch, split="train", data=epoch_loss / len(train_loader)
             )
 
             # Record sub-losses
-            for loss_name, loss_value in sub_losses.items():
-                self._result.sub_losses.add(
-                    epoch=epoch, split="train", data={loss_name: loss_value.item()}
-                )
+            self._result.sub_losses.add(
+                epoch=epoch,
+                split="train",
+                data={
+                    name: value / len(train_loader)
+                    for name, value in epoch_sub_losses.items()
+                },
+            )
 
             # Validation phase
             if valid_loader:
                 model.eval()
                 valid_loss = 0.0
-                valid_sub_losses = {k: 0.0 for k in sub_losses.keys()}
                 valid_outputs = []
+                valid_sub_losses = {}
 
                 with torch.no_grad():
                     for features, _ in valid_loader:
@@ -511,8 +587,11 @@ class StackixTrainer(BaseTrainer):
                         valid_loss += loss.item()
                         valid_outputs.append(valid_model_outputs)
 
-                        for k, v in sub_losses.items():
-                            valid_sub_losses[k] += v.item()
+                        # Track sub-losses
+                        for name, value in sub_losses.items():
+                            if name not in valid_sub_losses:
+                                valid_sub_losses[name] = 0.0
+                            valid_sub_losses[name] += value.item()
 
                 # Record validation loss
                 self._result.losses.add(
@@ -524,9 +603,14 @@ class StackixTrainer(BaseTrainer):
                     epoch=epoch,
                     split="valid",
                     data={
-                        k: v / len(valid_loader) for k, v in valid_sub_losses.items()
+                        name: value / len(valid_loader)
+                        for name, value in valid_sub_losses.items()
                     },
                 )
+
+            # Store model checkpoint
+            if not (epoch + 1) % self._config.checkpoint_interval:
+                self._result.model_checkpoints.add(epoch=epoch, data=model.state_dict())
 
             # Store dynamics at checkpoint intervals
             if (epoch + 1) % self._config.checkpoint_interval == 0:
@@ -541,6 +625,67 @@ class StackixTrainer(BaseTrainer):
 
         # Store the trained stacked model
         self.stacked_model = model
+
+        # Update main result model
+        self._result.model = model
+
+    def _capture_dynamics(
+        self, epoch: int, model_outputs: List[ModelOutput], split: str
+    ) -> None:
+        """
+        Capture training dynamics for the stacked model.
+
+        Parameters
+        ----------
+        epoch : int
+            Current epoch
+        model_outputs : List[ModelOutput]
+            List of model outputs
+        split : str
+            Data split (e.g., "train", "valid")
+        """
+        # Concatenate tensors from all model outputs
+        latentspaces = torch.cat(
+            [output.latentspace for output in model_outputs], dim=0
+        )
+        reconstructions = torch.cat(
+            [output.reconstruction for output in model_outputs], dim=0
+        )
+
+        self._result.latentspaces.add(
+            epoch=epoch,
+            split=split,
+            data=latentspaces.cpu().detach().numpy(),
+        )
+
+        self._result.reconstructions.add(
+            epoch=epoch,
+            split=split,
+            data=reconstructions.cpu().detach().numpy(),
+        )
+
+        # Handle latent distribution parameters for VAE
+        logvars = [
+            output.latent_logvar
+            for output in model_outputs
+            if output.latent_logvar is not None
+        ]
+        if logvars:
+            sigmas = torch.cat(logvars, dim=0)
+            self._result.sigmas.add(
+                epoch=epoch, split=split, data=sigmas.cpu().detach().numpy()
+            )
+
+        mus = [
+            output.latent_mean
+            for output in model_outputs
+            if output.latent_mean is not None
+        ]
+        if mus:
+            means = torch.cat(mus, dim=0)
+            self._result.mus.add(
+                epoch=epoch, split=split, data=means.cpu().detach().numpy()
+            )
 
     def predict(
         self, data: BaseDataset, model: Optional[torch.nn.Module] = None
@@ -580,8 +725,11 @@ class StackixTrainer(BaseTrainer):
                     modality_model = self.modality_models[modality]
                     modality_model.eval()
 
-                    # Extract tensor for this modality
+                    # Extract tensor for this modality and ensure it's on CPU
                     tensor_data = data.data_dict[modality]
+                    tensor_data = (
+                        tensor_data.cpu() if tensor_data.is_cuda else tensor_data
+                    )
 
                     # Create dataloader
                     temp_dataset = NumericDataset(
@@ -595,6 +743,9 @@ class StackixTrainer(BaseTrainer):
                         batch_size=self._config.batch_size,
                         shuffle=False,
                         num_workers=self._config.n_workers,
+                        pin_memory=True
+                        if self._config.device in ["cuda", "gpu"]
+                        else False,
                     )
                     dataloader = self._fabric.setup_dataloaders(dataloader)
 
@@ -612,7 +763,8 @@ class StackixTrainer(BaseTrainer):
             tensors_to_concat = list(modality_latent_spaces.values())
             concatenated = torch.cat(tensors_to_concat, dim=1)
 
-            # Create a new dataset with concatenated latent space
+            # Create a new dataset with concatenated latent space - ensure it's on CPU
+            concatenated = concatenated.cpu() if concatenated.is_cuda else concatenated
             predict_data = NumericDataset(data=concatenated, config=self._config)
         else:
             # If not a StackixDataset, use the data directly
@@ -624,6 +776,7 @@ class StackixTrainer(BaseTrainer):
             batch_size=self._config.batch_size,
             shuffle=False,
             num_workers=self._config.n_workers,
+            pin_memory=True if self._config.device in ["cuda", "gpu"] else False,
         )
         predict_loader = self._fabric.setup_dataloaders(predict_loader)
 

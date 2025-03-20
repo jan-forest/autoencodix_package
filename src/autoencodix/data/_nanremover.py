@@ -6,7 +6,7 @@ import mudata as md  # type: ignore
 import numpy as np
 from scipy.sparse import issparse  # type: ignore
 
-from autoencodix.data._datapackage import DataPackage
+from autoencodix.data.datapackage import DataPackage
 
 
 class NaNRemover:

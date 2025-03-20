@@ -4,6 +4,54 @@ from typing import Any, Dict, Literal, Optional, List, Union
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
+class SchemaPrinterMixin:
+    """Mixin class that adds schema printing functionality to Pydantic models."""
+
+    @classmethod
+    def get_params(cls) -> Dict[str, Dict[str, Any]]:
+        """
+        Get detailed information about all config fields including types and default values.
+
+        Returns
+        -------
+        Dict[str, Dict[str, Any]]
+            Dictionary containing field name, type, default value, and description if available
+        """
+        fields_info = {}
+        for name, field in cls.model_fields.items():
+            fields_info[name] = {
+                "type": str(field.annotation),
+                "default": field.default,
+                "description": field.description or "No description available",
+            }
+        return fields_info
+
+    @classmethod
+    def print_schema(cls, filter_params: Optional[List[str]] = None) -> None:
+        """
+        Print a human-readable schema of all config parameters.
+
+        Parameters
+        ----------
+        filter_params : Optional[List[str]]
+            If provided, only print information for these parameters
+        """
+        if filter_params:
+            print("Valid Keyword Arguments:")
+            print("-" * 50)
+        else:
+            print(f"\n{cls.__name__} Configuration Parameters:")
+            print("-" * 50)
+
+        for name, info in cls.get_params().items():
+            if filter_params and name not in filter_params:
+                continue
+            print(f"\n{name}:")
+            print(f"  Type: {info['type']}")
+            print(f"  Default: {info['default']}")
+            print(f"  Description: {info['description']}")
+
+
 class DataCase(str, Enum):
     MULTI_SINGLE_CELL = "Multi Single Cell"
     MULTI_BULK = "Multi Bulk"
@@ -18,7 +66,7 @@ class ConfigValidationError(Exception):
     pass
 
 
-class DataInfo(BaseModel):
+class DataInfo(BaseModel, SchemaPrinterMixin):
     # general -------------------------------------
     file_path: str = Field(default="", description="Path to raw data file")
     data_type: Literal["NUMERIC", "CATEGORICAL", "IMG", "ANNOTATION"] = Field(
@@ -68,14 +116,14 @@ class DataInfo(BaseModel):
     translate_direction: Union[Literal["from", "to"], None] = Field(default=None)
 
 
-class DataConfig(BaseModel):
+class DataConfig(BaseModel, SchemaPrinterMixin):
     data_info: Dict[str, DataInfo]
     require_common_cells: Optional[bool] = Field(default=False)
     annotation_columns: Optional[List[str]] = Field(default=None)
 
 
 # write tests: done
-class DefaultConfig(BaseModel):
+class DefaultConfig(BaseModel, SchemaPrinterMixin):
     """
     Complete configuration for model, training, hardware, and data handling.
 

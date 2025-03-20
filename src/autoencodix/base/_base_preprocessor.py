@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 
-from autoencodix.data._datapackage import DataPackage
+from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._datapackage_splitter import DataPackageSplitter
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
@@ -304,7 +304,7 @@ class BasePreprocessor(abc.ABC):
             modality_data: Dict[str, pd.DataFrame], modality_key: str
         ) -> Dict[str, pd.DataFrame]:
             """Processes bulk-to-bulk modality data with filtering and scaling."""
-            if not isinstance(modality_data, str):
+            if not isinstance(modality_key, str):
                 raise TypeError(
                     f"Modality key as to be string got {type(modality_key)}"
                 )

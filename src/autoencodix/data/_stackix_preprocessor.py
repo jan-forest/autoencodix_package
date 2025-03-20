@@ -6,7 +6,7 @@ from scipy.sparse import issparse
 
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_preprocessor import BasePreprocessor
-from autoencodix.data._datapackage import DataPackage
+from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.utils.default_config import DefaultConfig
 

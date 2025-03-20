@@ -2,6 +2,7 @@ import abc
 from typing import Optional, Union, Dict, Type, Any
 
 import numpy as np
+from mudata import MuData
 from torch.utils.data import Dataset
 from ._base_dataset import BaseDataset
 from ._base_autoencoder import BaseAutoencoder
@@ -11,7 +12,7 @@ from ._base_preprocessor import BasePreprocessor
 from ._base_loss import BaseLoss
 from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.data._datasetcontainer import DatasetContainer
-from autoencodix.data._datapackage import DataPackage
+from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig, DataInfo
@@ -109,10 +110,9 @@ class BasePipeline(abc.ABC):
         datasplitter_type: Type[DataSplitter],
         preprocessor_type: Type[BasePreprocessor],
         visualizer: BaseVisualizer,
+        user_data: Optional[Union[DataPackage, DatasetContainer]],
         evaluator: Evaluator,
         result: Result,
-        processed_data: Optional[DatasetContainer],
-        raw_user_data: Optional[DataPackage],
         config: DefaultConfig = DefaultConfig(),
         custom_split: Optional[Dict[str, np.ndarray]] = None,
         **kwargs: dict,
@@ -125,6 +125,8 @@ class BasePipeline(abc.ABC):
         config : DefaultConfig, optional
             The configuration dictionary for the model.
         """
+        processed_data = user_data if isinstance(user_data, DatasetContainer) else None
+        raw_user_data = user_data if isinstance(user_data, DataPackage) else None
         if processed_data is not None and not isinstance(
             processed_data, DatasetContainer
         ):
@@ -174,6 +176,9 @@ class BasePipeline(abc.ABC):
             all_keys.append(k)
             if isinstance(attr_value, dict):
                 all_keys.extend(attr_value.keys())
+                for k, v in attr_value.items():
+                    if isinstance(v, MuData):
+                        all_keys.extend(v.mod.keys())
         for k in all_keys:
             if self.config.data_config.data_info.get(k) is None:
                 self.config.data_config.data_info[k] = DataInfo()

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import torch
 from autoencodix.base._base_dataset import BaseDataset
-from autoencodix.data._datapackage import DataPackage
+from autoencodix.data.datapackage import DataPackage
 from autoencodix.utils.default_config import DefaultConfig
 
 # internal check done

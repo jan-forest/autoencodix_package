@@ -5,7 +5,7 @@ import pandas as pd
 from anndata import AnnData  # type: ignore
 from mudata import MuData  # type: ignore
 
-from autoencodix.data._datapackage import DataPackage
+from autoencodix.data.datapackage import DataPackage
 from autoencodix.utils.default_config import DefaultConfig
 
 

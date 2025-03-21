@@ -185,7 +185,7 @@ class GeneralPreprocessor(BasePreprocessor):
                     ids=attr_val.obs_names.tolist(),
                 )
 
-        raise ValueError("No data in the split")
+        raise NotImplementedError(f"General Preprocessor is not implemented for {key}")
 
     def preprocess(
         self,

@@ -353,6 +353,11 @@ class BasePipeline(abc.ABC):
             raise ValueError(
                 "Datasets not built. Please run the preprocess method first."
             )
+        ## Overloading for ontix
+        if hasattr(self, "ontologies"):
+            ontologies = self.ontologies
+        else:
+            ontologies = None
 
         self._trainer = self._trainer_type(
             trainset=self._datasets.train,
@@ -361,6 +366,7 @@ class BasePipeline(abc.ABC):
             config=self.config,
             model_type=self._model_type,
             loss_type=self._loss_type,
+            ontologies=ontologies, # Ontix
         )
         trainer_result = self._trainer.train()
         self.result.update(trainer_result)

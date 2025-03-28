@@ -70,6 +70,7 @@ class OntixArchitecture(BaseAutoencoder):
         with torch.no_grad():
             # Check that the decoder has the same number of layers as masks
             if len(self.masks) != len(self._decoder):
+                print(len(self.masks), len(self._decoder))
                 raise ValueError(
                     "Number of masks does not match number of decoder layers"
                 )
@@ -216,14 +217,15 @@ class OntixArchitecture(BaseAutoencoder):
         dec_dim = [self.latent_dim] + [mask.shape[0] for mask in self.masks] + [self.input_dim]
         decoder_layers = []
         for i, (in_features, out_features) in enumerate(zip(dec_dim[:-1], dec_dim[1:])):
-            last_layer = i == len(dec_dim) - 2
+            # last_layer = i == len(dec_dim) - 2
+            last_layer = True ## Only linear layers in sparse decoder
             decoder_layers.extend(
                 LayerFactory.create_layer(
                     in_features=in_features,
                     out_features=out_features,
                     dropout_p=0, ## No dropout in sparse decoder
                     last_layer=last_layer,
-                    only_linear=True, ## Only linear layers in sparse decoder
+                    # only_linear=True, 
                 )
             )
 

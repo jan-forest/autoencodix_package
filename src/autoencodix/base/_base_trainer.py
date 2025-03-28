@@ -70,6 +70,7 @@ class BaseTrainer(abc.ABC):
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
+        ontologies: Optional[tuple] = None,  # Addition to Varix, mandotory for Ontix
     ):
         self._trainset = trainset
         self._model_type = model_type
@@ -103,7 +104,7 @@ class BaseTrainer(abc.ABC):
 
         # Model and optimizer setup
         self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
-        self._init_model_architecture()
+        self._init_model_architecture(ontologies=ontologies) # Ontix
 
         self._fabric = Fabric(
             accelerator=self._config.device,
@@ -157,8 +158,14 @@ class BaseTrainer(abc.ABC):
             else:
                 print("cpu not relevant here")
 
-    def _init_model_architecture(self) -> None:
-        self._model = self._model_type(config=self._config, input_dim=self._input_dim)
+    def _init_model_architecture(self, ontologies: tuple) -> None:
+        if ontologies is None:
+            self._model = self._model_type(config=self._config, input_dim=self._input_dim)
+        else:
+            ## Ontix specific
+            self._model = self._model_type(
+                config=self._config, input_dim=self._input_dim, ontologies=ontologies
+            )
 
     @abc.abstractmethod
     def train(self) -> Result:

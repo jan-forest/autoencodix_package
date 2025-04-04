@@ -39,7 +39,7 @@ class NumericDataset(BaseDataset):
             raise ValueError("config cannot be None")
         dtype = self._map_float_precision_to_dtype(self.config.float_precision)
         self.data = self._to_tensor(data, dtype)
-        self.metadta = metadata
+        self.metadata = metadata
         self.split_ids = split_ids
 
     @staticmethod

@@ -83,7 +83,7 @@ class SingleCellFilter:
 
         return valid_layers
 
-    def _preprocess(self) -> md.MuData:
+    def presplit_processing(self) -> md.MuData:
         """
         Preprocess the data using modality-specific configurations.
         Returns
@@ -97,21 +97,15 @@ class SingleCellFilter:
             data_info = self._get_data_info_for_modality(mod_key)
             if data_info is not None:
                 sc.pp.filter_cells(mod_data, min_genes=data_info.min_genes)
-                sc.pp.filter_genes(mod_data, min_cells=data_info.min_cells)
                 layers_to_process = self._get_layers_for_modality(mod_key, mod_data)
 
                 for layer in layers_to_process:
                     if layer == "X":
-                        if data_info.normalize_counts:
-                            sc.pp.normalize_total(mod_data)
                         if data_info.log_transform:
                             sc.pp.log1p(mod_data)
                     else:
                         temp_view = mod_data.copy()
                         temp_view.X = mod_data.layers[layer].copy()
-
-                        if data_info.normalize_counts:
-                            sc.pp.normalize_total(temp_view)
                         if data_info.log_transform:
                             sc.pp.log1p(temp_view)
                         mod_data.layers[layer] = temp_view.X.copy()
@@ -180,7 +174,8 @@ class SingleCellFilter:
 
         return filtered_mod_data
 
-    def apply_general_filtering_and_scaling(self, mod_data, data_info, layer=None):
+    # TODO apply same logic as in _mulit_bulk_post
+    def _apply_general_filtering(self, mod_data, data_info, layer=None):
         """
         Apply general filtering and scaling to a modality's data.
         Parameters
@@ -199,11 +194,11 @@ class SingleCellFilter:
         df = self._to_dataframe(mod_data, layer)
         data_filter = DataFilter(df, data_info)
         filtered_df = data_filter.filter()
-        scaled_df = data_filter.scale(filtered_df)
-        updated_mod_data = self._from_dataframe(scaled_df, mod_data, layer)
+        updated_mod_data = self._from_dataframe(filtered_df, mod_data, layer)
         return updated_mod_data
 
-    def preprocess(self) -> md.MuData:
+    # TODO make new
+    def _general_presplit_processing(self) -> md.MuData:
         """
         Process the single-cell data by preprocessing, filtering, and scaling.
         Returns
@@ -241,7 +236,7 @@ class SingleCellFilter:
                         else mod_data.X
                     )
 
-                    updated_mod_data = self.apply_general_filtering_and_scaling(
+                    updated_mod_data = self.apply_general_filtering(
                         temp_view, data_info, layer=None
                     )
 

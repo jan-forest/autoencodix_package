@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.datasets import make_blobs
-from sklearn.model_selection import train_test_split
+from sklearn.datasets import make_blobs  # type: ignore
+from sklearn.model_selection import train_test_split  # type: ignore
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.utils.default_config import DefaultConfig
@@ -10,7 +10,11 @@ from autoencodix.data.datapackage import DataPackage
 from autoencodix.utils.default_config import DataCase
 
 config = DefaultConfig()
-def generate_example_data(n_samples=1000, n_features=30, n_clusters=5, random_seed=config.global_seed):
+
+
+def generate_example_data(
+    n_samples=1000, n_features=30, n_clusters=5, random_seed=config.global_seed
+):
     """
     Generate synthetic data for autoencoder testing and examples.
 
@@ -98,6 +102,7 @@ def generate_example_data(n_samples=1000, n_features=30, n_clusters=5, random_se
         ids=[ids[i] for i in train_idx],
         metadata=metadata_df.iloc[train_idx].reset_index(drop=True),
         split_ids=train_split,
+        feature_ids=[f"feature_{i}" for i in train_idx],
     )
 
     val_dataset = NumericDataset(
@@ -106,6 +111,7 @@ def generate_example_data(n_samples=1000, n_features=30, n_clusters=5, random_se
         ids=[ids[i] for i in val_idx],
         metadata=metadata_df.iloc[val_idx].reset_index(drop=True),
         split_ids=val_split,
+        feature_ids=[f"feature_{i}" for i in val_idx],
     )
 
     test_dataset = NumericDataset(
@@ -114,13 +120,17 @@ def generate_example_data(n_samples=1000, n_features=30, n_clusters=5, random_se
         ids=[ids[i] for i in test_idx],
         metadata=metadata_df.iloc[test_idx].reset_index(drop=True),
         split_ids=test_split,
+        feature_ids=[f"feature_{i}" for i in test_idx],
     )
 
     return DatasetContainer(train=train_dataset, valid=val_dataset, test=test_dataset)
 
 
 def generate_multi_bulk_example(
-    n_samples=500, n_features_modality1=100, n_features_modality2=80, random_seed=config.global_seed
+    n_samples=500,
+    n_features_modality1=100,
+    n_features_modality2=80,
+    random_seed=config.global_seed,
 ):
     """
     Generate example data for MULTI_BULK case.
@@ -184,16 +194,18 @@ def generate_multi_bulk_example(
     return data_package
 
 
-
-
-def generate_default_bulk_bulk_example(n_samples=500, n_features=200, random_seed=config.global_seed):
+def generate_default_bulk_bulk_example(
+    n_samples=500, n_features=200, random_seed=config.global_seed
+):
     """Generate example data for BULK_TO_BULK case."""
     np.random.seed(random_seed)
 
     raise NotImplementedError("BULK_TO_BULK example generation not yet implemented")
 
 
-def generate_default_sc_sc_example(n_cells=1000, n_features=500, random_seed=config.global_seed):
+def generate_default_sc_sc_example(
+    n_cells=1000, n_features=500, random_seed=config.global_seed
+):
     """Generate example data for SINGLE_CELL_TO_SINGLE_CELL case."""
     np.random.seed(random_seed)
 
@@ -252,6 +264,8 @@ def generate_raw_datapackage(data_case: DataCase, **kwargs):
 
     generator_function = generator_map[data_case]
     return generator_function(**kwargs)
+
+
 def generate_multi_sc_example(
     n_cells=1000, n_genes=500, n_proteins=200, random_seed=config.global_seed
 ):
@@ -355,22 +369,24 @@ def generate_multi_sc_example(
 
     # Create DataPackage with DataFrame representations
     data_package = DataPackage()
-    
+
     # Create DataFrames for multi_bulk
     data_package.multi_bulk = {
         "rna_counts": pd.DataFrame(rna_counts, index=cell_ids, columns=gene_names),
-        "protein_levels": pd.DataFrame(protein_levels, index=cell_ids, columns=protein_names)
+        "protein_levels": pd.DataFrame(
+            protein_levels, index=cell_ids, columns=protein_names
+        ),
     }
     data_package.annotation = {
         "rna_counts": cell_metadata,
-        "protein_levels": cell_metadata
+        "protein_levels": cell_metadata,
     }
-    
+
     return data_package
+
 
 # Pre-generated example data for direct import
 config = DefaultConfig()
 EXAMPLE_PROCESSED_DATA = generate_example_data(random_seed=config.global_seed)
 EXAMPLE_MULTI_BULK = generate_raw_datapackage(data_case=DataCase.MULTI_BULK)
 EXAMPLE_MULTI_SC = generate_raw_datapackage(data_case=DataCase.MULTI_SINGLE_CELL)
-

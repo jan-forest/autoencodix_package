@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Tuple, Optional, Union, List
+from typing import Any, Tuple, Optional, Union, List, Dict
 
 from torch.utils.data import Dataset
 import torch
@@ -26,6 +26,7 @@ class BaseDataset(abc.ABC, Dataset):
         data: torch.Tensor,
         config: Optional[Any] = None,
         ids: Union[None, List[Any]] = None,
+        feature_ids: Union[None, List[Any]] = None,
     ):
         """
         Initialize the dataset.
@@ -38,6 +39,7 @@ class BaseDataset(abc.ABC, Dataset):
         self.ids = ids
         self.data = data
         self.config = config
+        self.feature_ids = feature_ids
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, Any]:
         """
@@ -59,7 +61,7 @@ class BaseDataset(abc.ABC, Dataset):
             label = index
         return self.data[index], label
 
-    def get_input_dim(self) -> int:
+    def get_input_dim(self) -> Union[int, Dict[str, int]]:
         """
         Get the input dimension of the dataset.
 

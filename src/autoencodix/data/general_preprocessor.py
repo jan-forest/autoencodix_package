@@ -45,6 +45,7 @@ class GeneralPreprocessor(BasePreprocessor):
     def __init__(self, config: DefaultConfig):
         """
         Initializes the GeneralPreprocessor with the given configuration.
+        self.feature_ids_dict = feature_ids_dict or {}
 
         Parameters:
             config (DefaultConfig): Configuration for the preprocessor.
@@ -119,6 +120,7 @@ class GeneralPreprocessor(BasePreprocessor):
         split_ids: np.ndarray,
         metadata: pd.DataFrame,
         ids: List[str],
+        feature_ids: List[str],
     ) -> NumericDataset:
         """
         Creates a NumericDataset from the given data and metadata.
@@ -140,6 +142,7 @@ class GeneralPreprocessor(BasePreprocessor):
             split_ids=split_ids,
             metadata=metadata,
             ids=ids,
+            feature_ids=feature_ids,
         )
 
     def _process_data_package(self, data_dict: Dict[str, Any]) -> BaseDataset:
@@ -162,13 +165,25 @@ class GeneralPreprocessor(BasePreprocessor):
             if key == "multi_bulk" and attr_val is not None:
                 metadata = data.annotation
                 dfs_to_concat = list(attr_val.values())
+
+                combined_cols = []
+                for df in dfs_to_concat:
+                    if isinstance(df, pd.DataFrame):
+                        combined_cols.extend(df.columns)
+                    else:
+                        raise ValueError(
+                            "Expected a DataFrame, but got something else."
+                        )
+
                 combined_df = pd.concat(dfs_to_concat, axis=1)
+
                 return self._create_numeric_dataset(
                     data=combined_df.values,
                     config=self.config,
                     split_ids=split_ids,
                     metadata=metadata,
                     ids=combined_df.index.tolist(),
+                    feature_ids=combined_cols,
                 )
 
             elif key == "multi_sc" and attr_val is not None:
@@ -183,6 +198,7 @@ class GeneralPreprocessor(BasePreprocessor):
                     split_ids=split_ids,
                     metadata=combined_obs,
                     ids=attr_val.obs_names.tolist(),
+                    feature_ids=attr_val.var_names.tolist(),
                 )
 
         raise NotImplementedError(f"General Preprocessor is not implemented for {key}")

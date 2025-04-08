@@ -19,6 +19,7 @@ class StackixDataset(BaseDataset):
         data_dict: Dict[str, torch.Tensor],
         config: DefaultConfig,
         ids_dict: Optional[Dict[str, List[Any]]] = None,
+        feature_ids_dict: Optional[Dict[str, List[Any]]] = None,
     ):
         # Use first modality for base class initialization
         first_modality = next(iter(data_dict.values()))
@@ -32,6 +33,7 @@ class StackixDataset(BaseDataset):
         self.data_dict = data_dict
         self.modality_keys = list(data_dict.keys())
         self.ids_dict = ids_dict or {}
+        self.feature_ids_dict = feature_ids_dict or {}
 
         # Ensure all tensors have same first dimension (number of samples)
         sample_counts = [tensor.shape[0] for tensor in data_dict.values()]

@@ -158,7 +158,7 @@ class DataPackageSplitter:
                     setattr(result, key, copy.deepcopy(value))
         return result
 
-    def split(self) -> Dict[str, Dict[str, Any]]:
+    def split(self) -> Dict[str, Optional[Dict[str, Any]]]:
         """
         Splits the underlying DataPackage into train, valid, and test subsets.
         Returns a dictionary where each key ("train", "valid", "test") maps to a
@@ -168,7 +168,7 @@ class DataPackageSplitter:
             raise ValueError("No data package available for splitting")
 
         splits = ["train", "valid", "test"]
-        result = {}
+        result: Dict[str, Optional[Dict[str, Any]]] = {}
 
         if self.config.paired_translation is None or self.config.paired_translation:
             if self.indices is None:
@@ -178,7 +178,7 @@ class DataPackageSplitter:
                     "data": self._split_data_package(self.indices[split]),
                     "indices": {"paired": self.indices[split]}
                     if len(self.indices[split]) > 0
-                    else None,
+                    else {"paired": np.array([])},
                 }
                 for split in splits
             }
@@ -204,10 +204,10 @@ class DataPackageSplitter:
                     "indices": {
                         "to": self.to_indices[split]
                         if len(self.to_indices[split]) > 0
-                        else None,
+                        else np.array([]),
                         "from": self.from_indices[split]
                         if len(self.from_indices[split]) > 0
-                        else None,
+                        else np.array([]),
                     },
                 }
         return result

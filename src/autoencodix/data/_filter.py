@@ -151,9 +151,11 @@ class DataFilter:
             df_filt = df.iloc[:, medoid_indices]
             return df_filt
 
-    def _apply_filtering(
-        self, df: pd.DataFrame, genes_to_keep: Optional[List]
-    ) -> Tuple[pd.DataFrame, List[str]]:
+    def filter(
+        self, df: pd.DataFrame, genes_to_keep: Optional[List] = None
+    ) -> Tuple[
+        pd.DataFrame, List[str]
+    ]:  # TODO add indicies and update for the ones that got dropped
         """Apply the configured filtering method to the dataframe.
 
         This method is intended to be called on the training data to determine
@@ -183,7 +185,7 @@ class DataFilter:
             print(
                 f"WARNING: df is too small for filtering, needs to have at least {MIN_FILTER}"
             )
-            return df
+            return df, df.columns.tolist()
 
         filtered_df = df.copy()
 
@@ -217,12 +219,11 @@ class DataFilter:
                 filtered_df = self._filter_by_correlation(filtered_df, k_corr)
 
         print(f"Shape after filtering: {filtered_df.shape}")
-        return filtered_df, list(set(filtered_df.columns))
-
+        return filtered_df, filtered_df.columns.tolist()
 
     def _init_scaler(self) -> None:
         """Initialize the scaler based on the configured scaling method."""
-        method = self.data_info.scaling.upper()
+        method = self.data_info.scaling
         if method == "MINMAX":
             self._scaler = MinMaxScaler(clip=True)
         elif method == "STANDARD":
@@ -262,6 +263,8 @@ class DataFilter:
             return df
 
         print(f"Applying {self.data_info.scaling} scaling.")
+        print(f"shape before scaling: {df.shape}")
+        print(f"scaler: {scaler}")
         df_scaled = pd.DataFrame(
             scaler.transform(df), columns=df.columns, index=df.index
         )
@@ -275,49 +278,3 @@ class DataFilter:
             List[str]: List of available filtering method names.
         """
         return [method.value for method in FilterMethod]
-
-
-# Example Usage (assuming you have a DataInfo object):
-if __name__ == "__main__":
-    # Create a sample DataFrame and DataInfo
-    data = np.random.rand(100, 20)
-    df = pd.DataFrame(data, columns=[f"feature_{i}" for i in range(20)])
-    data_info = DataInfo(filtering="VARCORR", k_filter=5, scaling="STANDARD")
-
-    # Instantiate the DataPreprocessor
-    preprocessor = DataFilter(data_info)
-
-    # Split your data into train, validation, and test sets (this part is outside the class)
-    train_df = df.iloc[:60].copy()
-    valid_df = df.iloc[60:80].copy()
-    test_df = df.iloc[80:].copy()
-
-    # Apply filtering to the training data
-    filtered_train_df = preprocessor.apply_filtering(train_df)
-    print("\nFiltered Training Data:")
-    print(filtered_train_df.head())
-
-    # Apply the same filtering to validation and test sets
-    filtered_valid_df = preprocessor.apply_consistent_filtering(valid_df)
-    print("\nFiltered Validation Data:")
-    print(filtered_valid_df.head())
-
-    filtered_test_df = preprocessor.apply_consistent_filtering(test_df)
-    print("\nFiltered Test Data:")
-    print(filtered_test_df.head())
-
-    # Fit the scaler on the filtered training data
-    preprocessor.fit_scaler(filtered_train_df)
-
-    # Scale the filtered training, validation, and test sets
-    scaled_train_df = preprocessor.scale(filtered_train_df)
-    print("\nScaled Training Data:")
-    print(scaled_train_df.head())
-
-    scaled_valid_df = preprocessor.scale(filtered_valid_df)
-    print("\nScaled Validation Data:")
-    print(scaled_valid_df.head())
-
-    scaled_test_df = preprocessor.scale(filtered_test_df)
-    print("\nScaled Test Data:")
-    print(scaled_test_df.head())

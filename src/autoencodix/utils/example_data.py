@@ -8,6 +8,8 @@ from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.utils.default_config import DataCase
+import mudata
+import anndata
 
 config = DefaultConfig()
 
@@ -281,6 +283,7 @@ def generate_multi_sc_example(
     Returns:
         DataPackage: DataPackage with multi_sc data
     """
+
     np.random.seed(random_seed)
 
     cell_ids = [f"cell_{i}" for i in range(n_cells)]
@@ -307,10 +310,8 @@ def generate_multi_sc_example(
     )
 
     # Generate RNA data (sparse count matrix with negative binomial distribution)
-    # Create gene expression programs for each cell type
     gene_programs = np.zeros((n_cell_types, n_genes))
     for i in range(n_cell_types):
-        # Each cell type has ~20% of genes highly expressed
         high_expr_genes = np.random.choice(
             n_genes, size=int(n_genes * 0.2), replace=False
         )
@@ -318,29 +319,23 @@ def generate_multi_sc_example(
             5, 2, size=len(high_expr_genes)
         )
 
-    # Generate base expression levels
     lambda_values = np.zeros((n_cells, n_genes))
     for i in range(n_cells):
         lambda_values[i] = gene_programs[cell_types[i]] + np.random.gamma(
             0.5, 0.5, n_genes
         )
 
-    # Apply technical effects (e.g., sequencing depth)
     seq_depth = np.random.lognormal(mean=8, sigma=0.5, size=n_cells)
     lambda_values = lambda_values * seq_depth[:, np.newaxis]
 
-    # Generate count data from Poisson distribution
     rna_counts = np.random.poisson(lambda_values)
-
-    # Make it sparse by setting low counts to zero (simulating dropout)
     dropout_prob = 0.3
     dropout_mask = np.random.binomial(1, 1 - dropout_prob, size=rna_counts.shape)
     rna_counts = rna_counts * dropout_mask
 
-    # Generate protein data (related to the RNA but with different noise characteristics)
+    # Generate protein data
     protein_programs = np.zeros((n_cell_types, n_proteins))
     for i in range(n_cell_types):
-        # Each cell type has ~30% of proteins highly expressed
         high_expr_proteins = np.random.choice(
             n_proteins, size=int(n_proteins * 0.3), replace=False
         )
@@ -348,14 +343,12 @@ def generate_multi_sc_example(
             3, 1, size=len(high_expr_proteins)
         )
 
-    # Generate base protein levels with correlation to cell type
     protein_levels = np.zeros((n_cells, n_proteins))
     for i in range(n_cells):
         protein_levels[i] = protein_programs[cell_types[i]] + np.random.gamma(
             0.2, 0.3, n_proteins
         )
 
-    # Apply batch effects and measurement noise
     batch_effect = np.zeros(n_cells)
     batch_map = {"batch1": 0.8, "batch2": 1.0, "batch3": 1.2}
     for i in range(n_cells):
@@ -365,22 +358,18 @@ def generate_multi_sc_example(
     protein_levels = protein_levels + np.random.normal(
         0, 0.1, size=protein_levels.shape
     )
-    protein_levels = np.maximum(0, protein_levels)  # Ensure non-negative values
+    protein_levels = np.maximum(0, protein_levels)
 
-    # Create DataPackage with DataFrame representations
+    # Create Anndata objects
+    rna_adata = anndata.AnnData(X=rna_counts, obs=cell_metadata, var=pd.DataFrame(index=gene_names))
+    protein_adata = anndata.AnnData(X=protein_levels, obs=cell_metadata, var=pd.DataFrame(index=protein_names))
+
+    # Create a MuData object
+    mdata = mudata.MuData({"rna": rna_adata, "protein": protein_adata})
+
+    # Create DataPackage
     data_package = DataPackage()
-
-    # Create DataFrames for multi_bulk
-    data_package.multi_bulk = {
-        "rna_counts": pd.DataFrame(rna_counts, index=cell_ids, columns=gene_names),
-        "protein_levels": pd.DataFrame(
-            protein_levels, index=cell_ids, columns=protein_names
-        ),
-    }
-    data_package.annotation = {
-        "rna_counts": cell_metadata,
-        "protein_levels": cell_metadata,
-    }
+    data_package.multi_sc = mdata
 
     return data_package
 
@@ -389,4 +378,4 @@ def generate_multi_sc_example(
 config = DefaultConfig()
 EXAMPLE_PROCESSED_DATA = generate_example_data(random_seed=config.global_seed)
 EXAMPLE_MULTI_BULK = generate_raw_datapackage(data_case=DataCase.MULTI_BULK)
-EXAMPLE_MULTI_SC = generate_raw_datapackage(data_case=DataCase.MULTI_SINGLE_CELL)
+# EXAMPLE_MULTI_SC = generate_raw_datapackage(data_case=DataCase.MULTI_SINGLE_CELL)

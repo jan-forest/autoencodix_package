@@ -37,6 +37,15 @@ class DataPackage:
             return getattr(self, key)
         raise KeyError(f"{key} not found in DataPackage.")
 
+    def __setitem__(self, key: str, value: Any) -> None:
+        """
+        Allow dictionary-like item assignment to top-level attributes.
+        """
+        if hasattr(self, key):
+            setattr(self, key, value)
+        else:
+            raise KeyError(f"{key} not found in DataPackage.")
+
     def __iter__(self) -> Iterator[Tuple[str, Any]]:
         """
         Make DataPackage iterable, yielding (key, value) pairs.

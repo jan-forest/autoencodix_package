@@ -178,7 +178,7 @@ class SingleCellFilter:
         return filtered_mod_data
 
     def sc_postsplit_processing(
-        self, mudata: MuData, gene_filter_dict: Optional[Dict[str, List[str]]] = None
+        self, mudata: MuData, gene_map: Optional[Dict[str, List[str]]] = None
     ) -> Tuple[MuData, Dict[str, List[str]]]:
         """
         Preprocess the data using modality-specific configurations.
@@ -201,7 +201,7 @@ class SingleCellFilter:
             data_info = self._get_data_info_for_modality(mod_key)
             if data_info is None:
                 raise ValueError(f"No data info found for modality {mod_key}")
-            gene_list = gene_filter_dict.get(mod_key) if gene_filter_dict else None
+            gene_list = gene_map.get(mod_key) if gene_map else None
             if gene_list is not None:
                 gene_mask = mod_data.var_names.isin(gene_list)
                 mod_data._inplace_subset_var(gene_mask)
@@ -234,7 +234,9 @@ class SingleCellFilter:
         data_processor = DataFilter(data_info=data_info)
         return data_processor.filter(df=df, genes_to_keep=gene_list)
 
-    def _apply_scaling(self, df: pd.DataFrame, data_info: DataInfo, scaler: Any) -> Tuple[pd.DataFrame, Any]:
+    def _apply_scaling(
+        self, df: pd.DataFrame, data_info: DataInfo, scaler: Any
+    ) -> Tuple[pd.DataFrame, Any]:
         data_processor = DataFilter(data_info=data_info)
         if scaler is None:
             scaler = data_processor.fit_scaler(df=df)
@@ -277,7 +279,9 @@ class SingleCellFilter:
                 scaler = scaler_map[mod_key]["X"]
             else:
                 scaler = None
-            scaled_df, scaler = self._apply_scaling(df=filtered_df, data_info=data_info, scaler=scaler)
+            scaled_df, scaler = self._apply_scaling(
+                df=filtered_df, data_info=data_info, scaler=scaler
+            )
             out_scaler_map[mod_key]["X"] = scaler
             updated_mod_data = self._from_dataframe(scaled_df, mod_data, layer=None)
             mudata.mod[mod_key] = updated_mod_data
@@ -302,7 +306,9 @@ class SingleCellFilter:
                 )
                 if scaler_map is not None:
                     scaler = scaler_map[mod_key][layer]
-                scaled_df, scaler = self._apply_scaling(df=filtered_df, data_info=data_info, scaler=scaler)
+                scaled_df, scaler = self._apply_scaling(
+                    df=filtered_df, data_info=data_info, scaler=scaler
+                )
                 out_scaler_map[mod_key][layer] = scaler
                 scaled_view = self._from_dataframe(
                     df=scaled_df, mod_data=temp_view, layer=None

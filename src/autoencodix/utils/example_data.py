@@ -283,7 +283,6 @@ def generate_multi_sc_example(
     Returns:
         DataPackage: DataPackage with multi_sc data
     """
-
     np.random.seed(random_seed)
 
     cell_ids = [f"cell_{i}" for i in range(n_cells)]
@@ -360,16 +359,25 @@ def generate_multi_sc_example(
     )
     protein_levels = np.maximum(0, protein_levels)
 
-    # Create Anndata objects
-    rna_adata = anndata.AnnData(X=rna_counts, obs=cell_metadata, var=pd.DataFrame(index=gene_names))
-    protein_adata = anndata.AnnData(X=protein_levels, obs=cell_metadata, var=pd.DataFrame(index=protein_names))
+    var_rna = pd.DataFrame(index=gene_names)
+    var_protein = pd.DataFrame(index=protein_names)
 
-    # Create a MuData object
+    from scipy import sparse
+
+    # Convert to scipy sparse matrices to avoid copy issues
+    rna_counts_sparse = sparse.csr_matrix(rna_counts)
+    protein_levels_sparse = sparse.csr_matrix(protein_levels)
+
+    rna_adata = anndata.AnnData(X=rna_counts_sparse, obs=cell_metadata, var=var_rna)
+
+    protein_adata = anndata.AnnData(
+        X=protein_levels_sparse, obs=cell_metadata, var=var_protein
+    )
+
     mdata = mudata.MuData({"rna": rna_adata, "protein": protein_adata})
 
-    # Create DataPackage
     data_package = DataPackage()
-    data_package.multi_sc = mdata
+    data_package.multi_sc = {"multi_sc":mdata}
 
     return data_package
 
@@ -378,4 +386,4 @@ def generate_multi_sc_example(
 config = DefaultConfig()
 EXAMPLE_PROCESSED_DATA = generate_example_data(random_seed=config.global_seed)
 EXAMPLE_MULTI_BULK = generate_raw_datapackage(data_case=DataCase.MULTI_BULK)
-# EXAMPLE_MULTI_SC = generate_raw_datapackage(data_case=DataCase.MULTI_SINGLE_CELL)
+EXAMPLE_MULTI_SC = generate_raw_datapackage(data_case=DataCase.MULTI_SINGLE_CELL)

@@ -241,8 +241,9 @@ class BasePreprocessor(abc.ABC):
                     mudata=filtered_train, scaler_map=None, gene_map=None
                 )
             )
+            train_split.multi_sc = processed_train
             processed_splits["train"] = {
-                "data": processed_train,
+                "data": train_split,
                 "indices": split_data["train"]["indices"],
             }
 
@@ -253,18 +254,18 @@ class BasePreprocessor(abc.ABC):
                 sc_filter = SingleCellFilter(
                     data_info=self.config.data_config.data_info
                 )
-                filtered_sc_data, _, _ = sc_filter.sc_postsplit_processing(
+                filtered_sc_data, _ = sc_filter.sc_postsplit_processing(
                     mudata=data_package.multi_sc,
                     gene_filter_dict=sc_genes_to_keep,
-                    scaler_map=scalers,
                 )
                 processed_general_data, _, _ = sc_filter.general_postsplit_processing(
                     mudata=filtered_sc_data,
-                    gene_map=general_genes_to_keep, #TODO naming consistency
+                    gene_map=general_genes_to_keep,  # TODO naming consistency
                     scaler_map=scalers,
                 )
+                data_package.multi_sc = processed_general_data
                 processed_splits[split] = {
-                    "data": processed_general_data,
+                    "data": data_package,
                     "indices": split_package["indices"],
                 }
             return processed_splits
@@ -320,13 +321,14 @@ class BasePreprocessor(abc.ABC):
     def _postsplit_multi_bulk(
         self,
         split_data: Dict[str, Dict[str, Any]],
+        data_package_key: str = "multi_bulk",
     ) -> Dict[str, Dict[str, Any]]:
         train_split = split_data.get("train")["data"]
         kept_genes: Dict[str, List[str]] = {}
         scalers: Dict[str, Any] = {}
         processed_splits: Dict[str, Dict[str, Any]] = {}
 
-        for k, v in train_split.multi_bulk.items():
+        for k, v in train_split[data_package_key].items():
             if v is None:
                 continue
             data_processor = DataFilter(data_info=self.config.data_config.data_info[k])
@@ -350,13 +352,15 @@ class BasePreprocessor(abc.ABC):
             if split_name == "train":
                 continue
             processed_package = split_package["data"]
-            for k, v in processed_package.multi_bulk.items():
+            for k, v in processed_package[data_package_key].items():
                 if v is None:
                     continue
                 data_processor = DataFilter(
                     data_info=self.config.data_config.data_info[k]
                 )
-                filtered_df, _ = data_processor.filter(df=v, genes_to_keep=kept_genes[k])
+                filtered_df, _ = data_processor.filter(
+                    df=v, genes_to_keep=kept_genes[k]
+                )
                 scaled_df = data_processor.scale(df=filtered_df, scaler=scalers[k])
                 processed_package.multi_bulk[k] = scaled_df
                 if not filtered_df.index.equals(v.index):
@@ -406,17 +410,21 @@ class BasePreprocessor(abc.ABC):
 
         def postsplit_processor(
             split_data: Dict[str, Dict[str, Any]],
+            data_package_key: str
         ) -> Dict[str, Dict[str, Any]]:
-            return self._postsplit_multi_bulk(split_data=split_data)
+            return self._postsplit_multi_bulk(split_data=split_data, data_package_key=data_package_key)
 
         return self._process_data_case(
             data_package,
             modality_processors={
-                "from_modality": (
-                    presplit_processor,
-                    postsplit_processor,
-                ),  # TODO pass key information
-                "to_modality": (presplit_processor, postsplit_processor),
+            "from_modality": (
+                lambda data: presplit_processor(data, "from_modality"),
+                lambda data: postsplit_processor(data, "from_modality"),
+            ),
+            "to_modality": (
+                lambda data: presplit_processor(data, "to_modality"),
+                lambda data: postsplit_processor(data, "to_modality"),
+            ),
             },
         )
 

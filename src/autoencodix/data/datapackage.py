@@ -29,6 +29,14 @@ class DataPackage:
         Dict[str, Union[pd.DataFrame, List[ImgData], MuData, AnnData]]
     ] = field(default_factory=dict, repr=False)
 
+    def __getitem__(self, key: str) -> Any:
+        """
+        Allow dictionary-like access to top-level attributes.
+        """
+        if hasattr(self, key):
+            return getattr(self, key)
+        raise KeyError(f"{key} not found in DataPackage.")
+
     def __iter__(self) -> Iterator[Tuple[str, Any]]:
         """
         Make DataPackage iterable, yielding (key, value) pairs.

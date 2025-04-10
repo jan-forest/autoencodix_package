@@ -256,6 +256,7 @@ class SingleCellFilter:
         """
         out_gene_map: Dict[str, List] = {}
         out_scaler_map: Dict[str, Dict[str, Any]] = {}
+        out_scaler_map = {mod_key: {} for mod_key in mudata.mod.keys()}
         for mod_key, mod_data in mudata.mod.items():
             data_info = self._get_data_info_for_modality(mod_key)
             if gene_map is not None:

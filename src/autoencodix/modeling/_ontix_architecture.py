@@ -61,6 +61,7 @@ class OntixArchitecture(BaseAutoencoder):
         self.ontologies = ontologies
         self.masks = self._make_masks(config = self._config)
         self.latent_dim = self.masks[0].shape[1]
+        print("Latent Dim: " + str(self.latent_dim))
         # populate self.encoder and self.decoder
         self._build_network()
         self.apply(self._init_weights)
@@ -71,6 +72,8 @@ class OntixArchitecture(BaseAutoencoder):
             # Check that the decoder has the same number of layers as masks
             if len(self.masks) != len(self._decoder):
                 print(len(self.masks), len(self._decoder))
+                print(self._encoder)
+                print(self._decoder)
                 raise ValueError(
                     "Number of masks does not match number of decoder layers"
                 )
@@ -124,9 +127,10 @@ class OntixArchitecture(BaseAutoencoder):
             # Number of keys in ont_dic is prev_lay_dim
             prev_lay_dim = len(ont_dic.keys())
             # Number of childs in ont_dic is next_lay_dim
-            next_lay_dim = 0
-            for key in ont_dic:
-                next_lay_dim += len(ont_dic[key])
+            # next_lay_dim = 0
+            # print(ont_dic)
+            # for key in ont_dic:
+            #     next_lay_dim += len(ont_dic[key])
 
             # node_list are list of parents from next ontology??
             if x == len(self.ontologies) - 1:
@@ -134,7 +138,7 @@ class OntixArchitecture(BaseAutoencoder):
                 node_list = feature_names
             else:
                 node_list = list(self.ontologies[x+1].keys())
-
+            next_lay_dim = len(node_list)
             # create masks for sparse decoder
             mask = torch.zeros(next_lay_dim, prev_lay_dim)
             p_int = 0
@@ -154,11 +158,13 @@ class OntixArchitecture(BaseAutoencoder):
                     )
                     print("Returning zero mask")
             else:
+                print(f"node list: {len(node_list)} vs next_lay_dim:{next_lay_dim}")
                 print(
                     "Mask layer cannot be calculated. Output layer list does not match next layer dimension"
                 )
                 print("Returning zero mask")
-            
+            print(
+                f"Mask layer {x} with shape {mask.shape} and {torch.sum(mask)} connections")
             masks += (mask,)
 
         if torch.max(mask) < 1:
@@ -177,7 +183,7 @@ class OntixArchitecture(BaseAutoencoder):
 		#### Encoder copied from varix architecture ####
         enc_dim = LayerFactory.get_layer_dimensions(
             feature_dim=self.input_dim,
-            latent_dim=self._config.latent_dim,
+            latent_dim=self.latent_dim,
             n_layers=self._config.n_layers,
             enc_factor=self._config.enc_factor,
         )
@@ -185,8 +191,8 @@ class OntixArchitecture(BaseAutoencoder):
 
         # Case 1: No Hidden Layers (Direct Mapping)
         self._encoder = nn.Sequential()
-        self._mu = nn.Linear(self.input_dim, self._config.latent_dim)
-        self._logvar = nn.Linear(self.input_dim, self._config.latent_dim)
+        self._mu = nn.Linear(self.input_dim, self.latent_dim)
+        self._logvar = nn.Linear(self.input_dim, self.latent_dim)
 
         # Case 2: At Least One Hidden Layer
         if self._config.n_layers > 0:
@@ -208,13 +214,13 @@ class OntixArchitecture(BaseAutoencoder):
                 )
 
             self._encoder = nn.Sequential(*encoder_layers)
-            self._mu = nn.Linear(enc_dim[-2], self._config.latent_dim)
-            self._logvar = nn.Linear(enc_dim[-2], self._config.latent_dim)
+            self._mu = nn.Linear(enc_dim[-2], self.latent_dim)
+            self._logvar = nn.Linear(enc_dim[-2], self.latent_dim)
 		#### Encoder copied from varix architecture ####
 
         # Construct Decoder with Sparse Connections via masks
         # Decoder dimension is determined by the masks
-        dec_dim = [self.latent_dim] + [mask.shape[0] for mask in self.masks] + [self.input_dim]
+        dec_dim = [self.latent_dim] + [mask.shape[0] for mask in self.masks] #+ [self.input_dim]
         decoder_layers = []
         for i, (in_features, out_features) in enumerate(zip(dec_dim[:-1], dec_dim[1:])):
             # last_layer = i == len(dec_dim) - 2
@@ -298,6 +304,8 @@ class OntixArchitecture(BaseAutoencoder):
             Decoded tensor
 
         """
+        print(self._decoder)
+        print(x.shape)
         return self._decoder(x)
 
     def forward(self, x: torch.Tensor) -> ModelOutput:

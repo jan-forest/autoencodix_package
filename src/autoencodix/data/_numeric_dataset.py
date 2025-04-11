@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import torch
 from autoencodix.base._base_dataset import BaseDataset
-from autoencodix.data.datapackage import DataPackage
 from autoencodix.utils.default_config import DefaultConfig
 
 # internal check done
@@ -20,6 +19,7 @@ class NumericDataset(BaseDataset):
         data: torch.Tensor,
         config: DefaultConfig,
         ids: Union[None, List[Any]] = None,
+        feature_ids: Union[None, List[Any]] = None,
         metadata: Optional[pd.DataFrame] = None,
         split_ids: Optional[np.ndarray] = None,
     ):
@@ -34,7 +34,7 @@ class NumericDataset(BaseDataset):
             Optional labels for supervised learning
 
         """
-        super().__init__(data=data, ids=ids, config=config)
+        super().__init__(data=data, ids=ids, config=config, feature_ids=feature_ids)
         if self.config is None:
             raise ValueError("config cannot be None")
         dtype = self._map_float_precision_to_dtype(self.config.float_precision)

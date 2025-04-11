@@ -1,79 +1,14 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
-
+from typing import Any, Dict, List, Optional
 import numpy as np
 import torch
 from scipy.sparse import issparse
 
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_preprocessor import BasePreprocessor
+from autoencodix.data._stackix_dataset import StackixDataset
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.utils.default_config import DefaultConfig
-
-
-class StackixDataset(BaseDataset):
-    """
-    Dataset for handling multiple modalities in Stackix models.
-
-    This dataset holds tensors for multiple data modalities and provides
-    a consistent interface for accessing them during training.
-    """
-
-    def __init__(
-        self,
-        data_dict: Dict[str, torch.Tensor],
-        config: DefaultConfig,
-        ids_dict: Optional[Dict[str, List[Any]]] = None,
-    ):
-        # Use first modality for base class initialization
-        first_modality = next(iter(data_dict.values()))
-        first_ids = None
-        if ids_dict:
-            first_key = next(iter(ids_dict.keys()))
-            first_ids = ids_dict[first_key]
-
-        super().__init__(data=first_modality, ids=first_ids, config=config)
-
-        self.data_dict = data_dict
-        self.modality_keys = list(data_dict.keys())
-        self.ids_dict = ids_dict or {}
-
-        # Ensure all tensors have same first dimension (number of samples)
-        sample_counts = [tensor.shape[0] for tensor in data_dict.values()]
-        if not all(count == sample_counts[0] for count in sample_counts):
-            raise ValueError(
-                "All modality tensors must have the same number of samples"
-            )
-
-    def __len__(self) -> int:
-        """Return the number of samples in the dataset."""
-        return next(iter(self.data_dict.values())).shape[0]
-
-    def __getitem__(self, index: int) -> Dict[str, Tuple[torch.Tensor, Any]]:
-        """
-        Returns a dictionary mapping each modality to its (data, label) tuple.
-        """
-        result = {}
-        for key in self.modality_keys:
-            tensor = self.data_dict[key][index]
-            label = index
-            if key in self.ids_dict and self.ids_dict[key]:
-                label = self.ids_dict[key][index]
-            result[key] = (tensor, label)
-        return result
-
-    def get_input_dim(
-        self, modality: Optional[str] = None
-    ) -> Union[int, Dict[str, int]]:
-        """
-        Get the input dimension(s) of the dataset.
-        """
-        if modality is not None:
-            if modality not in self.data_dict:
-                raise KeyError(f"Modality '{modality}' not found in dataset")
-            return self.data_dict[modality].shape[1]
-
-        return {key: tensor.shape[1] for key, tensor in self.data_dict.items()}
 
 
 class StackixPreprocessor(BasePreprocessor):
@@ -132,16 +67,22 @@ class StackixPreprocessor(BasePreprocessor):
         # Create dictionaries to hold tensors and IDs for each modality
         modality_tensors = {}
         modality_ids = {}
+        feature_ids_dict = {}
 
         # Process each modality separately
         for modality_name, df in multi_bulk.items():
-            if df is not None:
-                tensor_data = torch.from_numpy(df.values).float()
-                modality_tensors[modality_name] = tensor_data
-                modality_ids[modality_name] = df.index.tolist()
+            if df is None:
+                continue
+            tensor_data = torch.from_numpy(df.values).float()
+            modality_tensors[modality_name] = tensor_data
+            modality_ids[modality_name] = df.index.tolist()
+            feature_ids_dict[modality_name] = df.columns.tolist()
 
         return StackixDataset(
-            data_dict=modality_tensors, config=self.config, ids_dict=modality_ids
+            data_dict=modality_tensors,
+            config=self.config,
+            ids_dict=modality_ids,
+            feature_ids_dict=feature_ids_dict,
         )
 
     def _process_multi_sc(self, data_dict: Dict[str, Any]) -> StackixDataset:
@@ -155,6 +96,7 @@ class StackixPreprocessor(BasePreprocessor):
         # Create dictionaries to hold tensors and IDs for each modality
         modality_tensors = {}
         modality_ids = {}
+        feature_ids_dict = {}
 
         # Process each modality separately
         for modality_name, modality_data in multi_sc.mod.items():
@@ -173,9 +115,13 @@ class StackixPreprocessor(BasePreprocessor):
                 tensor_data = torch.from_numpy(combined_data).float()
                 modality_tensors[modality_name] = tensor_data
                 modality_ids[modality_name] = modality_data.obs_names.tolist()
+                feature_ids_dict[modality_name] = modality_data.var_names.tolist()
 
         return StackixDataset(
-            data_dict=modality_tensors, config=self.config, ids_dict=modality_ids
+            data_dict=modality_tensors,
+            config=self.config,
+            ids_dict=modality_ids,
+            feature_ids_dict=feature_ids_dict,
         )
 
     def _process_data_package(self, data_dict: Dict[str, Any]) -> BaseDataset:

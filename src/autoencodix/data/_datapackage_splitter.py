@@ -59,18 +59,24 @@ class DataPackageSplitter:
             return None
 
         split_data = {}
+        print("in _split_data_package")
         for key, value in self._data_package.__dict__.items():
+            print(f"key: {key}, type: {type(value)}")
             if value is None:
                 continue
 
             if key == "multi_sc":
+                print("in multi_sc")
                 if isinstance(value, dict):
                     split_data[key] = {
                         k: self._indexing(v, indices) for k, v in value.items()
                     }
                 elif isinstance(value, (AnnData, MuData)):
                     split_data[key] = self._indexing(value, indices)
+                continue
             elif isinstance(value, dict):
+                print("in dict case")
+                print(f" attribute name: {key}")
                 first_val = next(iter(value.values()), None)
                 if isinstance(first_val, (pd.DataFrame, list, AnnData, MuData)):
                     split_data[key] = {
@@ -79,7 +85,9 @@ class DataPackageSplitter:
                 else:
                     split_data[key] = dict(value)
             else:
-                split_data[key] = self._shallow_copy(value)
+                raise TypeError(
+                    f"Unsupported type {type(value)} for attribute '{key}'. Has it been implemented in the DataPackage class?"
+                )
 
         return DataPackage(**split_data)
 
@@ -158,7 +166,7 @@ class DataPackageSplitter:
                     setattr(result, key, copy.deepcopy(value))
         return result
 
-    def split(self) -> Dict[str, Dict[str, Any]]:
+    def split(self) -> Dict[str, Optional[Dict[str, Any]]]:
         """
         Splits the underlying DataPackage into train, valid, and test subsets.
         Returns a dictionary where each key ("train", "valid", "test") maps to a
@@ -168,7 +176,7 @@ class DataPackageSplitter:
             raise ValueError("No data package available for splitting")
 
         splits = ["train", "valid", "test"]
-        result = {}
+        result: Dict[str, Optional[Dict[str, Any]]] = {}
 
         if self.config.paired_translation is None or self.config.paired_translation:
             if self.indices is None:
@@ -178,7 +186,7 @@ class DataPackageSplitter:
                     "data": self._split_data_package(self.indices[split]),
                     "indices": {"paired": self.indices[split]}
                     if len(self.indices[split]) > 0
-                    else None,
+                    else {"paired": np.array([])},
                 }
                 for split in splits
             }
@@ -204,10 +212,10 @@ class DataPackageSplitter:
                     "indices": {
                         "to": self.to_indices[split]
                         if len(self.to_indices[split]) > 0
-                        else None,
+                        else np.array([]),
                         "from": self.from_indices[split]
                         if len(self.from_indices[split]) > 0
-                        else None,
+                        else np.array([]),
                     },
                 }
         return result

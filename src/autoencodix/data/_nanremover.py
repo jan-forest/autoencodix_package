@@ -113,6 +113,8 @@ class NaNRemover:
 
         # Handle MuData in multi_sc
         if data.multi_sc is not None:
+            print(f"data in nanremover: {data}")
+            print(f"multi_sc in nanremover: {data.multi_sc}")
             mudata = data.multi_sc["multi_sc"]
             # Process each modality
             for mod_name, mod_data in mudata.mod.items():

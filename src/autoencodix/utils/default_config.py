@@ -77,8 +77,8 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         default="VAR"
     )
     k_filter: Union[int, None] = Field(
-        default=None, description="Number of top genes to keep"
-    )
+        default=20, description="Number of top genes to keep per dataset"
+    ) # maybe TODO to first concat datasets to spare the user from calculating the total top genes
     sep: Union[str, None] = Field(default=None)  # for pandas read_csv
     extra_anno_file: Union[str, None] = Field(default=None)
 
@@ -99,6 +99,7 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         description="Minimum fraction of genes a cell must express to be kept. Cells expressing fewer genes will be filtered out.",
     )  # Controls cell quality filtering
     selected_layers: List[str] = Field(default=["X"])
+
     is_X: bool = Field(default=False)  # only for single cell data
     normalize_counts: bool = Field(
         default=True, description="Whether to normalize by total counts"
@@ -114,6 +115,15 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     # annotation specific -------------------------
     # xmodalix specific -------------------------
     translate_direction: Union[Literal["from", "to"], None] = Field(default=None)
+
+    @field_validator("selected_layers")
+    @classmethod
+    def validate_selected_layers(cls, v):
+        if "X" not in v:
+            raise ValueError('"X" must always be a part of the selected_layers list')
+        return v
+
+
 
 
 class DataConfig(BaseModel, SchemaPrinterMixin):

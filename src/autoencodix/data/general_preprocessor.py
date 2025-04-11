@@ -187,6 +187,8 @@ class GeneralPreprocessor(BasePreprocessor):
                 )
 
             elif key == "multi_sc" and attr_val is not None:
+                if isinstance(attr_val, dict):
+                    attr_val = attr_val["multi_sc"]
                 combined_data = self._combine_modality_data(attr_val)
                 combined_obs = pd.concat(
                     [modality_data.obs for modality_data in attr_val.mod.values()],

@@ -1,10 +1,10 @@
 import abc
-import copy
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._datapackage_splitter import DataPackageSplitter
@@ -99,7 +99,9 @@ class BasePreprocessor(abc.ABC):
         self.predict_new_data = predict_new_data
         datacase = self.config.data_case
         if datacase is None:
-            raise TypeError("datacase can't be None. Please ensure the configuration specifies a valid DataCase.")
+            raise TypeError(
+                "datacase can't be None. Please ensure the configuration specifies a valid DataCase."
+            )
         if raw_user_data is None:
             self.from_key, self.to_key = self._get_translation_keys()
         else:
@@ -142,7 +144,7 @@ class BasePreprocessor(abc.ABC):
 
         This method handles the common preprocessing steps for different data cases,
         including splitting the data package, removing NaNs, and applying
-        modality-specific processors.
+        odality-specific processors.
 
         Parameters:
             data_package: The DataPackage object to be processed.
@@ -170,32 +172,35 @@ class BasePreprocessor(abc.ABC):
             ) in modality_processors.items():
                 modality_data = clean_package[modality_key]
                 if modality_data:
-                    processed_modality_data = presplit_processor(
-                        modality_data=modality_data
-                    )
+                    processed_modality_data = presplit_processor(modality_data)
                     # mock the split
                     clean_package[modality_key] = processed_modality_data
                     mock_split["train"]["data"] = clean_package
-                    mock_split = postsplit_processor(split_data=mock_split)
-            mock_split["test"] = mock_split["train"] # for new unseen data we expect test split
+                    mock_split = postsplit_processor(mock_split)
+            mock_split["test"] = mock_split[
+                "train"
+            ]  # for new unseen data we expect test split
             mock_split["train"] = {"data": None, "indices": {"paired": np.array([])}}
             mock_split["valid"] = {"data": None, "indices": {"paired": np.array([])}}
             return mock_split
+        print(f"datapackage before cleaning: {data_package}")
         clean_package = self._remove_nans(data_package=data_package)
+        print(f"datapackage after cleaning: {clean_package}")
         for modality_key, (presplit_processor, _) in modality_processors.items():
             modality_data = clean_package[modality_key]
             if modality_data:
-                processed_modality_data = presplit_processor(
-                    modality_data=modality_data
-                )
+                processed_modality_data = presplit_processor(modality_data)
                 clean_package[modality_key] = processed_modality_data
-
+        print(f"datapackage after presplit processing: {clean_package}")
         split_packages, indices = self._split_data_package(data_package=clean_package)
-        print(f"indices: {indices}")
+        train_data = split_packages.get("train")["data"]
+        print(f"type of train data: {type(train_data)}")
+        print(
+            f" type of to and from_modality: {type(train_data.to_modality)}, type of {type(train_data.from_modality)}"
+        )
         processed_splits = {}
-
         for modality_key, (_, postsplit_processor) in modality_processors.items():
-            split_packages = postsplit_processor(split_data=split_packages)
+            split_packages = postsplit_processor(split_packages)
         for split_name, split_package in split_packages.items():
             split_indices = {
                 name: {
@@ -254,20 +259,24 @@ class BasePreprocessor(abc.ABC):
         )
 
     def _postsplit_multi_single_cell(
-        self, split_data: Dict[str, Dict[str, Any]], datapackage_key: str = "multi_sc"
+        self,
+        split_data: Dict[str, Dict[str, Any]],
+        datapackage_key: str = "multi_sc",
+        modality_key: str = "multi_sc",
     ) -> Dict[str, Dict[str, Any]]:
         processed_splits: Dict[str, Dict[str, Any]] = {}
         train_split = split_data.get("train")["data"]
         sc_filter = SingleCellFilter(data_info=self.config.data_config.data_info)
+
         filtered_train, sc_genes_to_keep = sc_filter.sc_postsplit_processing(
-            mudata=train_split[datapackage_key]
+            mudata=train_split[datapackage_key][modality_key]
         )
         processed_train, general_genes_to_keep, scalers = (
             sc_filter.general_postsplit_processing(
                 mudata=filtered_train, scaler_map=None, gene_map=None
             )
         )
-        train_split[datapackage_key] = processed_train
+        train_split[datapackage_key] = {modality_key: processed_train}
         processed_splits["train"] = {
             "data": train_split,
             "indices": split_data["train"]["indices"],
@@ -279,15 +288,15 @@ class BasePreprocessor(abc.ABC):
             data_package = split_package["data"]
             sc_filter = SingleCellFilter(data_info=self.config.data_config.data_info)
             filtered_sc_data, _ = sc_filter.sc_postsplit_processing(
-                mudata=data_package[datapackage_key],
+                mudata=data_package[datapackage_key][modality_key],  # TODO check
                 gene_map=sc_genes_to_keep,
             )
             processed_general_data, _, _ = sc_filter.general_postsplit_processing(
                 mudata=filtered_sc_data,
-                gene_map=general_genes_to_keep,  # TODO naming consistency
+                gene_map=general_genes_to_keep,
                 scaler_map=scalers,
             )
-            data_package[datapackage_key] = processed_general_data
+            data_package[datapackage_key] = {modality_key: processed_general_data}
             processed_splits[split] = {
                 "data": data_package,
                 "indices": split_package["indices"],
@@ -354,7 +363,7 @@ class BasePreprocessor(abc.ABC):
             genes_to_keep_map[k] = genes_to_keep
             scalers[k] = scaler
             scaled_df = data_processor.scale(df=filtered_df, scaler=scaler)
-            train_split.multi_bulk[k] = scaled_df
+            train_split[datapackage_key][k] = scaled_df
             # Check if indices stayed the same after filtering
             if not filtered_df.index.equals(v.index):
                 mismatched_indices = filtered_df.index.symmetric_difference(v.index)
@@ -383,7 +392,7 @@ class BasePreprocessor(abc.ABC):
                     df=v, genes_to_keep=genes_to_keep_map[k]
                 )
                 scaled_df = data_processor.scale(df=filtered_df, scaler=scalers[k])
-                processed_package.multi_bulk[k] = scaled_df
+                processed_package[datapackage_key][k] = scaled_df
                 if not filtered_df.index.equals(v.index):
                     raise ValueError(
                         f"Indices mismatch after filtering for modality {k}. "
@@ -391,7 +400,7 @@ class BasePreprocessor(abc.ABC):
                     )
             processed_splits[split_name] = {
                 "data": processed_package,
-                "indices": split_package["indices"],  # TODO fix
+                "indices": split_package["indices"],
             }
         return processed_splits
 
@@ -468,39 +477,62 @@ class BasePreprocessor(abc.ABC):
         if raw_user_data is None:
             screader = self.data_readers[DataCase.SINGLE_CELL_TO_SINGLE_CELL]
             mudata = screader.read_data(config=self.config)
+            mudata = mudata["multi_sc"]
 
             data_package = DataPackage()
             data_package.from_modality = {self.from_key: mudata[self.from_key]}
             data_package.to_modality = {self.to_key: mudata[self.to_key]}
         else:
             data_package = raw_user_data
+        print(f"data_package in _process_sc_to_sc_case: {data_package}")
 
         def presplit_processor(
-            modality_data: Dict[str, MuData],
+            modality_data: Dict[str, Union[AnnData, MuData]],
+            modality_key: str,
         ) -> Dict[str, MuData]:
             """Preprocesses single-cell modality data."""
             if modality_data is None:
                 return modality_data
             sc_filter = SingleCellFilter(data_info=self.config.data_config.data_info)
-            return sc_filter.presplit_processing(mudata=modality_data)
+            print(
+                f"modality data in presplit_processor of *process*sc_to_sc_case: {modality_data}"
+            )
+            modality_data = modality_data[modality_key]
+            # Check if it is AnnData and convert to MuData if needed
+            if isinstance(modality_data, AnnData):
+                from mudata import MuData
+                mudata = MuData({modality_key: modality_data})
+                return {modality_key: sc_filter.presplit_processing(mudata=mudata)}
+            elif isinstance(modality_data, MuData):
+                return {modality_key: sc_filter.presplit_processing(mudata=modality_data)}
+            else:
+                raise TypeError(
+                    f"Expected AnnData or MuData, got {type(modality_data)}"
+                )
 
         def postsplit_processor(
-            split_data: Dict[str, Dict[str, Any]], datapackage_key: str
+            split_data: Dict[str, Dict[str, Any]],
+            datapackage_key: str,
+            modality_key: str,
         ) -> Dict[str, Dict[str, Any]]:
             return self._postsplit_multi_single_cell(
-                split_data=split_data, datapackage_key=datapackage_key
+                split_data=split_data,
+                datapackage_key=datapackage_key,
+                modality_key=modality_key,
             )
 
         return self._process_data_case(
             data_package,
             modality_processors={
                 "from_modality": (
-                    presplit_processor,
-                    lambda data: postsplit_processor(data, "from_modality"),
+                    lambda data: presplit_processor(data, self.from_key),
+                    lambda data: postsplit_processor(
+                        data, "from_modality", self.from_key
+                    ),
                 ),
                 "to_modality": (
-                    presplit_processor,
-                    lambda data: postsplit_processor(data, "to_modality"),
+                    lambda data: presplit_processor(data, self.to_key),
+                    lambda data: postsplit_processor(data, "to_modality", self.to_key),
                 ),
             },
         )
@@ -771,6 +803,7 @@ class BasePreprocessor(abc.ABC):
             split_indiced_config - (dict): the actual indicies used for splitting
         """
         data_splitter = DataSplitter(config=self.config)
+        print(f"datapacke in _split_data_package: {data_package}")
         n_samples = data_package.get_n_samples(is_paired=self.config.paired_translation)
 
         split_indices_config: dict = {}

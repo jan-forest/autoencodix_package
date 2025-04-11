@@ -59,18 +59,24 @@ class DataPackageSplitter:
             return None
 
         split_data = {}
+        print("in _split_data_package")
         for key, value in self._data_package.__dict__.items():
+            print(f"key: {key}, type: {type(value)}")
             if value is None:
                 continue
 
             if key == "multi_sc":
+                print("in multi_sc")
                 if isinstance(value, dict):
                     split_data[key] = {
                         k: self._indexing(v, indices) for k, v in value.items()
                     }
                 elif isinstance(value, (AnnData, MuData)):
                     split_data[key] = self._indexing(value, indices)
+                continue
             elif isinstance(value, dict):
+                print("in dict case")
+                print(f" attribute name: {key}")
                 first_val = next(iter(value.values()), None)
                 if isinstance(first_val, (pd.DataFrame, list, AnnData, MuData)):
                     split_data[key] = {
@@ -79,7 +85,9 @@ class DataPackageSplitter:
                 else:
                     split_data[key] = dict(value)
             else:
-                split_data[key] = self._shallow_copy(value)
+                raise TypeError(
+                    f"Unsupported type {type(value)} for attribute '{key}'. Has it been implemented in the DataPackage class?"
+                )
 
         return DataPackage(**split_data)
 

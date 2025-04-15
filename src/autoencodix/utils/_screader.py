@@ -1,15 +1,23 @@
 import scanpy as sc # type: ignore
 import mudata as md # type: ignore
 from anndata import AnnData # type: ignore
-from typing import Dict
+from typing import Dict, Any, TYPE_CHECKING
 from autoencodix.utils.default_config import DefaultConfig
+
+if TYPE_CHECKING:
+    import mudata as md  # type: ignore
+
+    MuData = md.MuData.MuData
+else:
+    MuData = Any
+
 
 
 class SingleCellDataReader:
     """Reader class for multi-modal single-cell data."""
 
     @staticmethod
-    def read_data(config: DefaultConfig) -> Dict[str, md.MuData]:
+    def read_data(config: DefaultConfig) -> Dict[str, MuData]:
         """
         Read multiple single-cell modalities into MuData object(s).
 

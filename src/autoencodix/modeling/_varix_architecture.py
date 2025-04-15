@@ -60,6 +60,7 @@ class VarixArchitecture(BaseAutoencoder):
 
         # populate self.encoder and self.decoder
         self._build_network()
+        self.apply(self._init_weights)
 
     def _build_network(self) -> None:
         """

@@ -197,7 +197,6 @@ class BasePipeline(abc.ABC):
                 self._validate_config_data()
         else:
             self._validate_raw_user_data()
-            # self._fill_data_info()
 
     def _validate_container(self) -> None:
         """

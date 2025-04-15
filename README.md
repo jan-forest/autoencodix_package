@@ -18,7 +18,7 @@
 - `gh repo clone MaxJoas/autoencodix_package`
 - `uv venv --python 3.10`
 - `source .venv/bin/activate`
-- `uv pip install -e '.[dev]'`
+- `uv pip install -e '`
 
 ## Sample Usage
 ```python

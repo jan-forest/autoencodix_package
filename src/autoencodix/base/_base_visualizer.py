@@ -1,8 +1,9 @@
 import abc
-from typing import Any, Optional, Dict, Union
+from typing import Optional, Union
 
 
-from autoencodix.utils._result import Result
+from autoencodix.utils._result import Result 
+from autoencodix.utils._utils import nested_dict
 from autoencodix.utils.default_config import DefaultConfig
 
 
@@ -29,10 +30,10 @@ class BaseVisualizer(abc.ABC):
     def show_latent_space(
         self,
         result: Result,
-        type: str = "2D-scatter",
+        plot_type: str = "2D-scatter",
         label_list: Optional[Union[list, None]] = None,
         param: str = "all",
-        epoch: Optional[Union[int, None]]  = None,
+        epoch: Optional[Union[int, None]] = None,
         split: str = "all",
     ) -> None:
         pass

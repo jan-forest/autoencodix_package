@@ -408,8 +408,10 @@ class BasePipeline(abc.ABC):
             predict_data: DatasetContainer = self._preprocessor.preprocess(
                 raw_user_data=data, predict_new_data=True
             )
+            self.result.new_datasets = predict_data
         elif isinstance(data, DatasetContainer):
             predict_data = data
+            self.result.new_datasets = predict_data
         else:
             raise ValueError(f"Unsupported data type: {type(data)}")
 

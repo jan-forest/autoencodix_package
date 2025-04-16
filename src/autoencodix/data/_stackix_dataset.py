@@ -28,7 +28,7 @@ class StackixDataset(BaseDataset):
             first_key = next(iter(ids_dict.keys()))
             first_ids = ids_dict[first_key]
 
-        super().__init__(data=first_modality, ids=first_ids, config=config)
+        super().__init__(data=first_modality, sample_ids=first_ids, config=config)
 
         self.data_dict = data_dict
         self.modality_keys = list(data_dict.keys())

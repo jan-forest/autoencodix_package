@@ -105,6 +105,10 @@ class Result:
     datasets: Optional[DatasetContainer] = field(
         default_factory=lambda: DatasetContainer(train=None, valid=None, test=None)
     )
+    new_datasets: Optional[DatasetContainer] = field(
+        default_factory=lambda: DatasetContainer(train=None, valid=None, test=None)
+    )
+
     # plots: Dict[str, Any] = field(
     #     default_factory=nested_dict
     # )  ## Nested dictionary of plots as figure handles

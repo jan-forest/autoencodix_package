@@ -101,28 +101,28 @@ def generate_example_data(
     train_dataset = NumericDataset(
         data=data_tensor[train_split],
         config=DefaultConfig(),
-        ids=[ids[i] for i in train_idx],
+        sample_ids=[ids[i] for i in train_idx],
         metadata=metadata_df.iloc[train_idx].reset_index(drop=True),
         split_ids=train_split,
-        feature_ids=[f"feature_{i}" for i in n_features],
+        feature_ids=[f"feature_{i}" for i in range(n_features)],
     )
 
     val_dataset = NumericDataset(
         data=data_tensor[val_split],
         config=DefaultConfig(),
-        ids=[ids[i] for i in val_idx],
+        sample_ids=[ids[i] for i in val_idx],
         metadata=metadata_df.iloc[val_idx].reset_index(drop=True),
         split_ids=val_split,
-        feature_ids=[f"feature_{i}" for i in n_features],
+        feature_ids=[f"feature_{i}" for i in range(n_features)],
     )
 
     test_dataset = NumericDataset(
         data=data_tensor[test_split],
         config=DefaultConfig(),
-        ids=[ids[i] for i in test_idx],
+        sample_ids=[ids[i] for i in test_idx],
         metadata=metadata_df.iloc[test_idx].reset_index(drop=True),
         split_ids=test_split,
-        feature_ids=[f"feature_{i}" for i in n_features],
+        feature_ids=[f"feature_{i}" for i in range(n_features)],
     )
 
     return DatasetContainer(train=train_dataset, valid=val_dataset, test=test_dataset)

@@ -3,14 +3,21 @@ Stores utility functions for the autoencodix package.
 Uuse of OOP would be overkill for the simple functions in this module.
 """
 
-from collections import defaultdict
 import inspect
+import os
+from collections import defaultdict
 from functools import wraps
 from typing import Any, Callable, Optional, get_type_hints
 
+import dill as pickle
+import torch
 from matplotlib import pyplot as plt
 
 from .default_config import DefaultConfig
+
+
+class BasePipeline:
+    pass
 
 
 def nested_dict():
@@ -131,3 +138,151 @@ def config_method(valid_params: Optional[set[str]] = None):
         return wrapper
 
     return decorator
+
+
+class Saver:
+    """
+    Handles the saving of BasePipeline objects.
+    """
+
+    def __init__(self, file_path: str):
+        """
+        Initializes the Saver with the base file path.
+
+        Args:
+            file_path: The base file path (without extensions).
+        """
+        self.file_path = file_path
+        self.preprocessor_path = f"{file_path}_preprocessor.pkl"
+        self.model_state_path = f"{file_path}_model.pth"
+
+    def save(self, pipeline: "BasePipeline"):
+        """
+        Saves the BasePipeline object.
+
+        Args:
+            pipeline: The BasePipeline object to save.
+        """
+        self._save_pipeline_object(pipeline)
+        self._save_preprocessor(pipeline._preprocessor)
+        self._save_model_state(pipeline)
+
+    def _save_pipeline_object(self, pipeline: "BasePipeline"):
+        try:
+            with open(self.file_path, "wb") as f:
+                pickle.dump(pipeline, f)
+            print("Pipeline object saved successfully.")
+        except (pickle.PicklingError, OSError) as e:
+            print(f"Error saving pipeline object: {e}")
+            raise e
+
+    def _save_preprocessor(self, preprocessor):
+        if preprocessor is not None:
+            try:
+                with open(self.preprocessor_path, "wb") as f:
+                    pickle.dump(preprocessor, f)
+                print("Preprocessor saved successfully.")
+            except (pickle.PickleError, OSError) as e:
+                print(f"Error saving preprocessor: {e}")
+                raise e
+
+    def _save_model_state(self, pipeline: "BasePipeline"):
+        if pipeline.result is not None and pipeline.result.model is not None:
+            try:
+                torch.save(pipeline.result.model.state_dict(), self.model_state_path)
+                print("Model state saved successfully.")
+            except (TypeError, OSError) as e:
+                print(f"Error saving model state: {e}")
+                raise e
+
+
+class Loader:
+    """
+    Handles the loading of BasePipeline objects.
+    """
+
+    def __init__(self, file_path: str):
+        """
+        Initializes the Loader with the base file path.
+
+        Args:
+            file_path: The base file path (without extensions).
+        """
+        self.file_path = file_path
+        self.preprocessor_path = f"{file_path}_preprocessor.pkl"
+        self.model_state_path = f"{file_path}_model.pth"
+
+    def load(self) -> Any:
+        """
+        Loads the BasePipeline object.
+
+        Returns:
+            The loaded BasePipeline object, or None on error.
+        """
+        loaded_obj = self._load_pipeline_object()
+        if loaded_obj is None:
+            return None  # Exit if the main object fails to load
+
+        loaded_obj._preprocessor = (
+            self._load_preprocessor()
+        )  # Load even if it doesn't exist
+        loaded_obj.result.model = self._load_model_state(loaded_obj)
+        return loaded_obj
+
+    def _load_pipeline_object(self) -> Any:
+        print(f"Attempting to load a pipeline from {self.file_path}...")
+        try:
+            if not os.path.exists(self.file_path):
+                print(f"Error: File not found at {self.file_path}")
+                return None
+            with open(self.file_path, "rb") as f:
+                loaded_obj = pickle.load(f)
+            print(
+                f"Pipeline object loaded successfully. Actual type: {type(loaded_obj).__name__}"
+            )
+            return loaded_obj
+        except (pickle.UnpicklingError, EOFError, OSError, FileNotFoundError) as e:
+            print(f"Error loading pipeline object: {e}")
+            return None
+
+    def _load_preprocessor(self):
+        if os.path.exists(self.preprocessor_path):
+            try:
+                with open(self.preprocessor_path, "rb") as f:
+                    preprocessor = pickle.load(f)
+                print("Preprocessor loaded successfully.")
+                return preprocessor
+            except (pickle.UnpicklingError, EOFError, OSError, FileNotFoundError) as e:
+                print(f"Error loading preprocessor: {e}")
+                return None
+        else:
+            print("Preprocessor file not found. Skipping preprocessor load.")
+            return None
+
+    def _load_model_state(self, loaded_obj: "BasePipeline"):
+        if os.path.exists(self.model_state_path):
+            try:
+                if (
+                    loaded_obj.result is not None
+                    and loaded_obj.result.model is not None
+                ):
+                    model_state = torch.load(self.model_state_path)
+                    try:
+                        loaded_obj.result.model.load_state_dict(model_state)
+
+                        print("Model state loaded successfully.")
+                        return loaded_obj.result.model
+                    except Exception as e:
+                        print(
+                            f"Error when loading model, filling obj.result.model with None: {e}"
+                        )
+                        return None
+
+                else:
+                    return None
+                    print("Warning: Model not initialized. Skipping model state load.")
+            except (RuntimeError, OSError) as e:
+                print(f"Error loading model state: {e}")
+        else:
+            print("Model state file not found. Skipping model state load.")
+            return None

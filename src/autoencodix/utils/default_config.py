@@ -76,9 +76,6 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     filtering: Literal["VAR", "MAD", "CORR", "VARCORR", "NOFILT", "NONZEROVAR"] = Field(
         default="VAR"
     )
-    k_filter: Union[int, None] = Field(
-        default=20, description="Number of top genes to keep per dataset"
-    ) # maybe TODO to first concat datasets to spare the user from calculating the total top genes
     sep: Union[str, None] = Field(default=None)  # for pandas read_csv
     extra_anno_file: Union[str, None] = Field(default=None)
 
@@ -93,7 +90,7 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     )  # Controls gene filtering based on expression prevalence
 
     min_genes: float = Field(
-        default=0.01,
+        default=0.02,
         ge=0,
         le=1,
         description="Minimum fraction of genes a cell must express to be kept. Cells expressing fewer genes will be filtered out.",
@@ -106,6 +103,10 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     )
     log_transform: bool = Field(
         default=True, description="Whether to apply log1p transformation"
+    )
+    k_filter: int = Field(
+        default=20,
+        description="Don't set this gets calculated dynamically, based on k_filter in general config ",
     )
     # image specific ------------------------------
 
@@ -122,8 +123,6 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         if "X" not in v:
             raise ValueError('"X" must always be a part of the selected_layers list')
         return v
-
-
 
 
 class DataConfig(BaseModel, SchemaPrinterMixin):
@@ -163,6 +162,10 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default_factory=lambda: None,
         description="Data case for the model, will be determined automatically",
     )
+    k_filter: Union[int, None] = Field(
+        default=20, description="Number of features to keep"
+    )
+
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(
         default=16, ge=1, description="Dimension of the latent space"

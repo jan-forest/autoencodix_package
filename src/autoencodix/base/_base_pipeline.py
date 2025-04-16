@@ -1,8 +1,12 @@
 import abc
-from typing import Optional, Union, Dict, Type, Any
+import torch
+import anndata as ad
+from typing import Optional, Union, Dict, Type
 
 import numpy as np
+import pandas as pd
 from mudata import MuData
+import anndata as ad
 from torch.utils.data import Dataset
 from ._base_dataset import BaseDataset
 from ._base_autoencoder import BaseAutoencoder
@@ -15,8 +19,8 @@ from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig, DataInfo
-from autoencodix.utils._utils import config_method
+from autoencodix.utils.default_config import DefaultConfig, DataInfo, DataCase
+from autoencodix.utils._utils import config_method, Saver, Loader
 
 
 # tests: done
@@ -110,7 +114,7 @@ class BasePipeline(abc.ABC):
         datasplitter_type: Type[DataSplitter],
         preprocessor_type: Type[BasePreprocessor],
         visualizer: BaseVisualizer,
-        user_data: Optional[Union[DataPackage, DatasetContainer]],
+        user_data: Optional[Union[DataPackage, DatasetContainer, ad.AnnData, MuData]],
         evaluator: Evaluator,
         result: Result,
         config: DefaultConfig = DefaultConfig(),
@@ -126,7 +130,11 @@ class BasePipeline(abc.ABC):
             The configuration dictionary for the model.
         """
         processed_data = user_data if isinstance(user_data, DatasetContainer) else None
-        raw_user_data = user_data if isinstance(user_data, DataPackage) else None
+        raw_user_data = (
+            user_data
+            if isinstance(user_data, (DataPackage, ad.AnnData, MuData))
+            else None
+        )
         if processed_data is not None and not isinstance(
             processed_data, DatasetContainer
         ):
@@ -135,12 +143,16 @@ class BasePipeline(abc.ABC):
             )
 
         self.preprocessed_data: DatasetContainer = processed_data
-        self.raw_user_data: DataPackage = raw_user_data
+        self.raw_user_data: Union[DataPackage, ad.AnnData, MuData] = raw_user_data
         self.config = config
         self._trainer_type = trainer_type
         self._model_type = model_type
         self._loss_type = loss_type
         self._preprocessor_type = preprocessor_type
+        if self.raw_user_data is not None:
+            self._handle_direct_user_data()
+            self._fill_data_info()
+
 
         self._preprocessor = self._preprocessor_type(
             config=self.config,
@@ -163,11 +175,71 @@ class BasePipeline(abc.ABC):
         self._datasets: Optional[DatasetContainer] = (
             processed_data  # None, or user input
         )
-        if self.raw_user_data is not None:
-            self._fill_data_info()
+
+    def _handle_direct_user_data(self):
+        if isinstance(self.raw_user_data, ad.AnnData):
+            mudata = MuData({"user-data": self.raw_user_data})
+            self.raw_user_data = DataPackage(multi_sc={"multi_sc": mudata})
+            self.config.data_case = DataCase.MULTI_SINGLE_CELL
+        elif isinstance(self.raw_user_data, MuData):
+            self.raw_user_data = DataPackage(multi_sc={"multi_sc": self.raw_user_data})
+            self.config.data_case = DataCase.MULTI_SINGLE_CELL
+        elif isinstance(self.raw_user_data, pd.DataFrame):
+            self.raw_user_data = DataPackage(
+                multi_bulk={"user-data": self.raw_user_data}
+            )
+            self.config.data_case = DataCase.MULTI_BULK
+        elif isinstance(self.raw_user_data, dict):
+            # Check if all values in the dictionary are pandas DataFrames
+            if all(
+                isinstance(value, pd.DataFrame) for value in self.raw_user_data.values()
+            ):
+                self.raw_user_data = DataPackage(multi_bulk=self.raw_user_data)
+                self.config.data_case = DataCase.MULTI_BULK
+            else:
+                raise ValueError(
+                    "All values in the dictionary must be pandas DataFrames."
+                )
+        elif isinstance(self.raw_user_data, DataPackage):
+            pass
+        else:
+            raise TypeError(
+                f"Type: {type[self.raw_user_data]} is not supported as of now, please provide: Union[AnnData, MuData, pd.DataFrame, Dict[str, pd.DataFrame], DataPackage]"
+            )
 
     def _validate_raw_user_data(self) -> None:
-        pass
+        """
+        Validates the raw user data provided by the user.
+
+        Ensures that:
+        - The raw user data is a DataPackage.
+        - Each attribute of the DataPackage is a dictionary.
+        - At least one attribute of the DataPackage is not None.
+
+        Raises:
+            TypeError: If the raw user data is not a DataPackage.
+            ValueError: If any attribute of the DataPackage is not a dictionary.
+            ValueError: If all attributes of the DataPackage are None.
+        """
+        if not isinstance(self.raw_user_data, DataPackage):
+            raise TypeError(
+                f"Expected raw_user_data to be of type DataPackage, got {type(self.raw_user_data)}."
+            )
+
+        all_none = True
+        for attr_name in self.raw_user_data.__annotations__:
+            attr_value = getattr(self.raw_user_data, attr_name)
+            if attr_value is not None:
+                all_none = False
+                if not isinstance(attr_value, dict):
+                    raise ValueError(
+                        f"Attribute '{attr_name}' of raw_user_data must be a dictionary, got {type(attr_value)}."
+                    )
+
+        if all_none:
+            raise ValueError(
+                "All attributes of raw_user_data are None. At least one must be non-None."
+            )
 
     def _fill_data_info(self):
         all_keys = []
@@ -423,8 +495,71 @@ class BasePipeline(abc.ABC):
         predictor_results = self._trainer.predict(
             data=predict_data.test, model=self.result.model
         )
+        latent = predictor_results.latentspaces.get(epoch=-1, split="test")
+        self.result.adata_latent = ad.AnnData(latent)
 
         self.result.update(predictor_results)
+
+    def decode(self, latent: Union[torch.Tensor, ad.AnnData]) -> torch.Tensor:
+        """
+        Decodes a latent representation into the original data space.
+
+        Handles both PyTorch tensors and AnnData objects as input.
+        If an AnnData object is provided, it extracts the `.X` attribute,
+        converts it to a tensor, and then decodes it.  It also checks
+        that the size of the latent representation is compatible with
+        the model's expected input size.
+
+        Args:
+            latent: The latent representation to decode.
+                - If torch.Tensor: A tensor of shape (n_cells, n_latent).
+                - If AnnData: An AnnData object. The .X attribute should
+                have shape (n_cells, n_features), and the function
+                will use a linear transformation to project this
+                to (n_cells, n_latent) if necessary.
+
+        Returns:
+            A torch.Tensor representing the decoded data, with shape
+            (n_cells, n_features_out), where n_features_out is the
+            number of features in the original data.
+
+        Raises:
+            TypeError: If no model has been trained yet.
+            ValueError: If the input `latent` has an incompatible size
+                with the model's expected latent input size.
+        """
+        if self.result.model is None:
+            raise TypeError("No model trained yet, use fit() or run() method first")
+
+        if isinstance(latent, ad.AnnData):
+            latent_data = torch.tensor(
+                latent.X, dtype=torch.float32
+            )  # Ensure float for compatibility
+
+            expected_latent_dim = self.config.latent_dim
+            if not latent_data.shape[1] == expected_latent_dim:
+                raise ValueError(
+                    f"Input AnnData's .X has shape {latent_data.shape}, but the model expects a latent vector of"
+                    f" size {expected_latent_dim}.  Consider projecting the AnnData to the correct latent space first."
+                )
+            latent_tensor = latent_data
+
+        elif isinstance(latent, torch.Tensor):
+            # Check size compatibility
+            expected_latent_dim = self.config.latent_dim
+            if not latent.shape[1] == expected_latent_dim:
+                raise ValueError(
+                    f"Input tensor has shape {latent.shape}, but the model expects a latent vector of"
+                    f" size {expected_latent_dim}."
+                )
+            latent_tensor = latent
+        else:
+            raise TypeError(
+                f"Input 'latent' must be either a torch.Tensor or an AnnData object, not {type(latent)}."
+            )
+
+        recons: torch.Tensor = self._trainer.decode(x=latent_tensor)
+        return recons
 
     @config_method(valid_params={"config"})
     def evaluate(
@@ -485,3 +620,14 @@ class BasePipeline(abc.ABC):
         self.evaluate()
         self.visualize()
         return self.result
+
+    def save(self, file_path):
+        """Saves the pipeline using the Saver class."""
+        saver = Saver(file_path)  # Create a Saver instance
+        saver.save(self)
+
+    @classmethod
+    def load(cls, file_path):
+        """Loads the pipeline using the Loader class."""
+        loader = Loader(file_path)  # Create a Loader instance
+        return loader.load()

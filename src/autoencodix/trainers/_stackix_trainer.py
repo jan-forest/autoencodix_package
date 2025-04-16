@@ -183,7 +183,7 @@ class StackixTrainer:
                 train_dataset = NumericDataset(
                     data=train_tensor.cpu() if train_tensor.is_cuda else train_tensor,
                     config=self._config,
-                    ids=self._trainset.ids_dict.get(modality, None),
+                    sample_ids=self._trainset.ids_dict.get(modality, None),
                 )
 
                 valid_dataset = None
@@ -193,7 +193,7 @@ class StackixTrainer:
                         if valid_tensor.is_cuda
                         else valid_tensor,
                         config=self._config,
-                        ids=self._validset.ids_dict.get(modality, None),
+                        sample_ids=self._validset.ids_dict.get(modality, None),
                     )
 
                 # Create data loaders
@@ -406,7 +406,7 @@ class StackixTrainer:
                     temp_dataset = NumericDataset(
                         data=tensor_data.cpu() if tensor_data.is_cuda else tensor_data,
                         config=self._config,
-                        ids=dataset.ids_dict.get(modality, None),
+                        sample_ids=dataset.ids_dict.get(modality, None),
                     )
 
                     dataloader = DataLoader(
@@ -735,7 +735,7 @@ class StackixTrainer:
                     temp_dataset = NumericDataset(
                         data=tensor_data,
                         config=self._config,
-                        ids=data.ids_dict.get(modality, None),
+                        sample_ids=data.ids_dict.get(modality, None),
                     )
 
                     dataloader = DataLoader(

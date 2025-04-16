@@ -103,4 +103,4 @@ class TestIntegrationDatasetContainer:
         if hasattr(real_dataset, "data"):
             assert real_filled_container.train.data.shape == real_dataset.data.shape
         if hasattr(real_dataset, "ids"):
-            assert real_filled_container.train.ids is real_dataset.ids
+            assert real_filled_container.train.sample_ids is real_dataset.ids

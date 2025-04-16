@@ -248,7 +248,7 @@ class SingleCellFilter:
         mudata: MuData,
         gene_map: Optional[Dict[str, List]],
         scaler_map: Optional[Dict[str, Dict[str, Any]]] = None,
-    ) -> MuData:
+    ) -> Tuple[MuData, Dict[str, List], Dict[str, Dict[str, Any]]]:
         """
         Process the single-cell data by preprocessing, filtering, and scaling.
         Returns

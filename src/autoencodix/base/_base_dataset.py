@@ -25,7 +25,7 @@ class BaseDataset(abc.ABC, Dataset):
         self,
         data: torch.Tensor,
         config: Optional[Any] = None,
-        ids: Union[None, List[Any]] = None,
+        sample_ids: Union[None, List[Any]] = None,
         feature_ids: Union[None, List[Any]] = None,
     ):
         """
@@ -36,7 +36,7 @@ class BaseDataset(abc.ABC, Dataset):
         data : Any
             The data to be used by the dataset.
         """
-        self.ids = ids
+        self.sample_ids = sample_ids
         self.data = data
         self.config = config
         self.feature_ids = feature_ids
@@ -55,8 +55,8 @@ class BaseDataset(abc.ABC, Dataset):
         Tuple[Any, Any]
             The sample and its label.
         """
-        if self.ids is not None:
-            label = self.ids[index]
+        if self.sample_ids is not None:
+            label = self.sample_ids[index]
         else:
             label = index
         return self.data[index], label

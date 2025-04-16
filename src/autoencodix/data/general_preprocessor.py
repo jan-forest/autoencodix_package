@@ -141,7 +141,7 @@ class GeneralPreprocessor(BasePreprocessor):
             config=config,
             split_ids=split_ids,
             metadata=metadata,
-            ids=ids,
+            sample_ids=ids,
             feature_ids=feature_ids,
         )
 

@@ -244,7 +244,9 @@ class BasePreprocessor(abc.ABC):
             """Preprocesses multi-single-cell modality data."""
             if modality_data is None:
                 return modality_data
-            sc_filter = SingleCellFilter(data_info=self.config.data_config.data_info)
+            sc_filter = SingleCellFilter(
+                data_info=self.config.data_config.data_info, config=self.config
+            )
             return {"multi_sc": sc_filter.presplit_processing(mudata=modality_data)}
 
         def postsplit_processor(
@@ -265,14 +267,17 @@ class BasePreprocessor(abc.ABC):
         datapackage_key: str = "multi_sc",
         modality_key: str = "multi_sc",
     ) -> Dict[str, Dict[str, Any]]:
+        processed_splits: Dict[str, Dict[str, Any]] = {}
+        train_split = split_data.get("train")["data"]
+
         if (
             self.sc_scalers is None
             and self.sc_general_genes_to_keep is None
             and self.sc_general_genes_to_keep is None
         ):
-            processed_splits: Dict[str, Dict[str, Any]] = {}
-            train_split = split_data.get("train")["data"]
-            sc_filter = SingleCellFilter(data_info=self.config.data_config.data_info)
+            sc_filter = SingleCellFilter(
+                data_info=self.config.data_config.data_info, config=self.config
+            )
 
             filtered_train, sc_genes_to_keep = sc_filter.sc_postsplit_processing(
                 mudata=train_split[datapackage_key][modality_key]
@@ -302,7 +307,12 @@ class BasePreprocessor(abc.ABC):
             if split == "train":
                 continue
             data_package = split_package["data"]
-            sc_filter = SingleCellFilter(data_info=self.config.data_config.data_info)
+            if data_package is None:
+                processed_splits[split] = split_package
+                continue
+            sc_filter = SingleCellFilter(
+                data_info=self.config.data_config.data_info, config=self.config
+            )
             filtered_sc_data, _ = sc_filter.sc_postsplit_processing(
                 mudata=data_package[datapackage_key][modality_key],
                 gene_map=sc_genes_to_keep,
@@ -369,10 +379,23 @@ class BasePreprocessor(abc.ABC):
         genes_to_keep_map: Dict[str, List[str]] = {}
         scalers: Dict[str, Any] = {}
         processed_splits: Dict[str, Dict[str, Any]] = {}
+
         if self.bulk_scalers is None and self.bulk_genes_to_keep is None:
-            for k, v in train_split[datapackage_key].items():
-                if v is None:
-                    continue
+            n_modalities: int = len(train_split[datapackage_key].keys())
+            base_features = self.config.k_filter // n_modalities
+            remainder = self.config.k_filter % n_modalities
+
+            # Get valid modality keys (those that are not None)
+            modality_keys = [
+                k for k, v in train_split[datapackage_key].items() if v is not None
+            ]
+
+            for i, k in enumerate(modality_keys):
+                v = train_split[datapackage_key][k]
+                # Add one extra feature to early modalities if there's remainder
+                extra = 1 if i < remainder else 0
+                self.config.data_config.data_info[k].k_filter = base_features + extra
+
                 data_processor = DataFilter(
                     data_info=self.config.data_config.data_info[k]
                 )
@@ -390,20 +413,24 @@ class BasePreprocessor(abc.ABC):
                         f"Mismatched indices: {mismatched_indices}. "
                         "Ensure filtering does not alter the indices."
                     )
-                self.bulk_scalers = scalers
-                self.bulk_genes_to_keep = genes_to_keep_map
+
+            self.bulk_scalers = scalers
+            self.bulk_genes_to_keep = genes_to_keep_map
         else:
             scalers, genes_to_keep_map = self.bulk_scalers, self.bulk_genes_to_keep
+
         processed_splits["train"] = {
             "data": train_split,
             "indices": split_data["train"]["indices"],
         }
+
         for split_name, split_package in split_data.items():
             if split_name == "train":
                 continue
             if split_package["data"] is None:
                 processed_splits[split_name] = split_data[split_name]
                 continue
+
             processed_package = split_package["data"]
             for k, v in processed_package[datapackage_key].items():
                 if v is None:
@@ -421,10 +448,12 @@ class BasePreprocessor(abc.ABC):
                         f"Indices mismatch after filtering for modality {k}. "
                         "Ensure filtering does not alter the indices."
                     )
+
             processed_splits[split_name] = {
                 "data": processed_package,
                 "indices": split_package["indices"],
             }
+
         return processed_splits
 
     def _process_bulk_to_bulk_case(
@@ -516,7 +545,9 @@ class BasePreprocessor(abc.ABC):
             """Preprocesses single-cell modality data."""
             if modality_data is None:
                 return modality_data
-            sc_filter = SingleCellFilter(data_info=self.config.data_config.data_info)
+            sc_filter = SingleCellFilter(
+                data_info=self.config.data_config.data_info, config=self.config
+            )
             print(
                 f"modality data in presplit_processor of *process*sc_to_sc_case: {modality_data}"
             )

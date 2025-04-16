@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Any, Optional, Dict
+from anndata import AnnData
 
 import torch
 
@@ -108,6 +109,9 @@ class Result:
     new_datasets: Optional[DatasetContainer] = field(
         default_factory=lambda: DatasetContainer(train=None, valid=None, test=None)
     )
+
+    # new_reconstruction: Optional[torch.tensor] = field(default=None)
+    adata_latent: Optional[AnnData] = field(default_factory=AnnData)
 
     # plots: Dict[str, Any] = field(
     #     default_factory=nested_dict

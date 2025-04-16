@@ -135,8 +135,13 @@ class GeneralTrainer(BaseTrainer):
                             split="valid",
                         )
 
-            self._result.model = self._model
+            self._result.model = next(self._model.children())
             return self._result
+
+    def decode(self, x: torch.tensor):
+        with self._fabric.autocast(), torch.no_grad():
+            x = self._fabric.to_device(x)
+            return self._model.decode(x=x)
 
     def _capture_dynamics(
         self, epoch: int, model_outputs: List[ModelOutput], split: str

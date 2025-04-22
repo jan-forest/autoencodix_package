@@ -190,8 +190,9 @@ class DataFilter:
         filtered_df = df.copy()
 
         if filtering_method == FilterMethod.NOFILT:
-            self.filtered_features = set(filtered_df.columns)
-            return filtered_df
+            return filtered_df, df.columns.tolist()
+        if self.data_info.k_filter is None:
+            return filtered_df, df.columns.tolist()
 
         if filtering_method == FilterMethod.NONZEROVAR:
             filtered_df = self._filter_nonzero_variance(filtered_df)

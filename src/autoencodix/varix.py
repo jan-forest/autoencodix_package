@@ -69,7 +69,7 @@ class Varix(BasePipeline):
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = GeneralPreprocessor,
-        visualizer: Optional[BaseVisualizer] = Visualizer,
+        visualizer: Optional[BaseVisualizer] = Visualizer(),
         evaluator: Optional[Evaluator] = Evaluator,
         result: Optional[Result] = Result(),
         datasplitter_type: Type[DataSplitter] = DataSplitter,

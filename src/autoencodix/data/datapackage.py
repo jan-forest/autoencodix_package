@@ -45,6 +45,17 @@ class DataPackage:
             setattr(self, key, value)
         else:
             raise KeyError(f"{key} not found in DataPackage.")
+    def __len__(self) -> int:
+        """
+        Return the number of paireed samples in the data package.
+        Only implemented for paired data.
+
+        """
+        if "paired" in self.annotation.keys():
+            return len(self.annotation["paired"].shape[0])
+        raise NotImplementedError(
+            "Length is only implemented for paired data. Please use get_n_samples() for other data types."
+        )
 
     def __iter__(self) -> Iterator[Tuple[str, Any]]:
         """

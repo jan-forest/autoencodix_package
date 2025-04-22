@@ -4,7 +4,7 @@ from anndata import AnnData
 
 import torch
 
-from autoencodix.data import DatasetContainer
+from autoencodix.data._datasetcontainer import DatasetContainer
 from ._traindynamics import TrainingDynamics
 
 
@@ -103,6 +103,7 @@ class Result:
     preprocessed_data: torch.Tensor = field(default_factory=torch.Tensor)
     model: torch.nn.Module = field(default_factory=torch.nn.Module)
     model_checkpoints: TrainingDynamics = field(default_factory=TrainingDynamics)
+
     datasets: Optional[DatasetContainer] = field(
         default_factory=lambda: DatasetContainer(train=None, valid=None, test=None)
     )

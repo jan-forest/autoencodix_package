@@ -7,8 +7,6 @@ from autoencodix.utils.default_config import DefaultConfig
 
 # internal check done
 # write tests: done
-
-
 class NumericDataset(BaseDataset):
     """
     A custom PyTorch dataset that handles tensors.

@@ -340,7 +340,7 @@ class SingleCellFilter:
         return mudata, out_gene_map, out_scaler_map
 
     def distribute_features_across_modalities(
-        self, mudata: MuData, total_features: int
+        self, mudata: MuData, total_features: Optional[int]
     ) -> Dict[str, int]:
         """
         Distributes a total number of features across modalities evenly.
@@ -357,16 +357,16 @@ class SingleCellFilter:
         Dict[str, int]
             Dictionary mapping modality keys to number of features to keep
         """
-        # Count valid modalities (those that are not None)
+
         valid_modalities = [key for key in mudata.mod.keys()]
+        if total_features is None:
+            return {k:None for k in valid_modalities }
         n_modalities = len(valid_modalities)
 
         if n_modalities == 0:
             return {}
 
-        # Calculate base features per modality
         base_features = total_features // n_modalities
-        # Calculate remainder to distribute
         remainder = total_features % n_modalities
 
         # Distribute features

@@ -74,7 +74,7 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     )
     scaling: Literal["STANDARD", "MINMAX", "ROBUST", "NONE"] = Field(default="STANDARD")
     filtering: Literal["VAR", "MAD", "CORR", "VARCORR", "NOFILT", "NONZEROVAR"] = Field(
-        default="NOFILT"
+        default="VAR"
     )
     sep: Union[str, None] = Field(default=None)  # for pandas read_csv
     extra_anno_file: Union[str, None] = Field(default=None)

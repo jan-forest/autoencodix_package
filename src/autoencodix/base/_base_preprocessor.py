@@ -271,9 +271,9 @@ class BasePreprocessor(abc.ABC):
 
         if (
             self.sc_scalers is None
+            and self.sc_genes_to_keep is None
             and self.sc_general_genes_to_keep is None
-            and self.sc_general_genes_to_keep is None
-        ):
+        ) or ("modality" in datapackage_key):
             sc_filter = SingleCellFilter(
                 data_info=self.config.data_config.data_info, config=self.config
             )
@@ -387,7 +387,9 @@ class BasePreprocessor(abc.ABC):
         scalers: Dict[str, Any] = {}
         processed_splits: Dict[str, Dict[str, Any]] = {}
 
-        if self.bulk_scalers is None and self.bulk_genes_to_keep is None:
+        if (self.bulk_scalers is None and self.bulk_genes_to_keep is None) or (
+            "modality" in datapackage_key
+        ):
             n_modalities: int = len(train_split[datapackage_key].keys())
             remainder = 0
             base_features = 0
@@ -399,6 +401,9 @@ class BasePreprocessor(abc.ABC):
             modality_keys = [
                 k for k, v in train_split[datapackage_key].items() if v is not None
             ]
+            print(
+                f"modality_keys in _postsplit_multi_bulk: {modality_keys} for datapackage_key: {datapackage_key}"
+            )
 
             for i, k in enumerate(modality_keys):
                 v = train_split[datapackage_key][k]
@@ -434,6 +439,9 @@ class BasePreprocessor(abc.ABC):
             "data": train_split,
             "indices": split_data["train"]["indices"],
         }
+        print(
+            f"genes_to_keep_map in _postsplit_multi_bulk before split loop: {genes_to_keep_map} for datapackage_key: {datapackage_key}"
+        )
 
         for split_name, split_package in split_data.items():
             if split_name == "train":
@@ -443,6 +451,10 @@ class BasePreprocessor(abc.ABC):
                 continue
 
             processed_package = split_package["data"]
+            print(f"datapackage_key in _postsplit_multi_bulk: {datapackage_key}")
+            print(
+                f" keys in processed_package[datapackage_key]: {processed_package[datapackage_key].keys()}"
+            )
             for k, v in processed_package[datapackage_key].items():
                 if v is None:
                     continue

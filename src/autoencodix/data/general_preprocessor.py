@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 import torch
 import numpy as np
 import pandas as pd
@@ -18,14 +18,14 @@ class GeneralPreprocessor(BasePreprocessor):
     def __init__(self, config: DefaultConfig):
         super().__init__(config=config)
         self._datapackage_dict: Optional[Dict[str, Any]] = None
-        self._numeric_dataset: Optional[NumericDataset] = None
+        self._dataset_container: Optional[DatasetContainer] = None
         # Reverse mappings for reconstruction
         self._reverse_mapping_multi_bulk: Dict[
             str, Dict[str, Tuple[List[int], List[str]]]
-        ] = {}
+        ] = {"train": {}, "test": {}, "valid": {}}
         self._reverse_mapping_multi_sc: Dict[
             Dict[str, Dict[str, Tuple[List[int], List[str]]]]
-        ] = {}
+        ] = {"train": {}, "test": {}, "valid": {}}
 
     def _extract_primary_data(self, modality_data: Any) -> np.ndarray:
         primary_data = modality_data.X
@@ -71,7 +71,9 @@ class GeneralPreprocessor(BasePreprocessor):
 
                 end_idx = start_idx + n_feats
                 feature_ids = modality_data.var_names.tolist()
-                self._reverse_mapping_multi_sc[self._split][modality_name][layer_name] = (
+                self._reverse_mapping_multi_sc[self._split][modality_name][
+                    layer_name
+                ] = (
                     list(range(start_idx, end_idx)),
                     feature_ids,
                 )
@@ -102,7 +104,6 @@ class GeneralPreprocessor(BasePreprocessor):
             sample_ids=ids,
             feature_ids=feature_ids,
         )
-        self._numeric_dataset = ds
         return ds
 
     def _process_data_package(self, data_dict: Dict[str, Any]) -> BaseDataset:
@@ -175,8 +176,8 @@ class GeneralPreprocessor(BasePreprocessor):
     ) -> DatasetContainer:
         # run common preprocessing
 
-        self._reverse_mapping_multi_bulk.clear()
-        self._reverse_mapping_multi_sc.clear()
+        # self._reverse_mapping_multi_bulk.clear()
+        # self._reverse_mapping_multi_sc.clear()
         self._datapackage_dict = self._general_preprocess(
             raw_user_data=raw_user_data, predict_new_data=predict_new_data
         )
@@ -194,11 +195,10 @@ class GeneralPreprocessor(BasePreprocessor):
                 continue
             ds = self._process_data_package(split_data)
             ds_container[split] = ds
-
+        self._dataset_container = ds_container
         return ds_container
 
-    def _reconstruct_data(self, reconstruction: torch.Tensor) -> DataPackage:
-
+    def format_reconstruction(self, reconstruction: torch.Tensor) -> DataPackage:
         self._split = self._match_split(n_samples=reconstruction.shape[0])
         if self.config.data_case == DataCase.MULTI_BULK:
             return self._reverse_multi_bulk(reconstruction)
@@ -208,18 +208,24 @@ class GeneralPreprocessor(BasePreprocessor):
             raise NotImplementedError(
                 f"Reconstruction not implemented for {self.config.data_case}"
             )
+
     def _match_split(self, n_samples: int) -> str:
         """
         Match the split based on the number of samples.
         """
         for split, split_data in self._datapackage_dict.items():
-            if split_data["data"] is not None and len(split_data["data"]) == n_samples:
+            data = split_data.get("data")
+            if data is None:
+                continue
+            if n_samples == data.get_n_samples(is_paired=True)["paired_count"]:
                 return split
         raise ValueError(
             f"Cannot find matching split for {n_samples} samples in the dataset."
         )
 
-    def _reverse_multi_bulk(self, reconstruction: torch.Tensor) -> DataPackage:
+    def _reverse_multi_bulk(
+        self, reconstruction: Union[np.ndarray, torch.Tensor]
+    ) -> DataPackage:
         data_package = DataPackage(
             multi_bulk={},
             multi_sc=None,
@@ -230,16 +236,35 @@ class GeneralPreprocessor(BasePreprocessor):
         )
         # reconstruct each bulk subkey
         dfs: Dict[str, pd.DataFrame] = {}
-        for subkey, (indices, fids) in self._reverse_mapping_multi_bulk[self._split].items():
-            arr = reconstruction[:, indices].detach().cpu().numpy()
+        for subkey, (indices, fids) in self._reverse_mapping_multi_bulk[
+            self._split
+        ].items():
+            arr = self._slice_tensor(
+                reconstruction=reconstruction,
+                indices=indices,
+            )
             dfs[subkey] = pd.DataFrame(
                 arr,
                 columns=fids,
-                index=self._numeric_dataset.sample_ids,
+                index=self._dataset_container[self._split].sample_ids,
             )
+        data_package.annotation = self._dataset_container[self._split].metadata
+
         data_package.multi_bulk = dfs
-        data_package.annotation = self._numeric_dataset.metadata
         return data_package
+
+    def _slice_tensor(
+        self, reconstruction: Union[np.ndarray, torch.Tensor], indices: List[int]
+    ) -> np.ndarray:
+        if isinstance(reconstruction, torch.Tensor):
+            arr = reconstruction[:, indices].detach().cpu().numpy()
+        elif isinstance(reconstruction, np.ndarray):
+            arr = reconstruction[:, indices]
+        else:
+            raise TypeError(
+                f"Expected reconstruction to be a torch.Tensor or np.ndarray, got {type(reconstruction)}"
+            )
+        return arr
 
     def _reverse_multi_sc(self, reconstruction: torch.Tensor) -> DataPackage:
         data_package = DataPackage(
@@ -251,17 +276,18 @@ class GeneralPreprocessor(BasePreprocessor):
             to_modality=None,
         )
         modalities: Dict[str, AnnData] = {}
-        obs = self._numeric_dataset.metadata
 
-        for modality_name, layers in self._reverse_mapping_multi_sc[self._split].items():
+        for modality_name, layers in self._reverse_mapping_multi_sc[
+            self._split
+        ].items():
             # rebuild each layer as DataFrame
             layers_dict: Dict[str, pd.DataFrame] = {}
             for layer_name, (indices, fids) in layers.items():
-                arr = reconstruction[:, indices].detach().cpu().numpy()
+                arr = self._slice_tensor(reconstruction=reconstruction, indices=indices)
                 layers_dict[layer_name] = pd.DataFrame(
                     arr,
                     columns=fids,
-                    index=self._numeric_dataset.sample_ids,
+                    index=self._dataset_container[self._split].sample_ids,
                 )
 
             # extract X layer for AnnData var
@@ -270,12 +296,12 @@ class GeneralPreprocessor(BasePreprocessor):
             X_df = layers_dict.pop("X", None)
             adata = AnnData(
                 X=X_df.values if X_df is not None else None,
-                obs=obs,
+                obs=self._dataset_container[self._split].metadata,
                 var=var,
                 layers={k: v.values for k, v in layers_dict.items()},
             )
             modalities[modality_name] = adata
 
-        data_package.multi_sc = md.MuData(modalities)
-        data_package.annotation = obs
+        data_package.multi_sc = {"multi_sc": md.MuData(modalities)}
+        data_package.annotation = self._dataset_container[self._split].metadata
         return data_package

@@ -1,4 +1,5 @@
 import abc
+import copy
 from typing import TYPE_CHECKING, Dict, Optional, Type, Union
 
 import anndata as ad
@@ -510,6 +511,31 @@ class BasePipeline(abc.ABC):
         self.result.adata_latent.uns["var_names"] = predict_data.test.feature_ids
 
         self.result.update(predictor_results)
+
+        raw_recon = self.result.reconstructions.get(epoch=-1, split="test")
+        if isinstance(data, DatasetContainer):
+            temp = copy.deepcopy(data.test)
+            temp.data = torch.from_numpy(raw_recon)
+            self.result.final_reconstruction = temp
+        # user inputs already processed data into pipeline and does not overwrite it in predict
+        elif self.preprocessed_data is not None:
+            temp = copy.deepcopy(self.preprocessed_data.test)
+            temp.data = torch.from_numpy(raw_recon)
+            self.result.final_reconstruction = temp
+
+        # for SC-community UX
+        elif self.config.data_case == DataCase.MULTI_SINGLE_CELL:
+            pkg = self._preprocessor.format_reconstruction(reconstruction=raw_recon)
+            self.result.final_reconstruction = pkg.multi_sc["multi_sc"]
+        # Case C: other non‐DatasetContainer → full package
+        elif not isinstance(data, DatasetContainer):
+            pkg = self._preprocessor.format_reconstruction(reconstruction=raw_recon)
+            self.result.final_reconstruction = pkg
+        # Case D: fallback
+        else:
+            print("Reconstruction not available for this data type or case.")
+
+
 
     def decode(
         self, latent: Union[torch.Tensor, ad.AnnData, pd.DataFrame]

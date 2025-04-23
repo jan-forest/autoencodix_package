@@ -45,17 +45,6 @@ class DataPackage:
             setattr(self, key, value)
         else:
             raise KeyError(f"{key} not found in DataPackage.")
-    def __len__(self) -> int:
-        """
-        Return the number of paireed samples in the data package.
-        Only implemented for paired data.
-
-        """
-        if "paired" in self.annotation.keys():
-            return len(self.annotation["paired"].shape[0])
-        raise NotImplementedError(
-            "Length is only implemented for paired data. Please use get_n_samples() for other data types."
-        )
 
     def __iter__(self) -> Iterator[Tuple[str, Any]]:
         """
@@ -144,8 +133,18 @@ class DataPackage:
                 if attr_value is None:
                     continue
                 n_samples[attr_name] = self._get_n_samples(attr_value)
-            n_samples["paired_count"] = max(n_samples.values())
-            return n_samples
+            # check if all data types have the same number of samples
+            cleaned_n_samples = set([v for v in n_samples.values() if v > 0])
+            print(cleaned_n_samples)
+            if len(cleaned_n_samples) == 1:
+                n_samples["paired_count"] = max(n_samples.values())
+                return n_samples
+            else:
+                raise ValueError(
+                    "The number of samples in the data types is not the same for the paired data cases"
+                    f"Samples: {n_samples}"
+                )
+
         return {
             "from": self._get_n_samples(self.from_modality),
             "to": self._get_n_samples(self.to_modality),

@@ -104,7 +104,7 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     log_transform: bool = Field(
         default=True, description="Whether to apply log1p transformation"
     )
-    k_filter: int = Field(
+    k_filter: Optional[int] = Field(
         default=20,
         description="Don't set this gets calculated dynamically, based on k_filter in general config ",
     )
@@ -165,6 +165,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     k_filter: Union[int, None] = Field(
         default=20, description="Number of features to keep"
     )
+    skip_preprocessing: bool= Field(default=False, description="If set don't scale, filter or clean the input data.")
 
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(
@@ -248,13 +249,13 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
 
     # Data handling configuration ---------------------------------------------
     train_ratio: float = Field(
-        default=0.7, gt=0, lt=1, description="Ratio of data for training"
+        default=0.7, ge=0, lt=1, description="Ratio of data for training"
     )
     test_ratio: float = Field(
-        default=0.2, gt=0, lt=1, description="Ratio of data for testing"
+        default=0.2, ge=0, lt=1, description="Ratio of data for testing"
     )
     valid_ratio: float = Field(
-        default=0.1, gt=0, lt=1, description="Ratio of data for validation"
+        default=0.1, ge=0, lt=1, description="Ratio of data for validation"
     )
 
     # General configuration ---------------------------------------------------

@@ -161,17 +161,20 @@ class BasePreprocessor(abc.ABC):
             A dictionary containing processed DataPackage objects for each data split.
         """
         if self.predict_new_data:
-            clean_package = self._remove_nans(data_package=data_package)
             # use train, because processing logic expects train split
             mock_split = {
                 "test": {
-                    "data": clean_package,
+                    "data": data_package,
                     "indices": {"paired": np.array([])},
                 },
                 "valid": {"data": None, "indices": {"paired": np.array([])}},
                 "train": {"data": None, "indices": {"paired": np.array([])}},
             }
+            if self.config.skip_preprocessing:
+                return mock_split
 
+            clean_package = self._remove_nans(data_package=data_package)
+            mock_split["test"]["data"] = clean_package
             for modality_key, (
                 presplit_processor,
                 postsplit_processor,
@@ -184,21 +187,17 @@ class BasePreprocessor(abc.ABC):
                     mock_split["test"]["data"] = clean_package
                     mock_split = postsplit_processor(mock_split)
             return mock_split
-        print(f"datapackage before cleaning: {data_package}")
+        # normal case without new data -----------------------------------
+        if self.config.skip_preprocessing:
+            split_packages, _ = self._split_data_package(data_package=data_package)
+            return split_packages
         clean_package = self._remove_nans(data_package=data_package)
-        print(f"datapackage after cleaning: {clean_package}")
         for modality_key, (presplit_processor, _) in modality_processors.items():
             modality_data = clean_package[modality_key]
             if modality_data:
                 processed_modality_data = presplit_processor(modality_data)
                 clean_package[modality_key] = processed_modality_data
-        print(f"datapackage after presplit processing: {clean_package}")
         split_packages, indices = self._split_data_package(data_package=clean_package)
-        train_data = split_packages.get("train")["data"]
-        print(f"type of train data: {type(train_data)}")
-        print(
-            f" type of to and from_modality: {type(train_data.to_modality)}, type of {type(train_data.from_modality)}"
-        )
         processed_splits = {}
         for modality_key, (_, postsplit_processor) in modality_processors.items():
             split_packages = postsplit_processor(split_packages)
@@ -272,9 +271,9 @@ class BasePreprocessor(abc.ABC):
 
         if (
             self.sc_scalers is None
+            and self.sc_genes_to_keep is None
             and self.sc_general_genes_to_keep is None
-            and self.sc_general_genes_to_keep is None
-        ):
+        ) or ("modality" in datapackage_key):
             sc_filter = SingleCellFilter(
                 data_info=self.config.data_config.data_info, config=self.config
             )
@@ -370,6 +369,14 @@ class BasePreprocessor(abc.ABC):
             },
         )
 
+    def _calc_k_filter(
+        self, i: int, remainder: Optional[int], base_features: int
+    ) -> Optional[int]:
+        if self.config.k_filter is None:
+            return None
+        extra = 1 if i < remainder else 0
+        return base_features + extra
+
     def _postsplit_multi_bulk(
         self,
         split_data: Dict[str, Dict[str, Any]],
@@ -380,21 +387,30 @@ class BasePreprocessor(abc.ABC):
         scalers: Dict[str, Any] = {}
         processed_splits: Dict[str, Dict[str, Any]] = {}
 
-        if self.bulk_scalers is None and self.bulk_genes_to_keep is None:
+        if (self.bulk_scalers is None and self.bulk_genes_to_keep is None) or (
+            "modality" in datapackage_key
+        ):
             n_modalities: int = len(train_split[datapackage_key].keys())
-            base_features = self.config.k_filter // n_modalities
-            remainder = self.config.k_filter % n_modalities
+            remainder = 0
+            base_features = 0
+            if self.config.k_filter is not None:
+                base_features = self.config.k_filter // n_modalities
+                remainder = self.config.k_filter % n_modalities
 
             # Get valid modality keys (those that are not None)
             modality_keys = [
                 k for k, v in train_split[datapackage_key].items() if v is not None
             ]
+            print(
+                f"modality_keys in _postsplit_multi_bulk: {modality_keys} for datapackage_key: {datapackage_key}"
+            )
 
             for i, k in enumerate(modality_keys):
                 v = train_split[datapackage_key][k]
-                # Add one extra feature to early modalities if there's remainder
-                extra = 1 if i < remainder else 0
-                self.config.data_config.data_info[k].k_filter = base_features + extra
+                cur_k_filter = self._calc_k_filter(
+                    i=i, base_features=base_features, remainder=remainder
+                )
+                self.config.data_config.data_info[k].k_filter = cur_k_filter
 
                 data_processor = DataFilter(
                     data_info=self.config.data_config.data_info[k]
@@ -423,6 +439,9 @@ class BasePreprocessor(abc.ABC):
             "data": train_split,
             "indices": split_data["train"]["indices"],
         }
+        print(
+            f"genes_to_keep_map in _postsplit_multi_bulk before split loop: {genes_to_keep_map} for datapackage_key: {datapackage_key}"
+        )
 
         for split_name, split_package in split_data.items():
             if split_name == "train":
@@ -432,6 +451,10 @@ class BasePreprocessor(abc.ABC):
                 continue
 
             processed_package = split_package["data"]
+            print(f"datapackage_key in _postsplit_multi_bulk: {datapackage_key}")
+            print(
+                f" keys in processed_package[datapackage_key]: {processed_package[datapackage_key].keys()}"
+            )
             for k, v in processed_package[datapackage_key].items():
                 if v is None:
                     continue

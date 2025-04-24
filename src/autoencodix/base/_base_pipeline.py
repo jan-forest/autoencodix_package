@@ -1,26 +1,28 @@
 import abc
-import torch
-import anndata as ad
-from typing import Optional, Union, Dict, Type
+import copy
+from typing import TYPE_CHECKING, Dict, Optional, Type, Union
 
+import anndata as ad
 import numpy as np
 import pandas as pd
+import torch
 from mudata import MuData
-import anndata as ad
 from torch.utils.data import Dataset
-from ._base_dataset import BaseDataset
+
+from autoencodix.data._datasetcontainer import DatasetContainer
+from autoencodix.data._datasplitter import DataSplitter
+from autoencodix.data.datapackage import DataPackage
+from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.utils._result import Result
+from autoencodix.utils._utils import Loader, Saver, config_method
+from autoencodix.utils.default_config import DataCase, DataInfo, DefaultConfig
+
 from ._base_autoencoder import BaseAutoencoder
+from ._base_dataset import BaseDataset
+from ._base_loss import BaseLoss
+from ._base_preprocessor import BasePreprocessor
 from ._base_trainer import BaseTrainer
 from ._base_visualizer import BaseVisualizer
-from ._base_preprocessor import BasePreprocessor
-from ._base_loss import BaseLoss
-from autoencodix.evaluate.evaluate import Evaluator
-from autoencodix.data._datasetcontainer import DatasetContainer
-from autoencodix.data.datapackage import DataPackage
-from autoencodix.data._datasplitter import DataSplitter
-from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig, DataInfo, DataCase
-from autoencodix.utils._utils import config_method, Saver, Loader
 
 
 # tests: done
@@ -150,9 +152,12 @@ class BasePipeline(abc.ABC):
         self._loss_type = loss_type
         self._preprocessor_type = preprocessor_type
         if self.raw_user_data is not None:
-            self._handle_direct_user_data()
+            self.raw_user_data, datacase = self._handle_direct_user_data(
+                data=self.raw_user_data,
+                data_case=self.config.data_case,  # if is None, data_case is inferred based on the data type
+            )
+            self.config.data_case = datacase
             self._fill_data_info()
-
 
         self._preprocessor = self._preprocessor_type(
             config=self.config,
@@ -176,36 +181,37 @@ class BasePipeline(abc.ABC):
             processed_data  # None, or user input
         )
 
-    def _handle_direct_user_data(self):
-        if isinstance(self.raw_user_data, ad.AnnData):
-            mudata = MuData({"user-data": self.raw_user_data})
-            self.raw_user_data = DataPackage(multi_sc={"multi_sc": mudata})
-            self.config.data_case = DataCase.MULTI_SINGLE_CELL
-        elif isinstance(self.raw_user_data, MuData):
-            self.raw_user_data = DataPackage(multi_sc={"multi_sc": self.raw_user_data})
-            self.config.data_case = DataCase.MULTI_SINGLE_CELL
-        elif isinstance(self.raw_user_data, pd.DataFrame):
-            self.raw_user_data = DataPackage(
-                multi_bulk={"user-data": self.raw_user_data}
-            )
-            self.config.data_case = DataCase.MULTI_BULK
-        elif isinstance(self.raw_user_data, dict):
+    def _handle_direct_user_data(self, data, data_case=None):
+        if isinstance(data, ad.AnnData):
+            mudata = MuData({"user-data": data})
+            data_package = DataPackage(multi_sc={"multi_sc": mudata})
+            data_case = data_case or DataCase.MULTI_SINGLE_CELL
+        elif isinstance(data, MuData):
+            data_package = DataPackage(multi_sc={"multi_sc": data})
+            data_case = data_case or DataCase.MULTI_SINGLE_CELL
+        elif isinstance(data, pd.DataFrame):
+            data_package = DataPackage(multi_bulk={"user-data": data})
+            data_case = data_case or DataCase.MULTI_BULK
+        elif isinstance(data, dict):
             # Check if all values in the dictionary are pandas DataFrames
-            if all(
-                isinstance(value, pd.DataFrame) for value in self.raw_user_data.values()
-            ):
-                self.raw_user_data = DataPackage(multi_bulk=self.raw_user_data)
-                self.config.data_case = DataCase.MULTI_BULK
+            if all(isinstance(value, pd.DataFrame) for value in data.values()):
+                data_package = DataPackage(multi_bulk=data)
+                data_case = data_case or DataCase.MULTI_BULK
             else:
                 raise ValueError(
                     "All values in the dictionary must be pandas DataFrames."
                 )
-        elif isinstance(self.raw_user_data, DataPackage):
-            pass
+        elif isinstance(data, DataPackage):
+            data_package = data
         else:
             raise TypeError(
-                f"Type: {type[self.raw_user_data]} is not supported as of now, please provide: Union[AnnData, MuData, pd.DataFrame, Dict[str, pd.DataFrame], DataPackage]"
+                f"Type: {type(data)} is not supported as of now, please provide: Union[AnnData, MuData, pd.DataFrame, Dict[str, pd.DataFrame], DataPackage]"
             )
+
+        if data_case is None:
+            raise ValueError("data_case must be provided if it cannot be inferred.")
+
+        return data_package, data_case
 
     def _validate_raw_user_data(self) -> None:
         """
@@ -439,7 +445,7 @@ class BasePipeline(abc.ABC):
     @config_method(valid_params={"config"})
     def predict(
         self,
-        data: Optional[Union[DatasetContainer, DataPackage]] = None,
+        data: Optional[Union[DataPackage, DatasetContainer, ad.AnnData, MuData]] = None,
         config: Optional[Union[None, DefaultConfig]] = None,
         **kwargs,
     ) -> None:
@@ -476,13 +482,17 @@ class BasePipeline(abc.ABC):
             if self._datasets.test is None:
                 raise ValueError("No test data available for prediction")
             predict_data: DatasetContainer = self._datasets
-        elif isinstance(data, DataPackage):
+        elif isinstance(data, DatasetContainer):
+            predict_data = data
+            self.result.new_datasets = predict_data
+
+        elif isinstance(data, (DataPackage, DatasetContainer, ad.AnnData, MuData)):
+            data, _ = self._handle_direct_user_data(
+                data=data, data_case=self.config.data_case
+            )
             predict_data: DatasetContainer = self._preprocessor.preprocess(
                 raw_user_data=data, predict_new_data=True
             )
-            self.result.new_datasets = predict_data
-        elif isinstance(data, DatasetContainer):
-            predict_data = data
             self.result.new_datasets = predict_data
         else:
             raise ValueError(f"Unsupported data type: {type(data)}")
@@ -497,10 +507,39 @@ class BasePipeline(abc.ABC):
         )
         latent = predictor_results.latentspaces.get(epoch=-1, split="test")
         self.result.adata_latent = ad.AnnData(latent)
+        self.result.adata_latent.obs_names = predict_data.test.sample_ids
+        self.result.adata_latent.uns["var_names"] = predict_data.test.feature_ids
 
         self.result.update(predictor_results)
 
-    def decode(self, latent: Union[torch.Tensor, ad.AnnData]) -> torch.Tensor:
+        raw_recon = self.result.reconstructions.get(epoch=-1, split="test")
+        if isinstance(data, DatasetContainer):
+            temp = copy.deepcopy(data.test)
+            temp.data = torch.from_numpy(raw_recon)
+            self.result.final_reconstruction = temp
+        # user inputs already processed data into pipeline and does not overwrite it in predict
+        elif self.preprocessed_data is not None:
+            temp = copy.deepcopy(self.preprocessed_data.test)
+            temp.data = torch.from_numpy(raw_recon)
+            self.result.final_reconstruction = temp
+
+        # for SC-community UX
+        elif self.config.data_case == DataCase.MULTI_SINGLE_CELL:
+            pkg = self._preprocessor.format_reconstruction(reconstruction=raw_recon)
+            self.result.final_reconstruction = pkg.multi_sc["multi_sc"]
+        # Case C: other non‐DatasetContainer → full package
+        elif not isinstance(data, DatasetContainer):
+            pkg = self._preprocessor.format_reconstruction(reconstruction=raw_recon)
+            self.result.final_reconstruction = pkg
+        # Case D: fallback
+        else:
+            print("Reconstruction not available for this data type or case.")
+
+
+
+    def decode(
+        self, latent: Union[torch.Tensor, ad.AnnData, pd.DataFrame]
+    ) -> Union[torch.Tensor, ad.AnnData, pd.DataFrame]:
         """
         Decodes a latent representation into the original data space.
 
@@ -519,9 +558,10 @@ class BasePipeline(abc.ABC):
                 to (n_cells, n_latent) if necessary.
 
         Returns:
-            A torch.Tensor representing the decoded data, with shape
-            (n_cells, n_features_out), where n_features_out is the
-            number of features in the original data.
+            recons: The reconstructed data.
+                - If input is torch.Tensor: A tensor of shape (n_cells, n_features).
+                - If input is AnnData: An AnnData object with the reconstructed data and obs_names + var_names
+                - If input is pd.DataFrame: A DataFrame with the reconstructed data and index + columns.
 
         Raises:
             TypeError: If no model has been trained yet.
@@ -544,6 +584,23 @@ class BasePipeline(abc.ABC):
                 )
             latent_tensor = latent_data
 
+            recons: torch.Tensor = self._trainer.decode(x=latent_tensor)
+
+            recons_adata = ad.AnnData(
+                X=recons.to("cpu").detach().numpy(),
+                obs=pd.DataFrame(index=latent.obs_names),
+                var=pd.DataFrame(index=self._datasets.train.feature_ids),
+            )
+
+            return recons_adata
+        elif isinstance(latent, pd.DataFrame):
+            latent_tensor = torch.tensor(latent.values, dtype=torch.float32)
+            recons: torch.Tensor = self._trainer.decode(x=latent_data)
+            return pd.DataFrame(
+                recons.to("cpu").detach().numpy(),
+                index=latent.index,
+                columns=latent.columns,
+            )
         elif isinstance(latent, torch.Tensor):
             # Check size compatibility
             expected_latent_dim = self.config.latent_dim
@@ -623,11 +680,11 @@ class BasePipeline(abc.ABC):
 
     def save(self, file_path):
         """Saves the pipeline using the Saver class."""
-        saver = Saver(file_path)  # Create a Saver instance
+        saver = Saver(file_path)
         saver.save(self)
 
     @classmethod
     def load(cls, file_path):
         """Loads the pipeline using the Loader class."""
-        loader = Loader(file_path)  # Create a Loader instance
+        loader = Loader(file_path)
         return loader.load()

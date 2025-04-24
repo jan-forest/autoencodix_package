@@ -1,10 +1,13 @@
 from dataclasses import dataclass, field
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, Union
 from anndata import AnnData
 
 import torch
 
-from autoencodix.data import DatasetContainer
+from autoencodix.data._datasetcontainer import DatasetContainer
+from autoencodix.data.datapackage import DataPackage
+
+from mudata import MuData
 from ._traindynamics import TrainingDynamics
 
 
@@ -103,6 +106,7 @@ class Result:
     preprocessed_data: torch.Tensor = field(default_factory=torch.Tensor)
     model: torch.nn.Module = field(default_factory=torch.nn.Module)
     model_checkpoints: TrainingDynamics = field(default_factory=TrainingDynamics)
+
     datasets: Optional[DatasetContainer] = field(
         default_factory=lambda: DatasetContainer(train=None, valid=None, test=None)
     )
@@ -112,6 +116,7 @@ class Result:
 
     # new_reconstruction: Optional[torch.tensor] = field(default=None)
     adata_latent: Optional[AnnData] = field(default_factory=AnnData)
+    final_reconstruction: Optional[Union[DataPackage, MuData]] = field(default=None)
 
     # plots: Dict[str, Any] = field(
     #     default_factory=nested_dict

@@ -69,75 +69,210 @@ def show_figure(fig):
     fig.set_canvas(new_manager.canvas)
 
 
-# internal check done
-# write tests: done
 def config_method(valid_params: Optional[set[str]] = None):
     """
-    Decorator for methods that accept configuration parameters.
+    Decorator for methods that accept configuration parameters via kwargs
+    or an explicit 'config' object.
+
+    It separates kwargs intended for the function's signature from those
+    intended as configuration overrides, validates the latter against
+    `valid_params`, applies valid overrides to a copy of `self.config`,
+    and passes the appropriate arguments to the decorated function.
+
     Parameters
     ----------
-    valid_params : set[str]
-        Set of valid parameter names for this method. If None, all config parameters are valid.
+    valid_params : set[str], optional
+        Set of valid configuration parameter names that can be overridden
+        via kwargs for this method. If None, all kwargs not matching the
+        function signature are considered potentially valid config overrides.
     """
 
     def decorator(func: Callable) -> Callable:
-        get_type_hints(func)  ## noqa: F841
-        inspect.signature(func)  ## noqa: F841
+        # --- Docstring Modification (outside wrapper) ---
+        sig = inspect.signature(func)
 
-        param_docs = "\nValid configuration parameters:\n"
+        param_docs = "\n\nValid configuration parameters (passed via **kwargs):\n"
         if valid_params:
-            param_docs += "\n".join(f"- {param}" for param in sorted(valid_params))
+            param_docs += "\n".join(f"- `{param}`" for param in sorted(valid_params))
         else:
-            param_docs += "All configuration parameters are valid for this method."
+            param_docs += ("All keyword arguments not matching the function's "
+                           "signature are treated as potential configuration overrides.")
 
         if func.__doc__ is None:
             func.__doc__ = ""
-        func.__doc__ += param_docs
+        # Avoid duplicating if decorator is applied multiple times (though unlikely)
+        if "Valid configuration parameters" not in func.__doc__:
+             func.__doc__ += param_docs
+        # --- End Docstring Modification ---
 
         @wraps(func)
         def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+            # Pop the explicit config object if provided
             user_config = kwargs.pop("config", None)
 
+            # Get names of parameters in the decorated function's signature
+            # that can accept keyword arguments (excluding self and config)
+            func_sig_kwarg_names = {
+                name for name, param in sig.parameters.items()
+                if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                                  inspect.Parameter.KEYWORD_ONLY)
+                   and name not in ('self', 'config')
+            }
+
+            # Separate kwargs into those matching the signature and potential config overrides
+            func_specific_kwargs = {}
+            potential_config_kwargs = {}
+            for k, v in kwargs.items():
+                if k in func_sig_kwarg_names:
+                    func_specific_kwargs[k] = v
+                else:
+                    potential_config_kwargs[k] = v
+
+            # Determine the configuration object to use
             if user_config is None:
-                config = self.config.model_copy(deep=True)
+                # No explicit config object, use self.config and apply overrides
+                if not hasattr(self, 'config'):
+                     raise AttributeError(f"{type(self).__name__} instance is missing 'config' attribute.")
+                # Ensure self.config is the right type (or duck-types model_copy/model_dump)
+                if not hasattr(self.config, 'model_copy') or not hasattr(self.config, 'model_dump'):
+                     raise TypeError(f"'self.config' on {type(self).__name__} must have 'model_copy' and 'model_dump' methods.")
 
-                # Check for invalid parameters and warn user
+                final_config = self.config.model_copy(deep=True) # Start with a copy
+
+                # Validate potential_config_kwargs against valid_params
                 if valid_params:
-                    invalid_params = set(kwargs.keys()) - valid_params
-                    if invalid_params:
-                        print(
-                            f"\nWarning: The following parameters are not valid for {func.__name__}:"
-                        )
-                        print(f"Invalid parameters: {', '.join(invalid_params)}")
-                        print(
-                            f"Valid parameters are: {', '.join(sorted(valid_params))}"
-                        )
-                    # check if parameter is a config parameter
+                    # Check for invalid *config* parameters among the potential overrides
+                    invalid_config_params = set(potential_config_kwargs.keys()) - valid_params
+                    if invalid_config_params:
+                        print(f"\nWarning: The following parameters are not valid "
+                              f"configuration overrides for {func.__name__}:")
+                        print(f"Invalid config parameters: {', '.join(invalid_config_params)}")
+                        print(f"Valid config parameters are: {', '.join(sorted(valid_params))}")
+                        print("These parameters will be ignored.")
 
-                    # Filter out invalid parameters
-                    valid_config_params = {
-                        p for p in valid_params if p in config.model_dump()
+                    # Filter potential overrides to only include those listed in valid_params
+                    # and that actually exist as fields in the config object
+                    # (prevents adding arbitrary attributes if DefaultConfig uses Pydantic's extra='forbid')
+                    valid_config_fields = {
+                        p for p in valid_params if hasattr(final_config, p) # Safer check
                     }
                     config_overrides = {
-                        k: v for k, v in kwargs.items() if k in valid_config_params
+                        k: v for k, v in potential_config_kwargs.items() if k in valid_config_fields
                     }
-                else:
-                    config_overrides = kwargs
 
-                config = config.model_copy(update=config_overrides)
+                else: # valid_params is None: Allow all potential config kwargs as overrides
+                      # Optional: Add a check here if you want to ensure they exist in the config model
+                    config_overrides = potential_config_kwargs
+
+                # Apply the valid overrides
+                if config_overrides:
+                     final_config = final_config.model_copy(update=config_overrides)
+
             else:
+                # User provided an explicit config object
+                # Add type check if DefaultConfig class is available
+                # Note: Replace 'object' with 'DefaultConfig' if it's imported/defined
                 if not isinstance(user_config, DefaultConfig):
-                    raise TypeError(
-                        "The 'config' parameter must be of type DefaultConfig"
-                    )
-                config = user_config
+                     # Trying to be robust if DefaultConfig is not strictly enforced type
+                     if hasattr(user_config, 'model_copy') and hasattr(user_config, 'model_dump'):
+                         pass # Looks like a valid config object duck-typing Pydantic
+                     else:
+                         raise TypeError(
+                             "The 'config' parameter must be a valid configuration object "
+                             "(e.g., an instance of DefaultConfig or similar)."
+                         )
+                final_config = user_config
+                # Decide what to do with potential_config_kwargs when user_config is provided.
+                # Option 1: Ignore them (current implementation below)
+                # Option 2: Raise an error if any exist
+                # Option 3: Apply them even to the user_config (might be unexpected)
+                if potential_config_kwargs:
+                    print(f"\nWarning: Additional keyword arguments provided "
+                          f"({', '.join(potential_config_kwargs.keys())}) "
+                          f"while an explicit 'config' object was also passed to {func.__name__}. "
+                          f"These additional arguments will be ignored as configuration overrides.")
 
-            return func(self, *args, config=config, **kwargs)
 
+            # Call the original function with the correct arguments
+            # Pass: self, original *args, the determined config object,
+            # and only the **kwargs that matched the function's signature.
+            return func(self, *args, config=final_config, **func_specific_kwargs)
+
+        # Preserve information about valid_params on the wrapper if needed elsewhere
         setattr(wrapper, "valid_params", valid_params)
         return wrapper
 
     return decorator
+# internal check done
+# write tests: done
+# def config_method(valid_params: Optional[set[str]] = None):
+#     """
+#     Decorator for methods that accept configuration parameters.
+#     Parameters
+#     ----------
+#     valid_params : set[str]
+#         Set of valid parameter names for this method. If None, all config parameters are valid.
+#     """
+
+#     def decorator(func: Callable) -> Callable:
+#         get_type_hints(func)  ## noqa: F841
+#         sig = inspect.signature(func)  ## noqa: F841
+#         func_param_names = set(sig.parameters.keys())
+
+#         param_docs = "\nValid configuration parameters:\n"
+#         if valid_params:
+#             param_docs += "\n".join(f"- {param}" for param in sorted(valid_params))
+#         else:
+#             param_docs += "All configuration parameters are valid for this method."
+
+#         if func.__doc__ is None:
+#             func.__doc__ = ""
+#         func.__doc__ += param_docs
+
+#         @wraps(func)
+#         def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+#             user_config = kwargs.pop("config", None)
+
+#             if user_config is None:
+#                 config = self.config.model_copy(deep=True)
+
+#                 # Check for invalid parameters and warn user
+#                 if valid_params:
+#                     invalid_params = set(kwargs.keys()) - valid_params
+#                     if invalid_params:
+#                         print(
+#                             f"\nWarning: The following parameters are not valid for {func.__name__}:"
+#                         )
+#                         print(f"Invalid parameters: {', '.join(invalid_params)}")
+#                         print(
+#                             f"Valid parameters are: {', '.join(sorted(valid_params))}"
+#                         )
+#                     # check if parameter is a config parameter
+
+#                     # Filter out invalid parameters
+#                     valid_config_params = {
+#                         p for p in valid_params if p in config.model_dump()
+#                     }
+#                     config_overrides = {
+#                         k: v for k, v in kwargs.items() if k in valid_config_params
+#                     }
+#                 else:
+#                     config_overrides = kwargs
+
+#                 config = config.model_copy(update=config_overrides)
+#             else:
+#                 if not isinstance(user_config, DefaultConfig):
+#                     raise TypeError(
+#                         "The 'config' parameter must be of type DefaultConfig"
+#                     )
+#                 config = user_config
+
+#             return func(self, *args, config=config, **kwargs)
+
+#         setattr(wrapper, "valid_params", valid_params)
+#         return wrapper
+
+#     return decorator
 
 
 class Saver:

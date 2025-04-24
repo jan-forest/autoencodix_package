@@ -42,7 +42,7 @@ class GeneralTrainer(BaseTrainer):
     def __init__(
         self,
         trainset: Optional[BaseDataset],
-        validset: Optional[Union[BaseDataset, None]],
+        validset: Optional[BaseDataset],
         result: Result,
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],

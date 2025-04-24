@@ -3,6 +3,7 @@ import torch
 import numpy as np
 
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.utils._utils import config_method
 from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.base._base_trainer import BaseTrainer
@@ -20,6 +21,7 @@ from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._losses import VarixLoss
 from autoencodix.visualize.visualize import Visualizer
 from autoencodix.data._stackix_preprocessor import StackixPreprocessor
+from autoencodix.data._stackix_dataset import StackixDataset
 from autoencodix.trainers._stackix_trainer import StackixTrainer
 
 
@@ -47,9 +49,7 @@ class Stackix(BasePipeline):
         self,
         user_data: Optional[Union[DataPackage, DatasetContainer]] = None,
         trainer_type: Type[BaseTrainer] = StackixTrainer,
-        dataset_type: Type[
-            BaseDataset
-        ] = None,  # Not used directly, StackixDataset created in preprocessor
+        dataset_type: Type[BaseDataset] = StackixDataset,
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = StackixPreprocessor,
@@ -107,6 +107,61 @@ class Stackix(BasePipeline):
             config=config or DefaultConfig(),
             custom_split=custom_splits,
         )
+
+    @config_method(
+        valid_params={
+            "config",
+            "batch_size",
+            "epochs",
+            "learning_rate",
+            "n_workers",
+            "device",
+            "n_gpus",
+            "gpu_strategy",
+            "weight_decay",
+            "reproducible",
+            "global_seed",
+            "reconstruction_loss",
+            "checkpoint_interval",
+        }
+    )
+    def predict_with_reconstruction(
+        self, data: Optional[Union[StackixDataset, torch.Tensor]] = None
+    ) -> Dict[str, torch.Tensor]:
+        """
+        Generate predictions and reconstruct original modality data.
+
+        This method extends the standard predict functionality to also
+        reconstruct the original modality data from the latent space.
+
+        Parameters
+        ----------
+        data : Optional[Union[StackixDataset, torch.Tensor]]
+            Input data for prediction, uses test data if not provided
+
+        Returns
+        -------
+        Dict[str, torch.Tensor]
+            Dictionary of reconstructed tensors by modality
+
+        Raises
+        ------
+        ValueError
+            If model has not been trained yet or no data is available
+        """
+        if not hasattr(self, "_trainer") or self._trainer is None:
+            raise ValueError("Model has not been trained yet. Call fit() first.")
+
+        # If no data provided, use test data
+        if data is None:
+            if self._datasets is None or self._datasets.test is None:
+                raise ValueError(
+                    "No test data available. Please provide data for prediction."
+                )
+            data = self._datasets.test
+
+        # Use the trainer's predict_with_reconstruction method
+        return self._trainer.predict_with_reconstruction(data)
 
     def sample_latent_space(self, split: str = "test", epoch: int = -1) -> torch.Tensor:
         """

@@ -25,8 +25,8 @@ class BaseDataset(abc.ABC, Dataset):
         self,
         data: torch.Tensor,
         config: Optional[Any] = None,
-        sample_ids: Union[None, List[Any]] = None,
-        feature_ids: Union[None, List[Any]] = None,
+        sample_ids: Optional[List[Any]] = None,
+        feature_ids: Optional[List[Any]] = None,
     ):
         """
         Initialize the dataset.
@@ -41,7 +41,9 @@ class BaseDataset(abc.ABC, Dataset):
         self.config = config
         self.feature_ids = feature_ids
 
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, Any]:
+    def __getitem__(
+        self, index: int
+    ) -> Union[Tuple[torch.Tensor, Any], Dict[str, Tuple[torch.Tensor, Any]]]:
         """
         Retrieve a single sample and its corresponding label.
 

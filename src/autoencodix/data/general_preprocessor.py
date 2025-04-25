@@ -99,7 +99,7 @@ class GeneralPreprocessor(BasePreprocessor):
         ds = NumericDataset(
             data=tensor_data,
             config=config,
-            split_ids=split_ids,
+            split_indices=split_ids,
             metadata=metadata,
             sample_ids=ids,
             feature_ids=feature_ids,

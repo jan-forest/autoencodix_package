@@ -177,11 +177,6 @@ class Stackix(BasePipeline):
         if not hasattr(self, "_trainer") or self._trainer is None:
             raise ValueError("Model is not trained yet. Please train the model first.")
 
-        if (
-            not hasattr(self._trainer, "stacked_model")
-            or self._trainer.stacked_model is None
-        ):
-            raise ValueError("Stacked model not trained yet.")
 
         if self.result.mus is None or self.result.sigmas is None:
             raise ValueError("Model has not learned the latent space distribution yet.")

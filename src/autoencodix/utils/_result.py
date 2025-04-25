@@ -114,9 +114,10 @@ class Result:
         default_factory=lambda: DatasetContainer(train=None, valid=None, test=None)
     )
 
-    # new_reconstruction: Optional[torch.tensor] = field(default=None)
     adata_latent: Optional[AnnData] = field(default_factory=AnnData)
     final_reconstruction: Optional[Union[DataPackage, MuData]] = field(default=None)
+     # for stackix only
+    sub_results: Optional[Dict[str, Any]] = field(default=None)
 
     # plots: Dict[str, Any] = field(
     #     default_factory=nested_dict

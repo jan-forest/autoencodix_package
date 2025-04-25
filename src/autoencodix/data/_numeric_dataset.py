@@ -19,7 +19,7 @@ class NumericDataset(BaseDataset):
         sample_ids: Union[None, List[Any]] = None,
         feature_ids: Union[None, List[Any]] = None,
         metadata: Optional[pd.DataFrame] = None,
-        split_ids: Optional[np.ndarray] = None,
+        split_indices: Optional[np.ndarray] = None,
     ):
         """
         Initialize the dataset
@@ -38,7 +38,7 @@ class NumericDataset(BaseDataset):
         dtype = self._map_float_precision_to_dtype(self.config.float_precision)
         self.data = self._to_tensor(data, dtype)
         self.metadata = metadata
-        self.split_ids = split_ids
+        self.split_indices = split_indices
 
     @staticmethod
     def _to_tensor(tensor: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:

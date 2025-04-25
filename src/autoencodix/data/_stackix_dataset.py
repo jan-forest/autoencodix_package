@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 import torch
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.utils.default_config import DefaultConfig
@@ -52,17 +52,27 @@ class StackixDataset(BaseDataset):
         # Use first modality for base class initialization
         first_modality_key = next(iter(datasets_dict.keys()))
         first_modality = datasets_dict[first_modality_key]
-
-        super().__init__(
-            data=first_modality.data, 
-            sample_ids=first_modality.sample_ids if hasattr(first_modality, "sample_ids") else None, 
-            config=config,
-            feature_ids=[v.feature_ids for v in datasets_dict.values() if hasattr(v, "feature_ids")],
+        data = torch.cat(
+            [v.data for k, v in datasets_dict.items() if hasattr(v, "data")], dim=1
         )
+        super().__init__(
+            data=data,
+            sample_ids=first_modality.sample_ids
+            if hasattr(first_modality, "sample_ids")
+            else None,
+            config=config,
+            feature_ids=[
+                v.feature_ids
+                for v in datasets_dict.values()
+                if hasattr(v, "feature_ids")
+            ],
+        )
+        # TODO indcies
+        # TODO metadata
 
         self.datasets_dict = datasets_dict
         self.modality_keys = list(datasets_dict.keys())
-        
+
         # Ensure all datasets have the same number of samples
         sample_counts = [len(dataset) for dataset in datasets_dict.values()]
         if not all(count == sample_counts[0] for count in sample_counts):
@@ -81,7 +91,9 @@ class StackixDataset(BaseDataset):
         """
         return len(next(iter(self.datasets_dict.values())))
 
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, Any]:
+    def __getitem__(
+        self, index: int
+    ) -> Union[Tuple[torch.Tensor, Any], Dict[str, Tuple[torch.Tensor, Any]]]:
         """
         Get a single sample and its label from the dataset.
 
@@ -96,14 +108,14 @@ class StackixDataset(BaseDataset):
 
         Returns
         -------
-        Tuple[torch.Tensor, Any]
-            Tuple of (data tensor, label) for the sample
+        Dict[str, Tuple[torch.Tensor, Any]]
+            Dictionary of (data tensor, label) pairs for each modality
+
         """
-        # Return the first modality's data for compatibility with BaseTrainer
-        first_key = self.modality_keys[0]
-        first_dataset = self.datasets_dict[first_key]
-        
-        return first_dataset[index]
+        return {
+            k: self._datasets_dict[k].__getitem__(index)
+            for k in self.datasets_dict.keys()
+        }
 
     def get_modality_item(self, modality: str, index: int) -> Tuple[torch.Tensor, Any]:
         """
@@ -157,93 +169,6 @@ class StackixDataset(BaseDataset):
                 raise KeyError(f"Modality '{modality}' not found in dataset")
             return self.datasets_dict[modality].get_input_dim()
 
-        return {key: dataset.get_input_dim() for key, dataset in self.datasets_dict.items()}
-
-    def get_feature_ids(
-        self, modality: Optional[str] = None
-    ) -> Union[List[Any], Dict[str, List[Any]]]:
-        """
-        Get feature identifiers for one or all modalities.
-
-        Parameters
-        ----------
-        modality : Optional[str]
-            If provided, returns feature IDs for the specified modality only
-
-        Returns
-        -------
-        Union[List[Any], Dict[str, List[Any]]]
-            Feature IDs for the specified modality or dictionary of IDs for all modalities
-
-        Raises
-        ------
-        KeyError
-            If the requested modality doesn't exist or lacks feature IDs
-        """
-        feature_ids_dict = {}
-        
-        for key, dataset in self.datasets_dict.items():
-            if hasattr(dataset, "feature_ids") and dataset.feature_ids is not None:
-                feature_ids_dict[key] = dataset.feature_ids
-        
-        if modality is not None:
-            if modality not in feature_ids_dict:
-                raise KeyError(f"Feature IDs for modality '{modality}' not found")
-            return feature_ids_dict[modality]
-
-        return feature_ids_dict
-    
-    def get_sample_ids(
-        self, modality: Optional[str] = None
-    ) -> Union[List[Any], Dict[str, List[Any]]]:
-        """
-        Get sample identifiers for one or all modalities.
-
-        Parameters
-        ----------
-        modality : Optional[str]
-            If provided, returns sample IDs for the specified modality only
-
-        Returns
-        -------
-        Union[List[Any], Dict[str, List[Any]]]
-            Sample IDs for the specified modality or dictionary of IDs for all modalities
-
-        Raises
-        ------
-        KeyError
-            If the requested modality doesn't exist or lacks sample IDs
-        """
-        sample_ids_dict = {}
-        
-        for key, dataset in self.datasets_dict.items():
-            if hasattr(dataset, "sample_ids") and dataset.sample_ids is not None:
-                sample_ids_dict[key] = dataset.sample_ids
-        
-        if modality is not None:
-            if modality not in sample_ids_dict:
-                raise KeyError(f"Sample IDs for modality '{modality}' not found")
-            return sample_ids_dict[modality]
-
-        return sample_ids_dict
-
-    @classmethod
-    def from_datasets(
-        cls, datasets: Dict[str, BaseDataset], config: DefaultConfig
-    ) -> "StackixDataset":
-        """
-        Create a StackixDataset from multiple individual datasets.
-
-        Parameters
-        ----------
-        datasets : Dict[str, BaseDataset]
-            Dictionary mapping modality names to individual datasets
-        config : DefaultConfig
-            Configuration object
-
-        Returns
-        -------
-        StackixDataset
-            A new StackixDataset combining data from all input datasets
-        """
-        return cls(datasets_dict=datasets, config=config)
+        return {
+            key: dataset.get_input_dim() for key, dataset in self.datasets_dict.items()
+        }

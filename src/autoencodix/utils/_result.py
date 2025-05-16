@@ -118,6 +118,7 @@ class Result:
     final_reconstruction: Optional[Union[DataPackage, MuData]] = field(default=None)
      # for stackix only
     sub_results: Optional[Dict[str, Any]] = field(default=None)
+    sub_reconstructions: Optional[Dict[str, Any]] = field(default=None)
 
     # plots: Dict[str, Any] = field(
     #     default_factory=nested_dict

@@ -1,10 +1,11 @@
 from typing import Any, Dict, Optional, Tuple, Union
 import torch
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.utils.default_config import DefaultConfig
 
 
-class StackixDataset(BaseDataset):
+class StackixDataset(NumericDataset):
     """
     Dataset for handling multiple modalities in Stackix models.
 
@@ -28,7 +29,7 @@ class StackixDataset(BaseDataset):
 
     def __init__(
         self,
-        datasets_dict: Dict[str, BaseDataset],
+        dataset_dict: Dict[str, BaseDataset],
         config: DefaultConfig,
     ):
         """
@@ -46,35 +47,33 @@ class StackixDataset(BaseDataset):
         ValueError
             If the datasets dictionary is empty or if modality datasets have different numbers of samples
         """
-        if not datasets_dict:
+        if not dataset_dict:
             raise ValueError("datasets_dict cannot be empty")
 
         # Use first modality for base class initialization
-        first_modality_key = next(iter(datasets_dict.keys()))
-        first_modality = datasets_dict[first_modality_key]
+        first_modality_key = next(iter(dataset_dict.keys()))
+        first_modality = dataset_dict[first_modality_key]
         data = torch.cat(
-            [v.data for k, v in datasets_dict.items() if hasattr(v, "data")], dim=1
+            [v.data for k, v in dataset_dict.items() if hasattr(v, "data")], dim=1
         )
         super().__init__(
             data=data,
-            sample_ids=first_modality.sample_ids
-            if hasattr(first_modality, "sample_ids")
-            else None,
+            sample_ids=first_modality.sample_ids,
             config=config,
+            split_indices=first_modality.split_indices,
+            metadata=first_modality.metadata,
             feature_ids=[
                 v.feature_ids
-                for v in datasets_dict.values()
+                for v in dataset_dict.values()
                 if hasattr(v, "feature_ids")
             ],
         )
-        # TODO indcies
-        # TODO metadata
 
-        self.datasets_dict = datasets_dict
-        self.modality_keys = list(datasets_dict.keys())
+        self.datasets_dict = dataset_dict
+        self.modality_keys = list(dataset_dict.keys())
 
         # Ensure all datasets have the same number of samples
-        sample_counts = [len(dataset) for dataset in datasets_dict.values()]
+        sample_counts = [len(dataset) for dataset in dataset_dict.values()]
         if not all(count == sample_counts[0] for count in sample_counts):
             raise ValueError(
                 "All modality datasets must have the same number of samples"
@@ -113,7 +112,7 @@ class StackixDataset(BaseDataset):
 
         """
         return {
-            k: self._datasets_dict[k].__getitem__(index)
+            k: self.datasets_dict[k].__getitem__(index)
             for k in self.datasets_dict.keys()
         }
 

@@ -12,6 +12,7 @@ from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.utils.default_config import DefaultConfig, DataCase
+from autoencodix.utils._result import Result
 
 
 class GeneralPreprocessor(BasePreprocessor):
@@ -198,7 +199,7 @@ class GeneralPreprocessor(BasePreprocessor):
         self._dataset_container = ds_container
         return ds_container
 
-    def format_reconstruction(self, reconstruction: torch.Tensor) -> DataPackage:
+    def format_reconstruction(self, reconstruction: torch.Tensor, result: Optional[Result] = None) -> DataPackage:
         self._split = self._match_split(n_samples=reconstruction.shape[0])
         if self.config.data_case == DataCase.MULTI_BULK:
             return self._reverse_multi_bulk(reconstruction)

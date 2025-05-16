@@ -529,7 +529,7 @@ class BasePipeline(abc.ABC):
             self.result.final_reconstruction = pkg.multi_sc["multi_sc"]
         # Case C: other non‐DatasetContainer → full package
         elif not isinstance(data, DatasetContainer):
-            pkg = self._preprocessor.format_reconstruction(reconstruction=raw_recon)
+            pkg = self._preprocessor.format_reconstruction(reconstruction=raw_recon, result=predictor_results)
             self.result.final_reconstruction = pkg
         # Case D: fallback
         else:

@@ -6,9 +6,12 @@ from torch.utils.data import DataLoader
 from autoencodix.trainers._stackix_orchestrator import StackixOrchestrator
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.base._base_loss import BaseLoss
+from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.data._stackix_dataset import StackixDataset
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
+
+from lightning_fabric import Fabric
 from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._model_output import ModelOutput
@@ -84,8 +87,28 @@ class StackixTrainer(GeneralTrainer):
             loss_type=loss_type,
             workdir=workdir,
         )
-        self._modality_models: Optional[Dict[str, BaseAutoencoder]] = None
+        self._modality_trainers: Optional[Dict[str, BaseAutoencoder]] = None
         self._modality_results: Optional[Dict[str, Result]] = None
+        
+        self._fabric = Fabric(
+            accelerator=self._config.device,
+            devices=self._config.n_gpus,
+            precision=self._config.float_precision,
+            strategy=self._config.gpu_strategy,
+        )
+
+
+    def get_model(self) -> torch.nn.Module:
+        """
+        Get the trained model.
+
+        Returns
+        -------
+        torch.nn.Module
+            The trained model
+        """
+        return self._model
+
 
     def train(self) -> Result:
         """
@@ -98,7 +121,18 @@ class StackixTrainer(GeneralTrainer):
         Result
             Training results including losses, latent spaces, and other metrics
         """
+        print("Training each modality model...")
         self._train_modalities()
+        print("finished training each modality model")
+        self._trainer = self._trainer_type(
+            trainset=self._train_latent_ds,
+            validset=self._valid_latent_ds,
+            result=self._result,
+            config=self._config,
+            model_type=self._model_type,
+            loss_type=self._loss_type,
+        )
+
         self._model = self._trainer._model
         self._result = self._trainer.train()
 
@@ -119,140 +153,37 @@ class StackixTrainer(GeneralTrainer):
             None
         """
         # Step 1: Train individual modality models
-        self._modality_models, self._modality_results = (
-            self._orchestrator.train_modalities()
-        )
+        self._modality_trainers, self._modality_results = self._orchestrator.train_modalities()
+
         self._result.sub_results = self._modality_results
-
         # Step 2: Prepare concatenated latent space datasets
-        train_latent_ds, valid_latent_ds = self._orchestrator.prepare_latent_datasets()
+        self._train_latent_ds = self._orchestrator.prepare_latent_datasets(split="train")
+        self._valid_latent_ds = self._orchestrator.prepare_latent_datasets(split="valid")
+        self.concat_idx = self._orchestrator.concat_idx
+        print(f"concat_idx: {self.concat_idx}")
 
-        # Step 3: Create and train the stacked model
-        self._trainer = self._trainer_type(
-            trainset=train_latent_ds,
-            validset=valid_latent_ds,
-            result=self._result,
-            config=self._config,
-            model_type=self._model_type,
-            loss_type=self._loss_type,
-        )
+    def _reconstruct(self, split: str) -> None:
+        stacked_recon = self._result.reconstructions.get(epoch=-1, split=split)
+        modality_reconstructions = {}
+        for name, (start_idx, end_idx) in self.concat_idx.items():
+            stacked_input = stacked_recon[:, start_idx:end_idx]
+            model = self._modality_results[name].model
+            modality_reconstructions[name] = model.decode(stacked_input)
+        
+        self._result.sub_reconstructions = modality_reconstructions
 
-    def predict(self, data: Union[StackixDataset, torch.Tensor]) -> Result:
+
+
+    def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
         """
-        Generate predictions using the trained model.
-
-        Parameters
-        ----------
-        data : Union[StackixDataset, torch.Tensor]
-            Input data for prediction, either a multi-modal dataset or concatenated latent tensor
-
-        Returns
-        -------
-        Result
-            Prediction metrics
-
-        Raises
-        ------
-        ValueError
-            If model has not been trained yet
         """
-        if self._modality_trainer is None:
-            raise ValueError("Model has not been trained yet. Call train() first.")
 
-        return self.predict_with_reconstruction(data)
+        self._orchestrator.set_testset(testset=data)
+        test_ds = self._orchestrator.prepare_latent_datasets(split="test")
+        # self._reconstruct(split="test")
+        return super().predict(data=test_ds, model=model)
 
     def _capture_dynamics(
         self, epoch: int, model_output: List[ModelOutput], split: str
     ) -> None:
         return super()._capture_dynamics(epoch, model_output, split)
-
-    def predict_with_reconstruction(
-        self,
-        data: Union[StackixDataset, torch.Tensor],
-    ) -> Dict[str, torch.Tensor]:
-        """
-        Generate predictions and reconstruct original modality data.
-
-        This method takes either a StackixDataset or a pre-encoded latent tensor,
-        passes it through the stacked model, and reconstructs each original modality.
-
-        Parameters
-        ----------
-        data : Union[StackixDataset, torch.Tensor]
-            Input data for prediction, either a multi-modal dataset or concatenated latent tensor
-
-        Returns
-        -------
-        Dict[str, torch.Tensor]
-            Dictionary of reconstructed data for each modality
-
-        Raises
-        ------
-        ValueError
-            If no model is available or an unsupported data type is provided
-        """
-        if self._model is None:
-            raise ValueError("No model available for prediction")
-
-        # Build concatenated latent representation if needed
-        if isinstance(data, StackixDataset):
-            # Handle multi-modal dataset
-            modality_latents = []
-
-            for modality in data.modality_keys:
-                model = self._modality_models.get(modality)
-                if model is None:
-                    raise ValueError(f"Model for modality {modality} not trained")
-
-                modality_dataset = data.datasets_dict[modality]
-
-                # Create dataloader
-                dataloader = DataLoader(
-                    dataset=modality_dataset,
-                    batch_size=self._config.batch_size,
-                    shuffle=False,
-                    num_workers=self._config.n_workers,
-                    pin_memory=self._config.device in ["cuda", "gpu"],
-                )
-
-                # Set up dataloader with fabric
-                dataloader = self._fabric.setup_dataloaders(dataloader)
-
-                # Extract latent representations
-                latent_parts = []
-                with self._fabric.autocast(), torch.no_grad():
-                    model.eval()
-                    for batch, _ in dataloader:
-                        mu, _ = model.encode(x=batch)
-                        latent_parts.append(mu)
-
-                modality_latents.append(torch.cat(tensors=latent_parts, dim=0))
-
-            # Concatenate all modality latents
-            concatenated = torch.cat(tensors=modality_latents, dim=1)
-
-        elif torch.is_tensor(data):
-            # Handle pre-concatenated latent tensor
-            concatenated = data
-        else:
-            raise ValueError("Unsupported data type for predict_with_reconstruction")
-
-        # Process through stacked model
-        self._model.eval()
-        with self._fabric.autocast(), torch.no_grad():
-            stacked_out = self._model(x=concatenated)
-            recon_latent = stacked_out.latentspace
-
-        # Reconstruct each modality
-        recon: Dict[str, torch.Tensor] = {}
-        idx = 0
-
-        for modality, dim in self._modality_latent_dims.items():
-            # Extract the portion of latent space for this modality
-            slice_z = recon_latent[:, idx : idx + dim]
-            idx += dim
-
-            # Decode using the modality-specific decoder
-            recon[modality] = self._modality_models[modality].decode(x=slice_z)
-
-        return recon

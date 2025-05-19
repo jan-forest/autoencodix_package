@@ -96,50 +96,54 @@ class StackixPreprocessor(BasePreprocessor):
             primary_data = primary_data.toarray()
         return primary_data
 
-
     def _combine_layers(
         self, modality_name: str, modality_data: Any
     ) -> Tuple[np.ndarray, List[Tuple[str, int, int]]]:
         """
         Combine layers from a modality and return the combined data and indices.
-        
+
         Parameters
         ----------
         modality_name : str
             Name of the modality
         modality_data : Any
             Data for the modality
-            
+
         Returns
         -------
         Tuple[np.ndarray, List[Tuple[str, int, int]]]
             Combined data and list of (layer_name, start_idx, end_idx) tuples
         """
         layer_list: List[np.ndarray] = []
-        layer_indices: List[Tuple[str, int, int]] = []
-        
+        layer_indices: Dict[str, Tuple[int]] = {}
+
         selected_layers = self.config.data_config.data_info[
             modality_name
         ].selected_layers
-        
-        current_idx = 0
+
+        start_idx = 0
+        print("combine layers")
         for layer_name in selected_layers:
+            print(f"layer: {layer_name}")
             if layer_name == "X":
                 data = self._extract_primary_data(modality_data)
                 layer_list.append(data)
-                layer_indices.append((layer_name, current_idx, current_idx + data.shape[1]))
-                current_idx += data.shape[1]
+                end_idx = start_idx + data.shape[1]
+                layer_indices[layer_name] = [start_idx, end_idx]
+                start_idx += data.shape[1]
+                continue
             elif layer_name in modality_data.layers:
                 layer_data = modality_data.layers[layer_name]
                 if issparse(layer_data):
                     layer_data = layer_data.toarray()
                 layer_list.append(layer_data)
-                layer_indices.append((layer_name, current_idx, current_idx + layer_data.shape[1]))
-                current_idx += layer_data.shape[1]
-            else:
-                continue
-        
-        combined_data = np.concatenate(layer_list, axis=1) if layer_list else np.array([])
+                end_idx = start_idx + layer_data.shape[1]
+                layer_indices[layer_name] = [start_idx, end_idx]
+                start_idx += layer_data.shape[1]
+
+        combined_data = (
+            np.concatenate(layer_list, axis=1) if layer_list else np.array([])
+        )
         return combined_data, layer_indices
 
     def _build_dataset_dict(
@@ -160,8 +164,12 @@ class StackixPreprocessor(BasePreprocessor):
 
         """
         dataset_dict: Dict[str, NumericDataset] = {}
-        for k, v in datapackage:
-            attr_name, dict_key = k.split(".")
+        layer_id_dict: Dict[str : Dict[str, List]] = {}
+        for k, _ in datapackage:
+            attr_name, dict_key = k.split(
+                "."
+            )  # see DataPackage __iter__ method for why this makes sense
+
             if attr_name == "multi_bulk":
                 df = datapackage[attr_name][dict_key]
                 tensor = torch.from_numpy(df.values)
@@ -183,12 +191,13 @@ class StackixPreprocessor(BasePreprocessor):
                     )
 
                 layer_list: List[Any] = []
+                print("building dataset_dict")
                 for mod_name, mod_data in mudata.mod.items():
-                    layer_list.extend(
-                        self._combine_layers(
-                            modality_name=mod_name, modality_data=mod_data
-                        )
+                    layers, indices = self._combine_layers(
+                        modality_name=mod_name, modality_data=mod_data
                     )
+                    layer_id_dict[mod_name] = indices
+                    layer_list.append(layers)
                     mod_concat = np.concatenate(layer_list, axis=1)
                     ds = NumericDataset(
                         data=torch.from_numpy(mod_concat),
@@ -201,29 +210,29 @@ class StackixPreprocessor(BasePreprocessor):
                     dataset_dict[mod_name] = ds
             else:
                 continue
+        self._layer_indices = layer_id_dict
         return dataset_dict
 
     def format_reconstruction(
         self, reconstruction: Any, result: Optional[Result] = None
     ) -> DataPackage:
         """
-        Takes the reconsturcted tensor and from which modality it comes and uses the dataset_dict
-        to obtain the format of the original datapackge, but instead of the .data attribute
+        Takes the reconstructed tensor and from which modality it comes and uses the dataset_dict
+        to obtain the format of the original datapackage, but instead of the .data attribute
         we populate this attribute with the reconstructed tensor (as pd.DataFrame or MuData object)
 
         Parameters
         ----------
         reconstruction : torch.Tensor
             The reconstructed tensor
-        modalit_key : str
-            The key of the modality in the dataset_dict
+        result : Optional[Result]
+            The result object containing the reconstructed tensor and other information
         Returns
         -------
         DataPackage
             The reconstructed data package with the reconstructed tensor
 
         """
-        pass
         if result is None:
             raise ValueError(
                 "Result object is not provided. This is needed for the StackixPreprocessor."
@@ -235,12 +244,14 @@ class StackixPreprocessor(BasePreprocessor):
             )
 
         if self.config.data_case == DataCase.MULTI_BULK:
-            formated = self._format_multi_bulk(reconstruction=reconstruction)
-            return formated
+            return self._format_multi_bulk(reconstruction=reconstruction)
 
+        elif self.config.data_case == DataCase.MULTI_SINGLE_CELL:
+            return self._format_multi_sc(reconstruction=reconstruction)
 
     def _format_multi_bulk(
-        self, reconstruction: Dict[str, torch.Tensor]) -> DataPackage:
+        self, reconstruction: Dict[str, torch.Tensor]
+    ) -> DataPackage:
         multi_bulk_dict = {}
         annotation_dict = {}
         dp = DataPackage()
@@ -251,9 +262,9 @@ class StackixPreprocessor(BasePreprocessor):
                 )
             if self._dataset_container is None:
                 raise ValueError("Dataset container is not initialized.")
-            stackix_ds = self._dataset_container["train"]
+            stackix_ds = self._dataset_container["test"]
             if stackix_ds is None:
-                raise ValueError("No dataset found for split: train")
+                raise ValueError("No dataset found for split: test")
             dataset_dict = stackix_ds.dataset_dict
             df = pd.DataFrame(
                 reconstruction.numpy(),
@@ -270,36 +281,38 @@ class StackixPreprocessor(BasePreprocessor):
     def _format_multi_sc(self, reconstruction: Dict[str, torch.Tensor]) -> DataPackage:
         """
         Formats reconstructed tensors back into a MuData object for single-cell data.
-        
+
         This uses the stored layer indices to accurately split the reconstructed tensor
         back into the original layers.
-        
+
         Parameters
         ----------
         reconstruction : Dict[str, torch.Tensor]
             Dictionary of reconstructed tensors for each modality
-            
+
         Returns
         -------
         DataPackage
             DataPackage containing the reconstructed MuData object
         """
         import mudata as md
-        
+
         dp = DataPackage()
         modalities = {}
-        
+
         if self._dataset_container is None:
             raise ValueError("Dataset container is not initialized.")
-        if not hasattr(self, '_layer_indices'):
-            raise ValueError("Layer indices not found. Make sure _build_dataset_dict was called.")
-        
-        stackix_ds = self._dataset_container["train"]
+        if not hasattr(self, "_layer_indices"):
+            raise ValueError(
+                "Layer indices not found. Make sure _build_dataset_dict was called."
+            )
+
+        stackix_ds = self._dataset_container["test"]
         if stackix_ds is None:
-            raise ValueError("No dataset found for split: train")
-        
+            raise ValueError("No dataset found for split: test")
+
         dataset_dict = stackix_ds.dataset_dict
-        
+
         # Process each modality in the reconstruction
         for mod_name, recon_tensor in reconstruction.items():
             if not isinstance(recon_tensor, torch.Tensor):
@@ -309,33 +322,33 @@ class StackixPreprocessor(BasePreprocessor):
             if mod_name not in dataset_dict:
                 raise ValueError(f"Modality {mod_name} not found in dataset dictionary")
             original_dataset = dataset_dict[mod_name]
-            
+
             layer_indices = self._layer_indices[mod_name]
-            
-            start_idx, end_idx = layer_indices.get("X")
+
+            start_idx, end_idx = layer_indices["X"]
             x_data = recon_tensor.numpy()[:, start_idx:end_idx]
-            
+
             var_names = original_dataset.feature_ids
-            
+
             mod_data = ad.AnnData(
                 X=x_data,
                 obs=original_dataset.metadata,
-                var=pd.DataFrame(index=var_names[0:x_data.shape[1]])
+                var=pd.DataFrame(index=var_names[0 : x_data.shape[1]]),
             )
-            
+
             # Add additional layers based on stored indices
-            for layer_name, start_idx, end_idx in layer_indices:
+            for layer_name, ids in layer_indices.items():
                 if layer_name == "X":
                     continue  # X is already set
-                
-                layer_data = recon_tensor.numpy()[:, start_idx:end_idx]
+
+                layer_data = recon_tensor.numpy()[:, ids[0] : ids[1]]
                 mod_data.layers[layer_name] = layer_data
-            
+
             modalities[mod_name] = mod_data
-        
+
         # Create MuData object from all modalities
         mdata = md.MuData(modalities)
-        
+
         # Create and return DataPackage
         dp["multi_sc"] = {"multi_sc": mdata}
-        return dp 
+        return dp

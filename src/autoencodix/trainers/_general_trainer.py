@@ -147,9 +147,7 @@ class GeneralTrainer(BaseTrainer):
         self, epoch: int, model_output: List[ModelOutput], split: str
     ):
         # Concatenate tensors from all model outputs
-        latentspaces = torch.cat(
-            [output.latentspace for output in model_output], dim=0
-        )
+        latentspaces = torch.cat([output.latentspace for output in model_output], dim=0)
         reconstructions = torch.cat(
             [output.reconstruction for output in model_output], dim=0
         )

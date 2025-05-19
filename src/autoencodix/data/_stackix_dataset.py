@@ -15,7 +15,7 @@ class StackixDataset(NumericDataset):
 
     Attributes
     ----------
-    datasets_dict : Dict[str, BaseDataset]
+    dataset_dict : Dict[str, BaseDataset]
         Dictionary mapping modality names to dataset objects
     modality_keys : List[str]
         List of modality names
@@ -37,7 +37,7 @@ class StackixDataset(NumericDataset):
 
         Parameters
         ----------
-        datasets_dict : Dict[str, BaseDataset]
+        dataset_dict : Dict[str, BaseDataset]
             Dictionary mapping modality names to dataset objects
         config : DefaultConfig
             Configuration object
@@ -48,7 +48,7 @@ class StackixDataset(NumericDataset):
             If the datasets dictionary is empty or if modality datasets have different numbers of samples
         """
         if not dataset_dict:
-            raise ValueError("datasets_dict cannot be empty")
+            raise ValueError("dataset_dict cannot be empty")
 
         # Use first modality for base class initialization
         first_modality_key = next(iter(dataset_dict.keys()))
@@ -69,7 +69,7 @@ class StackixDataset(NumericDataset):
             ],
         )
 
-        self.datasets_dict = dataset_dict
+        self.dataset_dict = dataset_dict
         self.modality_keys = list(dataset_dict.keys())
 
         # Ensure all datasets have the same number of samples
@@ -88,7 +88,7 @@ class StackixDataset(NumericDataset):
         int
             Number of samples in the dataset
         """
-        return len(next(iter(self.datasets_dict.values())))
+        return len(next(iter(self.dataset_dict.values())))
 
     def __getitem__(
         self, index: int
@@ -98,7 +98,7 @@ class StackixDataset(NumericDataset):
 
         Returns the data from the first modality to maintain compatibility
         with the BaseDataset interface, while still supporting multi-modality
-        access through datasets_dict.
+        access through dataset_dict.
 
         Parameters
         ----------
@@ -112,8 +112,8 @@ class StackixDataset(NumericDataset):
 
         """
         return {
-            k: self.datasets_dict[k].__getitem__(index)
-            for k in self.datasets_dict.keys()
+            k: self.dataset_dict[k].__getitem__(index)
+            for k in self.dataset_dict.keys()
         }
 
     def get_modality_item(self, modality: str, index: int) -> Tuple[torch.Tensor, Any]:
@@ -137,10 +137,10 @@ class StackixDataset(NumericDataset):
         KeyError
             If the requested modality doesn't exist in the dataset
         """
-        if modality not in self.datasets_dict:
+        if modality not in self.dataset_dict:
             raise KeyError(f"Modality '{modality}' not found in dataset")
 
-        return self.datasets_dict[modality][index]
+        return self.dataset_dict[modality][index]
 
     def get_input_dim(
         self, modality: Optional[str] = None
@@ -164,10 +164,10 @@ class StackixDataset(NumericDataset):
             If the requested modality doesn't exist in the dataset
         """
         if modality is not None:
-            if modality not in self.datasets_dict:
+            if modality not in self.dataset_dict:
                 raise KeyError(f"Modality '{modality}' not found in dataset")
-            return self.datasets_dict[modality].get_input_dim()
+            return self.dataset_dict[modality].get_input_dim()
 
         return {
-            key: dataset.get_input_dim() for key, dataset in self.datasets_dict.items()
+            key: dataset.get_input_dim() for key, dataset in self.dataset_dict.items()
         }

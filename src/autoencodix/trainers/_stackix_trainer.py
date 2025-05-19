@@ -160,16 +160,21 @@ class StackixTrainer(GeneralTrainer):
         self._train_latent_ds = self._orchestrator.prepare_latent_datasets(split="train")
         self._valid_latent_ds = self._orchestrator.prepare_latent_datasets(split="valid")
         self.concat_idx = self._orchestrator.concat_idx
-        print(f"concat_idx: {self.concat_idx}")
 
     def _reconstruct(self, split: str) -> None:
         stacked_recon = self._result.reconstructions.get(epoch=-1, split=split)
+
         modality_reconstructions = {}
         for name, (start_idx, end_idx) in self.concat_idx.items():
             stacked_input = stacked_recon[:, start_idx:end_idx]
-            model = self._modality_results[name].model
-            modality_reconstructions[name] = model.decode(stacked_input)
-        
+            stacked_tensor = torch.tensor(stacked_input, dtype=torch.float32)
+            with self._fabric.autocast() and torch.no_grad():
+                model = self._modality_results[name].model
+                stacked_tensor = self._fabric.to_device(stacked_tensor)
+                model = self._fabric.to_device(model)
+                model.eval()
+                modality_reconstructions[name] = model.decode(stacked_tensor).cpu()
+            
         self._result.sub_reconstructions = modality_reconstructions
 
 
@@ -180,8 +185,10 @@ class StackixTrainer(GeneralTrainer):
 
         self._orchestrator.set_testset(testset=data)
         test_ds = self._orchestrator.prepare_latent_datasets(split="test")
-        # self._reconstruct(split="test")
-        return super().predict(data=test_ds, model=model)
+        pred_result = super().predict(data=test_ds, model=model)
+        self._result.update(other=pred_result)
+        self._reconstruct(split="test")
+        return self._result
 
     def _capture_dynamics(
         self, epoch: int, model_output: List[ModelOutput], split: str

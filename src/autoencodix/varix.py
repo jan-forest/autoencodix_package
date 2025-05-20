@@ -3,6 +3,7 @@ import torch
 import numpy as np
 
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.utils._utils import config_method
 from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.base._base_trainer import BaseTrainer
@@ -121,7 +122,26 @@ class Varix(BasePipeline):
             custom_split=custom_splits,
         )
 
-    def sample_latent_space(self, split: str = "test", epoch: int = -1) -> torch.Tensor:
+    @config_method(
+        valid_params={
+            "config",
+            "batch_size",
+            "epochs",
+            "learning_rate",
+            "n_workers",
+            "device",
+            "n_gpus",
+            "gpu_strategy",
+            "weight_decay",
+            "reproducible",
+            "global_seed",
+            "reconstruction_loss",
+            "checkpoint_interval",
+        }
+    )
+    def sample_latent_space(
+        self, config, split: str = "test", epoch: int = -1
+    ) -> torch.Tensor:
         """
         Samples new latent space points from the learned distribution.
         Parameters:

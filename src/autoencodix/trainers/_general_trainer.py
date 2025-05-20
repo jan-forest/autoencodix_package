@@ -42,7 +42,7 @@ class GeneralTrainer(BaseTrainer):
     def __init__(
         self,
         trainset: Optional[BaseDataset],
-        validset: Optional[Union[BaseDataset, None]],
+        validset: Optional[BaseDataset],
         result: Result,
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
@@ -126,12 +126,12 @@ class GeneralTrainer(BaseTrainer):
                     )
                     print(f"Epoch: {epoch}, Loss: {epoch_loss}")
                     self._capture_dynamics(
-                        epoch=epoch, model_outputs=train_outputs, split="train"
+                        epoch=epoch, model_output=train_outputs, split="train"
                     )
                     if self._validset:
                         self._capture_dynamics(
                             epoch=epoch,
-                            model_outputs=valid_outputs,
+                            model_output=valid_outputs,
                             split="valid",
                         )
 
@@ -144,14 +144,12 @@ class GeneralTrainer(BaseTrainer):
             return self._model.decode(x=x)
 
     def _capture_dynamics(
-        self, epoch: int, model_outputs: List[ModelOutput], split: str
+        self, epoch: int, model_output: List[ModelOutput], split: str
     ):
         # Concatenate tensors from all model outputs
-        latentspaces = torch.cat(
-            [output.latentspace for output in model_outputs], dim=0
-        )
+        latentspaces = torch.cat([output.latentspace for output in model_output], dim=0)
         reconstructions = torch.cat(
-            [output.reconstruction for output in model_outputs], dim=0
+            [output.reconstruction for output in model_output], dim=0
         )
 
         self._result.latentspaces.add(
@@ -166,7 +164,7 @@ class GeneralTrainer(BaseTrainer):
         )
         logvars = [
             output.latent_logvar
-            for output in model_outputs
+            for output in model_output
             if output.latent_logvar is not None
         ]
         if logvars:
@@ -179,7 +177,7 @@ class GeneralTrainer(BaseTrainer):
             )
         mus = [
             output.latent_mean
-            for output in model_outputs
+            for output in model_output
             if output.latent_mean is not None
         ]
         if mus:
@@ -218,6 +216,6 @@ class GeneralTrainer(BaseTrainer):
             for _, (data, _) in enumerate(inference_loader):
                 model_output = model(data)
                 outputs.append(model_output)
-            self._capture_dynamics(epoch=-1, model_outputs=outputs, split="test")
+            self._capture_dynamics(epoch=-1, model_output=outputs, split="test")
 
         return self._result

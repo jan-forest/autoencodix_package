@@ -82,7 +82,7 @@ class BaseAutoencoder(ABC, nn.Module):
         self, x: torch.Tensor
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
-        Encodes the input into the latent space.
+        Encodes the input into the latent space or returns mu and logvar for VAE.
 
         Parameters
         ----------
@@ -93,6 +93,29 @@ class BaseAutoencoder(ABC, nn.Module):
         -------
         Union[torch.Tensor, Tuple[torch.tensor, torch.tensor]]
             The encoded latent space representation, or mu and logvar for VAE.
+        """
+        pass
+
+    @abstractmethod
+    def get_latent_space(
+        self, x: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Returns the latent space representation of the input. Method for unifcation of 
+        getting a latent space between Variational and Vanilla Autoencoders.
+        This method is a wrapper around the encode method, or the reparameterization method
+        for VAE.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            The input tensor to be encoded.
+
+        Returns
+        -------
+        latent_space : torch.Tensor
+            The latent space representation of the input tensor.
+
         """
         pass
 

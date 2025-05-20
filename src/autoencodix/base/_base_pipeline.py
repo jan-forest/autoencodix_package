@@ -471,13 +471,14 @@ class BasePipeline(abc.ABC):
             NotImplementedError:
                 If the model is not trained. Please run the fit method first.
         """
+        # checks -----------------------------------------------------------
         if self._preprocessor is None:  # type ignore
             raise NotImplementedError("Preprocessor not initialized")
         if self.result.model is None:
             raise NotImplementedError(
                 "Model not trained. Please run the fit method first"
             )
-
+        # user data validation and preprocessing ---------------------------
         if data is None:
             if self._datasets.test is None:
                 raise ValueError("No test data available for prediction")
@@ -485,8 +486,11 @@ class BasePipeline(abc.ABC):
         elif isinstance(data, DatasetContainer):
             predict_data = data
             self.result.new_datasets = predict_data
+            self._preprocessor._dataset_container = (
+                predict_data  # needed for metadata (sample_ids, features)
+            )
 
-        elif isinstance(data, (DataPackage, DatasetContainer, ad.AnnData, MuData)):
+        elif isinstance(data, (DataPackage, ad.AnnData, MuData, dict, pd.DataFrame)):
             data, _ = self._handle_direct_user_data(
                 data=data, data_case=self.config.data_case
             )
@@ -502,6 +506,7 @@ class BasePipeline(abc.ABC):
                 f"The data for prediction need to be a DatasetContainer with a test attribute, got: {predict_data}"
             )
 
+        # actual prediction ---------------------------------------------------------------------
         predictor_results = self._trainer.predict(
             data=predict_data.test, model=self.result.model
         )
@@ -512,6 +517,7 @@ class BasePipeline(abc.ABC):
 
         self.result.update(predictor_results)
 
+        # postprocessing prediction --------------------------------------------------------
         raw_recon = self.result.reconstructions.get(epoch=-1, split="test")
         if isinstance(data, DatasetContainer):
             temp = copy.deepcopy(data.test)
@@ -525,17 +531,22 @@ class BasePipeline(abc.ABC):
 
         # for SC-community UX
         elif self.config.data_case == DataCase.MULTI_SINGLE_CELL:
-            pkg = self._preprocessor.format_reconstruction(reconstruction=raw_recon)
+            pkg = self._preprocessor.format_reconstruction(
+                reconstruction=raw_recon, result=predictor_results
+            )
             self.result.final_reconstruction = pkg.multi_sc["multi_sc"]
         # Case C: other non‐DatasetContainer → full package
-        elif not isinstance(data, DatasetContainer):
-            pkg = self._preprocessor.format_reconstruction(reconstruction=raw_recon)
+
+        elif isinstance(data, (DataPackage, ad.AnnData, MuData, dict, pd.DataFrame)):
+            pkg = self._preprocessor.format_reconstruction(
+                reconstruction=raw_recon, result=predictor_results
+            )
             self.result.final_reconstruction = pkg
         # Case D: fallback
         else:
-            print("Reconstruction not available for this data type or case.")
-
-
+            print(
+                "Reconstruction Formatting (the process of using the reconstruction output of the autoencoder models and combine it with metadata to get the exact same data structure as the raw input data i.e, a DataPackage, DatasetContainer, or AnnData) not available for this data type or case."
+            )
 
     def decode(
         self, latent: Union[torch.Tensor, ad.AnnData, pd.DataFrame]

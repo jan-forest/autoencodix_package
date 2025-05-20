@@ -12,7 +12,7 @@
 
 ## Requirements
 - Python>=3.8 <3.13
-- uv (or another package manager, we recommend uv)
+- uv or another package manager (we recommend uv)
 - git or gh
 ## Installation
 - `gh repo clone MaxJoas/autoencodix_package`

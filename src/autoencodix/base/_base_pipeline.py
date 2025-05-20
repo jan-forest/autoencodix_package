@@ -1,12 +1,13 @@
 import abc
 import copy
-from typing import TYPE_CHECKING, Dict, Optional, Type, Union
+from enum import Enum
+from typing import Dict, Optional, Tuple, Type, Union, Any
 
-import anndata as ad
+import anndata as ad # type: ignore
 import numpy as np
 import pandas as pd
 import torch
-from mudata import MuData
+from mudata import MuData # type: ignore
 from torch.utils.data import Dataset
 
 from autoencodix.data._datasetcontainer import DatasetContainer
@@ -25,86 +26,29 @@ from ._base_trainer import BaseTrainer
 from ._base_visualizer import BaseVisualizer
 
 
-# tests: done
-# internal check done
 class BasePipeline(abc.ABC):
-    """
-    Abstract base class defining the interface for all models.
+    """Provides a standardized interface for building model pipelines.
 
-    This class provides the methods for preprocessing, training, predicting,
-    visualizing, and evaluating models. Subclasses should perform steps similar
-    to the parent class but include custom attributes such as Processor, Trainer,
-    Evaluator, and Visualizer.
+    Implements methods for preprocessing data, training models, making predictions,
+    evaluating performance, and visualizing results. Subclasses customize behavior
+    by providing specific implementations for processing, training, evaluation,
+    and visualization. For example when using the Stackix Model, we would use
+    the StackixPreprocessor Type for preprocessing.
 
-    Attributes
-    ----------
-    config : DefaultConfig
-        The configuration for the pipeline. Handles preprocessing, training, and
-        other settings.
-    preprocessed_data : Optional[DatasetContainer]
-            User data if no datafiles in the config are provided. We expect these to be split and processed.
-    raw_user_data : Optional[DataPackage]
-        We give users the option to populate a DataPacke with raw data i.e. pd.DataFrames, MuData.
-        We will process this data as we would do wit raw files specified in the config.
-    data_splitter : Optional[DataSplitter]
-        Returns train, validation, and test indices; users can provide a custom splitter.
-    result : Result
-        Dataclass to store all results from the pipeline.
-    _features : Optional[torch.Tensor]
-        The preprocessed data, output of the former `make_data`.
-    _preprocessor_type : Type[Preprocessor]
-        The preprocessor filters, scales, matches, and cleans the data.
-        Specific implementations for this will be used in subclasses.
-    _datasets : Optional[DatasetContainer]
-        Data in the form of Dataset classes after splitting; essentially, self._features
-        wrapped in a Dataset class and split into train, validation, and test datasets.
-    _trainer : Optional[Trainer]
-        Trainer object with a `train` method to train model weights.
-        Each subclass will have its own Trainer class.
-    _evaluator : Optional[Evaluator]
-        Object responsible for evaluating model performance.
-        Currently a placeholder, with detailed implementation pending.
-    _visualizer : Optional[Visualizer]
-        Object responsible for visualizing results.
-        Currently a placeholder, with detailed implementation pending.
-    _dataset_type : Type[BaseDataset]
-        Used to ensure correct dataset class type when overriding methods in subclasses.
-    _trainer_type : Type[BaseTrainer]
-        Used to ensure correct trainer class type when overriding methods in subclasses.
-    _model_type : Type[BaseAutoencoder]
-        Specifies the model architecture used in the pipeline.
-    _loss_type : Type[BaseLoss]
-        Specifies the loss function used during training.
-    _visualizer : BaseVisualizer
-        Visualizer instance responsible for generating visual outputs.
-    custom_split : Optional[Dict[str, np.ndarray]]
-        Allows users to provide a custom data split for training, validation, and testing.
-    _data_splitter : DataSplitter
-        The instance of the DataSplitter used for dividing data into training, validation, and testing sets.
-
-
-    Methods
-    -------
-    preprocess(*kwargs):
-        Calls the Preprocessor instance to preprocess the data. Updates the self._features attribute.
-        Populates the self.results attribute with self._features and self._datasets.
-    fit(*kwargs):
-        Calls the Trainer instance to train the model on the training and validation data of self._datasets.
-        Populates the self.results attribute with the trained model and training dynamics and results.
-    predict(*kwargs):
-        Calls the `predict` method of the Trainer instance to run inference with the test data on the trained model.
-        If user inputs data, it preprocesses the data and runs inference.
-        Updates the result attribute.
-    evaluate(*kwargs):
-        Calls the Evaluator instance to evaluate the model performance in downstream tasks.
-        Updates the result attribute.
-    visualize(*kwargs):
-        Calls the Visualizer instance to visualize all relevant data in the result attribute.
-    show_result():
-        Helper function to directly show the visualized results.
-    run():
-        Runs the entire pipeline in the following order: preprocess, fit, predict, evaluate, visualize.
-        Updates the result attribute.
+    Attributes:
+        config: Configuration for the pipeline's components and behavior.
+        preprocessed_data: Pre-split and processed data that can be provided by user.
+        raw_user_data: Raw input data for processing (DataFrames, MuData, etc.).
+        result: Storage container for all pipeline outputs.
+        _preprocessor: Component that filters, scales, and cleans data.
+        _visualizer: Component that generates visual representations of results.
+        _dataset_type: Base class for dataset implementations.
+        _trainer_type: Base class for trainer implementations.
+        _model_type: Base class for model architecture implementations.
+        _loss_type: Base class for loss function implementations.
+        _datasets: Split datasets after preprocessing.
+        _evaluator: Component that assesses model performance. Not implemented yet
+        _data_splitter: Component that divides data into train/validation/test sets.
     """
 
     def __init__(
@@ -123,13 +67,25 @@ class BasePipeline(abc.ABC):
         custom_split: Optional[Dict[str, np.ndarray]] = None,
         **kwargs: dict,
     ) -> None:
-        """
-        Initialize the model interface.
+        """Initializes the pipeline with components and configuration.
 
-        Parameters
-        ----------
-        config : DefaultConfig, optional
-            The configuration dictionary for the model.
+        Args:
+            dataset_type: Class for dataset implementations.
+            trainer_type: Class for model training implementations.
+            model_type: Class for model architecture implementations.
+            loss_type: Class for loss function implementations.
+            datasplitter_type: Class for data splitting implementation.
+            preprocessor_type: Class for data preprocessing implementation.
+            visualizer: Component for generating visualizations.
+            user_data: Input data to be processed or already processed data.
+            evaluator: Component for assessing model performance.
+            result: Storage container for pipeline outputs.
+            config: Configuration parameters for all pipeline components.
+            custom_split: User-provided data splits (train/validation/test).
+            **kwargs: Additional keyword arguments.
+
+        Raises:
+            TypeError: If inputs have incorrect types.
         """
         processed_data = user_data if isinstance(user_data, DatasetContainer) else None
         raw_user_data = (
@@ -181,7 +137,25 @@ class BasePipeline(abc.ABC):
             processed_data  # None, or user input
         )
 
-    def _handle_direct_user_data(self, data, data_case=None):
+    def _handle_direct_user_data(
+        self, data, data_case=None
+    ) -> Tuple[DataPackage, Enum]:
+        """Converts raw user data into a standardized DataPackage format.
+
+        Args:
+            data: Raw input data in various formats.
+            data_case: Specifies how to interpret the data structure.
+
+        Returns:
+            A tuple containing:
+                - DataPackage containing the standardized data
+                - DataCase enum indicating the data type
+
+        Raises:
+            TypeError: If data format is not supported.
+            ValueError: If data doesn't meet format requirements or data_case
+                cannot be inferred.
+        """
         if isinstance(data, ad.AnnData):
             mudata = MuData({"user-data": data})
             data_package = DataPackage(multi_sc={"multi_sc": mudata})
@@ -205,7 +179,9 @@ class BasePipeline(abc.ABC):
             data_package = data
         else:
             raise TypeError(
-                f"Type: {type(data)} is not supported as of now, please provide: Union[AnnData, MuData, pd.DataFrame, Dict[str, pd.DataFrame], DataPackage]"
+                f"Type: {type(data)} is not supported as of now, please provide: "
+                f"Union[AnnData, MuData, pd.DataFrame, Dict[str, pd.DataFrame], "
+                f"DataPackage]"
             )
 
         if data_case is None:
@@ -214,22 +190,19 @@ class BasePipeline(abc.ABC):
         return data_package, data_case
 
     def _validate_raw_user_data(self) -> None:
-        """
-        Validates the raw user data provided by the user.
+        """Validates the format and content of user-provided raw data.
 
-        Ensures that:
-        - The raw user data is a DataPackage.
-        - Each attribute of the DataPackage is a dictionary.
-        - At least one attribute of the DataPackage is not None.
+        Ensures that raw_user_data is a valid DataPackage with properly formatted
+        attributes.
 
         Raises:
-            TypeError: If the raw user data is not a DataPackage.
-            ValueError: If any attribute of the DataPackage is not a dictionary.
-            ValueError: If all attributes of the DataPackage are None.
+            TypeError: If raw_user_data is not a DataPackage.
+            ValueError: If DataPackage attributes aren't dictionaries or all are None.
         """
         if not isinstance(self.raw_user_data, DataPackage):
             raise TypeError(
-                f"Expected raw_user_data to be of type DataPackage, got {type(self.raw_user_data)}."
+                f"Expected raw_user_data to be of type DataPackage, got "
+                f"{type(self.raw_user_data)}."
             )
 
         all_none = True
@@ -239,7 +212,8 @@ class BasePipeline(abc.ABC):
                 all_none = False
                 if not isinstance(attr_value, dict):
                     raise ValueError(
-                        f"Attribute '{attr_name}' of raw_user_data must be a dictionary, got {type(attr_value)}."
+                        f"Attribute '{attr_name}' of raw_user_data must be a dictionary, "
+                        f"got {type(attr_value)}."
                     )
 
         if all_none:
@@ -247,7 +221,14 @@ class BasePipeline(abc.ABC):
                 "All attributes of raw_user_data are None. At least one must be non-None."
             )
 
-    def _fill_data_info(self):
+    def _fill_data_info(self) -> None:
+        """Populates the config's data_info with entries for all data keys.
+
+        Creates DataInfo objects for each data key found in raw_user_data
+        if they don't already exist in the configuration.
+        This method is needed, when the user provides data via the Pipeline and
+        not via the config.
+        """
         all_keys = []
         for k in self.raw_user_data.__annotations__:
             attr_value = getattr(self.raw_user_data, k)
@@ -261,12 +242,14 @@ class BasePipeline(abc.ABC):
             if self.config.data_config.data_info.get(k) is None:
                 self.config.data_config.data_info[k] = DataInfo()
 
-    def _validate_user_data(self) -> None:
-        """
-        Validates the data provided by the user.
+    def _validate_user_data(self):
+        """Validates user-provided data based on its source and format.
 
-        If the user passed preprocessed_data as dataset container, this function calls _validate_container().
-        If the user only passed a config with data configuration, this function calls _validate_config_data().
+        Performs different validation based on whether the user provided
+        preprocessed data, raw data, or a data configuration.
+
+        Raises:
+            Various exceptions depending on validation results.
         """
         if self.raw_user_data is None:
             if self._datasets is not None:  # case when user passes preprocessed data
@@ -276,14 +259,14 @@ class BasePipeline(abc.ABC):
         else:
             self._validate_raw_user_data()
 
-    def _validate_container(self) -> None:
-        """
-        Validates a DatasetContainer object to ensure it contains valid datasets.
+    def _validate_container(self):
+        """Validates that a DatasetContainer has at least one valid dataset.
 
-        Ensures that the container has at least a training dataset.
+        Ensures the container has properly formatted datasets and at least
+        one split is present.
 
         Raises:
-            ValueError: If the container validation fails.
+            ValueError: If container validation fails.
         """
         if self.preprocessed_data is None:
             raise ValueError("DatasetContainer is None. Please provide valid datasets.")
@@ -291,38 +274,36 @@ class BasePipeline(abc.ABC):
         if not isinstance(self.preprocessed_data.train, Dataset):
             if self.preprocessed_data.train is not None:
                 raise ValueError(
-                    f"Train dataset has to be either None or Dataset, got {type(self.preprocessed_data.valid)}"
+                    f"Train dataset has to be either None or Dataset, got "
+                    f"{type(self.preprocessed_data.train)}"
                 )
-            none_count += 1
-
         if not isinstance(self.preprocessed_data.test, Dataset):
             if self.preprocessed_data.test is not None:
                 raise ValueError(
-                    f"Test dataset has to be either None or Dataset, got {type(self.preprocessed_data.valid)}"
+                    f"Test dataset has to be either None or Dataset, got "
+                    f"{type(self.preprocessed_data.valid)}"
                 )
             none_count += 1
 
         if not isinstance(self.preprocessed_data.valid, Dataset):
             if self.preprocessed_data.valid is not None:
                 raise ValueError(
-                    f"Valid dataset has to be either None or Dataset, got {type(self.preprocessed_data.valid)}"
+                    f"Valid dataset has to be either None or Dataset, got "
+                    f"{type(self.preprocessed_data.valid)}"
                 )
             none_count += 1
         if none_count == 3:
-            raise ValueError("At lest one split needs to be provided")
+            raise ValueError("At least one split needs to be provided")
 
-    def _validate_config_data(self) -> None:
-        """
-        Validates the data configuration provided via config.data_config.data_info.
+    def _validate_config_data(self):
+        """Validates the data configuration provided via config.
 
-        Ensures that:
-        1. There is at least one non-annotation file
-        2. When working with non-single-cell data, there must be an annotation file
+        Ensures the data configuration has the necessary components based
+        on the data types being processed.
 
         Raises:
-            ValueError: If the data configuration validation fails.
+            ValueError: If data configuration validation fails.
         """
-
         data_info_dict = self.config.data_config.data_info
         if not data_info_dict:
             raise ValueError("data_info dictionary is empty.")
@@ -354,28 +335,23 @@ class BasePipeline(abc.ABC):
 
             if not annotation_files:
                 raise ValueError(
-                    "When working with non-single-cell data, an annotation file must be provided."
+                    "When working with non-single-cell data, an annotation file must be "
+                    "provided."
                 )
 
-    @config_method(valid_params={"config"})  # TODO allow more config params
-    def preprocess(
-        self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs: dict
-    ) -> None:
-        """
-        Takes the user input data and filters, norrmalizes and cleans the data.
-        Populates the self._datasets attribute with the preprocessed data as DatasetContainer,
-        containing the splits as a child of PyTorch Dataset, depending on which preprocessor was used
-        for the pipeline.
+    @config_method(valid_params={"config"})
+    def preprocess(self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs):
+        """Filters, normalizes and prepares data for model training.
 
-        Parameters:
-            config: DefaultConfig, optional (default: None)
-                allows to pass a custom configuration for the preprocessing step.
-            **kwargs:
-                User can pass configuration parameters as single keyword arguments.
+        Processes raw input data into the format required by the model and creates
+        train/validation/test splits as needed.
+
+        Args:
+            config: Optional custom configuration for preprocessing.
+            **kwargs: Additional configuration parameters as keyword arguments.
+
         Raises:
-            NotImplementedError:
-                If the preprocessor is not initialized.
-
+            NotImplementedError: If preprocessor is not initialized.
         """
         if self._preprocessor_type is None:
             raise NotImplementedError("Preprocessor not initialized")
@@ -406,26 +382,19 @@ class BasePipeline(abc.ABC):
             "checkpoint_interval",
         }
     )
-    def fit(
-        self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
-    ) -> None:
-        """
-        Trains the model, based on the in the child class defined Trainer class.
-        Populates the self.result attribute with the trained model and training dynamics and results.
+    def fit(self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs):
+        """Trains the model on preprocessed data.
 
-        Parameters:
-            config: DefaultConfig, optional (default: None)
-                allows to pass a custom configuration for the training step.
-            **kwargs:
-                User can pass configuration parameters as single keyword arguments.
+        Creates and configures a trainer instance, then executes the training
+        process using the preprocessed datasets.
+
+        Args:
+            config: Optional custom configuration for training.
+            **kwargs: Additional configuration parameters as keyword arguments.
+
         Raises:
-            ValueError:
-                If no data is available for training.
-            ValueError:
-                If the datasets are not built. Please run the preprocess method first.
-
+            ValueError: If datasets aren't available for training.
         """
-
         if self._datasets is None:
             raise ValueError(
                 "Datasets not built. Please run the preprocess method first."
@@ -448,31 +417,24 @@ class BasePipeline(abc.ABC):
         data: Optional[Union[DataPackage, DatasetContainer, ad.AnnData, MuData]] = None,
         config: Optional[Union[None, DefaultConfig]] = None,
         **kwargs,
-    ) -> None:
-        """
-        Run inference with the test data on the trained model.
-        If user inputs data, it preprocesses the data and runs inference.
-        Populates the self.result attribute with the inference results.
+    ):
+        """Generates predictions using the trained model.
 
-        Parameters:
-            data:
-                User input data to run inference as DatasetContainer, we will use the test split here.
-            config: DefaultConfig, optional (default: None)
-                allows to pass a custom configuration for the prediction step.
-            **kwargs:
-                User can pass configuration parameters as single keyword arguments.
+        Uses the trained model to make predictions on test data or new data
+        provided by the user. Processes the results and stores them in the
+        result container.
+
+        Args:
+            data: Optional new data for predictions.
+            config: Optional custom configuration for prediction.
+            **kwargs: Additional configuration parameters as keyword arguments.
+
         Raises:
-            NotImplementedError:
-                If the preprocessor is not initialized.
-            NotImplementedError:
-                If the predictor is not initialized.
-            NotImplementedError:
-                If the datasets are not built. Please run the preprocess method first.
-            NotImplementedError:
-                If the model is not trained. Please run the fit method first.
+            NotImplementedError: If required components aren't initialized.
+            ValueError: If no test data is available or data format is invalid.
         """
         # checks -----------------------------------------------------------
-        if self._preprocessor is None:  # type ignore
+        if self._preprocessor is None:
             raise NotImplementedError("Preprocessor not initialized")
         if self.result.model is None:
             raise NotImplementedError(
@@ -486,9 +448,7 @@ class BasePipeline(abc.ABC):
         elif isinstance(data, DatasetContainer):
             predict_data = data
             self.result.new_datasets = predict_data
-            self._preprocessor._dataset_container = (
-                predict_data  # needed for metadata (sample_ids, features)
-            )
+            self._preprocessor._dataset_container = predict_data  # for metadata
 
         elif isinstance(data, (DataPackage, ad.AnnData, MuData, dict, pd.DataFrame)):
             data, _ = self._handle_direct_user_data(
@@ -503,10 +463,11 @@ class BasePipeline(abc.ABC):
 
         if predict_data.test is None:
             raise ValueError(
-                f"The data for prediction need to be a DatasetContainer with a test attribute, got: {predict_data}"
+                f"The data for prediction need to be a DatasetContainer with a test "
+                f"attribute, got: {predict_data}"
             )
 
-        # actual prediction ---------------------------------------------------------------------
+        # actual prediction -----------------------------------------------
         predictor_results = self._trainer.predict(
             data=predict_data.test, model=self.result.model
         )
@@ -517,7 +478,7 @@ class BasePipeline(abc.ABC):
 
         self.result.update(predictor_results)
 
-        # postprocessing prediction --------------------------------------------------------
+        # postprocessing prediction ---------------------------------------
         raw_recon = self.result.reconstructions.get(epoch=-1, split="test")
         if isinstance(data, DatasetContainer):
             temp = copy.deepcopy(data.test)
@@ -536,7 +497,6 @@ class BasePipeline(abc.ABC):
             )
             self.result.final_reconstruction = pkg.multi_sc["multi_sc"]
         # Case C: other non‐DatasetContainer → full package
-
         elif isinstance(data, (DataPackage, ad.AnnData, MuData, dict, pd.DataFrame)):
             pkg = self._preprocessor.format_reconstruction(
                 reconstruction=raw_recon, result=predictor_results
@@ -545,39 +505,29 @@ class BasePipeline(abc.ABC):
         # Case D: fallback
         else:
             print(
-                "Reconstruction Formatting (the process of using the reconstruction output of the autoencoder models and combine it with metadata to get the exact same data structure as the raw input data i.e, a DataPackage, DatasetContainer, or AnnData) not available for this data type or case."
+                "Reconstruction Formatting (the process of using the reconstruction "
+                "output of the autoencoder models and combine it with metadata to get "
+                "the exact same data structure as the raw input data i.e, a DataPackage, "
+                "DatasetContainer, or AnnData) not available for this data type or case."
             )
 
     def decode(
         self, latent: Union[torch.Tensor, ad.AnnData, pd.DataFrame]
     ) -> Union[torch.Tensor, ad.AnnData, pd.DataFrame]:
-        """
-        Decodes a latent representation into the original data space.
+        """Transforms latent space representations back to input space.
 
-        Handles both PyTorch tensors and AnnData objects as input.
-        If an AnnData object is provided, it extracts the `.X` attribute,
-        converts it to a tensor, and then decodes it.  It also checks
-        that the size of the latent representation is compatible with
-        the model's expected input size.
+        Handles various input formats for the latent representation and
+        returns the decoded data in a matching format.
 
         Args:
-            latent: The latent representation to decode.
-                - If torch.Tensor: A tensor of shape (n_cells, n_latent).
-                - If AnnData: An AnnData object. The .X attribute should
-                have shape (n_cells, n_features), and the function
-                will use a linear transformation to project this
-                to (n_cells, n_latent) if necessary.
+            latent: Latent space representation to decode.
 
         Returns:
-            recons: The reconstructed data.
-                - If input is torch.Tensor: A tensor of shape (n_cells, n_features).
-                - If input is AnnData: An AnnData object with the reconstructed data and obs_names + var_names
-                - If input is pd.DataFrame: A DataFrame with the reconstructed data and index + columns.
+            Decoded data in a format matching the input.
 
         Raises:
-            TypeError: If no model has been trained yet.
-            ValueError: If the input `latent` has an incompatible size
-                with the model's expected latent input size.
+            TypeError: If no model has been trained or input type is invalid.
+            ValueError: If latent dimensions are incompatible with the model.
         """
         if self.result.model is None:
             raise TypeError("No model trained yet, use fit() or run() method first")
@@ -590,8 +540,9 @@ class BasePipeline(abc.ABC):
             expected_latent_dim = self.config.latent_dim
             if not latent_data.shape[1] == expected_latent_dim:
                 raise ValueError(
-                    f"Input AnnData's .X has shape {latent_data.shape}, but the model expects a latent vector of"
-                    f" size {expected_latent_dim}.  Consider projecting the AnnData to the correct latent space first."
+                    f"Input AnnData's .X has shape {latent_data.shape}, but the model "
+                    f"expects a latent vector of size {expected_latent_dim}. Consider "
+                    f"projecting the AnnData to the correct latent space first."
                 )
             latent_tensor = latent_data
 
@@ -606,7 +557,7 @@ class BasePipeline(abc.ABC):
             return recons_adata
         elif isinstance(latent, pd.DataFrame):
             latent_tensor = torch.tensor(latent.values, dtype=torch.float32)
-            recons: torch.Tensor = self._trainer.decode(x=latent_data)
+            recons: torch.Tensor = self._trainer.decode(x=latent_tensor)
             return pd.DataFrame(
                 recons.to("cpu").detach().numpy(),
                 index=latent.index,
@@ -617,13 +568,14 @@ class BasePipeline(abc.ABC):
             expected_latent_dim = self.config.latent_dim
             if not latent.shape[1] == expected_latent_dim:
                 raise ValueError(
-                    f"Input tensor has shape {latent.shape}, but the model expects a latent vector of"
-                    f" size {expected_latent_dim}."
+                    f"Input tensor has shape {latent.shape}, but the model expects a "
+                    f"latent vector of size {expected_latent_dim}."
                 )
             latent_tensor = latent
         else:
             raise TypeError(
-                f"Input 'latent' must be either a torch.Tensor or an AnnData object, not {type(latent)}."
+                f"Input 'latent' must be either a torch.Tensor or an AnnData object, "
+                f"not {type(latent)}."
             )
 
         recons: torch.Tensor = self._trainer.decode(x=latent_tensor)
@@ -633,31 +585,42 @@ class BasePipeline(abc.ABC):
     def evaluate(
         self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
     ) -> None:
+        """Not Implemented yet"""
         if config is None:
             config = self.config
-        # Add your evaluation logic here
 
     @config_method(valid_params={"config"})
-    def visualize(
-        self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
-    ) -> None:
-        """
-        Visualize model results.
+    def visualize(self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs):
+        """Creates visualizations of model results and performance.
 
-        Raises
-        ------
-        NotImplementedError
-            If the visualizer is not initialized.
-        ValueError
-            If no data is available for visualization.
+        Args:
+            config: Optional custom configuration for visualization.
+            **kwargs: Additional configuration parameters.
+
+        Raises:
+            NotImplementedError: If visualizer is not initialized.
         """
         if self._visualizer is None:
             raise NotImplementedError("Visualizer not initialized")
 
         self._visualizer.visualize(result=self.result, config=self.config)
 
-    def show_result(self) -> None:
-        print("Make plots")
+    def show_result(self):
+        """Displays key visualizations of model results.
+
+        This method generates the following visualizations:
+        1. Loss Curves: Displays the absolute loss curves to provide insights into
+           the model's training and validation performance over epochs.
+        2. Latent Space Ridgeline Plot: Visualizes the distribution of the latent
+           space representations across different dimensions, offering a high-level
+           overview of the learned embeddings.
+        3. Latent Space 2D Scatter Plot: Projects the latent space into two dimensions
+           for a detailed view of the clustering or separation of data points.
+
+        These visualizations help in understanding the model's performance and
+        the structure of the latent space representations.
+        """
+        print("Creating plots ...")
 
         self._visualizer.show_loss(plot_type="absolute")
 
@@ -668,19 +631,15 @@ class BasePipeline(abc.ABC):
     def run(
         self, data: Optional[Union[DatasetContainer, DataPackage]] = None
     ) -> Result:
-        """
-        Run the entire model pipeline (preprocess, fit, predict, evaluate, visualize).
-        When predict step should be run on user input data, the data parameter should be provided.
-        (Overrides test data from the pipeline object)
-        Populates the result attribute and returns it.
+        """Executes the complete pipeline from preprocessing to visualization.
 
-        Parameters:
-            data: Data
+        Runs all pipeline steps in sequence and returns the result.
+
+        Args:
+            data: Optional data for prediction (overrides test data).
 
         Returns:
-            Result:
-                The result object containing all relevant data from the pipeline.
-
+            Complete pipeline results.
         """
         self.preprocess()
         self.fit()
@@ -690,12 +649,23 @@ class BasePipeline(abc.ABC):
         return self.result
 
     def save(self, file_path):
-        """Saves the pipeline using the Saver class."""
+        """Saves the pipeline to a file.
+
+        Args:
+            file_path: Path where the pipeline should be saved.
+        """
         saver = Saver(file_path)
         saver.save(self)
 
     @classmethod
-    def load(cls, file_path):
-        """Loads the pipeline using the Loader class."""
+    def load(cls, file_path) -> Any:
+        """Loads a pipeline from a file.
+
+        Args:
+            file_path: Path to the saved pipeline.
+
+        Returns:
+            The loaded pipeline instance.
+        """
         loader = Loader(file_path)
         return loader.load()

@@ -9,6 +9,7 @@ class ConcreteDataset(BaseDataset):
 
 
 class TestBaseDataset:
+    
     @pytest.fixture
     def dummy_data(self):
         return torch.zeros(100, 10)

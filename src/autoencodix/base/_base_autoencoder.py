@@ -1,79 +1,51 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Union, Tuple
+from typing import Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
-from autoencodix.utils.default_config import DefaultConfig
+
 from autoencodix.utils._model_output import ModelOutput
+from autoencodix.utils.default_config import DefaultConfig
 
 
-# internal check done
-# write tests: done
 class BaseAutoencoder(ABC, nn.Module):
-    """
-    Abstract BaseAutoencoder class defining the required methods for an autoencoder.
-    Builds the encoder and decoder networks, with the _build_network method,
-    Each autoencoder model should implement the encode and decode methods and forward method.
-    Weight initalization is also encouraged to be implemented in the _init_weights method.
+    """Interface for building autoencoder models with standard interfaces.
 
-    This class inherits from `torch.nn.Module` and is intended to be extended
-    by specific autoencoder models i.e. a variational autoencoder might add a
-    reparmeterization method.
+    Defines standard methods for encoding data to a latent space and decoding
+    back to the original space. Includes a weight initialization method for
+    stable training. Intended to be extended by specific autoencoder variants
+    like VAE.
 
-    Attributes
-    ----------
-    self.input_dim : int
-        number of input features
-    self.config: DefaultConfig
-        Configuration object containing model architecture parameters
-    self.encoder: nn.Module
-        Encoder network
-    self.decoder: nn.Module
-        Decoder network
-
-    Methods
-    -------
-    _build_network()
-        Abstract method to build the encoder and decoder networks
-    encode(x: torch.Tensor) -> Union[torch.Tensor, Tuple[torch.tensor, torch.tensor]]
-        Abstract method to encode input tensor x
-    decode(x: torch.Tensor) -> torch.Tensor
-        Abstract method to decode latent tensor x
-    forward(x: torch.Tensor) -> ModelOutput
-        forward pass of model, fills in the reconstruction and latentspace attributes of ModelOutput class.
-        For other implementations, additional information can be added to the ModelOutput class.
-
+    Attributes:
+        input_dim: Number of input features.
+        config: Configuration object containing model architecture parameters.
+        _encoder: Encoder network.
+        _decoder: Decoder network.
     """
 
-    def __init__(
-        self, config: Optional[Union[DefaultConfig, None]], input_dim: int
-    ) -> None:
-        """
-        Parameters:
-           config: Optional[Union[DefaultConfig, None]]
-                Configuration object containing model parameters.
-            input_dim: int
-                Number of input features.
-        Returns:
-            None
+    def __init__(self, config: Optional[DefaultConfig], input_dim: int):
+        """Initializes the BaseAutoencoder.
 
+        Args:
+            config: Configuration object containing model parameters.
+                If None, a default configuration will be used.
+            input_dim: Number of input features.
         """
         super().__init__()
         if config is None:
             config = DefaultConfig()
         self.input_dim = input_dim
-        self._encoder: nn.Module
-        self._decoder: nn.Module
+        self._encoder: Optional[nn.Module] = None
+        self._decoder: Optional[nn.Module] = None
         self.config = config
 
     @abstractmethod
     def _build_network(self) -> None:
-        """
-        Builds the encoder and decoder networks for the autoencoder model.
-        Populates the self._encoder and self._decoder attributes.
+        """Builds the encoder and decoder networks for the autoencoder model.
 
-        This method should be implemented by subclasses to define the architecture
-        of the encoder and decoder networks.
+        Populates the self._encoder and self._decoder attributes.
+        This method should be implemented by subclasses to define
+        the architecture of the encoder and decoder networks.
         """
         pass
 
@@ -81,58 +53,67 @@ class BaseAutoencoder(ABC, nn.Module):
     def encode(
         self, x: torch.Tensor
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        """
-        Encodes the input into the latent space.
+        """Encodes the input into the latent space.
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            The input tensor to be encoded.
+        Args:
+            x: The input tensor to be encoded.
 
-        Returns
-        -------
-        Union[torch.Tensor, Tuple[torch.tensor, torch.tensor]]
+        Returns:
             The encoded latent space representation, or mu and logvar for VAE.
         """
         pass
 
     @abstractmethod
-    def decode(self, x: torch.Tensor) -> torch.Tensor:
+    def get_latent_space(self, x: torch.Tensor) -> torch.Tensor:
+        """Returns the latent space representation of the input.
+
+        Method for unification of getting a latent space between Variational
+        and Vanilla Autoencoders. This method is a wrapper around the encode
+        method, or the reparameterization method for VAE.
+
+        Args:
+            x: The input tensor to be encoded.
+
+        Returns:
+            The latent space representation of the input tensor.
         """
-        Decodes the latent representation back to the input space.
+        pass
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            The latent tensor to be decoded.
+    @abstractmethod
+    def decode(self, x: torch.Tensor) -> torch.Tensor:
+        """Decodes the latent representation back to the input space.
 
-        Returns
-        -------
-        torch.Tensor
+        Args:
+            x: The latent tensor to be decoded.
+
+        Returns:
             The decoded tensor, reconstructed from the latent space.
         """
         pass
 
     @abstractmethod
     def forward(self, x: torch.Tensor) -> ModelOutput:
-        """
-        Combines encoding and decoding steps for the autoencoder.
+        """Combines encoding and decoding steps for the autoencoder.
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            The input tensor to be processed.
+        Args:
+            x: The input tensor to be processed.
 
-        Returns
-        -------
-        ModelOutput
-            The reconstructed input tensor, and any additional information, depending on the model type.
+        Returns:
+            The reconstructed input tensor and any additional information,
+            depending on the model type.
         """
         pass
 
     def _init_weights(self, m):
-        """
-        This weight inititalization method worked well in our experiments.
+        """Initializes weights using Xavier uniform initialization.
+
+        This weight initialization method helps maintain the variance of
+        activations across layers, preventing gradients from vanishing or
+        exploding during training. This approach ensures stable and efficient
+        training of the autoencoder model.
+
+        Args:
+            m: The module to initialize.
         """
         if isinstance(m, nn.Linear):
             torch.nn.init.xavier_uniform_(m.weight)

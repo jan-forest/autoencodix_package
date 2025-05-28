@@ -1,14 +1,15 @@
-from ._datasplitter import DataSplitter
-from ._numeric_dataset import NumericDataset
-from ._datasetcontainer import DatasetContainer
-from .general_preprocessor import GeneralPreprocessor
-from .datapackage import DataPackage
-from ._imgdataclass import ImgData
 from ._datapackage_splitter import DataPackageSplitter
+from ._datasetcontainer import DatasetContainer
+from ._datasplitter import DataSplitter
 from ._filter import DataFilter
+from ._imgdataclass import ImgData
 from ._nanremover import NaNRemover
+from ._numeric_dataset import NumericDataset
 from ._stackix_dataset import StackixDataset
 from ._stackix_preprocessor import StackixPreprocessor
+from .datapackage import DataPackage
+from .general_preprocessor import GeneralPreprocessor
+from ._sc_filter import SingleCellFilter
 
 __all__ = [
     "DataSplitter",
@@ -22,6 +23,5 @@ __all__ = [
     "NaNRemover",
     "StackixPreprocessor",
     "StackixDataset",
+    "SingleCellFilter",
 ]
-
-# data dir V0 tests done

@@ -3,6 +3,7 @@ import torch
 import numpy as np
 
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.utils._utils import config_method
 from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.base._base_trainer import BaseTrainer
@@ -69,9 +70,9 @@ class Varix(BasePipeline):
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = GeneralPreprocessor,
-        visualizer: Optional[BaseVisualizer] = None,
-        evaluator: Optional[Evaluator] = None,
-        result: Optional[Result] = None,
+        visualizer: Optional[BaseVisualizer] = Visualizer(),
+        evaluator: Optional[Evaluator] = Evaluator,
+        result: Optional[Result] = Result(),
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
         config: Optional[DefaultConfig] = None,
@@ -113,15 +114,34 @@ class Varix(BasePipeline):
             model_type=model_type,
             loss_type=loss_type,
             preprocessor_type=preprocessor_type,
-            visualizer=visualizer or Visualizer(),
-            evaluator=evaluator or Evaluator(),
-            result=result or Result(),
+            visualizer=visualizer,
+            evaluator=evaluator,
+            result=result,
             datasplitter_type=datasplitter_type,
             config=config or DefaultConfig(),
             custom_split=custom_splits,
         )
 
-    def sample_latent_space(self, split: str = "test", epoch: int = -1) -> torch.Tensor:
+    @config_method(
+        valid_params={
+            "config",
+            "batch_size",
+            "epochs",
+            "learning_rate",
+            "n_workers",
+            "device",
+            "n_gpus",
+            "gpu_strategy",
+            "weight_decay",
+            "reproducible",
+            "global_seed",
+            "reconstruction_loss",
+            "checkpoint_interval",
+        }
+    )
+    def sample_latent_space(
+        self, config, split: str = "test", epoch: int = -1
+    ) -> torch.Tensor:
         """
         Samples new latent space points from the learned distribution.
         Parameters:

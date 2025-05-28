@@ -117,6 +117,18 @@ class VanillixArchitecture(BaseAutoencoder):
         """
         return self._encoder(x)
 
+    def get_latent_space(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Returns the latent space representation of the input data.
+
+        Parameters:
+            x : torch.Tensor
+        Returns:
+            torch.Tensor
+
+        """
+        return self.encode(x)
+
     def decode(self, x: torch.Tensor) -> torch.Tensor:
         """
         Decodes the latent representation.

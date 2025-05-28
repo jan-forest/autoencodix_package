@@ -24,6 +24,7 @@ dependencies = [
     "umap-learn>=0.5.7",
     "pyarrow>=19.0.1",
     "ipykernel>=6.29.5",
+    "dill>=0.4.0",
 ]
 
 [dependency-groups]
@@ -40,3 +41,13 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.mypy]
+mypy_path = "src"
+namespace_packages = true
+explicit_package_bases = true
+python_version = "3.9"
+exclude = [
+    "build/",
+    "dist/",
+]

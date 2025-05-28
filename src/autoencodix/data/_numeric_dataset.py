@@ -7,8 +7,6 @@ from autoencodix.utils.default_config import DefaultConfig
 
 # internal check done
 # write tests: done
-
-
 class NumericDataset(BaseDataset):
     """
     A custom PyTorch dataset that handles tensors.
@@ -18,10 +16,10 @@ class NumericDataset(BaseDataset):
         self,
         data: torch.Tensor,
         config: DefaultConfig,
-        ids: Union[None, List[Any]] = None,
+        sample_ids: Union[None, List[Any]] = None,
         feature_ids: Union[None, List[Any]] = None,
         metadata: Optional[pd.DataFrame] = None,
-        split_ids: Optional[np.ndarray] = None,
+        split_indices: Optional[np.ndarray] = None,
     ):
         """
         Initialize the dataset
@@ -34,13 +32,13 @@ class NumericDataset(BaseDataset):
             Optional labels for supervised learning
 
         """
-        super().__init__(data=data, ids=ids, config=config, feature_ids=feature_ids)
+        super().__init__(data=data, sample_ids=sample_ids, config=config, feature_ids=feature_ids)
         if self.config is None:
             raise ValueError("config cannot be None")
         dtype = self._map_float_precision_to_dtype(self.config.float_precision)
         self.data = self._to_tensor(data, dtype)
         self.metadata = metadata
-        self.split_ids = split_ids
+        self.split_indices = split_indices
 
     @staticmethod
     def _to_tensor(tensor: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:

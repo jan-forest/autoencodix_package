@@ -1,73 +1,173 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
-
+from typing import Any, Dict, Optional, Tuple, Union
 import torch
-
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.utils.default_config import DefaultConfig
 
 
-class StackixDataset(BaseDataset):
+class StackixDataset(NumericDataset):
     """
     Dataset for handling multiple modalities in Stackix models.
 
-    This dataset holds tensors for multiple data modalities and provides
-    a consistent interface for accessing them during training.
+    This dataset holds individual BaseDataset objects for multiple data modalities
+    and provides a consistent interface for accessing them during training.
+    It's designed to work specifically with StackixTrainer.
+
+    Attributes
+    ----------
+    dataset_dict : Dict[str, BaseDataset]
+        Dictionary mapping modality names to dataset objects
+    modality_keys : List[str]
+        List of modality names
+    data : torch.Tensor
+        First modality's tensor (needed for BaseDataset compatibility)
+    sample_ids : List[Any]
+        First modality's sample IDs (needed for BaseDataset compatibility)
+    feature_ids : List[Any]
+        First modality's feature IDs (needed for BaseDataset compatibility)
     """
 
     def __init__(
         self,
-        data_dict: Dict[str, torch.Tensor],
+        dataset_dict: Dict[str, BaseDataset],
         config: DefaultConfig,
-        ids_dict: Optional[Dict[str, List[Any]]] = None,
-        feature_ids_dict: Optional[Dict[str, List[Any]]] = None,
     ):
+        """
+        Initialize a StackixDataset instance.
+
+        Parameters
+        ----------
+        dataset_dict : Dict[str, BaseDataset]
+            Dictionary mapping modality names to dataset objects
+        config : DefaultConfig
+            Configuration object
+
+        Raises
+        ------
+        ValueError
+            If the datasets dictionary is empty or if modality datasets have different numbers of samples
+        """
+        if not dataset_dict:
+            raise ValueError("dataset_dict cannot be empty")
+
         # Use first modality for base class initialization
-        first_modality = next(iter(data_dict.values()))
-        first_ids = None
-        if ids_dict:
-            first_key = next(iter(ids_dict.keys()))
-            first_ids = ids_dict[first_key]
+        first_modality_key = next(iter(dataset_dict.keys()))
+        first_modality = dataset_dict[first_modality_key]
+        data = torch.cat(
+            [v.data for k, v in dataset_dict.items() if hasattr(v, "data")], dim=1
+        )
+        super().__init__(
+            data=data,
+            sample_ids=first_modality.sample_ids,
+            config=config,
+            split_indices=first_modality.split_indices,
+            metadata=first_modality.metadata,
+            feature_ids=[
+                v.feature_ids
+                for v in dataset_dict.values()
+                if hasattr(v, "feature_ids")
+            ],
+        )
 
-        super().__init__(data=first_modality, ids=first_ids, config=config)
+        self.dataset_dict = dataset_dict
+        self.modality_keys = list(dataset_dict.keys())
 
-        self.data_dict = data_dict
-        self.modality_keys = list(data_dict.keys())
-        self.ids_dict = ids_dict or {}
-        self.feature_ids_dict = feature_ids_dict or {}
-
-        # Ensure all tensors have same first dimension (number of samples)
-        sample_counts = [tensor.shape[0] for tensor in data_dict.values()]
+        # Ensure all datasets have the same number of samples
+        sample_counts = [len(dataset) for dataset in dataset_dict.values()]
         if not all(count == sample_counts[0] for count in sample_counts):
             raise ValueError(
-                "All modality tensors must have the same number of samples"
+                "All modality datasets must have the same number of samples"
             )
 
     def __len__(self) -> int:
-        """Return the number of samples in the dataset."""
-        return next(iter(self.data_dict.values())).shape[0]
+        """
+        Return the number of samples in the dataset.
 
-    def __getitem__(self, index: int) -> Dict[str, Tuple[torch.Tensor, Any]]:
+        Returns
+        -------
+        int
+            Number of samples in the dataset
         """
-        Returns a dictionary mapping each modality to its (data, label) tuple.
+        return len(next(iter(self.dataset_dict.values())))
+
+    def __getitem__(
+        self, index: int
+    ) -> Union[Tuple[torch.Tensor, Any], Dict[str, Tuple[torch.Tensor, Any]]]:
         """
-        result = {}
-        for key in self.modality_keys:
-            tensor = self.data_dict[key][index]
-            label = index
-            if key in self.ids_dict and self.ids_dict[key]:
-                label = self.ids_dict[key][index]
-            result[key] = (tensor, label)
-        return result
+        Get a single sample and its label from the dataset.
+
+        Returns the data from the first modality to maintain compatibility
+        with the BaseDataset interface, while still supporting multi-modality
+        access through dataset_dict.
+
+        Parameters
+        ----------
+        index : int
+            Index of the sample to retrieve
+
+        Returns
+        -------
+        Dict[str, Tuple[torch.Tensor, Any]]
+            Dictionary of (data tensor, label) pairs for each modality
+
+        """
+        return {
+            k: self.dataset_dict[k].__getitem__(index)
+            for k in self.dataset_dict.keys()
+        }
+
+    def get_modality_item(self, modality: str, index: int) -> Tuple[torch.Tensor, Any]:
+        """
+        Get a sample for a specific modality.
+
+        Parameters
+        ----------
+        modality : str
+            The modality name to retrieve data from
+        index : int
+            Index of the sample to retrieve
+
+        Returns
+        -------
+        Tuple[torch.Tensor, Any]
+            Tuple of (data tensor, label) for the specified modality and sample index
+
+        Raises
+        ------
+        KeyError
+            If the requested modality doesn't exist in the dataset
+        """
+        if modality not in self.dataset_dict:
+            raise KeyError(f"Modality '{modality}' not found in dataset")
+
+        return self.dataset_dict[modality][index]
 
     def get_input_dim(
         self, modality: Optional[str] = None
     ) -> Union[int, Dict[str, int]]:
         """
         Get the input dimension(s) of the dataset.
+
+        Parameters
+        ----------
+        modality : Optional[str]
+            If provided, returns the dimension for the specified modality only
+
+        Returns
+        -------
+        Union[int, Dict[str, int]]
+            Input dimension of the specified modality or dictionary of dimensions for all modalities
+
+        Raises
+        ------
+        KeyError
+            If the requested modality doesn't exist in the dataset
         """
         if modality is not None:
-            if modality not in self.data_dict:
+            if modality not in self.dataset_dict:
                 raise KeyError(f"Modality '{modality}' not found in dataset")
-            return self.data_dict[modality].shape[1]
+            return self.dataset_dict[modality].get_input_dim()
 
-        return {key: tensor.shape[1] for key, tensor in self.data_dict.items()}
+        return {
+            key: dataset.get_input_dim() for key, dataset in self.dataset_dict.items()
+        }

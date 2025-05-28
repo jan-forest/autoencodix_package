@@ -12,13 +12,14 @@
 
 ## Requirements
 - Python>=3.8 <3.13
-- uv (or another package manager, we recommend uv)
+- uv or another package manager (we recommend uv)
 - git or gh
 ## Installation
 - `gh repo clone MaxJoas/autoencodix_package`
+- `cd autoencodix_package`
 - `uv venv --python 3.10`
 - `source .venv/bin/activate`
-- `uv pip install -e '.[dev]'`
+- `uv pip install -e .` 
 
 ## Sample Usage
 ```python

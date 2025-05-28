@@ -161,6 +161,25 @@ class VarixArchitecture(BaseAutoencoder):
         eps = torch.randn_like(std)
         return mu + eps * std
 
+    def get_latent_space(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Returns the latent space representation of the input.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor
+
+        Returns
+        -------
+        torch.Tensor
+            Latent space representation
+
+        """
+        mu, logvar = self.encode(x)
+        z = self.reparametrize(mu, logvar)
+        return z
+
     def decode(self, x: torch.Tensor) -> torch.Tensor:
         """
         Decode the latent tensor x

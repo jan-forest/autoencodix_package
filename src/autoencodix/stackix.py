@@ -3,6 +3,7 @@ import torch
 import numpy as np
 
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.utils._utils import config_method
 from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.base._base_trainer import BaseTrainer
@@ -20,6 +21,7 @@ from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._losses import VarixLoss
 from autoencodix.visualize.visualize import Visualizer
 from autoencodix.data._stackix_preprocessor import StackixPreprocessor
+from autoencodix.data._stackix_dataset import StackixDataset
 from autoencodix.trainers._stackix_trainer import StackixTrainer
 
 
@@ -47,15 +49,13 @@ class Stackix(BasePipeline):
         self,
         user_data: Optional[Union[DataPackage, DatasetContainer]] = None,
         trainer_type: Type[BaseTrainer] = StackixTrainer,
-        dataset_type: Type[
-            BaseDataset
-        ] = None,  # Not used directly, StackixDataset created in preprocessor
+        dataset_type: Type[BaseDataset] = StackixDataset,
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = StackixPreprocessor,
-        visualizer: Optional[BaseVisualizer] = None,
-        evaluator: Optional[Evaluator] = None,
-        result: Optional[Result] = None,
+        visualizer: Optional[BaseVisualizer] = Visualizer(),
+        evaluator: Optional[Evaluator] = Evaluator(),
+        result: Optional[Result] = Result(),
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
         config: Optional[DefaultConfig] = None,
@@ -100,15 +100,32 @@ class Stackix(BasePipeline):
             model_type=model_type,
             loss_type=loss_type,
             preprocessor_type=preprocessor_type,
-            visualizer=visualizer or Visualizer(),
-            evaluator=evaluator or Evaluator(),
-            result=result or Result(),
+            visualizer=visualizer,
+            evaluator=evaluator,
+            result=result,
             datasplitter_type=datasplitter_type,
             config=config or DefaultConfig(),
             custom_split=custom_splits,
         )
 
-    def sample_latent_space(self, split: str = "test", epoch: int = -1) -> torch.Tensor:
+    @config_method(
+        valid_params={
+            "config",
+            "batch_size",
+            "epochs",
+            "learning_rate",
+            "n_workers",
+            "device",
+            "n_gpus",
+            "gpu_strategy",
+            "weight_decay",
+            "reproducible",
+            "global_seed",
+            "reconstruction_loss",
+            "checkpoint_interval",
+        }
+    )
+    def sample_latent_space(self,config, split: str = "test", epoch: int = -1) -> torch.Tensor:
         """
         Samples new latent space points from the learned distribution.
 
@@ -121,12 +138,6 @@ class Stackix(BasePipeline):
         """
         if not hasattr(self, "_trainer") or self._trainer is None:
             raise ValueError("Model is not trained yet. Please train the model first.")
-
-        if (
-            not hasattr(self._trainer, "stacked_model")
-            or self._trainer.stacked_model is None
-        ):
-            raise ValueError("Stacked model not trained yet.")
 
         if self.result.mus is None or self.result.sigmas is None:
             raise ValueError("Model has not learned the latent space distribution yet.")
@@ -148,10 +159,10 @@ class Stackix(BasePipeline):
         logvar_t = torch.from_numpy(logvar)
 
         # Move to same device and dtype as model
-        stacked_model = self._trainer.stacked_model
+        stacked_model = self._trainer.get_model()
         mu_t = mu_t.to(device=stacked_model.device, dtype=stacked_model.dtype)
         logvar_t = logvar_t.to(device=stacked_model.device, dtype=stacked_model.dtype)
 
-        with self._trainer._fabric.autocast(), torch.no_grad():
+        with self._trainer._trainer._fabric.autocast(), torch.no_grad():
             z = stacked_model.reparametrize(mu_t, logvar_t)
             return z

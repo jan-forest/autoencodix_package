@@ -1,73 +1,62 @@
 import abc
-from typing import Any, Tuple, Optional, Union, List, Dict
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from torch.utils.data import Dataset
 import torch
+from torch.utils.data import Dataset
 
-# from autoencodix.utils.default_config import DefaultConfig
 
-
-# internal check done
-# write tests: done
 class BaseDataset(abc.ABC, Dataset):
-    """
-    Abstract base class for PyTorch datasets.
+    """Interface to guide implementation fo custom PyTorch datasets.
 
-    Subclasses must implement the __len__ and __getitem__ methods.
-
-    Attributes
-    ----------
-    data : Any
-        The dataset (can be any type, like a NumPy array, list, or Pandas DataFrame).
+    Attributes:
+        data: The dataset content (can be a torch.Tensor or other data structure).
+        config: Optional configuration object.
+        sample_ids: Optional list of identifiers for each sample.
+        feature_ids: Optional list of identifiers for each feature.
     """
 
     def __init__(
         self,
         data: torch.Tensor,
         config: Optional[Any] = None,
-        ids: Union[None, List[Any]] = None,
-        feature_ids: Union[None, List[Any]] = None,
+        sample_ids: Optional[List[Any]] = None,
+        feature_ids: Optional[List[Any]] = None,
     ):
-        """
-        Initialize the dataset.
+        """Initializes the dataset.
 
-        Parameters
-        ----------
-        data : Any
-            The data to be used by the dataset.
+        Args:
+            data: The data to be used by the dataset.
+            config: Optional configuration parameters.
+            sample_ids: Optional identifiers for each sample.
+            feature_ids: Optional identifiers for each feature.
         """
-        self.ids = ids
         self.data = data
         self.config = config
+        self.sample_ids = sample_ids
         self.feature_ids = feature_ids
 
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, Any]:
-        """
-        Retrieve a single sample and its corresponding label.
+    def __getitem__(
+        self, index: int
+    ) -> Union[Tuple[torch.Tensor, Any], Dict[str, Tuple[torch.Tensor, Any]]]:
+        """Retrieves a single sample and its corresponding label.
 
-        Parameters
-        ----------
-        index : int
-            Index of the sample to retrieve.
+        Args:
+            index: Index of the sample to retrieve.
 
-        Returns
-        -------
-        Tuple[Any, Any]
-            The sample and its label.
+        Returns:
+            A tuple containing the data sample and its label, or a dictionary
+            mapping keys to such tuples.
         """
-        if self.ids is not None:
-            label = self.ids[index]
+        if self.sample_ids is not None:
+            label = self.sample_ids[index]
         else:
             label = index
         return self.data[index], label
 
     def get_input_dim(self) -> Union[int, Dict[str, int]]:
-        """
-        Get the input dimension of the dataset.
+        """Gets the input dimension of the dataset (n_features)
 
-        Returns
-        -------
-        int
-            The input dimension of the dataset, of the feature space.
+        Returns:
+            The input dimension of the dataset's feature space.
         """
         return self.data.shape[1]

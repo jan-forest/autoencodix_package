@@ -9,5 +9,6 @@ except PackageNotFoundError:
 from .vanillix import Vanillix
 from .varix import Varix
 from .stackix import Stackix
+from .ontix import Ontix
 
-__all__ = ["Vanillix", "Varix", "Stackix"]
+__all__ = ["Vanillix", "Varix", "Stackix", "Ontix"]

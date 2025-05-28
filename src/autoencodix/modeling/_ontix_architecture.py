@@ -40,7 +40,7 @@ class OntixArchitecture(BaseAutoencoder):
     """
 
     def __init__(
-        self, config: Optional[Union[None, DefaultConfig]], input_dim: int, ontologies: tuple
+        self, config: Optional[Union[None, DefaultConfig]], input_dim: int, ontologies: tuple, feature_order: list,
     ) -> None:
         """
         Initialize the Vanilla Autoencoder with the given configuration.
@@ -59,7 +59,8 @@ class OntixArchitecture(BaseAutoencoder):
         self._logvar: nn.Module
         # create masks for sparse decoder
         self.ontologies = ontologies
-        self.masks = self._make_masks(config = self._config)
+        self.feature_order = feature_order
+        self.masks = self._make_masks(config = self._config, feature_order=feature_order)
         self.latent_dim = self.masks[0].shape[1]
         print("Latent Dim: " + str(self.latent_dim))
         # populate self.encoder and self.decoder
@@ -82,7 +83,7 @@ class OntixArchitecture(BaseAutoencoder):
                     self._decoder[i].weight.mul_(mask)
 
 
-    def _make_masks(self, config: DefaultConfig) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _make_masks(self, config: DefaultConfig, feature_order: list) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Create masks for sparse decoder based on ontology via config
 
@@ -108,31 +109,16 @@ class OntixArchitecture(BaseAutoencoder):
             feature_names.update(values)
         feature_names = list(feature_names)
 
+        # Remove features in feature_names which are not in feature_order
+        feature_names = [f for f in feature_names if f in feature_order]
+        # Order feature_names according to feature_order
+        feature_names = sorted(feature_names, key=lambda x: feature_order.index(x))
+
         # Enumerate through the ontologies
         for x, ont_dic in enumerate(self.ontologies):
-            # ont_dic = dict()
-            # sep = "\t"
-            # with open(file_path, "r") as ont_file:
-            #     for line in ont_file:
-            #         id_parent = line.strip().split(sep)[1]
-            #         id_child = line.split(sep)[0]
 
-            #         if id_parent in ont_dic:
-            #             ont_dic[id_parent].append(id_child)
-            #         else:
-            #             ont_dic[id_parent] = list()
-            #             ont_dic[id_parent].append(id_child)
-            # ont_dic_list["lvl_" + str(x)] = dict()
-            # x += 1
-            # Number of keys in ont_dic is prev_lay_dim
             prev_lay_dim = len(ont_dic.keys())
-            # Number of childs in ont_dic is next_lay_dim
-            # next_lay_dim = 0
-            # print(ont_dic)
-            # for key in ont_dic:
-            #     next_lay_dim += len(ont_dic[key])
 
-            # node_list are list of parents from next ontology??
             if x == len(self.ontologies) - 1:
                 # fixed sort of feature list
                 node_list = feature_names
@@ -197,7 +183,7 @@ class OntixArchitecture(BaseAutoencoder):
         # Case 2: At Least One Hidden Layer
         if self._config.n_layers > 0:
             encoder_layers = []
-            print(enc_dim)
+            # print(enc_dim)
             for i, (in_features, out_features) in enumerate(
                 zip(enc_dim[:-1], enc_dim[1:])
             ):
@@ -304,8 +290,8 @@ class OntixArchitecture(BaseAutoencoder):
             Decoded tensor
 
         """
-        print(self._decoder)
-        print(x.shape)
+        # print(self._decoder)
+        # print(x.shape)
         return self._decoder(x)
 
     def forward(self, x: torch.Tensor) -> ModelOutput:
@@ -333,3 +319,22 @@ class OntixArchitecture(BaseAutoencoder):
             latent_logvar=logvar,
             additional_info=None,
         )
+
+    def get_latent_space(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Returns the latent space representation of the input.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor
+
+        Returns
+        -------
+        torch.Tensor
+            Latent space representation
+
+        """
+        mu, logvar = self.encode(x)
+        z = self.reparametrize(mu, logvar)
+        return z

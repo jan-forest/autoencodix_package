@@ -164,7 +164,7 @@ class BaseTrainer(abc.ABC):
         else:
             ## Ontix specific
             self._model = self._model_type(
-                config=self._config, input_dim=self._input_dim, ontologies=ontologies
+                config=self._config, input_dim=self._input_dim, ontologies=ontologies, feature_order=self._trainset.feature_ids,
             )
 
     @abc.abstractmethod

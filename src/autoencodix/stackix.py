@@ -93,7 +93,7 @@ class Stackix(BasePipeline):
             Configuration object
         """
         super().__init__(
-            user_data=user_data,
+            data=user_data,
             dataset_type=dataset_type
             or NumericDataset,  # Fallback, but not directly used
             trainer_type=trainer_type,

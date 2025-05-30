@@ -76,13 +76,13 @@ class BaseTrainer(abc.ABC):
         self._validset = validset
         self._result = result
         self._config = config
-        
+
         # Call this first for tests to work
         self._input_validation()
         self._handle_reproducibility()
 
         self._loss_fn = loss_type(config=self._config)
-        
+
         # Internal data handling
         self._model: BaseAutoencoder
         self._trainloader = DataLoader(
@@ -99,7 +99,7 @@ class BaseTrainer(abc.ABC):
                 num_workers=self._config.n_workers,
             )
         else:
-            self._validloader = None # type: ignore
+            self._validloader = None  # type: ignore
 
         # Model and optimizer setup
         self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
@@ -119,9 +119,9 @@ class BaseTrainer(abc.ABC):
         )
 
         self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
-        self._trainloader = self._fabric.setup_dataloaders(self._trainloader) # type: ignore
+        self._trainloader = self._fabric.setup_dataloaders(self._trainloader)  # type: ignore
         if self._validloader is not None:
-            self._validloader = self._fabric.setup_dataloaders(self._validloader) # type: ignore
+            self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
         self._fabric.launch()
 
     def _input_validation(self) -> None:
@@ -162,6 +162,10 @@ class BaseTrainer(abc.ABC):
 
     @abc.abstractmethod
     def train(self) -> Result:
+        pass
+
+    @abc.abstractmethod
+    def decode(self, x: torch.tensor) -> torch.Tensor:
         pass
 
     @abc.abstractmethod

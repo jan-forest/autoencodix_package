@@ -1,23 +1,26 @@
 import abc
+from abc import abstractmethod
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from anndata import AnnData
+import torch
+from anndata import AnnData  # type: ignore
 
-from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._datapackage_splitter import DataPackageSplitter
 from autoencodix.data._datasetcontainer import DatasetContainer
-from autoencodix.data._imgdataclass import ImgData
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data._filter import DataFilter
+from autoencodix.data._imgdataclass import ImgData
 from autoencodix.data._nanremover import NaNRemover
 from autoencodix.data._sc_filter import SingleCellFilter
+from autoencodix.data.datapackage import DataPackage
 from autoencodix.utils._bulkreader import BulkDataReader
 from autoencodix.utils._imgreader import ImageDataReader, ImageNormalizer
 from autoencodix.utils._screader import SingleCellDataReader
 from autoencodix.utils.default_config import DataCase, DefaultConfig
+from autoencodix.utils._result import Result
 
 if TYPE_CHECKING:
     import mudata as md  # type: ignore
@@ -45,11 +48,12 @@ class BasePreprocessor(abc.ABC):
             config: A DefaultConfig object containing preprocessing configurations.
         """
         self.config = config
+        self._dataset_container: Optional[DatasetContainer] = None
         self.processed_data = Dict[str, Dict[str, Union[Any, DataPackage]]]
         self.bulk_genes_to_keep: Optional[List[str]] = None
         self.bulk_scalers: Optional[Dict[str, Any]] = None
-        self.sc_genes_to_keep: Optional[Dict[str] : List[str]] = None
-        self.sc_scalers: Optional[Dict[str] : Dict[str, Any]] = None
+        self.sc_genes_to_keep: Optional[Dict[str, List[str]]] = None
+        self.sc_scalers: Optional[Dict[str, Dict[str, Any]]] = None
         self.sc_general_genes_to_keep: Optional[Dict[str, List]] = None
         self.data_readers: Dict[Enum, Any] = {
             DataCase.MULTI_SINGLE_CELL: SingleCellDataReader(),
@@ -1006,3 +1010,9 @@ class BasePreprocessor(abc.ABC):
                 print(e)
                 print("returning None")
                 return None, None
+
+    @abstractmethod
+    def format_reconstruction(
+        self, reconstruction: torch.Tensor, result: Optional[Result] = None
+    ) -> DataPackage:
+        return DataPackage(multi_sc={"multi_sc": reconstruction})

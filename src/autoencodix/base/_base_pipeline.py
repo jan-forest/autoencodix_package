@@ -1,13 +1,12 @@
 import abc
 import copy
-from enum import Enum
 from typing import Dict, Optional, Tuple, Type, Union, Any
 
-import anndata as ad # type: ignore
+import anndata as ad  # type: ignore
 import numpy as np
 import pandas as pd
 import torch
-from mudata import MuData # type: ignore
+from mudata import MuData  # type: ignore
 from torch.utils.data import Dataset
 
 from autoencodix.data._datasetcontainer import DatasetContainer
@@ -60,7 +59,7 @@ class BasePipeline(abc.ABC):
         datasplitter_type: Type[DataSplitter],
         preprocessor_type: Type[BasePreprocessor],
         visualizer: BaseVisualizer,
-        user_data: Optional[Union[DataPackage, DatasetContainer, ad.AnnData, MuData]],
+        data: Optional[Union[DataPackage, DatasetContainer, ad.AnnData, MuData]],
         evaluator: Evaluator,
         result: Result,
         config: DefaultConfig = DefaultConfig(),
@@ -77,7 +76,7 @@ class BasePipeline(abc.ABC):
             datasplitter_type: Class for data splitting implementation.
             preprocessor_type: Class for data preprocessing implementation.
             visualizer: Component for generating visualizations.
-            user_data: Input data to be processed or already processed data.
+            data: Input data to be processed or already processed data.
             evaluator: Component for assessing model performance.
             result: Storage container for pipeline outputs.
             config: Configuration parameters for all pipeline components.
@@ -87,11 +86,9 @@ class BasePipeline(abc.ABC):
         Raises:
             TypeError: If inputs have incorrect types.
         """
-        processed_data = user_data if isinstance(user_data, DatasetContainer) else None
+        processed_data = data if isinstance(data, DatasetContainer) else None
         raw_user_data = (
-            user_data
-            if isinstance(user_data, (DataPackage, ad.AnnData, MuData))
-            else None
+            data if isinstance(data, (DataPackage, ad.AnnData, MuData)) else None
         )
         if processed_data is not None and not isinstance(
             processed_data, DatasetContainer
@@ -100,7 +97,7 @@ class BasePipeline(abc.ABC):
                 f"Expected data type to be DatasetContainer, got {type(processed_data)}."
             )
 
-        self.preprocessed_data: DatasetContainer = processed_data
+        self.preprocessed_data: Optional[DatasetContainer] = processed_data
         self.raw_user_data: Union[DataPackage, ad.AnnData, MuData] = raw_user_data
         self.config = config
         self._trainer_type = trainer_type
@@ -139,7 +136,7 @@ class BasePipeline(abc.ABC):
 
     def _handle_direct_user_data(
         self, data, data_case=None
-    ) -> Tuple[DataPackage, Enum]:
+    ) -> Tuple[DataPackage, DataCase]:
         """Converts raw user data into a standardized DataPackage format.
 
         Args:
@@ -149,7 +146,7 @@ class BasePipeline(abc.ABC):
         Returns:
             A tuple containing:
                 - DataPackage containing the standardized data
-                - DataCase enum indicating the data type
+                - DataCase, muliti_single_cell or multi_bulk, etc.
 
         Raises:
             TypeError: If data format is not supported.
@@ -281,7 +278,7 @@ class BasePipeline(abc.ABC):
             if self.preprocessed_data.test is not None:
                 raise ValueError(
                     f"Test dataset has to be either None or Dataset, got "
-                    f"{type(self.preprocessed_data.valid)}"
+                    f"{type(self.preprocessed_data.test)}"
                 )
             none_count += 1
 
@@ -409,7 +406,7 @@ class BasePipeline(abc.ABC):
             loss_type=self._loss_type,
         )
         trainer_result = self._trainer.train()
-        self.result.update(trainer_result)
+        self.result.update(other=trainer_result)
 
     @config_method(valid_params={"config"})
     def predict(
@@ -433,83 +430,215 @@ class BasePipeline(abc.ABC):
             NotImplementedError: If required components aren't initialized.
             ValueError: If no test data is available or data format is invalid.
         """
-        # checks -----------------------------------------------------------
+        self._validate_prediction_requirements()
+
+        original_input = data
+        predict_data = self._prepare_prediction_data(data=data)
+
+        predictor_results = self._generate_predictions(predict_data=predict_data)
+
+        self._process_latent_results(
+            predictor_results=predictor_results, predict_data=predict_data
+        )
+        self._postprocess_reconstruction(
+            predictor_results=predictor_results,
+            original_input=original_input,
+            predict_data=predict_data,
+        )
+
+        return self.result
+
+    def _validate_prediction_requirements(self):
+        """Validate that required components are initialized."""
         if self._preprocessor is None:
             raise NotImplementedError("Preprocessor not initialized")
         if self.result.model is None:
             raise NotImplementedError(
                 "Model not trained. Please run the fit method first"
             )
-        # user data validation and preprocessing ---------------------------
-        if data is None:
-            if self._datasets.test is None:
-                raise ValueError("No test data available for prediction")
-            predict_data: DatasetContainer = self._datasets
-        elif isinstance(data, DatasetContainer):
-            predict_data = data
-            self.result.new_datasets = predict_data
-            self._preprocessor._dataset_container = predict_data  # for metadata
 
+    def _prepare_prediction_data(
+        self,
+        data: Optional[Union[DataPackage, DatasetContainer, ad.AnnData, MuData]] = None,
+    ) -> DatasetContainer:
+        """Prepare and validate input data for prediction.
+        Args:
+            data: Optional new data for predictions. If None, uses existing datasets.
+        Returns:
+            DatasetContainer: The prepared dataset container for predictions.
+        Raises:
+            ValueError: If data type is unsupported or no test data is available.
+        """
+        if data is None:
+            return self._get_existing_datasets()
+        elif isinstance(data, DatasetContainer):
+            return self._handle_dataset_container(data=data)
         elif isinstance(data, (DataPackage, ad.AnnData, MuData, dict, pd.DataFrame)):
-            data, _ = self._handle_direct_user_data(
-                data=data, data_case=self.config.data_case
-            )
-            predict_data: DatasetContainer = self._preprocessor.preprocess(
-                raw_user_data=data, predict_new_data=True
-            )
-            self.result.new_datasets = predict_data
+            return self._handle_user_data(data=data)
         else:
             raise ValueError(f"Unsupported data type: {type(data)}")
 
+    def _get_existing_datasets(self) -> DatasetContainer:
+        """Get existing preprocessed datasets and validate them for prediction.
+        Returns:
+            DatasetContainer: The preprocessed datasets available for prediction.
+        Raises:
+            ValueError: If no datasets are available or no test data is present.
+        """
+        if self._datasets is None:
+            raise ValueError(
+                "No data provided for prediction and no preprocessed datasets "
+                "available. Please run the preprocess method first or provide "
+                "data for prediction."
+            )
+        if self._datasets.test is None:
+            raise ValueError("No test data available for prediction")
+        return self._datasets
+
+    def _handle_dataset_container(self, data: DatasetContainer) -> DatasetContainer:
+        """Handle DatasetContainer input for prediction.
+        Args:
+            data: DatasetContainer containing preprocessed datasets.
+        Returns:
+            DatasetContainer: The processed dataset container for predictions.
+        """
+        self.result.new_datasets = data
+
+        if hasattr(self._preprocessor, "_dataset_container"):
+            self._preprocessor._dataset_container = data
+
+        return data
+
+    def _handle_user_data(self, data: Any) -> DatasetContainer:
+        """Handle user-provided data (DataPackage, AnnData, etc.).
+        Args:
+            data: Raw user data in various formats (DataPackage, AnnData, etc.).
+        Returns:
+            DatasetContainer: The processed dataset container for predictions.
+        Raises:
+            ValueError: If data type is unsupported or no test data is available.
+        """
+        processed_data, _ = self._handle_direct_user_data(
+            data=data, data_case=self.config.data_case
+        )
+        predict_data = self._preprocessor.preprocess(
+            raw_user_data=processed_data, predict_new_data=True
+        )
+        self.result.new_datasets = predict_data
+        return predict_data
+
+    def _validate_prediction_data(self, predict_data: DatasetContainer):
+        """Validate that prediction data has required test split."""
         if predict_data.test is None:
             raise ValueError(
                 f"The data for prediction need to be a DatasetContainer with a test "
                 f"attribute, got: {predict_data}"
             )
 
-        # actual prediction -----------------------------------------------
-        predictor_results = self._trainer.predict(
-            data=predict_data.test, model=self.result.model
-        )
+    def _generate_predictions(self, predict_data: DatasetContainer):
+        """Generate predictions using the trained model."""
+        self._validate_prediction_data(predict_data=predict_data)
+        return self._trainer.predict(data=predict_data.test, model=self.result.model)  # type: ignore
+
+    def _process_latent_results(
+        self, predictor_results, predict_data: DatasetContainer
+    ):
+        """Process and store latent space results."""
         latent = predictor_results.latentspaces.get(epoch=-1, split="test")
         self.result.adata_latent = ad.AnnData(latent)
-        self.result.adata_latent.obs_names = predict_data.test.sample_ids
-        self.result.adata_latent.uns["var_names"] = predict_data.test.feature_ids
-
+        self.result.adata_latent.obs_names = predict_data.test.sample_ids  # type: ignore
+        self.result.adata_latent.uns["var_names"] = predict_data.test.feature_ids  # type: ignore
         self.result.update(predictor_results)
 
-        # postprocessing prediction ---------------------------------------
-        raw_recon = self.result.reconstructions.get(epoch=-1, split="test")
-        if isinstance(data, DatasetContainer):
-            temp = copy.deepcopy(data.test)
-            temp.data = torch.from_numpy(raw_recon)
-            self.result.final_reconstruction = temp
-        # user inputs already processed data into pipeline and does not overwrite it in predict
-        elif self.preprocessed_data is not None:
-            temp = copy.deepcopy(self.preprocessed_data.test)
-            temp.data = torch.from_numpy(raw_recon)
-            self.result.final_reconstruction = temp
+    def _postprocess_reconstruction(
+        self, predictor_results, original_input, predict_data: DatasetContainer
+    ):
+        """Postprocess reconstruction results based on input type.
 
-        # for SC-community UX
+        This outpus the reconstruction in the same format as the original input data,
+        whether it is a DatasetContainer, DataPackage, AnnData, MuData, or other formats.
+
+        Args:
+            predictor_results: Results from the prediction step containing reconstructions.
+            original_input: Original input data format (if provided).
+            predict_data: DatasetContainer with preprocessed datasets for prediction.
+        Raises:
+            ValueError: If reconstruction fails or data types are incompatible.
+        """
+        raw_recon = torch.from_numpy(
+            self.result.reconstructions.get(epoch=-1, split="test")
+        )
+
+        if original_input is None:
+            # Using existing datasets
+            self._handle_dataset_container_reconstruction(
+                raw_recon=raw_recon,
+                dataset_container=predict_data,
+                context="existing datasets",
+            )
+        elif isinstance(original_input, DatasetContainer):
+            self._handle_dataset_container_reconstruction(
+                raw_recon=raw_recon,
+                dataset_container=original_input,
+                context="provided DatasetContainer",
+            )
         elif self.config.data_case == DataCase.MULTI_SINGLE_CELL:
-            pkg = self._preprocessor.format_reconstruction(
-                reconstruction=raw_recon, result=predictor_results
+            self._handle_multi_single_cell_reconstruction(
+                raw_recon=raw_recon, predictor_results=predictor_results
             )
-            self.result.final_reconstruction = pkg.multi_sc["multi_sc"]
-        # Case C: other non‐DatasetContainer → full package
-        elif isinstance(data, (DataPackage, ad.AnnData, MuData, dict, pd.DataFrame)):
-            pkg = self._preprocessor.format_reconstruction(
-                reconstruction=raw_recon, result=predictor_results
+        elif isinstance(
+            original_input, (DataPackage, ad.AnnData, MuData, dict, pd.DataFrame)
+        ):
+            self._handle_user_data_reconstruction(
+                raw_recon=raw_recon, predictor_results=predictor_results
             )
-            self.result.final_reconstruction = pkg
-        # Case D: fallback
         else:
-            print(
-                "Reconstruction Formatting (the process of using the reconstruction "
-                "output of the autoencoder models and combine it with metadata to get "
-                "the exact same data structure as the raw input data i.e, a DataPackage, "
-                "DatasetContainer, or AnnData) not available for this data type or case."
+            self._handle_unsupported_reconstruction()
+
+    def _handle_dataset_container_reconstruction(
+        self,
+        raw_recon: torch.Tensor,
+        dataset_container: DatasetContainer,
+        context: str = "DatasetContainer",
+    ):
+        """Handle reconstruction for DatasetContainer input."""
+        if dataset_container.test is None:
+            raise ValueError(f"No test data available in {context} for reconstruction.")
+        temp = copy.deepcopy(dataset_container.test)
+        temp.data = raw_recon
+        self.result.final_reconstruction = temp
+
+    def _handle_multi_single_cell_reconstruction(
+        self, raw_recon: torch.Tensor, predictor_results
+    ):
+        """Handle reconstruction for multi-single-cell data."""
+        pkg = self._preprocessor.format_reconstruction(
+            reconstruction=raw_recon, result=predictor_results
+        )
+        if not isinstance(pkg.multi_sc, dict):
+            raise ValueError(
+                "Expected pkg.multi_sc to be a dictionary, got "
+                f"{type(pkg.multi_sc)} instead."
             )
+        self.result.final_reconstruction = pkg.multi_sc["multi_sc"]
+
+    def _handle_user_data_reconstruction(
+        self, raw_recon: torch.Tensor, predictor_results
+    ):
+        """Handle reconstruction for user-provided data formats."""
+        pkg = self._preprocessor.format_reconstruction(
+            reconstruction=raw_recon, result=predictor_results
+        )
+        self.result.final_reconstruction = pkg
+
+    def _handle_unsupported_reconstruction(self):
+        """Handle cases where reconstruction formatting is not available."""
+        print(
+            "Reconstruction Formatting (the process of using the reconstruction "
+            "output of the autoencoder models and combine it with metadata to get "
+            "the exact same data structure as the raw input data i.e, a DataPackage, "
+            "DatasetContainer, or AnnData) not available for this data type or case."
+        )
 
     def decode(
         self, latent: Union[torch.Tensor, ad.AnnData, pd.DataFrame]
@@ -531,7 +660,7 @@ class BasePipeline(abc.ABC):
         """
         if self.result.model is None:
             raise TypeError("No model trained yet, use fit() or run() method first")
-
+        recons: torch.Tensor
         if isinstance(latent, ad.AnnData):
             latent_data = torch.tensor(
                 latent.X, dtype=torch.float32
@@ -546,8 +675,22 @@ class BasePipeline(abc.ABC):
                 )
             latent_tensor = latent_data
 
-            recons: torch.Tensor = self._trainer.decode(x=latent_tensor)
-
+            recons = self._trainer.decode(x=latent_tensor)
+            if self._datasets is None:
+                raise ValueError(
+                    "No datasets available in the DatasetContainer to reconstruct "
+                    "AnnData objects. Please provide a valid DatasetContainer."
+                )
+            if self._datasets.train is None:
+                raise ValueError(
+                    "The train dataset in the DatasetContainer is None. "
+                    "Please provide a valid train dataset to reconstruct AnnData objects."
+                )
+            if not isinstance(self._datasets.train, BaseDataset):
+                raise TypeError(
+                    "The train dataset in the DatasetContainer must be a BaseDataset "
+                    "to reconstruct AnnData objects."
+                )
             recons_adata = ad.AnnData(
                 X=recons.to("cpu").detach().numpy(),
                 obs=pd.DataFrame(index=latent.obs_names),
@@ -557,7 +700,7 @@ class BasePipeline(abc.ABC):
             return recons_adata
         elif isinstance(latent, pd.DataFrame):
             latent_tensor = torch.tensor(latent.values, dtype=torch.float32)
-            recons: torch.Tensor = self._trainer.decode(x=latent_tensor)
+            recons = self._trainer.decode(x=latent_tensor)
             return pd.DataFrame(
                 recons.to("cpu").detach().numpy(),
                 index=latent.index,
@@ -578,8 +721,7 @@ class BasePipeline(abc.ABC):
                 f"not {type(latent)}."
             )
 
-        recons: torch.Tensor = self._trainer.decode(x=latent_tensor)
-        return recons
+        return self._trainer.decode(x=latent_tensor)
 
     @config_method(valid_params={"config"})
     def evaluate(

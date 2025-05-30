@@ -140,7 +140,11 @@ class GeneralTrainer(BaseTrainer):
 
     def decode(self, x: torch.tensor):
         with self._fabric.autocast(), torch.no_grad():
-            x = self._fabric.to_device(x)
+            x = self._fabric.to_device(obj=x)
+            if not isinstance(x, torch.Tensor):
+                raise TypeError(
+                    f"Expected input to be a torch.Tensor, got {type(x)} instead."
+                )
             return self._model.decode(x=x)
 
     def _capture_dynamics(

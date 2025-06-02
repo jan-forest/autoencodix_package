@@ -59,10 +59,12 @@ class BasePipeline(abc.ABC):
         datasplitter_type: Type[DataSplitter],
         preprocessor_type: Type[BasePreprocessor],
         visualizer: BaseVisualizer,
-        data: Optional[Union[DataPackage, DatasetContainer, ad.AnnData, MuData]],
+        data: Optional[
+            Union[DataPackage, DatasetContainer, ad.AnnData, MuData, pd.DataFrame, dict]
+        ],
         evaluator: Evaluator,
         result: Result,
-        config: DefaultConfig = DefaultConfig(),
+        config: Optional[DefaultConfig] = None,
         custom_split: Optional[Dict[str, np.ndarray]] = None,
         **kwargs: dict,
     ) -> None:
@@ -86,9 +88,14 @@ class BasePipeline(abc.ABC):
         Raises:
             TypeError: If inputs have incorrect types.
         """
+
+        self._validate_config(config=config)
+        self._validate_user_input(data=data)
         processed_data = data if isinstance(data, DatasetContainer) else None
         raw_user_data = (
-            data if isinstance(data, (DataPackage, ad.AnnData, MuData)) else None
+            data
+            if isinstance(data, (DataPackage, ad.AnnData, MuData, pd.DataFrame, dict))
+            else None
         )
         if processed_data is not None and not isinstance(
             processed_data, DatasetContainer
@@ -98,8 +105,9 @@ class BasePipeline(abc.ABC):
             )
 
         self.preprocessed_data: Optional[DatasetContainer] = processed_data
-        self.raw_user_data: Union[DataPackage, ad.AnnData, MuData] = raw_user_data
-        self.config = config
+        self.raw_user_data: Union[
+            DataPackage, ad.AnnData, MuData, pd.DataFrame, dict
+        ] = raw_user_data
         self._trainer_type = trainer_type
         self._model_type = model_type
         self._loss_type = loss_type
@@ -107,7 +115,6 @@ class BasePipeline(abc.ABC):
         if self.raw_user_data is not None:
             self.raw_user_data, datacase = self._handle_direct_user_data(
                 data=self.raw_user_data,
-                data_case=self.config.data_case,  # if is None, data_case is inferred based on the data type
             )
             self.config.data_case = datacase
             self._fill_data_info()
@@ -123,19 +130,53 @@ class BasePipeline(abc.ABC):
             config=self.config, custom_splits=custom_split
         )
 
-        if config:
+
+        self._datasets: Optional[DatasetContainer] = (
+            processed_data  # None, or user input
+        )
+    def _validate_config(self, config: Any) -> None:
+        """Sets config to default if None, or validates its type.
+        Args:
+            config: Configuration object to validate or set to default.
+        Raises:
+            TypeError: If config is not of type DefaultConfig
+        """
+        if config is None:
+            self.config = DefaultConfig()
+        else:
             if not isinstance(config, DefaultConfig):
                 raise TypeError(
                     f"Expected config type to be DefaultConfig, got {type(config)}."
                 )
             self.config = config
 
-        self._datasets: Optional[DatasetContainer] = (
-            processed_data  # None, or user input
-        )
+    def _validate_user_input(self, data: Any) -> None:
+        """Ensures that user-provided data is of a valid type.
+        Args:
+            data: User-provided data to validate.
+        Raises:
+            TypeError: If data is not of a supported type.
+        """
+        if not isinstance(
+            data,
+            (
+                DataPackage,
+                ad.AnnData,
+                MuData,
+                pd.DataFrame,
+                dict,
+                type(None),
+                DatasetContainer,
+            )
+        ):
+            raise TypeError(
+                f"Expected data type to be one of [DataPackage, AnnData, MuData, "
+                f"pd.DataFrame, dict, DatasetContainer], got {type(data)}."
+            )
+
 
     def _handle_direct_user_data(
-        self, data, data_case=None
+        self, data,
     ) -> Tuple[DataPackage, DataCase]:
         """Converts raw user data into a standardized DataPackage format.
 
@@ -153,34 +194,34 @@ class BasePipeline(abc.ABC):
             ValueError: If data doesn't meet format requirements or data_case
                 cannot be inferred.
         """
-        if isinstance(data, ad.AnnData):
+        print(f"in handle_direct_user_data with data: {type(data)}")
+        data_case = self.config.data_case
+        if isinstance(data, DataPackage):
+            data_package = data
+            data_case = self.config.data_case
+        elif isinstance(data, ad.AnnData):
             mudata = MuData({"user-data": data})
             data_package = DataPackage(multi_sc={"multi_sc": mudata})
-            data_case = data_case or DataCase.MULTI_SINGLE_CELL
+            if self.config.data_case is None:
+                data_case = DataCase.MULTI_SINGLE_CELL
         elif isinstance(data, MuData):
             data_package = DataPackage(multi_sc={"multi_sc": data})
-            data_case = data_case or DataCase.MULTI_SINGLE_CELL
+            if self.config.data_case is None:
+                data_case = DataCase.MULTI_SINGLE_CELL
         elif isinstance(data, pd.DataFrame):
             data_package = DataPackage(multi_bulk={"user-data": data})
-            data_case = data_case or DataCase.MULTI_BULK
+            if self.config.data_case is None:
+                data_case = DataCase.MULTI_BULK
         elif isinstance(data, dict):
             # Check if all values in the dictionary are pandas DataFrames
             if all(isinstance(value, pd.DataFrame) for value in data.values()):
                 data_package = DataPackage(multi_bulk=data)
-                data_case = data_case or DataCase.MULTI_BULK
+                if self.config.data_case is None:
+                    data_case = DataCase.MULTI_BULK
             else:
                 raise ValueError(
                     "All values in the dictionary must be pandas DataFrames."
                 )
-        elif isinstance(data, DataPackage):
-            data_package = data
-        else:
-            raise TypeError(
-                f"Type: {type(data)} is not supported as of now, please provide: "
-                f"Union[AnnData, MuData, pd.DataFrame, Dict[str, pd.DataFrame], "
-                f"DataPackage]"
-            )
-
         if data_case is None:
             raise ValueError("data_case must be provided if it cannot be inferred.")
 
@@ -274,6 +315,7 @@ class BasePipeline(abc.ABC):
                     f"Train dataset has to be either None or Dataset, got "
                     f"{type(self.preprocessed_data.train)}"
                 )
+            none_count += 1
         if not isinstance(self.preprocessed_data.test, Dataset):
             if self.preprocessed_data.test is not None:
                 raise ValueError(
@@ -355,7 +397,7 @@ class BasePipeline(abc.ABC):
         self._validate_user_data()
         if self.preprocessed_data is None:
             self._datasets = self._preprocessor.preprocess(
-                raw_user_data=self.raw_user_data
+                raw_user_data=self.raw_user_data # type: ignore
             )
             self.result.datasets = self._datasets
         else:
@@ -519,7 +561,7 @@ class BasePipeline(abc.ABC):
             ValueError: If data type is unsupported or no test data is available.
         """
         processed_data, _ = self._handle_direct_user_data(
-            data=data, data_case=self.config.data_case
+            data=data
         )
         predict_data = self._preprocessor.preprocess(
             raw_user_data=processed_data, predict_new_data=True

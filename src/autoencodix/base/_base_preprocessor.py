@@ -31,20 +31,29 @@ else:
 
 
 class BasePreprocessor(abc.ABC):
-    """
-    Abstract base class for data preprocessors.
+    """Contains logic for data preprocessing in the Autoencodix framework.
 
     This class defines the general preprocessing workflow and provides
     methods for handling different data modalities and data cases.
     Subclasses should implement the `preprocess` method to perform
     specific preprocessing steps.
+
+    Attributes:
+        config: A DefaultConfig object containing preprocessing configurations.
+        processed_data: A dictionary to store processed DataPackage objects for each data split.
+        bulk_genes_to_keep: Optional list of genes to keep for bulk data.
+        bulk_scalers: Optional dictionary of scalers for bulk data.
+        sc_genes_to_keep: Optional dictionary mapping modality keys to lists of genes to keep for single-cell data.
+        sc_scalers: Optional dictionary mapping modality keys to scalers for single-cell data.
+        sc_general_genes_to_keep: Optional dictionary mapping modality keys to lists of genes to keep filtered by non-SC specific methods.
+        data_readers: A dictionary mapping DataCase enum values to data reader instances for different modalities.
+        _dataset_container: Optional DatasetContainer to hold the processed datasets.
     """
 
     def __init__(self, config: DefaultConfig):
-        """
-        Initializes the BasePreprocessor with a configuration object.
+        """Initializes the BasePreprocessor with a configuration object.
 
-        Parameters:
+        Args :
             config: A DefaultConfig object containing preprocessing configurations.
         """
         self.config = config
@@ -77,14 +86,12 @@ class BasePreprocessor(abc.ABC):
         raw_user_data: Optional[DataPackage] = None,
         predict_new_data: bool = False,
     ) -> DatasetContainer:
-        """
-        Abstract method to be implemented by subclasses for specific preprocessing steps.
-        Parameters:
-            raw_user_data - (Optional[DataPackage]): Users can provide raw data. This is an alternative way of
+        """To be implemented by subclasses for specific preprocessing steps.
+        Args:
+            raw_user_data: Users can provide raw data. This is an alternative way of
                 providing data via filepaths in the config. If this param is passed, we skip the data reading step.
-            predict_new_data - (bool): Indicates whether the user wants to predict with unseen data.
+            predict_new_data: Indicates whether the user wants to predict with unseen data.
                 If this is the case, we don't split the data and only prerpocess.
-
         """
         pass
 
@@ -93,11 +100,16 @@ class BasePreprocessor(abc.ABC):
         raw_user_data: Optional[DataPackage] = None,
         predict_new_data: bool = False,
     ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
-        """
-        Main preprocessing method that orchestrates the process flow.
+        """Orchestrates the preprocessing steps.
 
         This method determines the data case from the configuration and calls
         the appropriate processing function for that data case.
+
+        Args:
+            raw_user_data: Optional DataPackage containing user-provided data.
+                If provided, the data reading step is skipped.
+            predict_new_data: Boolean indicating whether to preprocess new unseen data
+                without splitting it into train/validation/test sets.
 
         Returns:
             A dictionary containing processed DataPackage objects for each data split
@@ -125,10 +137,9 @@ class BasePreprocessor(abc.ABC):
             raise ValueError(f"Unsupported data case: {datacase}")
 
     def _get_process_function(self, datacase: DataCase) -> Any:
-        """
-        Returns the appropriate processing function based on the data case.
+        """Returns the appropriate processing function based on the data case.
 
-        Parameters:
+        Args:
             datacase: The DataCase enum value representing the current data case.
 
         Returns:
@@ -148,15 +159,14 @@ class BasePreprocessor(abc.ABC):
 
     def _process_data_case(
         self, data_package: DataPackage, modality_processors: Dict[Any, Any]
-    ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
-        """
-        Generic method to process a data case.
+    ) -> Union[Dict[str, Dict[str, Union[Any, DataPackage]]], Dict[str, Any]]:
+        """Processes the data package based on the provided modality processors.
 
         This method handles the common preprocessing steps for different data cases,
         including splitting the data package, removing NaNs, and applying
         odality-specific processors.
 
-        Parameters:
+        Args::
             data_package: The DataPackage object to be processed.
             modality_processors: A dictionary mapping modality keys (e.g., 'multi_sc', 'from_modality')
                 to callable processor functions that will be applied to the corresponding modality data.
@@ -225,11 +235,12 @@ class BasePreprocessor(abc.ABC):
     def _process_multi_single_cell(
         self, raw_user_data: Optional[DataPackage] = None
     ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
-        """
-        Process MULTI_SINGLE_CELL case end-to-end.
+        """Process MULTI_SINGLE_CELL case
 
         Reads multi-single-cell data, performs data splitting, NaN removal,
         and applies single-cell specific filtering.
+        Args:
+            raw_user_data: Optional DataPackage containing user-provided data.
 
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
@@ -244,7 +255,6 @@ class BasePreprocessor(abc.ABC):
             data_package = raw_user_data
 
         def presplit_processor(modality_data: MuData) -> MuData:
-            """Preprocesses multi-single-cell modality data."""
             if modality_data is None:
                 return modality_data
             sc_filter = SingleCellFilter(
@@ -270,6 +280,16 @@ class BasePreprocessor(abc.ABC):
         datapackage_key: str = "multi_sc",
         modality_key: str = "multi_sc",
     ) -> Dict[str, Dict[str, Any]]:
+        """Post-split processing for multi-single-cell data.
+        This method applies filtering and scaling to the single-cell data after it has been split.
+
+        Args:
+            split_data: A dictionary containing the split data for each data split.
+            datapackage_key: The key in the DataPackage that contains the multi-single-cell data.
+            modality_key: The key for the specific modality within the multi-single-cell data.
+        Returns:
+            A dictionary containing processed DataPackage objects for each data split.
+        """
         processed_splits: Dict[str, Dict[str, Any]] = {}
         train_split = split_data.get("train")["data"]
 
@@ -337,10 +357,12 @@ class BasePreprocessor(abc.ABC):
         raw_user_data: Optional[DataPackage] = None,
     ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
         """
-        Process MULTI_BULK case end-to-end.
+        Process MULTI_BULK case.
 
         Reads multi-bulk data, performs data splitting, NaN removal,
         and applies filtering and scaling to bulk dataframes.
+        Args:
+            raw_user_data: Optional DataPackage containing user-provided data.
 
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
@@ -386,6 +408,17 @@ class BasePreprocessor(abc.ABC):
         split_data: Dict[str, Dict[str, Any]],
         datapackage_key: str = "multi_bulk",
     ) -> Dict[str, Dict[str, Any]]:
+        """Post-split processing for multi-bulk data.
+
+        This method applies filtering and scaling to the bulk dataframes after they have been split.
+
+        Args:
+            split_data: A dictionary containing the split data for each data split.
+            datapackage_key: The key in the DataPackage that contains the multi-bulk data.
+        Returns:
+            A dictionary containing processed DataPackage objects for each data split.
+        """
+
         train_split = split_data.get("train")["data"]
         genes_to_keep_map: Dict[str, List[str]] = {}
         scalers: Dict[str, Any] = {}
@@ -405,9 +438,6 @@ class BasePreprocessor(abc.ABC):
             modality_keys = [
                 k for k, v in train_split[datapackage_key].items() if v is not None
             ]
-            print(
-                f"modality_keys in _postsplit_multi_bulk: {modality_keys} for datapackage_key: {datapackage_key}"
-            )
 
             for i, k in enumerate(modality_keys):
                 v = train_split[datapackage_key][k]
@@ -443,9 +473,6 @@ class BasePreprocessor(abc.ABC):
             "data": train_split,
             "indices": split_data["train"]["indices"],
         }
-        print(
-            f"genes_to_keep_map in _postsplit_multi_bulk before split loop: {genes_to_keep_map} for datapackage_key: {datapackage_key}"
-        )
 
         for split_name, split_package in split_data.items():
             if split_name == "train":
@@ -455,10 +482,6 @@ class BasePreprocessor(abc.ABC):
                 continue
 
             processed_package = split_package["data"]
-            print(f"datapackage_key in _postsplit_multi_bulk: {datapackage_key}")
-            print(
-                f" keys in processed_package[datapackage_key]: {processed_package[datapackage_key].keys()}"
-            )
             for k, v in processed_package[datapackage_key].items():
                 if v is None:
                     continue
@@ -486,14 +509,19 @@ class BasePreprocessor(abc.ABC):
     def _process_bulk_to_bulk_case(
         self, raw_user_data: Optional[DataPackage] = None
     ) -> Dict[str, DataPackage]:
-        """
-        Process BULK_TO_BULK case end-to-end.
+        """Process BULK_TO_BULK case.
 
         Reads bulk data, prepares from/to modalities, performs data splitting,
         NaN removal, and applies filtering and scaling to from and to bulk dataframes.
 
+        Args:
+            raw_user_data: Optional DataPackage containing user-provided data.
+                If provided, the data reading step is skipped.
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
+        Raises:
+            TypeError: If from_key or to_key is None, indicating that translation keys must be specified.
+
         """
         if self.from_key is None or self.to_key is None:
             raise TypeError("from_key and to_key cannot be None for Translation")
@@ -541,14 +569,18 @@ class BasePreprocessor(abc.ABC):
     def _process_sc_to_sc_case(
         self, raw_user_data: Optional[DataPackage] = None
     ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
-        """
-        Process SC_TO_SC case end-to-end.
+        """Process SINGLE_CELL_TO_SINGLE_CELL case.
 
         Reads single-cell data, prepares from/to modalities, performs data splitting,
         NaN removal, and applies single-cell specific filtering to from and to mudata objects.
 
+        Args:
+            raw_user_data: Optional DataPackage containing user-provided data.
+                If provided, the data reading step is skipped.
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
+        Raises:
+            TypeError: If from_key or to_key is None, indicating that translation keys must be specified.
         """
         if self.from_key is None or self.to_key is None:
             raise TypeError("from_key and to_key cannot be None for Translation")
@@ -563,20 +595,15 @@ class BasePreprocessor(abc.ABC):
             data_package.to_modality = {self.to_key: mudata[self.to_key]}
         else:
             data_package = raw_user_data
-        print(f"data_package in _process_sc_to_sc_case: {data_package}")
 
         def presplit_processor(
             modality_data: Dict[str, Union[AnnData, MuData]],
             modality_key: str,
         ) -> Dict[str, MuData]:
-            """Preprocesses single-cell modality data."""
             if modality_data is None:
                 return modality_data
             sc_filter = SingleCellFilter(
                 data_info=self.config.data_config.data_info, config=self.config
-            )
-            print(
-                f"modality data in presplit_processor of *process*sc_to_sc_case: {modality_data}"
             )
             modality_data = modality_data[modality_key]
             # Check if it is AnnData and convert to MuData if needed
@@ -624,15 +651,18 @@ class BasePreprocessor(abc.ABC):
     def _process_img_to_bulk_case(
         self, raw_user_data: Optional[DataPackage] = None
     ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
-        """
-        Process IMG_TO_BULK case end-to-end.
+        """Process IMG_TO_BULK case
 
         Reads image and bulk data, prepares from/to modalities (IMG->BULK or BULK->IMG),
         performs data splitting, NaN removal, and applies normalization to image data
         and filtering/scaling to bulk dataframes.
-
+        Args:
+            raw_user_data: Optional DataPackage containing user-provided data.
+                If provided, the data reading step is skipped.
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
+        Raises:
+            TypeError: If from_key or to_key is None, indicating that translation keys must be specified.
         """
         if self.from_key is None or self.to_key is None:
             raise TypeError("from_key and to_key cannot be None for Translation")
@@ -671,7 +701,6 @@ class BasePreprocessor(abc.ABC):
             modality_data: Dict[str, Union[pd.DataFrame, List[ImgData]]],
             modality_key: str,
         ) -> Dict[str, Union[pd.DataFrame, List[ImgData]]]:
-            """Preprocesses img-to-bulk modality data."""
             if modality_key not in modality_data:
                 raise ValueError(f"Modality key '{modality_key}' not found in data.")
             data = modality_data[modality_key]
@@ -686,7 +715,6 @@ class BasePreprocessor(abc.ABC):
         def postsplit_processor(
             split_data: Dict[str, Dict[str, Any]], datapackage_key: str
         ) -> Dict[str, Dict[str, Any]]:
-            """Post-split processing for bulk data."""
             non_empty_split = None
             for _, split_content in split_data.items():
                 if split_content["data"][
@@ -724,15 +752,19 @@ class BasePreprocessor(abc.ABC):
     def _process_sc_to_img_case(
         self, raw_user_data: Optional[DataPackage] = None
     ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
-        """
-        Process SC_TO_IMG case end-to-end.
+        """Process SC_TO_IMG case.
 
         Reads single-cell and image data, prepares from/to modalities (SC->IMG or IMG->SC),
         performs data splitting, NaN removal, and applies single-cell specific filtering
         to single-cell data and normalization to image data.
 
+        Args:
+            raw_user_data: Optional DataPackage containing user-provided data.
+
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
+        Raises:
+            TypeError: If from_key or to_key is None, indicating that translation keys must be specified.
         """
         if self.from_key is None or self.to_key is None:
             raise TypeError("to and from keys cant be None for SC-to-Img")
@@ -770,7 +802,6 @@ class BasePreprocessor(abc.ABC):
         def postsplit_processor(
             split_data: Dict[str, Dict[str, Any]], datapackage_key: str
         ) -> Dict[str, Dict[str, Any]]:
-            """Post-split processing for single-cell data."""
             non_empty_split = None
             for _, split_content in split_data.items():
                 if split_content["data"][datapackage_key]:
@@ -807,14 +838,18 @@ class BasePreprocessor(abc.ABC):
     def _process_img_to_img_case(
         self, raw_user_data: Optional[DataPackage] = None
     ) -> Dict[str, DataPackage]:
-        """
-        Process IMG_TO_IMG case end-to-end.
+        """Process IMG_TO_IMG case.
 
         Reads image data for from/to modalities, performs data splitting,
         NaN removal, and applies normalization to both from and to image data.
 
+        Args:
+            raw_user_data: Optional DataPackage containing user-provided data.
+                If provided, the data reading step is skipped.
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
+        Raises:
+            TypeError: If from_key or to_key is None, indicating that translation keys must be specified.
         """
         if self.from_key is None or self.to_key is None:
             raise TypeError("from_key and to_key cannot be None for Translation")
@@ -871,13 +906,12 @@ class BasePreprocessor(abc.ABC):
     def _split_data_package(
         self, data_package: DataPackage
     ) -> Tuple[Dict[str, Dict], Dict[str, Dict[str, np.ndarray]]]:
-        """
-        Split data package into train/validation/test sets.
+        """Splits data package into train/validation/test sets.
 
         Uses DataSplitter and DataPackageSplitter to divide the DataPackage
         into training, validation, and test sets based on the configuration.
 
-        Parameters:
+        Args:
             data_package: The DataPackage to be split.
 
         Returns:
@@ -887,7 +921,6 @@ class BasePreprocessor(abc.ABC):
             split_indiced_config - (dict): the actual indicies used for splitting
         """
         data_splitter = DataSplitter(config=self.config)
-        print(f"datapacke in _split_data_package: {data_package}")
         n_samples = data_package.get_n_samples(is_paired=self.config.paired_translation)
 
         split_indices_config: dict = {}
@@ -913,13 +946,12 @@ class BasePreprocessor(abc.ABC):
         return data_splitter_instance.split(), split_indices_config
 
     def _is_image_data(self, data: Any) -> bool:
-        """
-        Check if data is image data.
+        """Check if data is image data.
 
         Determines if the provided data is a list of objects that are considered
         image data based on having an 'img' attribute.
 
-        Parameters:
+        Args:
             data: The data to check.
 
         Returns:
@@ -932,13 +964,12 @@ class BasePreprocessor(abc.ABC):
         return False
 
     def _remove_nans(self, data_package: DataPackage) -> DataPackage:
-        """
-        Remove NaN values from the data package.
+        """Remove NaN values from the data package.
 
         Utilizes NaNRemover to identify and remove rows containing NaN values
         in relevant annotation columns within the DataPackage.
 
-        Parameters:
+        Args:
             data_package: The DataPackage from which to remove NaNs.
 
         Returns:
@@ -950,13 +981,12 @@ class BasePreprocessor(abc.ABC):
         return nanremover.remove_nan(data=data_package)
 
     def _normalize_image_data(self, images: List, info_key: str) -> List:
-        """
-        Process images with normalization.
+        """Process images with normalization.
 
         Normalizes a list of image data objects using ImageNormalizer based on
         the scaling method specified in the configuration for the given info_key.
 
-        Parameters:
+        Args:
             images: A list of image data objects (each having an 'img' attribute).
             info_key: The key referencing data information in the configuration to get the scaling method.
 

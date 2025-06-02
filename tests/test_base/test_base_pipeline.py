@@ -1,10 +1,10 @@
 from unittest.mock import MagicMock, Mock
 
-import anndata as ad
+import anndata as ad # type: ignore
 import numpy as np
 import pandas as pd
 import pytest
-from mudata import MuData
+from mudata import MuData # type: ignore
 from torch.utils.data import Dataset
 
 from autoencodix.base._base_pipeline import BasePipeline
@@ -50,10 +50,9 @@ class TestBasePipeline:
             config=valid_config,
         )
 
-    def test_initialization_with_valid_data(self, mock_dataset_container):
+    def test_initialization_with_valid_data_infered_data_case(self, mock_dataset_container):
         valid_data_types = [
             mock_dataset_container,
-            DataPackage(),
             ad.AnnData(np.random.rand(10, 5)),
             MuData({"mod": ad.AnnData(np.random.rand(10, 5))}),
             pd.DataFrame(np.random.rand(10, 5)),
@@ -77,6 +76,26 @@ class TestBasePipeline:
                 pipeline.raw_user_data is not None
                 or pipeline.preprocessed_data is not None
             )
+    def test_initialization_with_valid_data_package(self, valid_config):
+
+        pipeline = BasePipeline(
+            dataset_type=Mock(),
+            config=valid_config,
+            trainer_type=Mock(),
+            model_type=Mock(),
+            loss_type=Mock(),
+            datasplitter_type=Mock,
+            preprocessor_type=Mock(),
+            visualizer=Mock(),
+            data=DataPackage(multi_bulk={"multi_bulk:": pd.DataFrame(np.random.rand(10, 5))}),
+            evaluator=Mock(),
+            result=Mock(),
+        )
+        assert (
+            pipeline.raw_user_data is not None
+            or pipeline.preprocessed_data is not None
+        )
+
 
     @pytest.mark.parametrize("invalid_data", [[1, 2, 3], "string data", 123])
     def test_initialization_raises_error_for_invalid_data(self, invalid_data):
@@ -185,11 +204,13 @@ class TestBasePipeline:
         )
         assert isinstance(pipeline.raw_user_data, DataPackage)
         assert pipeline.config.data_case == DataCase.MULTI_SINGLE_CELL
+        del pipeline
 
     def test_handle_direct_user_data_with_dataframe(self):
         pipeline = BasePipeline(
             dataset_type=Mock(),
             trainer_type=Mock(),
+            config=MockDefaultConfig(),
             model_type=Mock(),
             loss_type=Mock(),
             datasplitter_type=Mock,
@@ -200,6 +221,7 @@ class TestBasePipeline:
             result=Mock(),
         )
         assert isinstance(pipeline.raw_user_data, DataPackage)
+        print(f"Data case: {pipeline.config.data_case}")
         assert pipeline.config.data_case == DataCase.MULTI_BULK
 
     def test_run_method_returns_result(self, minimal_pipeline):

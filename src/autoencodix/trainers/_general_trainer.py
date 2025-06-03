@@ -92,6 +92,7 @@ class GeneralTrainer(BaseTrainer):
                                 )
                             else:
                                 for i, mask in enumerate(self._model.masks):
+                                    mask = mask.to(self._fabric.device)
                                     self._model._decoder[i].weight.mul_(mask)
                     ### ------------------------------------ ###
                     self._optimizer.step()

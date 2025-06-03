@@ -64,7 +64,8 @@ class Ontix(BasePipeline):
 
     def __init__(
         self,
-		ontologies: tuple, # Addition to Varix, mandotory for Ontix
+		ontologies: Union[tuple, list], # Addition to Varix, mandotory for Ontix
+        sep: Optional[str] = "\t", # Addition to Varix, optional to read in ontologies
         user_data: Optional[Union[DataPackage, DatasetContainer]] = None,
         trainer_type: Type[BaseTrainer] = GeneralTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
@@ -85,8 +86,13 @@ class Ontix(BasePipeline):
 
         Parameters
         ----------
-		ontologies: tuple
-			Tuple of dictionaries containing the ontologies to be used to construct sparse decoder layers.
+		ontologies: Union[tuple,list]
+			Tuple of dictionaries containing the ontologies to be used to construct sparse decoder layers. 
+            If a list is provided, it is assumed to be a list of file paths to ontology files. 
+            First item in list or tuple will be treated as first layer (after latent space) and so on. 
+            Last layer need to contain features identical to the input data.
+        sep: Optional[str]
+            Separator used in ontology files, default is tab ("\t")
         preprocessed_data : Union[np.ndarray, AnnData, pd.DataFrame, DatasetContainer]
             Input data to be processed
         trainer_type : Type[BaseTrainer]
@@ -124,7 +130,15 @@ class Ontix(BasePipeline):
             config=config or DefaultConfig(),
             custom_split=custom_splits,
         )
-        self.ontologies = ontologies
+        if isinstance(ontologies, tuple):
+            self.ontologies = ontologies
+        elif isinstance(ontologies, list):
+            ontologies_dict_list = [self._read_ont_file(ont_file, sep=sep) for ont_file in ontologies]
+            self.ontologies = tuple(ontologies_dict_list)
+        else:
+            raise TypeError(
+                f"Expected ontologies to be of type tuple or list, got {type(ontologies)}."
+            )
 
     def sample_latent_space(self, split: str = "test", epoch: int = -1) -> torch.Tensor:
         """
@@ -165,3 +179,26 @@ class Ontix(BasePipeline):
         with self._trainer._fabric.autocast(), torch.no_grad():
             z = self._trainer._model.reparametrize(mu_t, logvar_t)
             return z
+    
+    def _read_ont_file(self, file_path: str, sep: str = "\t") -> dict:
+        """Function to read-in text files of ontologies with format child - separator - parent into an dictionary.
+        ARGS:
+            file_path - (str): Path to file with ontology
+            sep - (str): Separator used in file
+        RETURNS:
+            ont_dic - (dict): Dictionary containing the ontology as described in the text file.
+
+        """
+        ont_dic = dict()
+        with open(file_path, "r") as ont_file:
+            for line in ont_file:
+                id_parent = line.strip().split(sep)[1]
+                id_child = line.split(sep)[0]
+
+                if id_parent in ont_dic:
+                    ont_dic[id_parent].append(id_child)
+                else:
+                    ont_dic[id_parent] = list()
+                    ont_dic[id_parent].append(id_child)
+
+        return ont_dic

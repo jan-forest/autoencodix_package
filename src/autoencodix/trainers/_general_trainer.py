@@ -104,7 +104,7 @@ class GeneralTrainer(BaseTrainer):
                     self._model.eval()
                     with torch.no_grad():
                         valid_loss = 0.0
-                        for _, (features, _) in enumerate(self._validloader):
+                        for _, (features, sample_ids) in enumerate(self._validloader):
                             valid_model_outputs = self._model(features)
                             loss, sub_losses = self._loss_fn(
                                 model_output=valid_model_outputs, targets=features
@@ -125,6 +125,11 @@ class GeneralTrainer(BaseTrainer):
                             k: v / len(self._validloader)
                             for k, v in valid_epoch_sub_losses.items()
                         },
+                    )
+
+                    # for control and convenience, we save the sample ids for validation dynamics visualization
+                    self._result.sample_ids.add(
+                        epoch=epoch, split="valid", data={"sample_ids": sample_ids}
                     )
 
                 if not (epoch + 1) % self._config.checkpoint_interval:

@@ -84,7 +84,7 @@ class VarixArchitecture(BaseAutoencoder):
         # Case 2: At Least One Hidden Layer
         if self._config.n_layers > 0:
             encoder_layers = []
-            print(enc_dim)
+            # print(enc_dim)
             for i, (in_features, out_features) in enumerate(
                 zip(enc_dim[:-1], enc_dim[1:])
             ):

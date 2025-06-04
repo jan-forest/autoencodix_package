@@ -70,7 +70,7 @@ class GeneralTrainer(BaseTrainer):
                 valid_epoch_sub_losses: defaultdict[str, float] = defaultdict(
                     lambda: 0.0
                 )
-                for _, (features, _) in enumerate(self._trainloader):
+                for _, (features, sample_ids) in enumerate(self._trainloader):
                     self._optimizer.zero_grad()
                     model_outputs = self._model(features)
                     loss, sub_losses = self._loss_fn(
@@ -112,12 +112,19 @@ class GeneralTrainer(BaseTrainer):
                         for k, v in epoch_sub_losses.items()
                     },
                 )
+
+                # to account for shuffling, we save the sample ids for training dynamics visualization
+                print(f"sample_ids: {sample_ids}")
+                self._result.sample_ids.add(
+                    epoch=epoch, split="train", data={"sample_ids": sample_ids}
+                )
+
                 # validation loss per epoch ---------------------------------
                 if self._validset:
                     self._model.eval()
                     with torch.no_grad():
                         valid_loss = 0.0
-                        for _, (features, _) in enumerate(self._validloader):
+                        for _, (features, sample_ids) in enumerate(self._validloader):
                             valid_model_outputs = self._model(features)
                             loss, sub_losses = self._loss_fn(
                                 model_output=valid_model_outputs, targets=features
@@ -140,6 +147,11 @@ class GeneralTrainer(BaseTrainer):
                         },
                     )
 
+                    # for control and convenience, we save the sample ids for validation dynamics visualization
+                    self._result.sample_ids.add(
+                        epoch=epoch, split="valid", data={"sample_ids": sample_ids}
+                    )
+
                 if not (epoch + 1) % self._config.checkpoint_interval:
                     self._result.model_checkpoints.add(
                         epoch=epoch, data=self._model.state_dict()
@@ -160,7 +172,11 @@ class GeneralTrainer(BaseTrainer):
 
     def decode(self, x: torch.tensor):
         with self._fabric.autocast(), torch.no_grad():
-            x = self._fabric.to_device(x)
+            x = self._fabric.to_device(obj=x)
+            if not isinstance(x, torch.Tensor):
+                raise TypeError(
+                    f"Expected input to be a torch.Tensor, got {type(x)} instead."
+                )
             return self._model.decode(x=x)
 
     def _capture_dynamics(

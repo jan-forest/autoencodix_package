@@ -108,7 +108,7 @@ class Varix(BasePipeline):
         """
 
         super().__init__(
-            user_data=user_data,
+            data=user_data,
             dataset_type=dataset_type,
             trainer_type=trainer_type,
             model_type=model_type,

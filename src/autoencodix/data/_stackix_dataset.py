@@ -141,33 +141,3 @@ class StackixDataset(NumericDataset):
             raise KeyError(f"Modality '{modality}' not found in dataset")
 
         return self.dataset_dict[modality][index]
-
-    def get_input_dim(
-        self, modality: Optional[str] = None
-    ) -> Union[int, Dict[str, int]]:
-        """
-        Get the input dimension(s) of the dataset.
-
-        Parameters
-        ----------
-        modality : Optional[str]
-            If provided, returns the dimension for the specified modality only
-
-        Returns
-        -------
-        Union[int, Dict[str, int]]
-            Input dimension of the specified modality or dictionary of dimensions for all modalities
-
-        Raises
-        ------
-        KeyError
-            If the requested modality doesn't exist in the dataset
-        """
-        if modality is not None:
-            if modality not in self.dataset_dict:
-                raise KeyError(f"Modality '{modality}' not found in dataset")
-            return self.dataset_dict[modality].get_input_dim()
-
-        return {
-            key: dataset.get_input_dim() for key, dataset in self.dataset_dict.items()
-        }

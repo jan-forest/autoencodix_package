@@ -52,9 +52,3 @@ class TestBaseTrainerUnit:
                 config=None,
                 called_from="MockConcreteTrainer",
             )
-
-
-class TestBaseTrainerIntegration:
-
-    def test_gpu_replication(self):
-        pass

@@ -1,18 +1,19 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
-import torch
+
+import mudata as md  # type: ignore
 import numpy as np
 import pandas as pd
+import torch
+from anndata import AnnData  # type: ignore
 from scipy.sparse import issparse  # type: ignore
-import mudata as md  # type: ignore
-from anndata import AnnData
 
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_preprocessor import BasePreprocessor
-from autoencodix.data.datapackage import DataPackage
-from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data._datasetcontainer import DatasetContainer
-from autoencodix.utils.default_config import DefaultConfig, DataCase
+from autoencodix.data._numeric_dataset import NumericDataset
+from autoencodix.data.datapackage import DataPackage
 from autoencodix.utils._result import Result
+from autoencodix.utils.default_config import DataCase, DefaultConfig
 
 
 class GeneralPreprocessor(BasePreprocessor):
@@ -25,7 +26,7 @@ class GeneralPreprocessor(BasePreprocessor):
             str, Dict[str, Tuple[List[int], List[str]]]
         ] = {"train": {}, "test": {}, "valid": {}}
         self._reverse_mapping_multi_sc: Dict[
-            Dict[str, Dict[str, Tuple[List[int], List[str]]]]
+            str, Dict[str, Tuple[List[int], List[str]]]
         ] = {"train": {}, "test": {}, "valid": {}}
 
     def _extract_primary_data(self, modality_data: Any) -> np.ndarray:
@@ -108,6 +109,7 @@ class GeneralPreprocessor(BasePreprocessor):
         return ds
 
     def _process_data_package(self, data_dict: Dict[str, Any]) -> BaseDataset:
+        print(f"data_dict: {data_dict['data']}")
         data, split_ids = data_dict["data"], data_dict["indices"]
 
         # MULTI-BULK
@@ -199,7 +201,9 @@ class GeneralPreprocessor(BasePreprocessor):
         self._dataset_container = ds_container
         return ds_container
 
-    def format_reconstruction(self, reconstruction: torch.Tensor, result: Optional[Result] = None) -> DataPackage:
+    def format_reconstruction(
+        self, reconstruction: torch.Tensor, result: Optional[Result] = None
+    ) -> DataPackage:
         self._split = self._match_split(n_samples=reconstruction.shape[0])
         if self.config.data_case == DataCase.MULTI_BULK:
             return self._reverse_multi_bulk(reconstruction)

@@ -1,37 +1,44 @@
 from typing import List, Union
 
 import anndata as ad  # type: ignore
+import warnings
 import pandas as pd
 import mudata as md  # type: ignore
 import numpy as np
 from scipy.sparse import issparse  # type: ignore
+from scipy import sparse  # type: ignore
 
 from autoencodix.data.datapackage import DataPackage
+from autoencodix.utils.default_config import DefaultConfig
 
 
 class NaNRemover:
-    """Class to handle NaN removal from multi-modal data."""
+    """Removes NaN (Not a Number) values from multi-modal datasets.
+
+    This object identifies and removes NaN values from various data structures
+    commonly used in single-cell and multi-modal omics, including AnnData, MuData,
+    and Pandas DataFrames. It supports processing of X matrices, layers, and
+    observation annotations within AnnData objects, as well as handling bulk and
+    annotation data within a DataPackage.
+    """
 
     def __init__(
         self,
-        relevant_cols: Union[
-            List[str], None
-        ] = [],  # Changed from None to empty list as default
-    ) -> None:
-        """
-        Initialize NaNRemover with data and optional relevant columns.
-
-        Parameters
-        ----------
-        data : Union[pd.DataFrame, AnnData, md.MuData]
-            Data to process
-        relevant_cols : List[str], optional
-            Columns to check for NaN values, by default empty list
-        """
-        self.relevant_cols = relevant_cols
+        config: DefaultConfig,
+    ):
+        self.config = config
+        self.relevant_cols = self.config.data_config.annotation_columns
 
     def _process_sparse_matrix(self, matrix) -> np.ndarray:
-        """Convert sparse matrix to dense and ensure float type."""
+        """Converts sparse matrix to dense NumPy array and ensures float type.
+
+        Args:
+            matrix: The input matrix, which can be a sparse matrix (e.g., from scipy.sparse)
+                or a dense NumPy array.
+
+        Returns
+            A dense NumPy array of float type.
+        """
         if issparse(matrix):
             matrix = matrix.toarray()
         return matrix.astype(float)
@@ -39,7 +46,18 @@ class NaNRemover:
     def _remove_nan_from_matrix(
         self, matrix, name: str = ""
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Remove NaNs from a matrix and return valid indices."""
+        """Removes NaNs from matrix, returns boolean masks for valid rows and columns.
+
+        Args:
+            matrix: The input matrix (NumPy array or sparse matrix) to process.
+            name: An optional string identifier for the matrix, used for printing
+                (though not currently implemented in the provided code).
+
+        Returns:
+            A tuple containing two boolean NumPy arrays:
+            - valid_rows: A 1D boolean array where True indicates a row without NaNs.
+            - valid_cols: A 1D boolean array where True indicates a column without NaNs.
+        """
         matrix = self._process_sparse_matrix(matrix)
         valid_cols = ~np.isnan(matrix).any(axis=0)
         valid_rows = ~np.isnan(matrix).any(axis=1)
@@ -49,49 +67,51 @@ class NaNRemover:
 
         return valid_rows, valid_cols
 
-    def _process_modality(self, adata: ad.AnnData, mod_name: str) -> ad.AnnData:
-        """Process a single modality to remove NaNs."""
+    def _process_modality(self, adata: ad.AnnData) -> ad.AnnData:
+        """Converts NaN values in AnnData object to zero and metadata NaNs to 'missing'.
+        Args:
+            adata: The AnnData object to process.
+        Returns:
+            The processed AnnData object with NaN values replaced.
+        """
+        adata = adata.copy()
 
-        # Process X matrix
-        valid_rows, valid_cols = self._remove_nan_from_matrix(adata.X, "X")
-        adata = adata[valid_rows, valid_cols]
+        # Handle X matrix
+        if sparse.issparse(adata.X):
+            if hasattr(adata.X, "data"):
+                adata.X.data = np.nan_to_num(adata.X.data, nan=0.0)
+                adata.X.eliminate_zeros()
+        else:
+            adata.X = np.nan_to_num(adata.X, nan=0.0)
 
-        # Process each layer
+        # Handle all layers
         for layer_name, layer_data in adata.layers.items():
-            layer_valid_rows, layer_valid_cols = self._remove_nan_from_matrix(
-                layer_data, f"layer {layer_name}"
-            )
-            # Update AnnData object with filtered layer
-            layer_matrix = self._process_sparse_matrix(layer_data)
-            adata = adata[layer_valid_rows, :]
-            adata.layers[layer_name] = layer_matrix[layer_valid_rows, :][
-                :, layer_valid_cols
-            ]
+            if sparse.issparse(layer_data):
+                if hasattr(layer_data, "data"):
+                    layer_data.data = np.nan_to_num(layer_data.data, nan=0.0)
+                    layer_data.eliminate_zeros()
+            else:
+                adata.layers[layer_name] = np.nan_to_num(layer_data, nan=0.0)
 
-        # Process obs annotations
-        if self.relevant_cols is None:
-            return adata
-        for col in self.relevant_cols:
-            if col in adata.obs.columns:
-                valid_obs = ~adata.obs[col].isna()
-                if (~valid_obs).any():
-                    adata = adata[valid_obs, :]
-
+        # Handle obs metadata
+        if self.relevant_cols is not None:
+            for col in self.relevant_cols:
+                if col in adata.obs.columns:
+                    adata.obs[col] = adata.obs[col].astype("category").fillna("missing")
         return adata
 
     def remove_nan(self, data: DataPackage) -> DataPackage:
-        """
-        Remove NaNs from all components of the DataPackage.
+        """Removes NaN values from all applicable DataPackage components.
 
-        Parameters
-        ----------
-        data : DataPackage
-            Data package containing multi-modal data
+        Iterates through the bulk data, annotation data, and multi-modal
+        single-cell data (MuData and AnnData objects) within the provided
+        DataPackage and removes rows/columns/entries containing NaN values.
 
-        Returns
-        -------
-        DataPackage
-            Processed data package with NaNs removed
+        Args:
+            data: The DataPackage object containing multi-modal data.
+
+        Returns:
+            The DataPackage object with NaN values removed from its components.
         """
         # Handle bulk data
         if data.multi_bulk:
@@ -113,12 +133,10 @@ class NaNRemover:
 
         # Handle MuData in multi_sc
         if data.multi_sc is not None:
-            print(f"data in nanremover: {data}")
-            print(f"multi_sc in nanremover: {data.multi_sc}")
             mudata = data.multi_sc["multi_sc"]
             # Process each modality
             for mod_name, mod_data in mudata.mod.items():
-                processed_mod = self._process_modality(mod_data, mod_name)
+                processed_mod = self._process_modality(mod_data)
                 data.multi_sc["multi_sc"].mod[mod_name] = processed_mod
 
             # Ensure cell alignment across modalities
@@ -138,9 +156,7 @@ class NaNRemover:
                 if isinstance(mod_value, md.MuData):
                     # Process each modality in the MuData
                     for inner_mod_name, inner_mod_data in mod_value.mod.items():
-                        processed_mod = self._process_modality(
-                            inner_mod_data, f"{mod_key}.{inner_mod_name}"
-                        )
+                        processed_mod = self._process_modality(inner_mod_data)
                         mod_value.mod[inner_mod_name] = processed_mod
 
                     # Ensure cell alignment if there are multiple modalities
@@ -156,16 +172,14 @@ class NaNRemover:
 
                 # Handle AnnData objects directly
                 elif isinstance(mod_value, ad.AnnData):
-                    processed_mod = self._process_modality(mod_value, mod_key)
+                    processed_mod = self._process_modality(mod_value)
                     modality_dict[mod_key] = processed_mod
 
                 # Handle other types of data (e.g., dictionaries of AnnData objects)
                 elif isinstance(mod_value, dict):
                     for sub_key, sub_value in mod_value.items():
                         if isinstance(sub_value, ad.AnnData):
-                            processed_mod = self._process_modality(
-                                sub_value, f"{mod_key}.{sub_key}"
-                            )
+                            processed_mod = self._process_modality(sub_value)
                             mod_value[sub_key] = processed_mod
 
                 elif isinstance(mod_value, pd.DataFrame):
@@ -173,7 +187,7 @@ class NaNRemover:
                     modality_dict[mod_key] = mod_value
 
                 else:
-                    print(
+                    warnings.warn(
                         f"Skipping unknown type in {direction}.{mod_key}: {type(mod_value)}"
                     )
 

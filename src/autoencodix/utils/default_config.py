@@ -72,7 +72,7 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     data_type: Literal["NUMERIC", "CATEGORICAL", "IMG", "ANNOTATION"] = Field(
         default="NUMERIC"
     )
-    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "NONE"] = Field(default="STANDARD")
+    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE"] = Field(default="STANDARD")
     filtering: Literal["VAR", "MAD", "CORR", "VARCORR", "NOFILT", "NONZEROVAR"] = Field(
         default="VAR"
     )

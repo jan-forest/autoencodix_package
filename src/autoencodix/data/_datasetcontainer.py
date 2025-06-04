@@ -3,15 +3,11 @@ from dataclasses import dataclass
 from autoencodix.base._base_dataset import BaseDataset
 
 
-# internal check done
-# write tests: done
 @dataclass
 class DatasetContainer:
-    """
-    A container for datasets used in training, validation, and testing.
+    """A container for datasets used in training, validation, and testing.
 
-    Attributes
-    ----------
+    Attributes:
     train : Dataset
         The training dataset.
     valid : Dataset

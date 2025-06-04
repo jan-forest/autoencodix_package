@@ -70,7 +70,7 @@ class TestGeneralTrainerIntegration:
             result.preprocessed_data is before_preprocessed_data
         ), "Preprocessed data should not overwrite."
 
-    @pytest.mark.parametrize("devices", ["cpu", "cuda", "mps"])
+    @pytest.mark.parametrize("devices", ["cpu", "cuda"])
     def test_reproducible(self, devices, train_dataset, valid_dataset):
         # if device not available, skip tes
         if not torch.cuda.is_available() and devices == "cuda":

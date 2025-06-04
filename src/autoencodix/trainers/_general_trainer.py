@@ -68,7 +68,7 @@ class GeneralTrainer(BaseTrainer):
                 valid_epoch_sub_losses: defaultdict[str, float] = defaultdict(
                     lambda: 0.0
                 )
-                for _, (features, _) in enumerate(self._trainloader):
+                for _, (features, sample_ids) in enumerate(self._trainloader):
                     self._optimizer.zero_grad()
                     model_outputs = self._model(features)
                     loss, sub_losses = self._loss_fn(
@@ -92,6 +92,13 @@ class GeneralTrainer(BaseTrainer):
                         for k, v in epoch_sub_losses.items()
                     },
                 )
+
+                # to account for shuffling, we save the sample ids for training dynamics visualization
+                print(f"sample_ids: {sample_ids}")
+                self._result.sample_ids.add(
+                    epoch=epoch, split="train", data={"sample_ids": sample_ids}
+                )
+
                 # validation loss per epoch ---------------------------------
                 if self._validset:
                     self._model.eval()

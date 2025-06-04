@@ -98,6 +98,8 @@ class Result:
     """
 
     latentspaces: TrainingDynamics = field(default_factory=TrainingDynamics)
+    sample_ids: TrainingDynamics = field(default_factory=TrainingDynamics)
+    feature_ids: TrainingDynamics = field(default_factory=TrainingDynamics)
     reconstructions: TrainingDynamics = field(default_factory=TrainingDynamics)
     mus: TrainingDynamics = field(default_factory=TrainingDynamics)
     sigmas: TrainingDynamics = field(default_factory=TrainingDynamics)

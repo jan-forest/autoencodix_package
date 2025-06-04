@@ -5,6 +5,7 @@ import torch
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.utils.default_config import DefaultConfig
 
+
 # internal check done
 # write tests: done
 class NumericDataset(BaseDataset):
@@ -32,7 +33,9 @@ class NumericDataset(BaseDataset):
             Optional labels for supervised learning
 
         """
-        super().__init__(data=data, sample_ids=sample_ids, config=config, feature_ids=feature_ids)
+        super().__init__(
+            data=data, sample_ids=sample_ids, config=config, feature_ids=feature_ids
+        )
         if self.config is None:
             raise ValueError("config cannot be None")
         dtype = self._map_float_precision_to_dtype(self.config.float_precision)
@@ -97,14 +100,3 @@ class NumericDataset(BaseDataset):
         Returns the number of samples (rows) in the dataset
         """
         return self.data.shape[0]
-
-    def get_input_dim(self) -> int:
-        """
-        Get the input dimension of the dataset
-
-        Returns:
-        --------
-        int
-            The input dimension
-        """
-        return self.data.shape[1]

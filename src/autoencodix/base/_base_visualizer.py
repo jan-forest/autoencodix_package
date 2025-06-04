@@ -8,6 +8,11 @@ from autoencodix.utils.default_config import DefaultConfig
 
 
 class BaseVisualizer(abc.ABC):
+    """ Defines the interface for visualizing training results.
+    
+    Attributes:
+        plots: A nested dictionary to store various plots.
+    """
     def __init__(self):
         self.plots = nested_dict()
 

@@ -59,7 +59,7 @@ class BasePreprocessor(abc.ABC):
         self.config = config
         self._dataset_container: Optional[DatasetContainer] = None
         self.processed_data = Dict[str, Dict[str, Union[Any, DataPackage]]]
-        self.bulk_genes_to_keep: Optional[List[str]] = None
+        self.bulk_genes_to_keep: Optional[Dict[str, List[str]]] = None
         self.bulk_scalers: Optional[Dict[str, Any]] = None
         self.sc_genes_to_keep: Optional[Dict[str, List[str]]] = None
         self.sc_scalers: Optional[Dict[str, Dict[str, Any]]] = None
@@ -176,7 +176,7 @@ class BasePreprocessor(abc.ABC):
         """
         if self.predict_new_data:
             # use train, because processing logic expects train split
-            mock_split = {
+            mock_split: Dict[str, Dict[str, Union[Any, DataPackage]]] = {
                 "test": {
                     "data": data_package,
                     "indices": {"paired": np.array([])},
@@ -214,7 +214,9 @@ class BasePreprocessor(abc.ABC):
         split_packages, indices = self._split_data_package(data_package=clean_package)
         processed_splits = {}
         for modality_key, (_, postsplit_processor) in modality_processors.items():
+            print(f" split_package before postsplit: {split_packages['train']['data']}")
             split_packages = postsplit_processor(split_packages)
+            print(f" split_package before postsplit: {split_packages['train']['data']}")
         for split_name, split_package in split_packages.items():
             split_indices = {
                 name: {
@@ -224,8 +226,6 @@ class BasePreprocessor(abc.ABC):
                 }
                 for name in indices.keys()
             }
-            assert split_package is not None
-            assert split_indices is not None
             processed_splits[split_name] = {
                 "data": split_package["data"],
                 "indices": split_indices,
@@ -254,7 +254,7 @@ class BasePreprocessor(abc.ABC):
         else:
             data_package = raw_user_data
 
-        def presplit_processor(modality_data: MuData) -> MuData:
+        def presplit_processor(modality_data: Any) -> Any:
             if modality_data is None:
                 return modality_data
             sc_filter = SingleCellFilter(
@@ -289,21 +289,32 @@ class BasePreprocessor(abc.ABC):
             modality_key: The key for the specific modality within the multi-single-cell data.
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
+        Raises:
+            ValueError: If the train split data is None.
         """
         processed_splits: Dict[str, Dict[str, Any]] = {}
-        train_split = split_data.get("train")["data"]
-
+        train_split: Optional[Dict[str, Any]] = split_data.get("train")
+        if train_split is None:
+            raise ValueError(
+                "Train split data is None. Ensure that the data package contains valid train data."
+            )
+        train_data: Optional[Any] = train_split.get("data")
         if (
             self.sc_scalers is None
             and self.sc_genes_to_keep is None
             and self.sc_general_genes_to_keep is None
         ) or ("modality" in datapackage_key):
+            if train_data is None:
+                raise ValueError(
+                    "Train split data is None. Ensure that the data package contains valid train data."
+                )
+
             sc_filter = SingleCellFilter(
                 data_info=self.config.data_config.data_info, config=self.config
             )
 
             filtered_train, sc_genes_to_keep = sc_filter.sc_postsplit_processing(
-                mudata=train_split[datapackage_key][modality_key]
+                mudata=train_data[datapackage_key][modality_key]
             )
             processed_train, general_genes_to_keep, scalers = (
                 sc_filter.general_postsplit_processing(
@@ -313,16 +324,16 @@ class BasePreprocessor(abc.ABC):
             self.sc_scalers = scalers
             self.sc_genes_to_keep = sc_genes_to_keep
             self.sc_general_genes_to_keep = general_genes_to_keep
-            train_split[datapackage_key] = {modality_key: processed_train}
+            train_data[datapackage_key] = {modality_key: processed_train}
         else:
             scalers, sc_genes_to_keep, general_genes_to_keep = (
-                self.sc_scalers,
-                self.sc_genes_to_keep,
-                self.sc_general_genes_to_keep,
+                self.sc_scalers,  # type: ignore
+                self.sc_genes_to_keep,  # type: ignore
+                self.sc_general_genes_to_keep,  # type: ignore
             )
 
         processed_splits["train"] = {
-            "data": train_split,
+            "data": train_data,
             "indices": split_data["train"]["indices"],
         }
 
@@ -378,8 +389,8 @@ class BasePreprocessor(abc.ABC):
             data_package = raw_user_data
 
         def presplit_processor(
-            modality_data: Dict[str, pd.DataFrame | None],
-        ) -> Dict[str, pd.DataFrame | None]:
+            modality_data: Dict[str, Union[pd.DataFrame, None]],
+        ) -> Dict[str, Union[pd.DataFrame, None]]:
             """For the multi_bulk modality we perform all operations after splitting at the moment."""
             return modality_data
 
@@ -396,7 +407,7 @@ class BasePreprocessor(abc.ABC):
         )
 
     def _calc_k_filter(
-        self, i: int, remainder: Optional[int], base_features: int
+        self, i: int, remainder: int, base_features: int
     ) -> Optional[int]:
         if self.config.k_filter is None:
             return None
@@ -417,9 +428,16 @@ class BasePreprocessor(abc.ABC):
             datapackage_key: The key in the DataPackage that contains the multi-bulk data.
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
+        Raises:
+            ValueError: If the train split data is None.
         """
 
-        train_split = split_data.get("train")["data"]
+        train_split: Optional[Dict[str, Any]] = split_data.get("train")
+        if train_split is None:
+            raise ValueError(
+                "Train split data is None. Ensure that the data package contains valid train data."
+            )
+        train_data: Optional[Any] = train_split.get("data")
         genes_to_keep_map: Dict[str, List[str]] = {}
         scalers: Dict[str, Any] = {}
         processed_splits: Dict[str, Dict[str, Any]] = {}
@@ -427,8 +445,12 @@ class BasePreprocessor(abc.ABC):
         if (self.bulk_scalers is None and self.bulk_genes_to_keep is None) or (
             "modality" in datapackage_key
         ):
-            n_modalities: int = len(train_split[datapackage_key].keys())
-            remainder = 0
+            if train_data is None:
+                raise ValueError(
+                    "Train split data is None. Ensure that the data package contains valid train data."
+                )
+            n_modalities: int = len(train_data[datapackage_key].keys())
+            remainder: int = 0
             base_features = 0
             if self.config.k_filter is not None:
                 base_features = self.config.k_filter // n_modalities
@@ -436,11 +458,11 @@ class BasePreprocessor(abc.ABC):
 
             # Get valid modality keys (those that are not None)
             modality_keys = [
-                k for k, v in train_split[datapackage_key].items() if v is not None
+                k for k, v in train_data[datapackage_key].items() if v is not None
             ]
 
             for i, k in enumerate(modality_keys):
-                v = train_split[datapackage_key][k]
+                v = train_data[datapackage_key][k]
                 cur_k_filter = self._calc_k_filter(
                     i=i, base_features=base_features, remainder=remainder
                 )
@@ -454,7 +476,7 @@ class BasePreprocessor(abc.ABC):
                 genes_to_keep_map[k] = genes_to_keep
                 scalers[k] = scaler
                 scaled_df = data_processor.scale(df=filtered_df, scaler=scaler)
-                train_split[datapackage_key][k] = scaled_df
+                train_data[datapackage_key][k] = scaled_df
                 # Check if indices stayed the same after filtering
                 if not filtered_df.index.equals(v.index):
                     mismatched_indices = filtered_df.index.symmetric_difference(v.index)
@@ -465,12 +487,12 @@ class BasePreprocessor(abc.ABC):
                     )
 
             self.bulk_scalers = scalers
-            self.bulk_genes_to_keep = genes_to_keep_map
+            self.bulk_genes_to_keep = genes_to_keep_map  # type: ignore
         else:
-            scalers, genes_to_keep_map = self.bulk_scalers, self.bulk_genes_to_keep
+            scalers, genes_to_keep_map = self.bulk_scalers, self.bulk_genes_to_keep  # type: ignore
 
         processed_splits["train"] = {
-            "data": train_split,
+            "data": train_data,
             "indices": split_data["train"]["indices"],
         }
 
@@ -508,7 +530,7 @@ class BasePreprocessor(abc.ABC):
 
     def _process_bulk_to_bulk_case(
         self, raw_user_data: Optional[DataPackage] = None
-    ) -> Dict[str, DataPackage]:
+    ) -> Union[dict[str, dict[str, Union[Any, DataPackage]]]]:
         """Process BULK_TO_BULK case.
 
         Reads bulk data, prepares from/to modalities, performs data splitting,
@@ -597,9 +619,11 @@ class BasePreprocessor(abc.ABC):
             data_package = raw_user_data
 
         def presplit_processor(
-            modality_data: Dict[str, Union[AnnData, MuData]],
+            modality_data: Dict[str, Union[AnnData, Any]],
             modality_key: str,
-        ) -> Dict[str, MuData]:
+        ) -> Dict[str, Any]:
+            from mudata import MuData
+
             if modality_data is None:
                 return modality_data
             sc_filter = SingleCellFilter(
@@ -608,10 +632,9 @@ class BasePreprocessor(abc.ABC):
             modality_data = modality_data[modality_key]
             # Check if it is AnnData and convert to MuData if needed
             if isinstance(modality_data, AnnData):
-                from mudata import MuData
-
                 mudata = MuData({modality_key: modality_data})
                 return {modality_key: sc_filter.presplit_processing(mudata=mudata)}
+
             elif isinstance(modality_data, MuData):
                 return {
                     modality_key: sc_filter.presplit_processing(mudata=modality_data)
@@ -706,7 +729,8 @@ class BasePreprocessor(abc.ABC):
             data = modality_data[modality_key]
             if self._is_image_data(data=data):
                 modality_data[modality_key] = self._normalize_image_data(
-                    images=modality_data[modality_key], info_key=modality_key
+                    images=modality_data[modality_key],
+                    info_key=modality_key,  # type: ignore
                 )
             # we don't need to filter bulk data here
             # because we do it in the postsplit step
@@ -788,8 +812,8 @@ class BasePreprocessor(abc.ABC):
             data_package.to_modality = {self.to_key: images[self.to_key]}
 
         def presplit_processor(
-            modality_data: Dict[str, Union[MuData, List[ImgData]]], modality_key: str
-        ) -> Dict[str, Union[MuData, List[ImgData]]]:
+            modality_data: Dict[str, Union[Any, List[ImgData]]], modality_key: str
+        ) -> Dict[str, Union[Any, List[ImgData]]]:
             if modality_key not in modality_data:
                 raise ValueError(f"Modality key '{modality_key}' not found in data.")
 
@@ -905,7 +929,7 @@ class BasePreprocessor(abc.ABC):
 
     def _split_data_package(
         self, data_package: DataPackage
-    ) -> Tuple[Dict[str, Dict], Dict[str, Dict[str, np.ndarray]]]:
+    ) -> Tuple[Dict[str, Optional[Dict[str, Any]]], Dict[str, Any]]:
         """Splits data package into train/validation/test sets.
 
         Uses DataSplitter and DataPackageSplitter to divide the DataPackage
@@ -976,7 +1000,7 @@ class BasePreprocessor(abc.ABC):
             The DataPackage with NaN values removed.
         """
         nanremover = NaNRemover(
-            relevant_cols=self.config.data_config.annotation_columns
+            config=self.config,
         )
         return nanremover.remove_nan(data=data_package)
 
@@ -1014,6 +1038,10 @@ class BasePreprocessor(abc.ABC):
 
         Returns:
             A tuple containing the from_key and to_key as strings, or None if not found.
+
+        Raises:
+            ValueError: If neither 'from' nor 'to' keys are found in the data configuration.
+            TypeError: If the translate_direction is not set for the data_info.
         """
         from_key, to_key = None, None
         for k, v in self.config.data_config.data_info.items():
@@ -1026,11 +1054,15 @@ class BasePreprocessor(abc.ABC):
         return from_key, to_key
 
     def _get_user_translation_keys(self, raw_user_data: DataPackage):
-        if len(raw_user_data.from_modality) == 0:
+        if len(raw_user_data.from_modality) == 0:  # type: ignore
             return None, None
-        elif len(raw_user_data.to_modality) == 0:
+        elif len(raw_user_data.to_modality) == 0:  # type: ignore
             return None, None
         else:
+            if raw_user_data.from_modality is None or raw_user_data.to_modality is None:
+                raise TypeError(
+                    "from_modality and to_modality cannot be None for Translation"
+                )
             try:
                 return next(iter(raw_user_data.from_modality.keys())), next(
                     iter(raw_user_data.to_modality.keys())

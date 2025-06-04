@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, Union, Type, List, cast
+from typing import Optional, Type, List, cast
 
 import torch
 from lightning_fabric import Fabric
@@ -13,53 +13,25 @@ from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 
 
-# internal check done
-# write tests: done
 class BaseTrainer(abc.ABC):
-    """
-    Abstract base class for all trainer implementations. It sets up the general components
-    needed for training, such as the model, optimizer, and data loaders. Additionally,
-    it provides the structure for handling reproducibility and model-specific configurations.
+    """General training logic for all autoencoder models.
 
-    Attributes
-    ----------
-    _trainset : BaseDataset
-        The dataset used for training.
-    _validset : Optional[BaseDataset]
-        The dataset used for validation, if provided.
-    _result : Result
-        An object to store and manage training results.
-    _config : DefaultConfig
-        Configuration object containing training hyperparameters and settings.
-    _model_type : Type[BaseAutoencoder]
-        The autoencoder model class to be trained.
-    _loss_fn : Type[BaseLoss], instantiated specific loss_fn for the corresponding model
-    _trainloader : DataLoader
-        DataLoader for the training dataset.
-    _validloader : Optional[DataLoader]
-        DataLoader for the validation dataset, if validation data is provided.
-    _model : BaseAutoencoder
-        The instantiated model architecture.
-    _optimizer : torch.optim.Optimizer
-        The optimizer used for training.
-    _fabric : Fabric
-        A wrapper for distributed training and precision management.
+    This class sets up the model, optimizer, and data loaders. It also handles
+    reproducibility and model-specific configurations. Subclasses must implement
+    model training and prediction logic.
 
-    Methods
-    -------
-    train() -> Result
-        Abstract method that must be implemented to define the training loop.
-    _capture_dynamics(epoch: int, model_output: torch.Tensor) -> None
-        Abstract method for capturing model dynamics during training.
-    _loss_fn(model_output: ModelOutput, targets: torch.Tensor) -> torch.Tensor
-        Abstract method for defining the loss computation logic.
-    _input_validation() -> None
-        Validates input arguments and ensures the proper configuration.
-    _handle_reproducibility() -> None
-        Sets seeds and configurations for reproducibility.
-    _init_model_architecture() -> None
-        Initializes the model architecture based on the configuration.
-
+    Attributes:
+        trainset: The dataset used for training.
+        validset: The dataset used for validation, if provided.
+        result: An object to store and manage training results.
+        config: Configuration object containing training hyperparameters and settings.
+        model_type: The autoencoder model class to be trained.
+        loss_fn: Instantiated loss function specific to the model.
+        trainloader: DataLoader for the training dataset.
+        validloader: DataLoader for the validation dataset, if provided.
+        model: The instantiated model architecture.
+        optimizer: The optimizer used for training.
+        fabric: Lightning Fabric wrapper for device and precision management.
     """
 
     def __init__(
@@ -93,7 +65,7 @@ class BaseTrainer(abc.ABC):
         )
         if self._validset:
             self._validloader = DataLoader(
-                self._validset,
+                dataset=self._validset,
                 batch_size=self._config.batch_size,
                 shuffle=False,
                 num_workers=self._config.n_workers,
@@ -113,7 +85,7 @@ class BaseTrainer(abc.ABC):
         )
 
         self._optimizer = torch.optim.AdamW(
-            self._model.parameters(),
+            params=self._model.parameters(),
             lr=self._config.learning_rate,
             weight_decay=self._config.weight_decay,
         )
@@ -143,7 +115,11 @@ class BaseTrainer(abc.ABC):
             raise ValueError("Config cannot be None.")
 
     def _handle_reproducibility(self) -> None:
-        """Sets all relevant seeds for reproducibility"""
+        """Sets all relevant seeds for reproducibility
+
+        Raises:
+            NotImplementedError: If the device is set to "mps" (Apple Silicon).
+        """
         if self._config.reproducible:
             torch.use_deterministic_algorithms(True)
             torch.manual_seed(seed=self._config.global_seed)
@@ -153,7 +129,9 @@ class BaseTrainer(abc.ABC):
                 torch.backends.cudnn.deterministic = True
                 torch.backends.cudnn.benchmark = False
             elif self._config.device == "mps":
-                print("warning: MPS backend does not support reproducibility")
+                raise NotImplementedError(
+                    "MPS backend does not support reproducibility settings."
+                )
             else:
                 print("cpu not relevant here")
 
@@ -165,7 +143,7 @@ class BaseTrainer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def decode(self, x: torch.tensor) -> torch.Tensor:
+    def decode(self, x: torch.Tensor) -> torch.Tensor:
         pass
 
     @abc.abstractmethod

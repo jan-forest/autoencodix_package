@@ -3,6 +3,7 @@ Ignoring types for scipy and sklearn, because it stubs require Python > 3.9, whi
 """
 
 import pandas as pd
+import warnings
 import numpy as np
 from typing import Optional, List, Set, Tuple, Any
 from scipy.stats import median_abs_deviation  # type: ignore
@@ -39,7 +40,7 @@ class FilterMethod(Enum):
 
 
 class DataFilter:
-    """A class for preprocessing dataframes, including filtering and scaling.
+    """Preprocesses dataframes, including filtering and scaling.
 
     This class separates the filtering logic that needs to be applied consistently
     across train, validation, and test sets from the scaling logic that is
@@ -48,57 +49,60 @@ class DataFilter:
     Attributes:
         data_info (DataInfo): Configuration object containing preprocessing parameters.
         filtered_features (Optional[Set[str]]): Set of features to keep after filtering
-                                                 on the training data. None initially.
+                                                on the training data. None initially.
     """
 
     def __init__(self, data_info: DataInfo):
-        """Initialize the DataPreprocessor with a configuration.
+        """Initializes the DataFilter with a configuration.
 
-        Parameters:
-            data_info (DataInfo): Configuration object containing preprocessing parameters.
+        Args:
+            data_info: Configuration object containing preprocessing parameters.
         """
         self.data_info = data_info
         self.filtered_features: Optional[Set[str]] = None
         self._scaler = None
 
     def _filter_nonzero_variance(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Remove features with zero variance.
+        """Removes features with zero variance.
 
-        Parameters:
-            df (pd.DataFrame): Input dataframe.
+        Args:
+            df: Input dataframe.
 
         Returns:
-            pd.DataFrame: Filtered dataframe containing only columns with non-zero variance.
+            Filtered dataframe containing only columns with non-zero variance.
         """
         var = pd.Series(np.var(df, axis=0), index=df.columns)
         return df[var[var > 0].index]
 
     def _filter_by_variance(self, df: pd.DataFrame, k: Optional[int]) -> pd.DataFrame:
-        """Keep top k features by variance.
+        """Keeps top k features by variance.
 
-        Parameters:
-            df (pd.DataFrame): Input dataframe.
-            k (Optional[int]): Number of top variance features to keep. If None or greater
-                                than number of columns, all features are kept.
+        Args:
+            df: Input dataframe.
+            k: Number of top variance features to keep. If None or greater
+               than number of columns, all features are kept.
 
         Returns:
-            pd.DataFrame: Filtered dataframe with top k variance features.
+            Filtered dataframe with top k variance features.
         """
         if k is None or k > df.shape[1]:
+            warnings.warn(
+                "WARNING: k is None or greater than number of columns, keeping all features."
+            )
             return df
         var = pd.Series(np.var(df, axis=0), index=df.columns)
         return df[var.sort_values(ascending=False).index[:k]]
 
     def _filter_by_mad(self, df: pd.DataFrame, k: Optional[int]) -> pd.DataFrame:
-        """Keep top k features by median absolute deviation.
+        """Keeps top k features by median absolute deviation.
 
-        Parameters:
-            df (pd.DataFrame): Input dataframe.
-            k (Optional[int]): Number of top MAD features to keep. If None or greater
-                                than number of columns, all features are kept.
+        Args:
+            df: Input dataframe.
+            k: Number of top MAD features to keep. If None or greater
+               than number of columns, all features are kept.
 
         Returns:
-            pd.DataFrame: Filtered dataframe with top k MAD features.
+            Filtered dataframe with top k MAD features.
         """
         if k is None or k > df.shape[1]:
             return df
@@ -108,20 +112,23 @@ class DataFilter:
     def _filter_by_correlation(
         self, df: pd.DataFrame, k: Optional[int]
     ) -> pd.DataFrame:
-        """Filter features using correlation-based clustering.
+        """Filters features using correlation-based clustering.
 
         This method clusters features based on their correlation distance and
         selects a representative feature (medoid) from each cluster.
 
-        Parameters:
-            df (pd.DataFrame): Input dataframe.
-            k (Optional[int]): Number of clusters to create. If None or greater
-                                than number of columns, all features are kept.
+        Args:
+            df: Input dataframe.
+            k: Number of clusters to create. If None or greater
+               than number of columns, all features are kept.
 
         Returns:
-            pd.DataFrame: Filtered dataframe with one representative feature (medoid) per cluster.
+            Filtered dataframe with one representative feature (medoid) per cluster.
         """
         if k is None or k > df.shape[1]:
+            warnings.warn(
+                "WARNING: k is None or greater than number of columns, keeping all features."
+            )
             return df
         else:
             X = df.transpose().values
@@ -130,11 +137,8 @@ class DataFilter:
 
             clustering = AgglomerativeClustering(
                 n_clusters=k,
-                affinity="precomputed",
-                linkage="average",  # Average linkage is often used with correlation
             ).fit(dist_matrix)
 
-            # Find the medoid of each cluster
             medoid_indices = []
             for i in range(k):
                 cluster_points = np.where(clustering.labels_ == i)[0]
@@ -147,7 +151,6 @@ class DataFilter:
                     medoid_idx = cluster_points[np.argmin(sum_distances)]
                     medoid_indices.append(medoid_idx)
 
-            # Filter the DataFrame using the medoid indices
             df_filt = df.iloc[:, medoid_indices]
             return df_filt
 
@@ -155,18 +158,25 @@ class DataFilter:
         self, df: pd.DataFrame, genes_to_keep: Optional[List] = None
     ) -> Tuple[
         pd.DataFrame, List[str]
-    ]:  # TODO add indicies and update for the ones that got dropped
-        """Apply the configured filtering method to the dataframe.
+    ]:
+        """Applies the configured filtering method to the dataframe.
 
         This method is intended to be called on the training data to determine
         which features to keep. The `filtered_features` attribute will be set
         based on the result.
 
-        Parameters:
-            df (pd.DataFrame): Input dataframe to be filtered (typically the training set).
+        Args:
+            df: Input dataframe to be filtered (typically the training set).
+            genes_to_keep: A list of gene names to explicitly keep.
+                If provided, other filtering methods will be ignored.
 
         Returns:
-            pd.DataFrame: Filtered dataframe.
+            A tuple containing:
+                - The filtered dataframe.
+                - A list of column names (features) that were kept.
+
+        Raises:
+            KeyError: If some genes in `genes_to_keep` are not present in the dataframe.
         """
         if genes_to_keep is not None:
             try:
@@ -179,10 +189,9 @@ class DataFilter:
 
         MIN_FILTER = 10
         filtering_method = FilterMethod(self.data_info.filtering)
-        print(f"Applying {filtering_method.value} filtering")
 
         if df.shape[0] < MIN_FILTER or df.empty:
-            print(
+            warnings.warn(
                 f"WARNING: df is too small for filtering, needs to have at least {MIN_FILTER}"
             )
             return df, df.columns.tolist()
@@ -219,11 +228,10 @@ class DataFilter:
                 k_corr = min(self.data_info.k_filter, num_features_after_var)
                 filtered_df = self._filter_by_correlation(filtered_df, k_corr)
 
-        print(f"Shape after filtering: {filtered_df.shape}")
         return filtered_df, filtered_df.columns.tolist()
 
     def _init_scaler(self) -> None:
-        """Initialize the scaler based on the configured scaling method."""
+        """Initializes the scaler based on the configured scaling method."""
         method = self.data_info.scaling
         if method == "MINMAX":
             self._scaler = MinMaxScaler(clip=True)
@@ -237,35 +245,35 @@ class DataFilter:
             self._scaler = None
 
     def fit_scaler(self, df: pd.DataFrame) -> Any:
-        """Fit the scaler to the input dataframe (typically the training set).
+        """Fits the scaler to the input dataframe (typically the training set).
 
-        Parameters:
-            df (pd.DataFrame): Input dataframe to fit the scaler on.
+        Args:
+            df: Input dataframe to fit the scaler on.
+
+        Returns:
+            The fitted scaler object.
         """
         self._init_scaler()
         if self._scaler is not None:
             self._scaler.fit(df)
-            print(f"Fitted {self.data_info.scaling} scaler.")
         else:
-            print("No scaling applied.")
+            warnings.warn("No scaling applied.")
         return self._scaler
 
     def scale(self, df: pd.DataFrame, scaler: Any) -> pd.DataFrame:
-        """Apply the fitted scaler to the input dataframe.
+        """Applies the fitted scaler to the input dataframe.
 
-        Parameters:
-            df (pd.DataFrame): Input dataframe to be scaled.
+        Args:
+            df: Input dataframe to be scaled.
+            scaler: The fitted scaler object.
 
         Returns:
-            pd.DataFrame: Scaled dataframe.
+            Scaled dataframe.
         """
         if scaler is None:
-            print("No scaler has been fitted yet or scaling is set to NONE.")
+            warnings.warn("No scaler has been fitted yet or scaling is set to NONE.")
             return df
 
-        print(f"Applying {self.data_info.scaling} scaling.")
-        print(f"shape before scaling: {df.shape}")
-        print(f"scaler: {scaler}")
         df_scaled = pd.DataFrame(
             scaler.transform(df), columns=df.columns, index=df.index
         )
@@ -273,9 +281,9 @@ class DataFilter:
 
     @property
     def available_methods(self) -> List[str]:
-        """List all available filtering methods.
+        """Lists all available filtering methods.
 
         Returns:
-            List[str]: List of available filtering method names.
+            List of available filtering method names.
         """
         return [method.value for method in FilterMethod]

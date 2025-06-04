@@ -109,6 +109,7 @@ class GeneralPreprocessor(BasePreprocessor):
         return ds
 
     def _process_data_package(self, data_dict: Dict[str, Any]) -> BaseDataset:
+        print(f"data_dict: {data_dict['data']}")
         data, split_ids = data_dict["data"], data_dict["indices"]
 
         # MULTI-BULK

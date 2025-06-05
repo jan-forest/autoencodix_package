@@ -208,17 +208,17 @@ class Visualizer(BaseVisualizer):
             else:
                 embedding = df_latent
 
-            if not self.plots["2D-scatter"][epoch][split][
-                param
-            ]:  ## Create when not exist
-                self.plots["2D-scatter"][epoch][split][param] = self.plot_2D(
-                    embedding=embedding,
-                    labels=label_list,
-                    param=param,
-                    layer=f"2D latent space (epoch {epoch})",
-                    figsize=(12, 8),
-                    center=True,
-                )
+            # if not self.plots["2D-scatter"][epoch][split][
+            #     param
+            # ]:  ## Create when not exist
+            self.plots["2D-scatter"][epoch][split][param] = self.plot_2D(
+                embedding=embedding,
+                labels=label_list,
+                param=param,
+                layer=f"2D latent space (epoch {epoch})",
+                figsize=(12, 8),
+                center=True,
+            )
 
             fig = self.plots["2D-scatter"][epoch][split][param]
             show_figure(fig)
@@ -253,12 +253,10 @@ class Visualizer(BaseVisualizer):
                 label_list = ["all"] * df_latent.shape[0]
 
             ## Make ridgeline plot
-            if not self.plots["Ridgeline"][epoch][split][
-                param
-            ]:  ## Create when not exist
-                self.plots["Ridgeline"][epoch][split][param] = self.plot_latent_ridge(
-                    lat_space=df_latent, label_list=label_list, param=param
-                )
+
+            self.plots["Ridgeline"][epoch][split][param] = self.plot_latent_ridge(
+                lat_space=df_latent, label_list=label_list, param=param
+            )
 
             fig = self.plots["Ridgeline"][epoch][split][param].figure
             show_figure(fig)
@@ -302,6 +300,16 @@ class Visualizer(BaseVisualizer):
         """
         all_weights = []
         names = []
+        if hasattr(model, "ontologies"):
+            # If model is Ontix
+            # Get node names from ontologies
+            node_names = list()
+            for ontology in model.ontologies:
+                node_names.append( ontology.keys())
+            
+            node_names.append(model.feature_order)  # Add feature order as last layer
+
+
         for name, param in model.named_parameters():
             if "weight" in name and len(param.shape) == 2:
                 if "var" not in name:  ## For VAE plot only mu weights
@@ -326,6 +334,13 @@ class Visualizer(BaseVisualizer):
                     ax=axes[1, layer],
                 ).set(title=names[layers + layer])
                 axes[1, layer].set_xlabel("In Node", size=12)
+                if hasattr(model, "ontologies"):
+                    axes[1, layer].set_xticks(
+                        ticks=range(len(node_names[layer])), labels=node_names[layer], rotation=90, fontsize=8
+                    )
+                    axes[1, layer].set_yticks(
+                        ticks=range(len(node_names[layer+1])), labels=node_names[layer+1], rotation=0, fontsize=8
+                    )
             else:
                 sns.heatmap(
                     all_weights[layer],

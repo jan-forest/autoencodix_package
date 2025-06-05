@@ -56,11 +56,12 @@ def generate_example_data(
             ),  # Random category
         }
     )
-
+    
     # Add some noise features to metadata that don't correlate with clusters
     metadata_df["random_feature"] = np.random.normal(0, 1, n_samples)
 
     ids = [f"sample_{i}" for i in range(n_samples)]
+    metadata_df["sample_id"] = ids
     data_tensor = torch.tensor(X, dtype=torch.float32)
 
     # Get split ratios from DefaultConfig
@@ -99,7 +100,7 @@ def generate_example_data(
     test_split[test_idx] = True
 
     train_dataset = NumericDataset(
-        data=data_tensor[train_split],
+        data=data_tensor[train_idx],
         config=DefaultConfig(),
         sample_ids=[ids[i] for i in train_idx],
         metadata=metadata_df.iloc[train_idx].reset_index(drop=True),
@@ -108,7 +109,7 @@ def generate_example_data(
     )
 
     val_dataset = NumericDataset(
-        data=data_tensor[val_split],
+        data=data_tensor[val_idx],
         config=DefaultConfig(),
         sample_ids=[ids[i] for i in val_idx],
         metadata=metadata_df.iloc[val_idx].reset_index(drop=True),
@@ -117,7 +118,7 @@ def generate_example_data(
     )
 
     test_dataset = NumericDataset(
-        data=data_tensor[test_split],
+        data=data_tensor[test_idx],
         config=DefaultConfig(),
         sample_ids=[ids[i] for i in test_idx],
         metadata=metadata_df.iloc[test_idx].reset_index(drop=True),

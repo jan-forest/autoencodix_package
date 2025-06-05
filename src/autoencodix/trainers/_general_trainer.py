@@ -48,6 +48,7 @@ class GeneralTrainer(BaseTrainer):
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
+        ontologies: Optional[tuple] = None,  # Addition to Varix, mandotory for Ontix
     ):
         super().__init__(
             trainset=trainset,
@@ -56,6 +57,7 @@ class GeneralTrainer(BaseTrainer):
             config=config,
             model_type=model_type,
             loss_type=loss_type,
+            ontologies=ontologies, # Ontix
         )
 
     def train(self) -> Result:
@@ -79,6 +81,24 @@ class GeneralTrainer(BaseTrainer):
                         model_output=model_outputs, targets=features
                     )
                     self._fabric.backward(loss)
+                    
+                    ### Overloading Generaltrainer for Ontix ###
+                    ## Check if model_type is OntixArchitecture
+                    ## Then mask gradients 
+                    if hasattr(self._model, "ontologies"):
+                        self._model._decoder.apply(self._model._positive_dec) # Sparse decoder only has positive weights
+                        # Apply weight mask to create ontology-based decoder
+                        with torch.no_grad():
+                            # Check that the decoder has the same number of layers as masks
+                            if len(self._model.masks) != len(self._model._decoder):
+                                raise ValueError(
+                                    "Number of masks does not match number of decoder layers"
+                                )
+                            else:
+                                for i, mask in enumerate(self._model.masks):
+                                    mask = mask.to(self._fabric.device)
+                                    self._model._decoder[i].weight.mul_(mask)
+                    ### ------------------------------------ ###
                     self._optimizer.step()
                     epoch_loss += loss.item()
                     train_outputs.append(model_outputs)

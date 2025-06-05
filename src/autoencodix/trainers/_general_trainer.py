@@ -2,6 +2,7 @@ from typing import Optional, Union, Type, List
 from collections import defaultdict
 
 import torch
+import numpy as np
 from torch.utils.data import DataLoader
 
 from autoencodix.base._base_dataset import BaseDataset
@@ -64,6 +65,8 @@ class GeneralTrainer(BaseTrainer):
             for epoch in range(self._config.epochs):
                 train_outputs = []
                 valid_outputs = []
+                train_sample_ids = []
+                valid_sample_ids = []
                 self._model.train()
                 epoch_loss = 0.0
                 epoch_sub_losses: defaultdict[str, float] = defaultdict(lambda: 0.0)
@@ -71,6 +74,7 @@ class GeneralTrainer(BaseTrainer):
                     lambda: 0.0
                 )
                 for _, (features, sample_ids) in enumerate(self._trainloader):
+                    train_sample_ids.append(list(sample_ids))
                     self._optimizer.zero_grad()
                     model_outputs = self._model(features)
                     loss, sub_losses = self._loss_fn(
@@ -113,18 +117,13 @@ class GeneralTrainer(BaseTrainer):
                     },
                 )
 
-                # to account for shuffling, we save the sample ids for training dynamics visualization
-                print(f"sample_ids: {sample_ids}")
-                self._result.sample_ids.add(
-                    epoch=epoch, split="train", data={"sample_ids": sample_ids}
-                )
-
                 # validation loss per epoch ---------------------------------
                 if self._validset:
                     self._model.eval()
                     with torch.no_grad():
                         valid_loss = 0.0
                         for _, (features, sample_ids) in enumerate(self._validloader):
+                            valid_sample_ids.append(list(sample_ids))
                             valid_model_outputs = self._model(features)
                             loss, sub_losses = self._loss_fn(
                                 model_output=valid_model_outputs, targets=features
@@ -147,24 +146,22 @@ class GeneralTrainer(BaseTrainer):
                         },
                     )
 
-                    # for control and convenience, we save the sample ids for validation dynamics visualization
-                    self._result.sample_ids.add(
-                        epoch=epoch, split="valid", data={"sample_ids": sample_ids}
-                    )
-
                 if not (epoch + 1) % self._config.checkpoint_interval:
                     self._result.model_checkpoints.add(
                         epoch=epoch, data=self._model.state_dict()
                     )
-                    print(f"Epoch: {epoch}, Loss: {epoch_loss}")
                     self._capture_dynamics(
-                        epoch=epoch, model_output=train_outputs, split="train"
+                        epoch=epoch,
+                        model_output=train_outputs,
+                        split="train",
+                        sample_ids=train_sample_ids,
                     )
                     if self._validset:
                         self._capture_dynamics(
                             epoch=epoch,
                             model_output=valid_outputs,
                             split="valid",
+                            sample_ids=valid_sample_ids,
                         )
 
             self._result.model = next(self._model.children())
@@ -180,9 +177,15 @@ class GeneralTrainer(BaseTrainer):
             return self._model.decode(x=x)
 
     def _capture_dynamics(
-        self, epoch: int, model_output: List[ModelOutput], split: str
+        self,
+        epoch: int,
+        model_output: List[ModelOutput],
+        split: str,
+        sample_ids: Optional[List[int]] = None,
     ):
         # Concatenate tensors from all model outputs
+        if sample_ids is not None:
+            sample_ids = np.concat([sample_id for sample_id in sample_ids], axis=0)
         latentspaces = torch.cat([output.latentspace for output in model_output], dim=0)
         reconstructions = torch.cat(
             [output.reconstruction for output in model_output], dim=0
@@ -198,6 +201,7 @@ class GeneralTrainer(BaseTrainer):
             split=split,
             data=reconstructions.cpu().detach().numpy(),
         )
+        self._result.sample_ids.add(epoch=epoch, split=split, data=sample_ids)
         logvars = [
             output.latent_logvar
             for output in model_output

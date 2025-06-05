@@ -3,6 +3,7 @@ from typing import Any, Optional, Dict, Union
 from anndata import AnnData
 
 import torch
+import pandas as pd
 
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data.datapackage import DataPackage
@@ -82,6 +83,8 @@ class Result:
     ----------
     latentspaces : TrainingDynamics
         Stores latent space representations for 'train', 'valid', and 'test' splits.
+    sample_ids : TrainingDynamics
+        Stores sample identifiers for 'train', 'valid', and 'test' splits.
     reconstructions : TrainingDynamics
         Stores reconstructed outputs for 'train', 'valid', and 'test' splits.
     mus : TrainingDynamics
@@ -99,7 +102,6 @@ class Result:
 
     latentspaces: TrainingDynamics = field(default_factory=TrainingDynamics)
     sample_ids: TrainingDynamics = field(default_factory=TrainingDynamics)
-    feature_ids: TrainingDynamics = field(default_factory=TrainingDynamics)
     reconstructions: TrainingDynamics = field(default_factory=TrainingDynamics)
     mus: TrainingDynamics = field(default_factory=TrainingDynamics)
     sigmas: TrainingDynamics = field(default_factory=TrainingDynamics)
@@ -118,7 +120,7 @@ class Result:
 
     adata_latent: Optional[AnnData] = field(default_factory=AnnData)
     final_reconstruction: Optional[Union[DataPackage, MuData]] = field(default=None)
-     # for stackix only
+    # for stackix only
     sub_results: Optional[Dict[str, Any]] = field(default=None)
     sub_reconstructions: Optional[Dict[str, Any]] = field(default=None)
 
@@ -333,3 +335,9 @@ class Result:
         Return the same representation as __str__ for consistency.
         """
         return self.__str__()
+
+    def get_latent_df(self, epoch: int, split: str) -> pd.DataFrame:
+        latents = self.latentspaces.get(epoch=epoch, split=split)
+        ids = self.sample_ids.get(epoch=epoch, split=split)
+        return pd.DataFrame(latents, index=ids)
+

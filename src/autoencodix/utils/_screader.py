@@ -41,7 +41,7 @@ class SingleCellDataReader:
             adata = sc.read_h5ad(mod_info.file_path)
             modalities[mod_key] = adata
 
-        if config.paired_translation is None:
+        if config.requires_paired is None:
             mdata = md.MuData(modalities, join_vars=False)
             common_cells = list(
                 set.intersection(
@@ -52,7 +52,7 @@ class SingleCellDataReader:
             mdata = mdata[common_cells]
 
             return {"multi_sc": mdata}
-        if not config.paired_translation:
+        if not config.requires_paired:
             result = {}
             for mod_key, adata in modalities.items():
                 # Create individual MuData for each modality

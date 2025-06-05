@@ -1,4 +1,4 @@
-paired_translation: False
+requires_paired: False
 data_config:
   data_info:
    RNA:

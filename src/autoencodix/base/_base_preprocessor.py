@@ -945,26 +945,38 @@ class BasePreprocessor(abc.ABC):
             split_indiced_config - (dict): the actual indicies used for splitting
         """
         data_splitter = DataSplitter(config=self.config)
-        n_samples = data_package.get_n_samples(is_paired=self.config.paired_translation)
+        n_samples = data_package.get_n_samples()
+        print(f"n_samples: {n_samples}")
 
         split_indices_config: dict = {}
-        if self.config.paired_translation or self.config.paired_translation is None:
+        for k, v in n_samples.items():
+            for subkey, n in v.items():
+                if subkey == "paired_count":
+                    continue
+                if n == 0 or n is None:
+                    continue
+                split_indices_config[k] = {subkey: {}}
+                split_indices_config[k][subkey] = data_splitter.split(n_samples=n)
+        print(f"Split indices config: {split_indices_config}")
+
+        split_indices_config: dict = {}
+        if self.config.requires_paired or self.config.requires_paired is None:
             split_indices_config["paired"] = data_splitter.split(
-                n_samples=n_samples["paired_count"]
+                n_samples=n_samples["paired_count"]["paired_count"]
             )
         else:
-            split_indices_config["from_indices"] = data_splitter.split(
-                n_samples=n_samples["from"]
-            )
-            split_indices_config["to_indices"] = data_splitter.split(
-                n_samples=n_samples["to"]
-            )
+            for k, v in n_samples.items():
+                for subkey, n in v.items():
+                    if subkey == "paired_count":
+                        continue
+                    if n == 0 or n is None:
+                        continue
+                    split_indices_config[k] = {subkey: {}}
+                    split_indices_config[k][subkey] = data_splitter.split(n_samples=n)
         data_splitter_instance = DataPackageSplitter(
             data_package=data_package,
             config=self.config,
-            indices=split_indices_config.get("paired"),
-            from_indices=split_indices_config.get("from_indices"),
-            to_indices=split_indices_config.get("to_indices"),
+            indices=split_indices_config,
         )
 
         return data_splitter_instance.split(), split_indices_config

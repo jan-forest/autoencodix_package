@@ -32,7 +32,7 @@ class BulkDataReader:
         Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]
             A tuple containing (bulk_dataframes, annotation_dataframes)
         """
-        if self.config.paired_translation or self.config.paired_translation is None:
+        if self.config.requires_paired or self.config.requires_paired is None:
             return self.read_paired_data()
         else:
             return self.read_unpaired_data()

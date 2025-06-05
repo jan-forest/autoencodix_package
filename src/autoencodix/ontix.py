@@ -66,7 +66,7 @@ class Ontix(BasePipeline):
         self,
 		ontologies: Union[tuple, list], # Addition to Varix, mandotory for Ontix
         sep: Optional[str] = "\t", # Addition to Varix, optional to read in ontologies
-        user_data: Optional[Union[DataPackage, DatasetContainer]] = None,
+        data: Optional[Union[DataPackage, DatasetContainer]] = None,
         trainer_type: Type[BaseTrainer] = GeneralTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
         model_type: Type[BaseAutoencoder] = OntixArchitecture,
@@ -117,7 +117,7 @@ class Ontix(BasePipeline):
         """
 
         super().__init__(
-            user_data=user_data,
+            data=data,
             dataset_type=dataset_type,
             trainer_type=trainer_type,
             model_type=model_type,
@@ -127,7 +127,7 @@ class Ontix(BasePipeline):
             evaluator=evaluator or Evaluator(),
             result=result or Result(),
             datasplitter_type=datasplitter_type,
-            config=config or DefaultConfig(),
+            config=config,
             custom_split=custom_splits,
         )
         if isinstance(ontologies, tuple):

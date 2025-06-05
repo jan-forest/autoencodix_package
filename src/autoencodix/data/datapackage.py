@@ -69,35 +69,22 @@ class DataPackage:
 
         for data_type, data_info in shapes.items():
             # Skip empty entries
-            if data_info.get("shape") is None and not any(
-                v for k, v in data_info.items() if k != "shape" and v is not None
-            ):
+            if not data_info:
                 continue
 
-            if "shape" in data_info and data_info["shape"] is not None:
-                # Handle the case where we have a direct shape
-                if isinstance(data_info["shape"], tuple):
-                    samples, features = data_info["shape"]
-                    lines.append(
-                        f"{data_type}: {samples} samples × {features} features"
-                    )
-                else:
-                    lines.append(f"{data_type}: {data_info['shape']} items")
-            else:
-                # Handle nested dictionaries (like multi_bulk, annotation, etc.)
-                sub_items = []
-                for subtype, shape in data_info.items():
-                    if shape is not None:
-                        if isinstance(shape, tuple):
-                            sub_items.append(
-                                f"{subtype}: {shape[0]} samples × {shape[1]} features"
-                            )
-                        else:
-                            sub_items.append(f"{subtype}: {shape} items")
+            sub_items = []
+            for subtype, shape in data_info.items():
+                if shape is not None:
+                    if isinstance(shape, tuple):
+                        sub_items.append(
+                            f"{subtype}: {shape[0]} samples × {shape[1]} features"
+                        )
+                    else:
+                        sub_items.append(f"{subtype}: {shape} items")
 
-                if sub_items:
-                    lines.append(f"{data_type}:")
-                    lines.extend(f"  {item}" for item in sub_items)
+            if sub_items:
+                lines.append(f"{data_type}:")
+                lines.extend(f"  {item}" for item in sub_items)
 
         if not lines:
             return "Empty DataPackage"
@@ -123,32 +110,149 @@ class DataPackage:
             ]
         )
 
-    def get_n_samples(self, is_paired: Union[bool, None]) -> Dict[str, int]:
-        """Get the number of samples for each data type."""
+    def get_n_samples(
+        self
+    ) -> Dict[str, Dict[str, int]]:
+        """Get the number of samples for each data type in nested dictionary format.
 
-        if is_paired or is_paired is None:
-            n_samples: dict = {}
-            for attr_name in self.__annotations__.keys():
-                attr_value = getattr(self, attr_name)
-                if attr_value is None:
-                    continue
-                n_samples[attr_name] = self._get_n_samples(attr_value)
-            # check if all data types have the same number of samples
-            cleaned_n_samples = set([v for v in n_samples.values() if v > 0])
-            print(cleaned_n_samples)
-            if len(cleaned_n_samples) == 1:
-                n_samples["paired_count"] = max(n_samples.values())
-                return n_samples
+        Returns:
+            Dictionary with nested structure: {modality_type: {sub_key: count}}
+        """
+        n_samples: Dict[str, Dict[str, int]] = {}
+
+        # Process each main attribute
+        for attr_name in self.__annotations__.keys():
+            attr_value = getattr(self, attr_name)
+            print(f"type of attr_value: {type(attr_value)}")
+
+
+            if isinstance(attr_value, dict):
+                # Handle dictionary attributes (multi_sc, multi_bulk, etc.)
+                sub_counts = {}
+                print("dict case")
+                for sub_key, sub_value in attr_value.items():
+                    if sub_value is None or sub_value == {}:
+                        print(f"Skipping empty sub_value for {sub_key}")
+                        continue
+                    print(f"sub_key: {sub_key}")
+                    if sub_key == "multi_sc":
+                        print("multi_sc")
+
+                        for mod_name, mod_data in sub_value.mod.items():
+                            count = self._get_n_samples(mod_data)
+                            sub_counts[mod_name] = count
+                    else:
+                        sub_counts[sub_key] = self._get_n_samples(sub_value)
+                print(f"sub_counts: {sub_counts}")
+                n_samples[attr_name] = sub_counts if sub_counts else {}
             else:
-                raise ValueError(
-                    "The number of samples in the data types is not the same for the paired data cases"
-                    f"Samples: {n_samples}"
-                )
+                # Handle non-dictionary attributes
+                count = self._get_n_samples(attr_value)
+                n_samples[attr_name] = {attr_name: count}
 
-        return {
-            "from": self._get_n_samples(self.from_modality),
-            "to": self._get_n_samples(self.to_modality),
-        }
+        paired_count = self._calculate_paired_count()
+        n_samples["paired_count"] = {"paired_count": paired_count}
+
+        return n_samples
+
+    def _calculate_paired_count(self) -> int:
+        """
+        Calculate the number of samples that are common across modalities that have data.
+
+        Returns:
+            Number of common samples across modalities with data
+        """
+        all_counts = []
+
+        # Collect all sample counts from modalities that have data
+        for attr_name in self.__annotations__.keys():
+            attr_value = getattr(self, attr_name)
+            if attr_value is None:
+                continue
+
+            if isinstance(attr_value, dict):
+                if attr_value:  # Non-empty dictionary
+                    for sub_value in attr_value.values():
+                        if sub_value is not None:
+                            count = self._get_n_samples(sub_value)
+                            if count > 0:
+                                all_counts.append(count)
+            else:
+                count = self._get_n_samples(attr_value)
+                if count > 0:
+                    all_counts.append(count)
+
+        # Return minimum count (intersection) or 0 if no data
+        return min(all_counts) if all_counts else 0
+
+    def get_common_ids(self) -> List[str]:
+        """
+        Get the common sample IDs across modalities that have data.
+
+        Returns:
+            List of sample IDs that are present in all modalities with data
+        """
+        all_ids = []
+
+        # Collect sample IDs from each modality that has data
+        for attr_name in self.__annotations__.keys():
+            attr_value = getattr(self, attr_name)
+            if attr_value is None:
+                continue
+
+            if isinstance(attr_value, dict):
+                if attr_value:  # Non-empty dictionary
+                    for sub_value in attr_value.values():
+                        if sub_value is not None:
+                            ids = self._get_sample_ids(sub_value)
+                            if ids:
+                                all_ids.append(set(ids))
+            else:
+                ids = self._get_sample_ids(attr_value)
+                if ids:
+                    all_ids.append(set(ids))
+
+        # Find intersection of all ID sets
+        if not all_ids:
+            return []
+
+        common = all_ids[0]
+        for id_set in all_ids[1:]:
+            common = common.intersection(id_set)
+
+        return sorted(list(common))
+
+    def _get_sample_ids(
+        self, dataobj: Union[MuData, pd.DataFrame, List[ImgData], AnnData]
+    ) -> List[str]:
+        """
+        Extract sample IDs from a data object.
+
+        Parameters:
+            dataobj: Data object to extract IDs from
+
+        Returns:
+            List of sample IDs
+        """
+        if dataobj is None:
+            return []
+
+        if isinstance(dataobj, pd.DataFrame):
+            return dataobj.index.astype(str).tolist()
+        elif isinstance(dataobj, list):
+            # For lists of ImgData, extract sample_id from each object
+            return [
+                img_data.sample_id
+                for img_data in dataobj
+                if hasattr(img_data, "sample_id")
+            ]
+        elif isinstance(dataobj, AnnData):
+            return dataobj.obs.index.astype(str).tolist()
+        elif isinstance(dataobj, MuData):
+            # For MuData, we can use the obs.index directly
+            return dataobj.obs.index.astype(str).tolist()
+        else:
+            return []
 
     def _get_n_samples(
         self, dataobj: Union[MuData, pd.DataFrame, List[ImgData], AnnData, Dict]
@@ -171,39 +275,53 @@ class DataPackage:
         elif isinstance(dataobj, MuData):
             if not dataobj.mod:  # Empty MuData
                 return 0
-            first_key = next(iter(dataobj.mod.keys()))
-            first_anno = dataobj.mod[first_key].obs
-            return first_anno.shape[0]
+            return dataobj.n_obs
         else:
             raise ValueError(
                 f"Unknown data type {type(dataobj)} for dataobj. Probably you've implemented a new attribute in the DataPackage class or changed the data type of an existing attribute."
             )
 
     def shape(self) -> Dict[str, Dict[str, Any]]:
-        """Get the shape of the data for each data type."""
-        shapes: Dict[str, Dict[str, Union[None, Tuple, int]]] = {
-            k: {"shape": None} for k in self.__annotations__.keys()
-        }
+        """
+        Get the shape of the data for each data type in nested dictionary format.
+
+        Returns:
+            Dictionary with nested structure: {modality_type: {sub_key: shape}}
+        """
+        shapes: Dict[str, Dict[str, Any]] = {}
+
         for attr_name in self.__annotations__.keys():
             attr_value = getattr(self, attr_name)
-            if attr_value is not None:
-                if isinstance(attr_value, dict):
-                    # Use a recursive helper function for dictionaries
+
+            if isinstance(attr_value, dict):
+                # Handle dictionary attributes
+                if attr_value is None or len(attr_value) == 0:
+                    # Empty or None dictionary
+                    shapes[attr_name] = {}
+                else:
                     sub_dict = self._get_shape_from_dict(attr_value)
                     shapes[attr_name] = sub_dict
-                elif isinstance(attr_value, list):
-                    shapes[attr_name]["shape"] = len(attr_value)
-                elif isinstance(attr_value, pd.DataFrame):
-                    shapes[attr_name]["shape"] = attr_value.shape
-                elif isinstance(attr_value, AnnData):
-                    shapes[attr_name]["shape"] = attr_value.shape
-                elif isinstance(attr_value, MuData):
-                    shapes[attr_name]["shape"] = (attr_value.n_obs, attr_value.n_vars)
-                else:
-                    raise ValueError(
-                        f"Unknown data type {type(attr_value)} for dataobj. Probably you've implemented a new attribute in the DataPackage class or changed the data type of an existing attribute."
-                    )
+            else:
+                # Handle non-dictionary attributes
+                shape = self._get_single_shape(attr_value)
+                shapes[attr_name] = {attr_name: shape}
+
         return shapes
+
+    def _get_single_shape(self, dataobj: Any) -> Optional[Union[Tuple, int]]:
+        """Get shape for a single data object."""
+        if dataobj is None:
+            return None
+        elif isinstance(dataobj, list):
+            return len(dataobj)
+        elif isinstance(dataobj, pd.DataFrame):
+            return dataobj.shape
+        elif isinstance(dataobj, AnnData):
+            return dataobj.shape
+        elif isinstance(dataobj, MuData):
+            return (dataobj.n_obs, dataobj.n_vars)
+        else:
+            return None
 
     def _get_shape_from_dict(self, data_dict: Dict) -> Dict[str, Any]:
         """
@@ -228,7 +346,10 @@ class DataPackage:
                 result[key] = (value.n_obs, value.n_vars)
             elif isinstance(value, dict):
                 # Recursively process nested dictionaries
-                result[key] = self._get_shape_from_dict(value)
+                nested_result = self._get_shape_from_dict(value)
+                result[key] = nested_result
+            elif value is None:
+                result[key] = None
             else:
                 # For unknown types, store a descriptive string instead of raising an error
                 # This is more robust as it won't crash the entire method

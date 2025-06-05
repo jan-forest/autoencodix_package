@@ -104,7 +104,7 @@ class Stackix(BasePipeline):
             evaluator=evaluator,
             result=result,
             datasplitter_type=datasplitter_type,
-            config=config or DefaultConfig(),
+            config=config,
             custom_split=custom_splits,
         )
 

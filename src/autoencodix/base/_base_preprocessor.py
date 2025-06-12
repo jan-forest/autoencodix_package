@@ -214,9 +214,7 @@ class BasePreprocessor(abc.ABC):
         split_packages, indices = self._split_data_package(data_package=clean_package)
         processed_splits = {}
         for modality_key, (_, postsplit_processor) in modality_processors.items():
-            print(f" split_package before postsplit: {split_packages['train']['data']}")
             split_packages = postsplit_processor(split_packages)
-            print(f" split_package before postsplit: {split_packages['train']['data']}")
         for split_name, split_package in split_packages.items():
             split_indices = {
                 name: {
@@ -253,6 +251,14 @@ class BasePreprocessor(abc.ABC):
             data_package.multi_sc = mudata
         else:
             data_package = raw_user_data
+        if self.config.requires_paired:
+            print(
+                f"datapackge in process_multi_single_cell {data_package} and multi_sc: {data_package.multi_sc}"
+            )
+            common_ids = data_package.get_common_ids()
+            data_package.multi_sc = {
+                "multi_sc": data_package.multi_sc["multi_sc"][common_ids]
+            }
 
         def presplit_processor(modality_data: Any) -> Any:
             if modality_data is None:
@@ -260,7 +266,7 @@ class BasePreprocessor(abc.ABC):
             sc_filter = SingleCellFilter(
                 data_info=self.config.data_config.data_info, config=self.config
             )
-            return {"multi_sc": sc_filter.presplit_processing(mudata=modality_data)}
+            return sc_filter.presplit_processing(multi_sc=modality_data)
 
         def postsplit_processor(
             split_data: Dict[str, Dict[str, Any]],
@@ -273,95 +279,6 @@ class BasePreprocessor(abc.ABC):
             data_package,
             modality_processors={"multi_sc": (presplit_processor, postsplit_processor)},
         )
-
-    def _postsplit_multi_single_cell(
-        self,
-        split_data: Dict[str, Dict[str, Any]],
-        datapackage_key: str = "multi_sc",
-        modality_key: str = "multi_sc",
-    ) -> Dict[str, Dict[str, Any]]:
-        """Post-split processing for multi-single-cell data.
-        This method applies filtering and scaling to the single-cell data after it has been split.
-
-        Args:
-            split_data: A dictionary containing the split data for each data split.
-            datapackage_key: The key in the DataPackage that contains the multi-single-cell data.
-            modality_key: The key for the specific modality within the multi-single-cell data.
-        Returns:
-            A dictionary containing processed DataPackage objects for each data split.
-        Raises:
-            ValueError: If the train split data is None.
-        """
-        processed_splits: Dict[str, Dict[str, Any]] = {}
-        train_split: Optional[Dict[str, Any]] = split_data.get("train")
-        if train_split is None:
-            raise ValueError(
-                "Train split data is None. Ensure that the data package contains valid train data."
-            )
-        train_data: Optional[Any] = train_split.get("data")
-        if (
-            self.sc_scalers is None
-            and self.sc_genes_to_keep is None
-            and self.sc_general_genes_to_keep is None
-        ) or ("modality" in datapackage_key):
-            if train_data is None:
-                raise ValueError(
-                    "Train split data is None. Ensure that the data package contains valid train data."
-                )
-
-            sc_filter = SingleCellFilter(
-                data_info=self.config.data_config.data_info, config=self.config
-            )
-
-            filtered_train, sc_genes_to_keep = sc_filter.sc_postsplit_processing(
-                mudata=train_data[datapackage_key][modality_key]
-            )
-            processed_train, general_genes_to_keep, scalers = (
-                sc_filter.general_postsplit_processing(
-                    mudata=filtered_train, scaler_map=None, gene_map=None
-                )
-            )
-            self.sc_scalers = scalers
-            self.sc_genes_to_keep = sc_genes_to_keep
-            self.sc_general_genes_to_keep = general_genes_to_keep
-            train_data[datapackage_key] = {modality_key: processed_train}
-        else:
-            scalers, sc_genes_to_keep, general_genes_to_keep = (
-                self.sc_scalers,  # type: ignore
-                self.sc_genes_to_keep,  # type: ignore
-                self.sc_general_genes_to_keep,  # type: ignore
-            )
-
-        processed_splits["train"] = {
-            "data": train_data,
-            "indices": split_data["train"]["indices"],
-        }
-
-        for split, split_package in split_data.items():
-            if split == "train":
-                continue
-            data_package = split_package["data"]
-            if data_package is None:
-                processed_splits[split] = split_package
-                continue
-            sc_filter = SingleCellFilter(
-                data_info=self.config.data_config.data_info, config=self.config
-            )
-            filtered_sc_data, _ = sc_filter.sc_postsplit_processing(
-                mudata=data_package[datapackage_key][modality_key],
-                gene_map=sc_genes_to_keep,
-            )
-            processed_general_data, _, _ = sc_filter.general_postsplit_processing(
-                mudata=filtered_sc_data,
-                gene_map=general_genes_to_keep,
-                scaler_map=scalers,
-            )
-            data_package[datapackage_key] = {modality_key: processed_general_data}
-            processed_splits[split] = {
-                "data": data_package,
-                "indices": split_package["indices"],
-            }
-        return processed_splits
 
     def _process_multi_bulk_case(
         self,
@@ -387,6 +304,16 @@ class BasePreprocessor(abc.ABC):
             data_package.annotation = annotation
         else:
             data_package = raw_user_data
+        if self.config.requires_paired:
+            common_ids = data_package.get_common_ids()
+            unpaired_data = data_package.multi_bulk
+            unpaired_anno = data_package.annotation
+            data_package.multi_bulk = {
+                k: v.loc[common_ids] for k, v in unpaired_data.items()
+            }
+            data_package.annotation = {
+                k: v.loc[common_ids] for k, v in unpaired_anno.items()
+            }
 
         def presplit_processor(
             modality_data: Dict[str, Union[pd.DataFrame, None]],
@@ -413,6 +340,162 @@ class BasePreprocessor(abc.ABC):
             return None
         extra = 1 if i < remainder else 0
         return base_features + extra
+
+    def _postsplit_multi_single_cell(
+        self,
+        split_data: Dict[str, Dict[str, Any]],
+        datapackage_key: str = "multi_sc",
+        modality_key: Optional[str] = None,
+    ) -> Dict[str, Dict[str, Any]]:
+        """Post-split processing for multi-single-cell data.
+        This method applies filtering and scaling to the single-cell data after it has been split.
+        Now supports multiple MuData objects in the input dictionary.
+
+        Args:
+            split_data: A dictionary containing the split data for each data split.
+            datapackage_key: The key in the DataPackage that contains the multi-single-cell data.
+            modality_key: Optional specific modality key for backward compatibility.
+                        If provided, only processes that specific modality.
+                        If None, processes all modalities in the dictionary.
+
+        Returns:
+            A dictionary containing processed DataPackage objects for each data split.
+
+        Raises:
+            ValueError: If the train split data is None.
+        """
+        processed_splits: Dict[str, Dict[str, Any]] = {}
+        train_split: Optional[Dict[str, Any]] = split_data.get("train")
+
+        if train_split is None:
+            raise ValueError(
+                "Train split data is None. Ensure that the data package contains valid train data."
+            )
+
+        train_data: Optional[Any] = train_split.get("data")
+        if train_data is None:
+            raise ValueError(
+                "Train split data is None. Ensure that the data package contains valid train data."
+            )
+
+        # Get all modality keys from the train data
+        mudata_dict = train_data[datapackage_key]
+
+        if modality_key is not None:
+            if modality_key not in mudata_dict:
+                raise ValueError(
+                    f"Specified modality_key '{modality_key}' not found in {list(mudata_dict.keys())}"
+                )
+            modality_keys = [modality_key]
+            print(
+                f"Processing single modality (backward compatibility): {modality_key}"
+            )
+        else:
+            modality_keys = list(mudata_dict.keys())
+            print(f"Processing {len(modality_keys)} MuData objects: {modality_keys}")
+
+        # Initialize storage for scalers and gene filters for each modality
+        if (
+            self.sc_scalers is None
+            and self.sc_genes_to_keep is None
+            and self.sc_general_genes_to_keep is None
+        ) or ("modality" in datapackage_key):
+            # Process each MuData object in the train split
+            processed_mudata_dict = {}
+            all_scalers = {}
+            all_sc_genes_to_keep = {}
+            all_general_genes_to_keep = {}
+
+            for current_modality_key in modality_keys:
+                print(f"Processing train modality: {current_modality_key}")
+
+                sc_filter = SingleCellFilter(
+                    data_info=self.config.data_config.data_info, config=self.config
+                )
+
+                # Single-cell specific filtering
+                filtered_train, sc_genes_to_keep = sc_filter.sc_postsplit_processing(
+                    mudata=mudata_dict[current_modality_key]
+                )
+
+                # General post-processing
+                processed_train, general_genes_to_keep, scalers = (
+                    sc_filter.general_postsplit_processing(
+                        mudata=filtered_train, scaler_map=None, gene_map=None
+                    )
+                )
+
+                # Store processed data and filters for this modality
+                processed_mudata_dict[current_modality_key] = processed_train
+                all_scalers[current_modality_key] = scalers
+                all_sc_genes_to_keep[current_modality_key] = sc_genes_to_keep
+                all_general_genes_to_keep[current_modality_key] = general_genes_to_keep
+
+            # Store all scalers and gene filters
+            self.sc_scalers = all_scalers
+            self.sc_genes_to_keep = all_sc_genes_to_keep
+            self.sc_general_genes_to_keep = all_general_genes_to_keep
+
+            # Update train data with processed MuData objects
+            train_data[datapackage_key] = processed_mudata_dict
+
+        else:
+            # Use existing scalers and gene filters
+            all_scalers = self.sc_scalers  # type: ignore
+            all_sc_genes_to_keep = self.sc_genes_to_keep  # type: ignore
+            all_general_genes_to_keep = self.sc_general_genes_to_keep  # type: ignore
+
+        # Store processed train split
+        processed_splits["train"] = {
+            "data": train_data,
+            "indices": split_data["train"]["indices"],
+        }
+
+        # Process other splits (val, test, etc.)
+        for split, split_package in split_data.items():
+            if split == "train":
+                continue
+
+            data_package = split_package["data"]
+            if data_package is None:
+                processed_splits[split] = split_package
+                continue
+
+            print(f"Processing {split} split")
+            processed_mudata_dict = {}
+
+            # Process each MuData object in this split
+            for current_modality_key in modality_keys:
+                print(f"Processing {split} modality: {current_modality_key}")
+
+                sc_filter = SingleCellFilter(
+                    data_info=self.config.data_config.data_info, config=self.config
+                )
+
+                # Apply single-cell filtering using train-derived gene map
+                filtered_sc_data, _ = sc_filter.sc_postsplit_processing(
+                    mudata=data_package[datapackage_key][current_modality_key],
+                    gene_map=all_sc_genes_to_keep[current_modality_key],
+                )
+
+                # Apply general processing using train-derived scalers and gene map
+                processed_general_data, _, _ = sc_filter.general_postsplit_processing(
+                    mudata=filtered_sc_data,
+                    gene_map=all_general_genes_to_keep[current_modality_key],
+                    scaler_map=all_scalers[current_modality_key],
+                )
+
+                processed_mudata_dict[current_modality_key] = processed_general_data
+
+            # Update data package with all processed MuData objects
+            data_package[datapackage_key] = processed_mudata_dict
+
+            processed_splits[split] = {
+                "data": data_package,
+                "indices": split_package["indices"],
+            }
+
+        return processed_splits
 
     def _postsplit_multi_bulk(
         self,
@@ -562,6 +645,22 @@ class BasePreprocessor(abc.ABC):
         else:
             data_package = raw_user_data
 
+        if self.config.requires_paired:
+            common_ids = data_package.get_common_ids()
+
+            data_package.from_modality = {
+                k: v.loc[common_ids]  # type: ignore
+                for k, v in data_package.from_modality.items()  # type: ignore
+            }  # type: ignore
+            data_package.to_modality = {
+                k: v.loc[common_ids]  # type: ignore
+                for k, v in data_package.to_modality.items()  # type: ignore
+            }  # type: ignore
+
+            data_package.annotation = {
+                k: v.loc[common_ids] for k, v in data_package.annotation.items()
+            }  # type: ignore
+
         def presplit_processor(
             modality_data: Dict[str, pd.DataFrame],
         ) -> Dict[str, pd.DataFrame]:
@@ -610,13 +709,25 @@ class BasePreprocessor(abc.ABC):
         if raw_user_data is None:
             screader = self.data_readers[DataCase.SINGLE_CELL_TO_SINGLE_CELL]
             mudata = screader.read_data(config=self.config)
-            mudata = mudata["multi_sc"]
+            mod_dict = mudata["multi_sc"]
 
             data_package = DataPackage()
-            data_package.from_modality = {self.from_key: mudata[self.from_key]}
-            data_package.to_modality = {self.to_key: mudata[self.to_key]}
+            data_package.from_modality = {self.from_key: mod_dict[self.from_key]}
+            data_package.to_modality = {self.to_key: mod_dict[self.to_key]}
         else:
             data_package = raw_user_data
+        if self.config.requires_paired:
+            common_ids = data_package.get_common_ids()
+
+            # Subset both from_modality and to_modality
+            data_package.from_modality = {
+                k: v[common_ids]
+                for k, v in data_package.from_modality.items()  # type: ignore
+            }
+            data_package.to_modality = {
+                k: v[common_ids]
+                for k, v in data_package.to_modality.items()  # type: ignore
+            }
 
         def presplit_processor(
             modality_data: Dict[str, Union[AnnData, Any]],
@@ -633,11 +744,11 @@ class BasePreprocessor(abc.ABC):
             # Check if it is AnnData and convert to MuData if needed
             if isinstance(modality_data, AnnData):
                 mudata = MuData({modality_key: modality_data})
-                return {modality_key: sc_filter.presplit_processing(mudata=mudata)}
+                return {modality_key: sc_filter.presplit_processing(multi_sc=mudata)}
 
             elif isinstance(modality_data, MuData):
                 return {
-                    modality_key: sc_filter.presplit_processing(mudata=modality_data)
+                    modality_key: sc_filter.presplit_processing(multi_sc=modality_data)
                 }
             else:
                 raise TypeError(
@@ -719,6 +830,34 @@ class BasePreprocessor(abc.ABC):
                 }
         else:
             data_package = raw_user_data
+
+        if self.config.requires_paired:
+            common_ids = data_package.get_common_ids()
+            if data_package.from_modality is not None:
+                for k, v in data_package.from_modality.items():
+                    if self._is_image_data(v):
+                        filtered_list = [
+                            img for img in v if img.sample_id in common_ids
+                        ]
+                        data_package.from_modality[k] = filtered_list
+                    else:
+                        data_package.from_modality[k] = v.loc[common_ids]
+
+            if data_package.to_modality is not None:
+                for k, v in data_package.to_modality.items():
+                    if self._is_image_data(v):
+                        filtered_list = [
+                            img for img in v if img.sample_id in common_ids
+                        ]
+                        data_package.to_modality[k] = filtered_list
+                    else:
+                        data_package.to_modality[k] = v.loc[common_ids]
+
+            if data_package.annotation is not None:
+                for side in ["from", "to"]:
+                    ann = data_package.annotation.get(side)
+                    if ann is not None:
+                        data_package.annotation[side] = ann.loc[common_ids]
 
         def presplit_processor(
             modality_data: Dict[str, Union[pd.DataFrame, List[ImgData]]],
@@ -811,6 +950,28 @@ class BasePreprocessor(abc.ABC):
             data_package.from_modality = {self.from_key: mudata}
             data_package.to_modality = {self.to_key: images[self.to_key]}
 
+        if self.config.requires_paired:
+            common_ids = data_package.get_common_ids()
+            if data_package.from_modality is not None:
+                for k, v in data_package.from_modality.items():
+                    if self._is_image_data(v):
+                        filtered_list = [
+                            img for img in v if img.sample_id in common_ids
+                        ]
+                        data_package.from_modality[k] = filtered_list
+                    else:
+                        data_package.from_modality[k] = v.loc[common_ids]
+
+            if data_package.to_modality is not None:
+                for k, v in data_package.to_modality.items():
+                    if self._is_image_data(v):
+                        filtered_list = [
+                            img for img in v if img.sample_id in common_ids
+                        ]
+                        data_package.to_modality[k] = filtered_list
+                    else:
+                        data_package.to_modality[k] = v.loc[common_ids]
+
         def presplit_processor(
             modality_data: Dict[str, Union[Any, List[ImgData]]], modality_key: str
         ) -> Dict[str, Union[Any, List[ImgData]]]:
@@ -887,6 +1048,24 @@ class BasePreprocessor(abc.ABC):
         else:
             data_package = raw_user_data
 
+        if self.config.requires_paired:
+            common_ids = data_package.get_common_ids()
+
+            def filter_imgdata_list(img_list, ids):
+                filtered = []
+                for imgdata in img_list:
+                    if imgdata.sample_id in ids:
+                        filtered.append(imgdata)
+                return filtered
+
+            data_package.from_modality[self.from_key] = filter_imgdata_list(
+                data_package.from_modality[self.from_key], common_ids
+            )
+
+            data_package.to_modality[self.to_key] = filter_imgdata_list(
+                data_package.to_modality[self.to_key], common_ids
+            )
+
         def presplit_processor(
             modality_data: Dict[str, List], modality_key: str
         ) -> Dict[str, List]:
@@ -945,28 +1124,21 @@ class BasePreprocessor(abc.ABC):
             split_indiced_config - (dict): the actual indicies used for splitting
         """
         data_splitter = DataSplitter(config=self.config)
-        n_samples = data_package.get_n_samples(is_paired=self.config.paired_translation)
+        n_samples = data_package.get_n_samples()
+        split_indices_config = n_samples.copy()
 
-        split_indices_config: dict = {}
-        if self.config.paired_translation or self.config.paired_translation is None:
-            split_indices_config["paired"] = data_splitter.split(
-                n_samples=n_samples["paired_count"]
-            )
-        else:
-            split_indices_config["from_indices"] = data_splitter.split(
-                n_samples=n_samples["from"]
-            )
-            split_indices_config["to_indices"] = data_splitter.split(
-                n_samples=n_samples["to"]
-            )
+        print(f" n_samples: {n_samples}")
+        for k, v in n_samples.items():
+            for subkey, n in v.items():
+                if n == 0 or n is None:
+                    split_indices_config[k][subkey] = None
+                    continue
+                split_indices_config[k][subkey] = data_splitter.split(n_samples=n)
         data_splitter_instance = DataPackageSplitter(
             data_package=data_package,
             config=self.config,
-            indices=split_indices_config.get("paired"),
-            from_indices=split_indices_config.get("from_indices"),
-            to_indices=split_indices_config.get("to_indices"),
+            indices=split_indices_config,
         )
-
         return data_splitter_instance.split(), split_indices_config
 
     def _is_image_data(self, data: Any) -> bool:
@@ -1077,4 +1249,4 @@ class BasePreprocessor(abc.ABC):
     def format_reconstruction(
         self, reconstruction: torch.Tensor, result: Optional[Result] = None
     ) -> DataPackage:
-        return DataPackage(multi_sc={"multi_sc": reconstruction})
+        pass

@@ -55,7 +55,7 @@ def real_unpaired_config():
         "METH": DataInfo(translate_direction="to"),
     }
     config = DefaultConfig(
-        paired_translation=False,  # we want to have matched samples in this case
+        requires_paired=False,  # we want to have matched samples in this case
         data_case=DataCase.BULK_TO_BULK,
         data_config=DataConfig(data_info=data_info),
     )
@@ -112,7 +112,7 @@ def paired_config():
 
 @pytest.fixture
 def unpaired_config():
-    return DefaultConfig(paired_translation=False)
+    return DefaultConfig(requires_paired=False)
 
 
 def test_split_paired_returns_all_splits(

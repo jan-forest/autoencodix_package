@@ -153,8 +153,8 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
 
     # Datasets configuration --------------------------------------------------
     data_config: DataConfig = DataConfig(data_info={})
-    paired_translation: Union[bool, None] = Field(
-        default_factory=lambda: None,
+    requires_paired: Union[bool, None] = Field(
+        default_factory=lambda: True,
         description="Indicator if the samples for the xmodalix are paired, based on some sample id",
     )
 
@@ -422,6 +422,18 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         device = values.data.get("device")
         if device == "mps" and v != "auto":
             raise ValueError("MPS backend only supports GPU strategy 'auto'")
+
+    @model_validator(mode="after")
+    def validate_k_filter_with_nonzero_var(self):
+        k_filter = self.k_filter
+
+        data_info = self.data_config.data_info
+
+        for info in data_info.values():
+            if info.filtering == "NONZEROVAR" and k_filter is not None:
+                raise ValueError("k_filter cannot be combined with DataInfo that has scaling set to 'NONZEROVAR'")
+
+        return self
 
     #### END VALIDATION #### --------------------------------------------------
 

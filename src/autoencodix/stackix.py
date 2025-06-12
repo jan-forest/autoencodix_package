@@ -47,7 +47,7 @@ class Stackix(BasePipeline):
 
     def __init__(
         self,
-        user_data: Optional[Union[DataPackage, DatasetContainer]] = None,
+        data: Optional[Union[DataPackage, DatasetContainer]] = None,
         trainer_type: Type[BaseTrainer] = StackixTrainer,
         dataset_type: Type[BaseDataset] = StackixDataset,
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
@@ -93,7 +93,7 @@ class Stackix(BasePipeline):
             Configuration object
         """
         super().__init__(
-            data=user_data,
+            data=data,
             dataset_type=dataset_type
             or NumericDataset,  # Fallback, but not directly used
             trainer_type=trainer_type,
@@ -104,7 +104,7 @@ class Stackix(BasePipeline):
             evaluator=evaluator,
             result=result,
             datasplitter_type=datasplitter_type,
-            config=config or DefaultConfig(),
+            config=config,
             custom_split=custom_splits,
         )
 
@@ -125,7 +125,9 @@ class Stackix(BasePipeline):
             "checkpoint_interval",
         }
     )
-    def sample_latent_space(self,config, split: str = "test", epoch: int = -1) -> torch.Tensor:
+    def sample_latent_space(
+        self, config, split: str = "test", epoch: int = -1
+    ) -> torch.Tensor:
         """
         Samples new latent space points from the learned distribution.
 

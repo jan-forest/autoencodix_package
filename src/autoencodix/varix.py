@@ -64,7 +64,7 @@ class Varix(BasePipeline):
 
     def __init__(
         self,
-        user_data: Optional[Union[DataPackage, DatasetContainer]] = None,
+        data: Optional[Union[DataPackage, DatasetContainer]] = None,
         trainer_type: Type[BaseTrainer] = GeneralTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
@@ -108,7 +108,7 @@ class Varix(BasePipeline):
         """
 
         super().__init__(
-            data=user_data,
+            data=data,
             dataset_type=dataset_type,
             trainer_type=trainer_type,
             model_type=model_type,
@@ -118,7 +118,7 @@ class Varix(BasePipeline):
             evaluator=evaluator,
             result=result,
             datasplitter_type=datasplitter_type,
-            config=config or DefaultConfig(),
+            config=config,
             custom_split=custom_splits,
         )
 

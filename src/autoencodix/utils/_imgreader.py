@@ -273,8 +273,8 @@ class ImageDataReader:
                     for f in config.data_config.data_info.values()
                     if f.data_type == "ANNOTATION"
                 )
-                if not config.paired_translation:
-                    if config.paired_translation is not None:
+                if not config.requires_paired:
+                    if config.requires_paired is not None:
                         
                         raise ValueError(
                             "Img specific annotation file is required for unpaired translation."
@@ -289,7 +289,7 @@ class ImageDataReader:
             to_h=to_h,
             to_w=to_w,
             annotation_df=annotation,
-            is_paired=config.paired_translation,
+            is_paired=config.requires_paired,
         )
 
         return images

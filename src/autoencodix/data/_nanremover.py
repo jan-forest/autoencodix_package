@@ -132,18 +132,24 @@ class NaNRemover:
             data.annotation = non_na  # type: ignore
 
         # Handle MuData in multi_sc
-        if data.multi_sc is not None:
+        if data.multi_sc is not None and self.config.requires_paired:
             mudata = data.multi_sc["multi_sc"]
             # Process each modality
             for mod_name, mod_data in mudata.mod.items():
-                processed_mod = self._process_modality(mod_data)
+                processed_mod = self._process_modality(adata=mod_data)
                 data.multi_sc["multi_sc"].mod[mod_name] = processed_mod
 
-            # Ensure cell alignment across modalities
-            common_cells = list(
-                set.intersection(*(set(mod.obs_names) for mod in mudata.mod.values()))
-            )
-            data.multi_sc = data.multi_sc["multi_sc"][common_cells]
+        elif data.multi_sc is not None:
+            print(f"data in multi_sc: {data.multi_sc}")
+            processed = {k: None for k, _ in data.multi_sc.items()}
+
+            for k, v in data.multi_sc.items():
+                # we know from screader that there is only one modality
+                for modkey, adata in v.mod.items():
+                    processed_mod = self._process_modality(adata=adata)
+                    processed_mod = md.MuData({modkey: processed_mod})
+                processed[k] = processed_mod
+            data.multi_sc = processed
 
         # Handle from_modality and to_modality (for translation cases)
         for direction in ["from_modality", "to_modality"]:

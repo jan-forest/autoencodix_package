@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Type, Union, List
+from typing import Dict, Optional, Type, Union, List, Tuple
 import torch
 from torch.utils.data import DataLoader
 
@@ -46,6 +46,7 @@ class StackixTrainer(GeneralTrainer):
         orchestrator_type: Type[StackixOrchestrator] = StackixOrchestrator,
         trainer_type: Type[BaseTrainer] = GeneralTrainer,
         workdir: str = "./stackix_work",
+        ontologies: Optional[Tuple] = None,
     ):
         """
         Initialize the StackixTrainer with datasets and configuration.

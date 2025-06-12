@@ -91,7 +91,7 @@ class SingleCellFilter:
 
         return valid_layers
 
-    def presplit_processing(self, mudata: MuData) -> MuData:
+    def _presplit_processing(self, mudata: MuData) -> MuData:
         """
         Preprocess the data using modality-specific configurations.
         Returns
@@ -99,7 +99,7 @@ class SingleCellFilter:
         MuData
             Preprocessed data
         """
-
+        print(f"mudata: {mudata}")
         for mod_key, mod_data in mudata.mod.items():
             data_info = self._get_data_info_for_modality(mod_key)
             if data_info is not None:
@@ -120,6 +120,19 @@ class SingleCellFilter:
                 mudata.mod[mod_key] = mod_data
 
         return mudata
+
+    def presplit_processing(
+        self, multi_sc: Union[MuData, Dict[str, MuData]]
+    ) -> Dict[str, MuData]:
+
+        from mudata import MuData
+        if isinstance(multi_sc, MuData):
+            return self._presplit_processing(mudata=multi_sc)
+        res = {k: None for k in multi_sc.keys()}
+        for k, v in multi_sc.items():
+            processed = self._presplit_processing(mudata=v)
+            res[k] = processed
+        return res
 
     def _to_dataframe(self, mod_data, layer=None) -> pd.DataFrame:
         """

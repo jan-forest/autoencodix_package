@@ -133,7 +133,7 @@ class StackixOrchestrator:
         modality: str,
         modality_dataset: BaseDataset,
         valid_modality_dataset: Optional[BaseDataset] = None,
-    ) -> Tuple[BaseAutoencoder, Result]:
+    ) -> None:
         """
         Trains a single modality and returns the trained model and result.
 

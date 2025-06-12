@@ -110,9 +110,7 @@ class DataPackage:
             ]
         )
 
-    def get_n_samples(
-        self
-    ) -> Dict[str, Dict[str, int]]:
+    def get_n_samples(self) -> Dict[str, Dict[str, int]]:
         """Get the number of samples for each data type in nested dictionary format.
 
         Returns:
@@ -123,27 +121,14 @@ class DataPackage:
         # Process each main attribute
         for attr_name in self.__annotations__.keys():
             attr_value = getattr(self, attr_name)
-            print(f"type of attr_value: {type(attr_value)}")
-
 
             if isinstance(attr_value, dict):
                 # Handle dictionary attributes (multi_sc, multi_bulk, etc.)
                 sub_counts = {}
-                print("dict case")
                 for sub_key, sub_value in attr_value.items():
-                    if sub_value is None or sub_value == {}:
-                        print(f"Skipping empty sub_value for {sub_key}")
+                    if sub_value is None or len(sub_value) == 0:
                         continue
-                    print(f"sub_key: {sub_key}")
-                    if sub_key == "multi_sc":
-                        print("multi_sc")
-
-                        for mod_name, mod_data in sub_value.mod.items():
-                            count = self._get_n_samples(mod_data)
-                            sub_counts[mod_name] = count
-                    else:
-                        sub_counts[sub_key] = self._get_n_samples(sub_value)
-                print(f"sub_counts: {sub_counts}")
+                    sub_counts[sub_key] = self._get_n_samples(sub_value)
                 n_samples[attr_name] = sub_counts if sub_counts else {}
             else:
                 # Handle non-dictionary attributes

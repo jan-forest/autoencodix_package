@@ -423,17 +423,17 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         if device == "mps" and v != "auto":
             raise ValueError("MPS backend only supports GPU strategy 'auto'")
 
-    @field_validator("k_filter")
-    def validate_k_filter_with_nonzero_var(cls, values):
-        data_config = values.get("data_config")
-        k_filter = values.get("k_filter")
+    @model_validator(mode="after")
+    def validate_k_filter_with_nonzero_var(self):
+        k_filter = self.k_filter
 
-        if data_config:
-            for data_info in data_config.data_info.values():
-                if data_info.scaling == "NONZEROVAR" and k_filter is None:
-                    raise ValueError("k_filter cannot be None when any DataInfo has scaling set to 'NONZEROVAR'")
+        data_info = self.data_config.data_info
 
-        return values
+        for info in data_info.values():
+            if info.filtering == "NONZEROVAR" and k_filter is not None:
+                raise ValueError("k_filter cannot be combined with DataInfo that has scaling set to 'NONZEROVAR'")
+
+        return self
 
     #### END VALIDATION #### --------------------------------------------------
 

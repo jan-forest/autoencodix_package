@@ -109,23 +109,39 @@ class GeneralPreprocessor(BasePreprocessor):
         return ds
 
     def _process_data_package(self, data_dict: Dict[str, Any]) -> BaseDataset:
-        print(f"data_dict: {data_dict['data']}")
+        # print(f"data_dict: {data_dict['data']}")
         data, split_ids = data_dict["data"], data_dict["indices"]
-
         # MULTI-BULK
         if data.multi_bulk is not None:
             # reset bulk mapping
             metadata = data.annotation
             bulk_dict: Dict[str, pd.DataFrame] = data.multi_bulk
 
-            combined_cols: List[str] = []
-            start_idx = 0
+            # Check if all DataFrames have the same number of samples
+            sample_counts = {}
             for subkey, df in bulk_dict.items():
                 if not isinstance(df, pd.DataFrame):
                     raise ValueError(
                         f"Expected a DataFrame for '{subkey}', got {type(df)}"
                     )
+                sample_counts[subkey] = df.shape[0]
+                print(f"cur shape: {subkey}: {df.shape}")
 
+            # Validate all modalities have the same number of samples
+            unique_sample_counts = set(sample_counts.values())
+            if len(unique_sample_counts) > 1:
+                sample_count_str = ", ".join(
+                    [f"{k}: {v} samples" for k, v in sample_counts.items()]
+                )
+                raise NotImplementedError(
+                    f"Different sample counts across modalities are not currently supported for Varix and Vanillix"
+                    "Set requires_pared=True in config."
+                    f"Found: {sample_count_str}. All modalities must have the same number of samples."
+                )
+
+            combined_cols: List[str] = []
+            start_idx = 0
+            for subkey, df in bulk_dict.items():
                 n_feats = df.shape[1]
                 end_idx = start_idx + n_feats
                 self._reverse_mapping_multi_bulk[self._split][subkey] = (
@@ -144,12 +160,14 @@ class GeneralPreprocessor(BasePreprocessor):
                 ids=combined_df.index.tolist(),
                 feature_ids=combined_cols,
             )
-
         # MULTI-SINGLE-CELL
         elif data.multi_sc is not None:
             # reset single-cell mapping
-            mudata: md.MuData = data.multi_sc["multi_sc"]
-
+            mudata: md.MuData = data.multi_sc.get("multi_sc", None)
+            if mudata is None:
+                raise NotImplementedError(
+                    "Unpaired multi Single Cell case not implemented vor Varix and Vanillix, set requires_paired=True in config"
+                )
             combined_data = self._combine_modality_data(mudata)
             combined_obs = pd.concat([mod.obs for mod in mudata.mod.values()], axis=1)
             # collect feature IDs in concatenation order
@@ -157,7 +175,6 @@ class GeneralPreprocessor(BasePreprocessor):
             for layers in self._reverse_mapping_multi_sc[self._split].values():
                 for _, fids in layers.values():
                     feature_ids.extend(fids)
-
             return self._create_numeric_dataset(
                 data=combined_data,
                 config=self.config,
@@ -166,7 +183,6 @@ class GeneralPreprocessor(BasePreprocessor):
                 ids=combined_obs.index.tolist(),
                 feature_ids=feature_ids,
             )
-
         else:
             raise NotImplementedError(
                 "GeneralPreprocessor only handles multi_bulk or multi_sc."
@@ -218,11 +234,15 @@ class GeneralPreprocessor(BasePreprocessor):
         """
         Match the split based on the number of samples.
         """
+        print(f"n_samples in format recon: {n_samples}")
         for split, split_data in self._datapackage_dict.items():
+            print(split)
             data = split_data.get("data")
             if data is None:
                 continue
-            if n_samples == data.get_n_samples(is_paired=True)["paired_count"]:
+            ref_n = data.get_n_samples()["paired_count"]
+            print(f"n_samples from datatpackge: {ref_n}")
+            if n_samples == data.get_n_samples()["paired_count"]["paired_count"]:
                 return split
         raise ValueError(
             f"Cannot find matching split for {n_samples} samples in the dataset."

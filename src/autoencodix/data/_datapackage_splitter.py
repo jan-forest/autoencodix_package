@@ -61,7 +61,12 @@ class DataPackageSplitter:
             return obj.iloc[indices]
         elif isinstance(obj, list):
             return [obj[i] for i in indices]
-        elif isinstance(obj, (AnnData)):
+        elif isinstance(obj, (AnnData, MuData)):
+            print(f"shape of obj: {obj.shape}")
+            print(f"obj: {obj}")
+            print(f"len(ind): {len(indices)}")
+            print(f"max of index{ np.max(indices)}")
+            print(f"ind: {indices}")
             return obj[indices]
         else:
             raise TypeError(
@@ -88,20 +93,10 @@ class DataPackageSplitter:
         for key, value in self._data_package.__dict__.items():
             if value is None:
                 continue
-            if key == "multi_sc":
-                mudata = value["multi_sc"]
-                split_data[key] = self._split_mudata(mudata, self.indices[key], split)
-            elif key in ["to_modality", "from_modality"]:
-                if isinstance(value[key], MuData):
-                    mudata = value[key]
-                    split_data[key] = self._split_mudata(
-                        mudata, self.indices[key], split
-                    )
-            else:
-                split_data[key] = {
-                    modality: self._indexing(data, self.indices[key][modality][split])
-                    for modality, data in value.items()
-                }
+            split_data[key] = {
+                modality: self._indexing(data, self.indices[key][modality][split])
+                for modality, data in value.items()
+            }
         return DataPackage(**split_data)
 
     def _split_mudata(
@@ -137,30 +132,19 @@ class DataPackageSplitter:
             raise ValueError("No data package available for splitting")
 
         splits = ["train", "valid", "test"]
-        result: Dict[str, Optional[Dict[str, Any]]] = {}
-
-        # if self._requires_paired():
-            # check_lens = []
-            # for _, sub_dict in self.indices.items():
-            #     for _, cur_splits in sub_dict.items():
-            #         for split in splits:
-            #             ids = cur_splits[split]
-            #             if len(ids) == 0:
-            #                 continue
-            #             check_lens.append(len(ids))
-            # if not len(set(check_lens)) == 1:
-            #     raise ValueError(
-            #         "All splits must have the same number of indices in the paired case."
-            #     )
+        result: Dict[str, Optional[Dict[str, Any]]] = {
+            "train": {},
+            "valid": {},
+            "test": {},
+        }
 
         for split in splits:
-            if self.indices is None or split not in self.indices:
+            if self.indices is None:  # or split not in self.indices:
                 result[split] = None
                 continue
-            result = {
-                split: {
-                    "data": self._split_data_package(split=split),
-                    "indices": self.indices
-                }
+            result[split] = {
+                "data": self._split_data_package(split=split),
+                "indices": self.indices,
             }
+
         return result

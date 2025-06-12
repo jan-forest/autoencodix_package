@@ -53,9 +53,12 @@ class StackixDataset(NumericDataset):
         # Use first modality for base class initialization
         first_modality_key = next(iter(dataset_dict.keys()))
         first_modality = dataset_dict[first_modality_key]
-        data = torch.cat(
-            [v.data for k, v in dataset_dict.items() if hasattr(v, "data")], dim=1
-        )
+        try:
+            data = torch.cat(
+                [v.data for _, v in dataset_dict.items() if hasattr(v, "data")], dim=1
+            )
+        except Exception:
+            raise NotImplementedError("Data modalities have different shapes, set requires_paired=True in config")
         super().__init__(
             data=data,
             sample_ids=first_modality.sample_ids,

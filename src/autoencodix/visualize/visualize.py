@@ -172,96 +172,6 @@ class Visualizer(BaseVisualizer):
         --------
         None
         """
-        if plot_type == "2D-scatter":
-            # Set Defaults
-            if epoch is None:
-                # Infer total epochs from losses
-                epoch = len(result.losses.get()) - 1
-
-            if split == "all":
-                df_latent = pd.DataFrame(
-                    np.concatenate(
-                        [
-                            result.latentspaces.get(epoch=epoch, split="train"),
-                            result.latentspaces.get(epoch=epoch, split="valid"),
-                            result.latentspaces.get(epoch=-1, split="test"),
-                        ]
-                    )
-                )
-            else:
-                if split == "test":
-                    df_latent = pd.DataFrame(
-                        result.latentspaces.get(epoch=-1, split=split)
-                    )
-                else:
-                    df_latent = pd.DataFrame(
-                        result.latentspaces.get(epoch=epoch, split=split)
-                    )
-
-            if label_list is None:
-                label_list = ["all"] * df_latent.shape[0]
-
-            ## Make 2D Embedding with UMAP
-            if df_latent.shape[1] > 2:
-                reducer = UMAP(n_components=2)
-                embedding = pd.DataFrame(reducer.fit_transform(df_latent))
-            else:
-                embedding = df_latent
-
-            # if not self.plots["2D-scatter"][epoch][split][
-            #     param
-            # ]:  ## Create when not exist
-            self.plots["2D-scatter"][epoch][split][param] = self.plot_2D(
-                embedding=embedding,
-                labels=label_list,
-                param=param,
-                layer=f"2D latent space (epoch {epoch})",
-                figsize=(12, 8),
-                center=True,
-            )
-
-            fig = self.plots["2D-scatter"][epoch][split][param]
-            show_figure(fig)
-            plt.show()
-
-        if plot_type == "Ridgeline":
-            if epoch is None:
-                # Infer total epochs from losses
-                epoch = len(result.losses.get()) - 1
-
-            if split == "all":
-                df_latent = pd.DataFrame(
-                    np.concatenate(
-                        [
-                            result.latentspaces.get(epoch=epoch, split="train"),
-                            result.latentspaces.get(epoch=epoch, split="valid"),
-                            result.latentspaces.get(epoch=-1, split="test"),
-                        ]
-                    )
-                )
-            else:
-                if split == "test":
-                    df_latent = pd.DataFrame(
-                        result.latentspaces.get(epoch=-1, split=split)
-                    )
-                else:
-                    df_latent = pd.DataFrame(
-                        result.latentspaces.get(epoch=epoch, split=split)
-                    )
-
-            if label_list is None:
-                label_list = ["all"] * df_latent.shape[0]
-
-            ## Make ridgeline plot
-
-            self.plots["Ridgeline"][epoch][split][param] = self.plot_latent_ridge(
-                lat_space=df_latent, label_list=label_list, param=param
-            )
-
-            fig = self.plots["Ridgeline"][epoch][split][param].figure
-            show_figure(fig)
-            plt.show()
-
         if plot_type == "Coverage-Correlation":
             ## TODO
             print("Not implemented yet, empty figure will be shown instead")
@@ -269,6 +179,72 @@ class Visualizer(BaseVisualizer):
             self.plots["Coverage-Correlation"] = fig
             show_figure(fig)
             plt.show()
+        
+        else:
+            # Set Defaults
+            if epoch is None:
+                # Infer total epochs from losses
+                epoch = len(result.losses.get()) - 1
+
+            if split == "all":
+                df_latent = pd.concat(
+                        [
+                            result.get_latent_df(epoch=epoch, split="train"),
+                            result.get_latent_df(epoch=epoch, split="valid"),
+                            result.get_latent_df(epoch=-1, split="test"),
+                        ]
+                    )
+            else:
+                if split == "test":
+                    df_latent = pd.DataFrame(
+                        result.latentspaces.get(epoch=-1, split=split)
+                    )
+                    df_latent = result.get_latent_df(epoch=-1, split=split)
+                else:
+                    # df_latent = pd.DataFrame(
+                    #     result.latentspaces.get(epoch=epoch, split=split)
+                    # )
+                    df_latent = result.get_latent_df(epoch=epoch, split=split)
+
+            if label_list is None:
+                label_list = ["all"] * df_latent.shape[0]
+            
+            if plot_type == "2D-scatter":
+                ## Make 2D Embedding with UMAP
+                if df_latent.shape[1] > 2:
+                    reducer = UMAP(n_components=2)
+                    embedding = pd.DataFrame(reducer.fit_transform(df_latent))
+                else:
+                    embedding = df_latent
+
+                # if not self.plots["2D-scatter"][epoch][split][
+                #     param
+                # ]:  ## Create when not exist
+                self.plots["2D-scatter"][epoch][split][param] = self.plot_2D(
+                    embedding=embedding,
+                    labels=label_list,
+                    param=param,
+                    layer=f"2D latent space (epoch {epoch})",
+                    figsize=(12, 8),
+                    center=True,
+                )
+
+                fig = self.plots["2D-scatter"][epoch][split][param]
+                show_figure(fig)
+                plt.show()
+
+            if plot_type == "Ridgeline":
+                ## Make ridgeline plot
+
+                self.plots["Ridgeline"][epoch][split][param] = self.plot_latent_ridge(
+                    lat_space=df_latent, label_list=label_list, param=param
+                )
+
+                fig = self.plots["Ridgeline"][epoch][split][param].figure
+                show_figure(fig)
+                plt.show()
+
+
 
     def show_weights(self) -> None:
         """

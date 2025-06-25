@@ -99,20 +99,22 @@ class OntixArchitecture(BaseAutoencoder):
 
         """
         # Read ontology from config
-        # self.ontologies 
-        # ont_dic_list = dict()
-        masks = tuple()
-        # x = 1
-        # feature_names are all values in the last ontology layer
-        feature_names = set()
-        for key, values in self.ontologies[-1].items():
-            feature_names.update(values)
-        feature_names = list(feature_names)
 
-        # Remove features in feature_names which are not in feature_order
-        feature_names = [f for f in feature_names if f in feature_order]
-        # Order feature_names according to feature_order
-        feature_names = sorted(feature_names, key=lambda x: feature_order.index(x))
+        masks = tuple()
+        # feature_names are all values in the last ontology layer
+        all_feature_names = set()
+        for key, values in self.ontologies[-1].items():
+            all_feature_names.update(values)
+        all_feature_names = list(all_feature_names)
+        print("Ontix checks:")
+        print(f"All possible feature names length: {len(all_feature_names)}")
+        print(f"Feature order length: {len(feature_order)}")
+        # Check if all features in feature_order are present in all_feature_names
+        feature_names =  [f for f in feature_order]
+        missing_features = [f for f in feature_order if f not in all_feature_names]
+        if missing_features:
+            print(f"Features in feature_order not found in all_feature_names: {missing_features}")
+        print(f"Feature names without filtering: {len(feature_names)}")
 
         # Enumerate through the ontologies
         for x, ont_dic in enumerate(self.ontologies):

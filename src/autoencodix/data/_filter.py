@@ -52,7 +52,9 @@ class DataFilter:
                                                 on the training data. None initially.
     """
 
-    def __init__(self, data_info: DataInfo):
+    def __init__(self,
+                data_info: DataInfo,
+                ontologies: Optional[tuple] = None):  # Addition to Varix, mandotory for Ontix
         """Initializes the DataFilter with a configuration.
 
         Args:
@@ -61,6 +63,7 @@ class DataFilter:
         self.data_info = data_info
         self.filtered_features: Optional[Set[str]] = None
         self._scaler = None
+        self.ontologies= ontologies  # Addition to Varix, mandotory for Ontix
 
     def _filter_nonzero_variance(self, df: pd.DataFrame) -> pd.DataFrame:
         """Removes features with zero variance.
@@ -197,6 +200,24 @@ class DataFilter:
             return df, df.columns.tolist()
 
         filtered_df = df.copy()
+
+        ## Remove features which are not in the ontology for Ontix architecture
+        ## must be done before other filtering is applied 
+        if hasattr(self, 'ontologies') and self.ontologies is not None:
+            all_feature_names = set()
+            for key, values in self.ontologies[-1].items():
+                all_feature_names.update(values)
+            all_feature_names = list(all_feature_names)
+            feature_order = filtered_df.columns.tolist()
+            missing_features = [f for f in feature_order if f not in all_feature_names]
+            ## Filter out features not in the ontology
+            feature_order = [f for f in feature_order if f in all_feature_names]
+            if missing_features:
+                print(f"Features in feature_order not found in all_feature_names: {missing_features}")
+
+            filtered_df = filtered_df.loc[:,feature_order]         
+            
+        ####
 
         if filtering_method == FilterMethod.NOFILT:
             return filtered_df, df.columns.tolist()

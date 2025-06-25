@@ -339,5 +339,9 @@ class Result:
     def get_latent_df(self, epoch: int, split: str) -> pd.DataFrame:
         latents = self.latentspaces.get(epoch=epoch, split=split)
         ids = self.sample_ids.get(epoch=epoch, split=split)
-        return pd.DataFrame(latents, index=ids)
+        if hasattr(self.model, "ontologies"):
+            cols = list(self.model.ontologies[0].keys())
+        else:
+            cols = ["LatDim_" + str(i) for i in range(latents.shape[1])]
+        return pd.DataFrame(latents, index=ids, columns=cols)
 

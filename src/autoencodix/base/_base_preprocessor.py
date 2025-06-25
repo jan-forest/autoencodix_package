@@ -50,7 +50,9 @@ class BasePreprocessor(abc.ABC):
         _dataset_container: Optional DatasetContainer to hold the processed datasets.
     """
 
-    def __init__(self, config: DefaultConfig):
+    def __init__(self, 
+                 config: DefaultConfig, 
+                 ):
         """Initializes the BasePreprocessor with a configuration object.
 
         Args :
@@ -552,7 +554,8 @@ class BasePreprocessor(abc.ABC):
                 self.config.data_config.data_info[k].k_filter = cur_k_filter
 
                 data_processor = DataFilter(
-                    data_info=self.config.data_config.data_info[k]
+                    data_info=self.config.data_config.data_info[k],
+                    ontologies= self.ontologies
                 )
                 filtered_df, genes_to_keep = data_processor.filter(df=v)
                 scaler = data_processor.fit_scaler(df=filtered_df)
@@ -591,7 +594,8 @@ class BasePreprocessor(abc.ABC):
                 if v is None:
                     continue
                 data_processor = DataFilter(
-                    data_info=self.config.data_config.data_info[k]
+                    data_info=self.config.data_config.data_info[k],
+                    ontologies=self.ontologies,
                 )
                 filtered_df, _ = data_processor.filter(
                     df=v, genes_to_keep=genes_to_keep_map[k]

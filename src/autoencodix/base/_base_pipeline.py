@@ -396,9 +396,15 @@ class BasePipeline(abc.ABC):
             raise NotImplementedError("Preprocessor not initialized")
         self._validate_user_data()
         if self.preprocessed_data is None:
-            self._datasets = self._preprocessor.preprocess(
-                raw_user_data=self.raw_user_data # type: ignore
-            )
+            if hasattr(self, "ontologies"):
+                self._datasets = self._preprocessor.preprocess(
+                    raw_user_data=self.raw_user_data,  # type: ignore
+                    ontologies=self.ontologies,  # Ontix
+                )
+            else:
+                self._datasets = self._preprocessor.preprocess(
+                    raw_user_data=self.raw_user_data # type: ignore
+                )
             self.result.datasets = self._datasets
         else:
             self._datasets = self.preprocessed_data

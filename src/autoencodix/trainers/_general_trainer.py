@@ -105,6 +105,8 @@ class GeneralTrainer(BaseTrainer):
                     for k, v in sub_losses.items():
                         epoch_sub_losses[k] += v.item()
                 # loss per epoch savving -----------------------------------
+                # TODO losses not normalized by batch/sample size
+                # TODO save and report also r2 
                 self._result.losses.add(
                     epoch=epoch, split="train", data=epoch_loss / len(self._trainloader)
                 )
@@ -115,6 +117,12 @@ class GeneralTrainer(BaseTrainer):
                         k: v / len(self._trainloader)
                         for k, v in epoch_sub_losses.items()
                     },
+                )
+                # Print epoch and loss information
+                self._fabric.print(
+                    f"Epoch {epoch + 1}/{self._config.epochs}, "
+                    f"Train Loss: {epoch_loss / len(self._trainloader):.4f}, "
+                    f"Sub Losses: {', '.join([f'{k}: {v / len(self._trainloader):.4f}' for k, v in epoch_sub_losses.items()])}"
                 )
 
                 # validation loss per epoch ---------------------------------
@@ -253,9 +261,11 @@ class GeneralTrainer(BaseTrainer):
         inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
         with self._fabric.autocast(), torch.no_grad():
             outputs = []
-            for _, (data, _) in enumerate(inference_loader):
+            test_sample_ids= []
+            for _, (data, sample_ids) in enumerate(inference_loader):
+                test_sample_ids.append(list(sample_ids))
                 model_output = model(data)
                 outputs.append(model_output)
-            self._capture_dynamics(epoch=-1, model_output=outputs, split="test")
+            self._capture_dynamics(epoch=-1, model_output=outputs, split="test", sample_ids=test_sample_ids)
 
         return self._result

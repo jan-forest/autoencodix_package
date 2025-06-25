@@ -105,24 +105,23 @@ class GeneralTrainer(BaseTrainer):
                     for k, v in sub_losses.items():
                         epoch_sub_losses[k] += v.item()
                 # loss per epoch savving -----------------------------------
-                # TODO losses not normalized by batch/sample size
                 # TODO save and report also r2 
                 self._result.losses.add(
-                    epoch=epoch, split="train", data=epoch_loss / len(self._trainloader)
+                    epoch=epoch, split="train", data=epoch_loss / len(self._trainloader.dataset)
                 )
                 self._result.sub_losses.add(
                     epoch=epoch,
                     split="train",
                     data={
-                        k: v / len(self._trainloader)
+                        k: v / len(self._trainloader.dataset)
                         for k, v in epoch_sub_losses.items()
                     },
                 )
                 # Print epoch and loss information
                 self._fabric.print(
                     f"Epoch {epoch + 1}/{self._config.epochs}, "
-                    f"Train Loss: {epoch_loss / len(self._trainloader):.4f}, "
-                    f"Sub Losses: {', '.join([f'{k}: {v / len(self._trainloader):.4f}' for k, v in epoch_sub_losses.items()])}"
+                    f"Train Loss: {epoch_loss / len(self._trainloader.dataset):.4f}, "
+                    f"Sub Losses: {', '.join([f'{k}: {v / len(self._trainloader.dataset):.4f}' for k, v in epoch_sub_losses.items()])}"
                 )
 
                 # validation loss per epoch ---------------------------------
@@ -143,13 +142,13 @@ class GeneralTrainer(BaseTrainer):
                     self._result.losses.add(
                         epoch=epoch,
                         split="valid",
-                        data=valid_loss / len(self._validloader),
+                        data=valid_loss / len(self._validloader.dataset),
                     )
                     self._result.sub_losses.add(
                         epoch=epoch,
                         split="valid",
                         data={
-                            k: v / len(self._validloader)
+                            k: v / len(self._validloader.dataset)
                             for k, v in valid_epoch_sub_losses.items()
                         },
                     )
@@ -171,6 +170,12 @@ class GeneralTrainer(BaseTrainer):
                             split="valid",
                             sample_ids=valid_sample_ids,
                         )
+                # Print epoch and validation loss information
+                self._fabric.print(
+                    # f"Epoch {epoch + 1}/{self._config.epochs}, "
+                    f"Valid Loss: {valid_loss / len(self._validloader.dataset):.4f}, "
+                    f"Sub Losses: {', '.join([f'{k}: {v / len(self._validloader.dataset):.4f}' for k, v in valid_epoch_sub_losses.items()])}"
+                )
 
             self._result.model = next(self._model.children())
             return self._result

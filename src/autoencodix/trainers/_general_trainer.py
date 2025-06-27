@@ -117,12 +117,13 @@ class GeneralTrainer(BaseTrainer):
                         for k, v in epoch_sub_losses.items()
                     },
                 )
-                # Print epoch and loss information
-                self._fabric.print(
-                    f"Epoch {epoch + 1}/{self._config.epochs}, "
-                    f"Train Loss: {epoch_loss / len(self._trainloader.dataset):.4f}, "
-                    f"Sub Losses: {', '.join([f'{k}: {v / len(self._trainloader.dataset):.4f}' for k, v in epoch_sub_losses.items()])}"
-                )
+                if not (epoch + 1) % self._config.checkpoint_interval:
+                    # Print epoch and loss information
+                    self._fabric.print(
+                        f"Epoch {epoch + 1}/{self._config.epochs}, "
+                        f"Train Loss: {epoch_loss / len(self._trainloader.dataset):.4f}, "
+                        f"Sub Losses: {', '.join([f'{k}: {v / len(self._trainloader.dataset):.4f}' for k, v in epoch_sub_losses.items()])}"
+                    )
 
                 # validation loss per epoch ---------------------------------
                 if self._validset:
@@ -170,12 +171,12 @@ class GeneralTrainer(BaseTrainer):
                             split="valid",
                             sample_ids=valid_sample_ids,
                         )
-                # Print epoch and validation loss information
-                self._fabric.print(
-                    # f"Epoch {epoch + 1}/{self._config.epochs}, "
-                    f"Valid Loss: {valid_loss / len(self._validloader.dataset):.4f}, "
-                    f"Sub Losses: {', '.join([f'{k}: {v / len(self._validloader.dataset):.4f}' for k, v in valid_epoch_sub_losses.items()])}"
-                )
+                    # Print epoch and validation loss information
+                    self._fabric.print(
+                        # f"Epoch {epoch + 1}/{self._config.epochs}, "
+                        f"Valid Loss: {valid_loss / len(self._validloader.dataset):.4f}, "
+                        f"Sub Losses: {', '.join([f'{k}: {v / len(self._validloader.dataset):.4f}' for k, v in valid_epoch_sub_losses.items()])}"
+                    )
 
             self._result.model = next(self._model.children())
             return self._result

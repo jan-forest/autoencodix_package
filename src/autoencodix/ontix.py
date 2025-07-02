@@ -15,6 +15,7 @@ from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.general_preprocessor import GeneralPreprocessor
 from autoencodix.evaluate.evaluate import Evaluator
+
 # from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.modeling._ontix_architecture import OntixArchitecture
 from autoencodix.trainers._general_trainer import GeneralTrainer
@@ -22,6 +23,7 @@ from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._losses import VarixLoss
 from autoencodix.visualize.visualize import Visualizer
+
 
 ## Copy from Varix with ontology addition
 class Ontix(BasePipeline):
@@ -64,8 +66,8 @@ class Ontix(BasePipeline):
 
     def __init__(
         self,
-		ontologies: Union[tuple, list], # Addition to Varix, mandotory for Ontix
-        sep: Optional[str] = "\t", # Addition to Varix, optional to read in ontologies
+        ontologies: Union[tuple, list],  # Addition to Varix, mandotory for Ontix
+        sep: Optional[str] = "\t",  # Addition to Varix, optional to read in ontologies
         data: Optional[Union[DataPackage, DatasetContainer]] = None,
         trainer_type: Type[BaseTrainer] = GeneralTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
@@ -86,10 +88,10 @@ class Ontix(BasePipeline):
 
         Parameters
         ----------
-		ontologies: Union[tuple,list]
-			Tuple of dictionaries containing the ontologies to be used to construct sparse decoder layers. 
-            If a list is provided, it is assumed to be a list of file paths to ontology files. 
-            First item in list or tuple will be treated as first layer (after latent space) and so on. 
+        ontologies: Union[tuple,list]
+                Tuple of dictionaries containing the ontologies to be used to construct sparse decoder layers.
+            If a list is provided, it is assumed to be a list of file paths to ontology files.
+            First item in list or tuple will be treated as first layer (after latent space) and so on.
             Last layer need to contain features identical to the input data.
         sep: Optional[str]
             Separator used in ontology files, default is tab ("\t")
@@ -116,6 +118,22 @@ class Ontix(BasePipeline):
             Configuration for all pipeline components
         """
 
+        if isinstance(ontologies, tuple):
+            self.ontologies = ontologies
+        elif isinstance(ontologies, list):
+            if sep is None:
+                raise ValueError(
+                    "If ontologies are provided as a list, the seperator 'sep' cannot be None. "
+                )
+            ontologies_dict_list = [
+                self._read_ont_file(ont_file, sep=sep) for ont_file in ontologies
+            ]
+            self.ontologies = tuple(ontologies_dict_list)
+        else:
+            raise TypeError(
+                f"Expected ontologies to be of type tuple or list, got {type(ontologies)}."
+            )
+
         super().__init__(
             data=data,
             dataset_type=dataset_type,
@@ -123,22 +141,14 @@ class Ontix(BasePipeline):
             model_type=model_type,
             loss_type=loss_type,
             preprocessor_type=preprocessor_type,
-            visualizer=visualizer or Visualizer(),
-            evaluator=evaluator or Evaluator(),
-            result=result or Result(),
+            visualizer=visualizer,
+            evaluator=evaluator,
+            result=result,
             datasplitter_type=datasplitter_type,
             config=config,
             custom_split=custom_splits,
+            ontologies=self.ontologies,
         )
-        if isinstance(ontologies, tuple):
-            self.ontologies = ontologies
-        elif isinstance(ontologies, list):
-            ontologies_dict_list = [self._read_ont_file(ont_file, sep=sep) for ont_file in ontologies]
-            self.ontologies = tuple(ontologies_dict_list)
-        else:
-            raise TypeError(
-                f"Expected ontologies to be of type tuple or list, got {type(ontologies)}."
-            )
 
     def sample_latent_space(self, split: str = "test", epoch: int = -1) -> torch.Tensor:
         """
@@ -179,7 +189,7 @@ class Ontix(BasePipeline):
         with self._trainer._fabric.autocast(), torch.no_grad():
             z = self._trainer._model.reparametrize(mu_t, logvar_t)
             return z
-    
+
     def _read_ont_file(self, file_path: str, sep: str = "\t") -> dict:
         """Function to read-in text files of ontologies with format child - separator - parent into an dictionary.
         ARGS:

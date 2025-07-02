@@ -72,7 +72,9 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     data_type: Literal["NUMERIC", "CATEGORICAL", "IMG", "ANNOTATION"] = Field(
         default="NUMERIC"
     )
-    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE"] = Field(default="STANDARD")
+    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE"] = Field(
+        default="STANDARD"
+    )
     filtering: Literal["VAR", "MAD", "CORR", "VARCORR", "NOFILT", "NONZEROVAR"] = Field(
         default="VAR"
     )
@@ -165,7 +167,9 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     k_filter: Union[int, None] = Field(
         default=20, description="Number of features to keep"
     )
-    skip_preprocessing: bool= Field(default=False, description="If set don't scale, filter or clean the input data.")
+    skip_preprocessing: bool = Field(
+        default=False, description="If set don't scale, filter or clean the input data."
+    )
 
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(
@@ -208,6 +212,24 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     )
     min_samples_per_split: int = Field(
         default=1, ge=1, description="Minimum number of samples per split"
+    )
+    anneal_pretraining: bool = Field(
+        default=False, description="Whether to apply annealing during pretraining phase"
+    )
+    anneal_function: Literal[
+        "5phase-constant",
+        "3phase-linear",
+        "3phase-log",
+        "logistic-mid",
+        "logistic-early",
+        "logistic-late",
+        "no-annealing",
+    ] = Field(
+        default="logistic-mid",
+        description="Annealing function strategy for VAE loss scheduling",
+    )
+    pretrain_epochs: int = Field(
+        default=100, ge=0, description="Number of pretraining epochs"
     )
 
     # Hardware configuration --------------------------------------------------
@@ -431,7 +453,9 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
 
         for info in data_info.values():
             if info.filtering == "NONZEROVAR" and k_filter is not None:
-                raise ValueError("k_filter cannot be combined with DataInfo that has scaling set to 'NONZEROVAR'")
+                raise ValueError(
+                    "k_filter cannot be combined with DataInfo that has scaling set to 'NONZEROVAR'"
+                )
 
         return self
 

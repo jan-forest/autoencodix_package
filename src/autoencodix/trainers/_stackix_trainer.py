@@ -90,14 +90,13 @@ class StackixTrainer(GeneralTrainer):
         )
         self._modality_trainers: Optional[Dict[str, BaseAutoencoder]] = None
         self._modality_results: Optional[Dict[str, Result]] = None
-        
+
         self._fabric = Fabric(
             accelerator=self._config.device,
             devices=self._config.n_gpus,
             precision=self._config.float_precision,
             strategy=self._config.gpu_strategy,
         )
-
 
     def get_model(self) -> torch.nn.Module:
         """
@@ -109,7 +108,6 @@ class StackixTrainer(GeneralTrainer):
             The trained model
         """
         return self._model
-
 
     def train(self) -> Result:
         """
@@ -154,12 +152,18 @@ class StackixTrainer(GeneralTrainer):
             None
         """
         # Step 1: Train individual modality models
-        self._modality_trainers, self._modality_results = self._orchestrator.train_modalities()
+        self._modality_trainers, self._modality_results = (
+            self._orchestrator.train_modalities()
+        )
 
         self._result.sub_results = self._modality_results
         # Step 2: Prepare concatenated latent space datasets
-        self._train_latent_ds = self._orchestrator.prepare_latent_datasets(split="train")
-        self._valid_latent_ds = self._orchestrator.prepare_latent_datasets(split="valid")
+        self._train_latent_ds = self._orchestrator.prepare_latent_datasets(
+            split="train"
+        )
+        self._valid_latent_ds = self._orchestrator.prepare_latent_datasets(
+            split="valid"
+        )
         self.concat_idx = self._orchestrator.concat_idx
 
     def _reconstruct(self, split: str) -> None:
@@ -175,14 +179,11 @@ class StackixTrainer(GeneralTrainer):
                 model = self._fabric.to_device(model)
                 model.eval()
                 modality_reconstructions[name] = model.decode(stacked_tensor).cpu()
-            
+
         self._result.sub_reconstructions = modality_reconstructions
 
-
-
     def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
-        """
-        """
+        """ """
 
         self._orchestrator.set_testset(testset=data)
         test_ds = self._orchestrator.prepare_latent_datasets(split="test")
@@ -192,6 +193,10 @@ class StackixTrainer(GeneralTrainer):
         return self._result
 
     def _capture_dynamics(
-        self, epoch: int, model_output: List[ModelOutput], split: str
+        self,
+        epoch: int,
+        model_output: List[ModelOutput],
+        split: str,
+        sample_ids: Optional[List[int]] = None,
     ) -> None:
-        return super()._capture_dynamics(epoch, model_output, split)
+        return super()._capture_dynamics(epoch, model_output, split, sample_ids)

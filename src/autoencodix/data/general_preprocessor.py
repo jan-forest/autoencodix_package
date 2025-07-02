@@ -17,8 +17,10 @@ from autoencodix.utils.default_config import DataCase, DefaultConfig
 
 
 class GeneralPreprocessor(BasePreprocessor):
-    def __init__(self, config: DefaultConfig):
-        super().__init__(config=config)
+    def __init__(
+        self, config: DefaultConfig, ontologies: Optional[Union[Tuple, Dict]] = None
+    ) -> None:
+        super().__init__(config=config, ontologies=ontologies)
         self._datapackage_dict: Optional[Dict[str, Any]] = None
         self._dataset_container: Optional[DatasetContainer] = None
         # Reverse mappings for reconstruction
@@ -192,13 +194,11 @@ class GeneralPreprocessor(BasePreprocessor):
         self,
         raw_user_data: Optional[DataPackage] = None,
         predict_new_data: bool = False,
-        ontologies: Optional[tuple] = None,  # Addition to Varix, mandotory for Ontix
     ) -> DatasetContainer:
         # run common preprocessing
 
         # self._reverse_mapping_multi_bulk.clear()
         # self._reverse_mapping_multi_sc.clear()
-        self.ontologies = ontologies  # Addition to Varix, mandatory for Ontix
 
         self._datapackage_dict = self._general_preprocess(
             raw_user_data=raw_user_data, predict_new_data=predict_new_data

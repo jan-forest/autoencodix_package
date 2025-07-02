@@ -33,7 +33,9 @@ class StackixPreprocessor(BasePreprocessor):
         Container for processed datasets by split
     """
 
-    def __init__(self, config: DefaultConfig):
+    def __init__(
+        self, config: DefaultConfig, ontologies: Optional[Union[Tuple, Dict]] = None
+    ) -> None:
         """
         Initialize the StackixPreprocessor with the given configuration.
 

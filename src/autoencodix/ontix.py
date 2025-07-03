@@ -18,7 +18,7 @@ from autoencodix.evaluate.evaluate import Evaluator
 
 # from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.modeling._ontix_architecture import OntixArchitecture
-from autoencodix.trainers._general_trainer import GeneralTrainer
+from autoencodix.trainers._ontix_trainer import OntixTrainer
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._losses import VarixLoss
@@ -69,7 +69,7 @@ class Ontix(BasePipeline):
         ontologies: Union[tuple, list],  # Addition to Varix, mandotory for Ontix
         sep: Optional[str] = "\t",  # Addition to Varix, optional to read in ontologies
         data: Optional[Union[DataPackage, DatasetContainer]] = None,
-        trainer_type: Type[BaseTrainer] = GeneralTrainer,
+        trainer_type: Type[BaseTrainer] = OntixTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
         model_type: Type[BaseAutoencoder] = OntixArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,

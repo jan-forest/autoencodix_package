@@ -234,7 +234,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
 
     # Hardware configuration --------------------------------------------------
     device: Literal["cpu", "cuda", "gpu", "tpu", "mps", "auto"] = Field(
-        default="mps", description="Device to use"
+        default="auto", description="Device to use"
     )
     # 0 uses cpu and not gpu
     n_gpus: int = Field(default=1, ge=1, description="Number of GPUs to use")

@@ -1,20 +1,19 @@
-from typing import Dict, Optional, Type, Union, List, Tuple
+from typing import Dict, List, Optional, Tuple, Type, Union
+
 import torch
+from lightning_fabric import Fabric
 from torch.utils.data import DataLoader
 
-
-from autoencodix.trainers._stackix_orchestrator import StackixOrchestrator
 from autoencodix.base._base_autoencoder import BaseAutoencoder
-from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.base._base_loss import BaseLoss
+from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.data._stackix_dataset import StackixDataset
+from autoencodix.trainers._general_trainer import GeneralTrainer
+from autoencodix.trainers._stackix_orchestrator import StackixOrchestrator
+from autoencodix.utils._model_output import ModelOutput
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
-
-from lightning_fabric import Fabric
-from autoencodix.base._base_trainer import BaseTrainer
-from autoencodix.trainers._general_trainer import GeneralTrainer
-from autoencodix.utils._model_output import ModelOutput
 
 
 class StackixTrainer(GeneralTrainer):
@@ -96,6 +95,15 @@ class StackixTrainer(GeneralTrainer):
             devices=self._config.n_gpus,
             precision=self._config.float_precision,
             strategy=self._config.gpu_strategy,
+        )
+
+        super().__init__(
+            trainset=trainset,
+            validset=validset,
+            result=result,
+            config=config,
+            model_type=model_type,
+            loss_type=loss_type,
         )
 
     def get_model(self) -> torch.nn.Module:
@@ -184,7 +192,7 @@ class StackixTrainer(GeneralTrainer):
 
     def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
         """ """
-
+        self.n_test = len(data) if data is not None else 0
         self._orchestrator.set_testset(testset=data)
         test_ds = self._orchestrator.prepare_latent_datasets(split="test")
         pred_result = super().predict(data=test_ds, model=model)

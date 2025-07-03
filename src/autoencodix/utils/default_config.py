@@ -234,7 +234,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
 
     # Hardware configuration --------------------------------------------------
     device: Literal["cpu", "cuda", "gpu", "tpu", "mps", "auto"] = Field(
-        default="auto", description="Device to use"
+        default="mps", description="Device to use"
     )
     # 0 uses cpu and not gpu
     n_gpus: int = Field(default=1, ge=1, description="Number of GPUs to use")
@@ -242,7 +242,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=2, ge=0, description="Number of data loading workers"
     )
     checkpoint_interval: int = Field(
-        default=1, ge=1, description="Interval for saving checkpoints"
+        default=10, ge=1, description="Interval for saving checkpoints"
     )
     float_precision: Literal[
         "transformer-engine",
@@ -282,7 +282,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
 
     # General configuration ---------------------------------------------------
     reproducible: bool = Field(
-        default=True, description="Whether to ensure reproducibility"
+        default=False, description="Whether to ensure reproducibility"
     )
     global_seed: int = Field(default=1, ge=0, description="Global random seed")
 

@@ -179,7 +179,7 @@ class Visualizer(BaseVisualizer):
             self.plots["Coverage-Correlation"] = fig
             show_figure(fig)
             plt.show()
-        
+
         else:
             # Set Defaults
             if epoch is None:
@@ -188,12 +188,12 @@ class Visualizer(BaseVisualizer):
 
             if split == "all":
                 df_latent = pd.concat(
-                        [
-                            result.get_latent_df(epoch=epoch, split="train"),
-                            result.get_latent_df(epoch=epoch, split="valid"),
-                            result.get_latent_df(epoch=-1, split="test"),
-                        ]
-                    )
+                    [
+                        result.get_latent_df(epoch=epoch, split="train"),
+                        result.get_latent_df(epoch=epoch, split="valid"),
+                        result.get_latent_df(epoch=-1, split="test"),
+                    ]
+                )
             else:
                 if split == "test":
                     df_latent = pd.DataFrame(
@@ -208,7 +208,7 @@ class Visualizer(BaseVisualizer):
 
             if label_list is None:
                 label_list = ["all"] * df_latent.shape[0]
-            
+
             if plot_type == "2D-scatter":
                 ## Make 2D Embedding with UMAP
                 if df_latent.shape[1] > 2:
@@ -244,8 +244,6 @@ class Visualizer(BaseVisualizer):
                 show_figure(fig)
                 plt.show()
 
-
-
     def show_weights(self) -> None:
         """
         Display the model weights plot if it exists in the plots dictionary.
@@ -276,15 +274,14 @@ class Visualizer(BaseVisualizer):
         """
         all_weights = []
         names = []
-        if hasattr(model, "ontologies"):
+        if model.ontologies is not None:
             # If model is Ontix
             # Get node names from ontologies
             node_names = list()
             for ontology in model.ontologies:
-                node_names.append( ontology.keys())
-            
-            node_names.append(model.feature_order)  # Add feature order as last layer
+                node_names.append(ontology.keys())
 
+            node_names.append(model.feature_order)  # Add feature order as last layer
 
         for name, param in model.named_parameters():
             if "weight" in name and len(param.shape) == 2:
@@ -310,12 +307,18 @@ class Visualizer(BaseVisualizer):
                     ax=axes[1, layer],
                 ).set(title=names[layers + layer])
                 axes[1, layer].set_xlabel("In Node", size=12)
-                if hasattr(model, "ontologies"):
+                if model.ontologies is not None:
                     axes[1, layer].set_xticks(
-                        ticks=range(len(node_names[layer])), labels=node_names[layer], rotation=90, fontsize=8
+                        ticks=range(len(node_names[layer])),
+                        labels=node_names[layer],
+                        rotation=90,
+                        fontsize=8,
                     )
                     axes[1, layer].set_yticks(
-                        ticks=range(len(node_names[layer+1])), labels=node_names[layer+1], rotation=0, fontsize=8
+                        ticks=range(len(node_names[layer + 1])),
+                        labels=node_names[layer + 1],
+                        rotation=0,
+                        fontsize=8,
                     )
             else:
                 sns.heatmap(
@@ -673,7 +676,7 @@ class Visualizer(BaseVisualizer):
                         loss_values = {i: val for i, val in enumerate(loss_values)}
 
             # Now create the DataFrame
-            loss_df = pd.DataFrame.from_dict(loss_values, orient="index") # type: ignore
+            loss_df = pd.DataFrame.from_dict(loss_values, orient="index")  # type: ignore
 
             # Rest of your code remains the same
             if term == "var_loss":
@@ -702,7 +705,7 @@ class Visualizer(BaseVisualizer):
                 if hasattr(loss_values, "shape"):
                     loss_values = {i: val for i, val in enumerate(loss_values)}
 
-        loss_df = pd.DataFrame.from_dict(loss_values, orient="index") # type: ignore
+        loss_df = pd.DataFrame.from_dict(loss_values, orient="index")  # type: ignore
         loss_df["Epoch"] = loss_df.index + 1
         loss_df["Loss Term"] = "total_loss"
 

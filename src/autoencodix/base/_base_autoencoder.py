@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, Dict
 
 import torch
 import torch.nn as nn
@@ -23,7 +23,13 @@ class BaseAutoencoder(ABC, nn.Module):
         _decoder: Decoder network.
     """
 
-    def __init__(self, config: Optional[DefaultConfig], input_dim: int):
+    def __init__(
+        self,
+        config: Optional[DefaultConfig],
+        input_dim: int,
+        ontologies: Optional[Union[Tuple, Dict]] = None,
+        feature_order: Optional[Union[Tuple, Dict]] = None,
+    ):
         """Initializes the BaseAutoencoder.
 
         Args:
@@ -38,6 +44,8 @@ class BaseAutoencoder(ABC, nn.Module):
         self._encoder: Optional[nn.Module] = None
         self._decoder: Optional[nn.Module] = None
         self.config = config
+        self.ontologies = ontologies
+        self.feature_order = feature_order
 
     @abstractmethod
     def _build_network(self) -> None:

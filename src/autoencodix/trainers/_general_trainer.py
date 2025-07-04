@@ -108,12 +108,14 @@ class GeneralTrainer(BaseTrainer):
                 should_checkpoint = self._should_checkpoint(epoch)
                 self._model.train()
 
-                epoch_loss, epoch_sub_losses = self._train_epoch(should_checkpoint)
+                epoch_loss, epoch_sub_losses = self._train_epoch(
+                    should_checkpoint=should_checkpoint, epoch=epoch
+                )
                 self._log_losses(epoch, "train", epoch_loss, epoch_sub_losses)
 
                 if self._validset:
                     valid_loss, valid_sub_losses = self._validate_epoch(
-                        should_checkpoint
+                        should_checkpoint=should_checkpoint, epoch=epoch
                     )
                     self._log_losses(epoch, "valid", valid_loss, valid_sub_losses)
 
@@ -123,7 +125,7 @@ class GeneralTrainer(BaseTrainer):
         self._result.model = next(self._model.children())
         return self._result
 
-    def _train_epoch(self, should_checkpoint):
+    def _train_epoch(self, should_checkpoint: bool, epoch: int):
         total_loss = 0.0
         sub_losses = defaultdict(float)
 
@@ -131,7 +133,7 @@ class GeneralTrainer(BaseTrainer):
             self._optimizer.zero_grad()
             model_outputs = self._model(features)
             loss, batch_sub_losses = self._loss_fn(
-                model_output=model_outputs, targets=features
+                model_output=model_outputs, targets=features, epoch=epoch
             )
 
             self._fabric.backward(loss)
@@ -146,7 +148,7 @@ class GeneralTrainer(BaseTrainer):
 
         return total_loss, sub_losses
 
-    def _validate_epoch(self, should_checkpoint):
+    def _validate_epoch(self, should_checkpoint: bool, epoch: int):
         total_loss = 0.0
         sub_losses = defaultdict(float)
         self._model.eval()
@@ -155,7 +157,7 @@ class GeneralTrainer(BaseTrainer):
             for indices, features, sample_ids in self._validloader:
                 model_outputs = self._model(features)
                 loss, batch_sub_losses = self._loss_fn(
-                    model_output=model_outputs, targets=features
+                    model_output=model_outputs, targets=features, epoch=epoch
                 )
                 total_loss += loss.item()
                 for k, v in batch_sub_losses.items():

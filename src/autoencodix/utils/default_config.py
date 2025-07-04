@@ -229,7 +229,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         description="Annealing function strategy for VAE loss scheduling",
     )
     pretrain_epochs: int = Field(
-        default=100, ge=0, description="Number of pretraining epochs"
+        default=0, ge=0, description="Number of pretraining epochs"
     )
 
     # Hardware configuration --------------------------------------------------

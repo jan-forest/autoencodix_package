@@ -8,6 +8,9 @@ import pandas as pd
 import torch
 from mudata import MuData  # type: ignore
 from torch.utils.data import Dataset
+# ML evaluation
+from sklearn import linear_model
+
 
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
@@ -779,11 +782,41 @@ class BasePipeline(abc.ABC):
 
     @config_method(valid_params={"config"})
     def evaluate(
-        self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
-    ) -> None:
-        """Not Implemented yet"""
-        if config is None:
-            config = self.config
+        self,
+        ml_model_class: Any = linear_model.LogisticRegression(), # Default is sklearn LogisticRegression
+        ml_model_regression: Any = linear_model.LinearRegression(), # Default is sklearn LinearRegression
+        params: Union[list, str]= "all",	# No default? ... or all params in annotation?
+        metric_class: str = "roc_auc_ovr", # Default is 'roc_auc_ovr' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
+        metric_regression: str = "r2", # Default is 'r2'
+        reference_methods: list = [], # Default [], Options are "PCA", "UMAP", "TSNE", "Random"
+        split_type:str = "pre-split", # Default is "pre-split", other options: "CV-5", ... "LOOCv"?
+    ) -> Result:
+        """ TODO"""
+        if self._evaluator is None:
+            raise NotImplementedError("Evaluator not initialized")
+        if self.result.model is None:
+            raise NotImplementedError(
+                "Model not trained. Please run the fit method first"
+            )
+        self.result = self._evaluator.evaluate(
+            datasets=self._datasets,
+            model=self.result.model,
+            config=self.config,
+            ml_model_class=ml_model_class,
+            ml_model_regression=ml_model_regression,
+            params=params,
+            metric_class=metric_class,
+            metric_regression=metric_regression,
+            reference_methods=reference_methods,
+            split_type=split_type,
+        )
+        
+        return self.result
+    #     self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
+    # ) -> None:
+    #     """Not Implemented yet"""
+    #     if config is None:
+    #         config = self.config
 
     @config_method(valid_params={"config"})
     def visualize(self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs):

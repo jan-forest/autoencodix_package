@@ -175,6 +175,12 @@ class GeneralTrainer(BaseTrainer):
             split=split,
             data={k: v / dataset_len for k, v in sub_losses.items()},
         )
+        self._fabric.print(
+            f"Epoch {epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {total_loss / dataset_len:.4f}"
+        )
+        self._fabric.print(
+            f"Sub-losses: {', '.join([f'{k}: {v / dataset_len:.4f}' for k, v in sub_losses.items()])}"
+        )
 
     def _store_checkpoint(self, epoch):
         self._result.model_checkpoints.add(epoch=epoch, data=self._model.state_dict())

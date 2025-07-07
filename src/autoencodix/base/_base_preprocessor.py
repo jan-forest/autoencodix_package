@@ -50,9 +50,11 @@ class BasePreprocessor(abc.ABC):
         _dataset_container: Optional DatasetContainer to hold the processed datasets.
     """
 
-    def __init__(self, 
-                 config: DefaultConfig, 
-                 ):
+    def __init__(
+        self,
+        config: DefaultConfig,
+        ontologies: Optional[Union[Tuple[Any, Any], Dict[Any, Any]]] = None,
+    ):
         """Initializes the BasePreprocessor with a configuration object.
 
         Args :
@@ -66,6 +68,7 @@ class BasePreprocessor(abc.ABC):
         self.sc_genes_to_keep: Optional[Dict[str, List[str]]] = None
         self.sc_scalers: Optional[Dict[str, Dict[str, Any]]] = None
         self.sc_general_genes_to_keep: Optional[Dict[str, List]] = None
+        self._ontologies: Optional[Union[Tuple[Any, Any], Dict[Any, Any]]] = ontologies
         self.data_readers: Dict[Enum, Any] = {
             DataCase.MULTI_SINGLE_CELL: SingleCellDataReader(),
             DataCase.MULTI_BULK: BulkDataReader(config=self.config),
@@ -555,7 +558,7 @@ class BasePreprocessor(abc.ABC):
 
                 data_processor = DataFilter(
                     data_info=self.config.data_config.data_info[k],
-                    ontologies= self.ontologies
+                    ontologies=self._ontologies,
                 )
                 filtered_df, genes_to_keep = data_processor.filter(df=v)
                 scaler = data_processor.fit_scaler(df=filtered_df)
@@ -595,7 +598,7 @@ class BasePreprocessor(abc.ABC):
                     continue
                 data_processor = DataFilter(
                     data_info=self.config.data_config.data_info[k],
-                    ontologies=self.ontologies,
+                    ontologies=self._ontologies,
                 )
                 filtered_df, _ = data_processor.filter(
                     df=v, genes_to_keep=genes_to_keep_map[k]

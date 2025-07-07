@@ -1,8 +1,7 @@
-from typing import Optional, Union, Type, List
-from collections import defaultdict
-
 import torch
 import numpy as np
+from typing import Optional, Type
+from collections import defaultdict
 from torch.utils.data import DataLoader
 
 from autoencodix.base._base_dataset import BaseDataset
@@ -15,31 +14,6 @@ from autoencodix.utils._model_output import ModelOutput
 
 
 class GeneralTrainer(BaseTrainer):
-    """
-    Handles model training process for the Vanilla Autoencoder model.
-
-    Attributes
-    ----------
-    trainset : BaseDataset
-        Training dataset
-    validset : BaseDataset
-
-    result : Result
-        Result object to store the training results
-    config : DefaultConfig
-        Configuration object containing model parameters
-    loss_type : Type[BaseLoss] which loss function to use
-
-    Methods
-    -------
-    train()
-        Train the model standard PyTorch training loop
-        Populates the result object with training dynamics and model checkpoints
-    _capture_dynamics(epoch, model_output)
-        Capture the model dynamics at each epoch (latentspace and reconstruction)
-
-    """
-
     def __init__(
         self,
         trainset: Optional[BaseDataset],
@@ -48,200 +22,218 @@ class GeneralTrainer(BaseTrainer):
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
-        ontologies: Optional[tuple] = None,  # Addition to Varix, mandotory for Ontix
+        ontologies: Optional[tuple] = None,
     ):
         super().__init__(
-            trainset=trainset,
-            validset=validset,
-            result=result,
-            config=config,
-            model_type=model_type,
-            loss_type=loss_type,
-            ontologies=ontologies, # Ontix
+            trainset, validset, result, config, model_type, loss_type, ontologies
         )
+
+        self.latent_dim = config.latent_dim
+        if ontologies is not None:
+            if not hasattr(self._model, "latent_dim"):
+                raise ValueError(
+                    "Model must have a 'latent_dim' attribute when ontologies are provided."
+                )
+            self.latent_dim = self._model.latent_dim
+
+        # we will set this later, in the predict method
+        self.n_test: Optional[int] = None
+        self.n_train = len(trainset) if trainset else 0
+        self.n_valid = len(validset) if validset else 0
+        self.n_features = trainset.data.shape[1] if trainset else 0
+        self.device = next(self._model.parameters()).device
+
+        self._init_buffers()
+
+    def _init_buffers(self):
+        def make_tensor_buffer(size, dim):
+            return torch.zeros((size, dim), device=self.device)
+
+        def make_numpy_buffer(size):
+            return np.empty((size,), dtype=object)
+
+        self._latentspace_buffer = {
+            "train": make_tensor_buffer(self.n_train, self.latent_dim),
+            "valid": make_tensor_buffer(self.n_valid, self.latent_dim)
+            if self.n_valid
+            else None,
+            "test": make_tensor_buffer(self.n_test, self.latent_dim)
+            if self.n_test
+            else None,
+        }
+        self._reconstruction_buffer = {
+            "train": make_tensor_buffer(self.n_train, self.n_features),
+            "valid": make_tensor_buffer(self.n_valid, self.n_features)
+            if self.n_valid
+            else None,
+            "test": make_tensor_buffer(self.n_test, self.n_features)
+            if self.n_test
+            else None,
+        }
+        self._mu_buffer = {
+            "train": make_tensor_buffer(self.n_train, self.latent_dim),
+            "valid": make_tensor_buffer(self.n_valid, self.latent_dim)
+            if self.n_valid
+            else None,
+            "test": make_tensor_buffer(self.n_test, self.latent_dim)
+            if self.n_test
+            else None,
+        }
+        self._sigma_buffer = {
+            "train": make_tensor_buffer(self.n_train, self.latent_dim),
+            "valid": make_tensor_buffer(self.n_valid, self.latent_dim)
+            if self.n_valid
+            else None,
+            "test": make_tensor_buffer(self.n_test, self.latent_dim)
+            if self.n_test
+            else None,
+        }
+        self._sample_ids_buffer = {
+            "train": make_numpy_buffer(self.n_train),
+            "valid": make_numpy_buffer(self.n_valid) if self.n_valid else None,
+            "test": make_numpy_buffer(self.n_test) if self.n_test else None,
+        }
+
+    def _apply_post_backward_processing(self):
+        pass
+
+    def _should_checkpoint(self, epoch: int):
+        return (
+            epoch + 1
+        ) % self._config.checkpoint_interval == 0 or epoch == self._config.epochs - 1
 
     def train(self) -> Result:
         with self._fabric.autocast():
             for epoch in range(self._config.epochs):
-                train_outputs = []
-                valid_outputs = []
-                train_sample_ids = []
-                valid_sample_ids = []
+                should_checkpoint = self._should_checkpoint(epoch)
                 self._model.train()
-                epoch_loss = 0.0
-                epoch_sub_losses: defaultdict[str, float] = defaultdict(lambda: 0.0)
-                valid_epoch_sub_losses: defaultdict[str, float] = defaultdict(
-                    lambda: 0.0
-                )
-                for _, (features, sample_ids) in enumerate(self._trainloader):
-                    train_sample_ids.append(list(sample_ids))
-                    self._optimizer.zero_grad()
-                    model_outputs = self._model(features)
-                    loss, sub_losses = self._loss_fn(
-                        model_output=model_outputs, targets=features
-                    )
-                    self._fabric.backward(loss)
-                    
-                    ### Overloading Generaltrainer for Ontix ###
-                    ## Check if model_type is OntixArchitecture
-                    ## Then mask gradients 
-                    if hasattr(self._model, "ontologies"):
-                        self._model._decoder.apply(self._model._positive_dec) # Sparse decoder only has positive weights
-                        # Apply weight mask to create ontology-based decoder
-                        with torch.no_grad():
-                            # Check that the decoder has the same number of layers as masks
-                            if len(self._model.masks) != len(self._model._decoder):
-                                raise ValueError(
-                                    "Number of masks does not match number of decoder layers"
-                                )
-                            else:
-                                for i, mask in enumerate(self._model.masks):
-                                    mask = mask.to(self._fabric.device)
-                                    self._model._decoder[i].weight.mul_(mask)
-                    ### ------------------------------------ ###
-                    self._optimizer.step()
-                    epoch_loss += loss.item()
-                    train_outputs.append(model_outputs)
-                    for k, v in sub_losses.items():
-                        epoch_sub_losses[k] += v.item()
-                # loss per epoch savving -----------------------------------
-                # TODO save and report also r2 
-                self._result.losses.add(
-                    epoch=epoch, split="train", data=epoch_loss / len(self._trainloader.dataset)
-                )
-                self._result.sub_losses.add(
-                    epoch=epoch,
-                    split="train",
-                    data={
-                        k: v / len(self._trainloader.dataset)
-                        for k, v in epoch_sub_losses.items()
-                    },
-                )
-                if not (epoch + 1) % self._config.checkpoint_interval:
-                    # Print epoch and loss information
-                    self._fabric.print(
-                        f"Epoch {epoch + 1}/{self._config.epochs}, "
-                        f"Train Loss: {epoch_loss / len(self._trainloader.dataset):.4f}, "
-                        f"Sub Losses: {', '.join([f'{k}: {v / len(self._trainloader.dataset):.4f}' for k, v in epoch_sub_losses.items()])}"
-                    )
 
-                # validation loss per epoch ---------------------------------
+                epoch_loss, epoch_sub_losses = self._train_epoch(
+                    should_checkpoint=should_checkpoint, epoch=epoch
+                )
+                self._log_losses(epoch, "train", epoch_loss, epoch_sub_losses)
+
                 if self._validset:
-                    self._model.eval()
-                    with torch.no_grad():
-                        valid_loss = 0.0
-                        for _, (features, sample_ids) in enumerate(self._validloader):
-                            valid_sample_ids.append(list(sample_ids))
-                            valid_model_outputs = self._model(features)
-                            loss, sub_losses = self._loss_fn(
-                                model_output=valid_model_outputs, targets=features
-                            )
-                            valid_loss += loss.item()
-                            valid_outputs.append(valid_model_outputs)
-                            for k, v in sub_losses.items():
-                                valid_epoch_sub_losses[k] += v.item()
-                    self._result.losses.add(
-                        epoch=epoch,
-                        split="valid",
-                        data=valid_loss / len(self._validloader.dataset),
+                    valid_loss, valid_sub_losses = self._validate_epoch(
+                        should_checkpoint=should_checkpoint, epoch=epoch
                     )
-                    self._result.sub_losses.add(
-                        epoch=epoch,
-                        split="valid",
-                        data={
-                            k: v / len(self._validloader.dataset)
-                            for k, v in valid_epoch_sub_losses.items()
-                        },
-                    )
+                    self._log_losses(epoch, "valid", valid_loss, valid_sub_losses)
 
-                if not (epoch + 1) % self._config.checkpoint_interval:
-                    self._result.model_checkpoints.add(
-                        epoch=epoch, data=self._model.state_dict()
-                    )
-                    self._capture_dynamics(
-                        epoch=epoch,
-                        model_output=train_outputs,
-                        split="train",
-                        sample_ids=train_sample_ids,
-                    )
-                    if self._validset:
-                        self._capture_dynamics(
-                            epoch=epoch,
-                            model_output=valid_outputs,
-                            split="valid",
-                            sample_ids=valid_sample_ids,
-                        )
-                    # Print epoch and validation loss information
-                    self._fabric.print(
-                        # f"Epoch {epoch + 1}/{self._config.epochs}, "
-                        f"Valid Loss: {valid_loss / len(self._validloader.dataset):.4f}, "
-                        f"Sub Losses: {', '.join([f'{k}: {v / len(self._validloader.dataset):.4f}' for k, v in valid_epoch_sub_losses.items()])}"
-                    )
+                if should_checkpoint:
+                    self._store_checkpoint(epoch)
 
-            self._result.model = next(self._model.children())
-            return self._result
+        self._result.model = next(self._model.children())
+        return self._result
 
-    def decode(self, x: torch.tensor):
-        with self._fabric.autocast(), torch.no_grad():
-            x = self._fabric.to_device(obj=x)
-            if not isinstance(x, torch.Tensor):
-                raise TypeError(
-                    f"Expected input to be a torch.Tensor, got {type(x)} instead."
+    def _train_epoch(self, should_checkpoint: bool, epoch: int):
+        total_loss = 0.0
+        sub_losses = defaultdict(float)
+
+        for indices, features, sample_ids in self._trainloader:
+            self._optimizer.zero_grad()
+            model_outputs = self._model(features)
+            loss, batch_sub_losses = self._loss_fn(
+                model_output=model_outputs, targets=features, epoch=epoch
+            )
+
+            self._fabric.backward(loss)
+            self._optimizer.step()
+
+            total_loss += loss.item()
+            for k, v in batch_sub_losses.items():
+                sub_losses[k] += v.item()
+
+            if should_checkpoint:
+                self._capture_dynamics(model_outputs, "train", indices, sample_ids)
+
+        return total_loss, sub_losses
+
+    def _validate_epoch(self, should_checkpoint: bool, epoch: int):
+        total_loss = 0.0
+        sub_losses = defaultdict(float)
+        self._model.eval()
+
+        with torch.no_grad():
+            for indices, features, sample_ids in self._validloader:
+                model_outputs = self._model(features)
+                loss, batch_sub_losses = self._loss_fn(
+                    model_output=model_outputs, targets=features, epoch=epoch
                 )
-            return self._model.decode(x=x)
+                total_loss += loss.item()
+                for k, v in batch_sub_losses.items():
+                    sub_losses[k] += v.item()
+                if should_checkpoint:
+                    self._capture_dynamics(model_outputs, "valid", indices, sample_ids)
+
+        return total_loss, sub_losses
+
+    def _log_losses(self, epoch, split, total_loss, sub_losses):
+        dataset_len = len(
+            self._trainloader.dataset if split == "train" else self._validloader.dataset
+        )
+        self._result.losses.add(epoch=epoch, split=split, data=total_loss / dataset_len)
+        self._result.sub_losses.add(
+            epoch=epoch,
+            split=split,
+            data={k: v / dataset_len for k, v in sub_losses.items()},
+        )
+
+    def _store_checkpoint(self, epoch):
+        self._result.model_checkpoints.add(epoch=epoch, data=self._model.state_dict())
+        self._dynamics_to_result(epoch, "train")
+        if self._validset:
+            self._dynamics_to_result(epoch, "valid")
 
     def _capture_dynamics(
-        self,
-        epoch: int,
-        model_output: List[ModelOutput],
-        split: str,
-        sample_ids: Optional[List[int]] = None,
-    ):
-        # Concatenate tensors from all model outputs
-        if sample_ids is not None:
-            sample_ids = np.concat([sample_id for sample_id in sample_ids], axis=0)
-        latentspaces = torch.cat([output.latentspace for output in model_output], dim=0)
-        reconstructions = torch.cat(
-            [output.reconstruction for output in model_output], dim=0
+        self, model_output: ModelOutput, split: str, indices: torch.Tensor, sample_ids
+    ) -> None:
+        indices_np = (
+            indices.cpu().numpy()
+            if isinstance(indices, torch.Tensor)
+            else np.array(indices)
         )
+        sample_ids_list = (
+            sample_ids.tolist()
+            if isinstance(sample_ids, torch.Tensor)
+            else list(sample_ids)
+        )
+
+        for i, idx in enumerate(indices_np):
+            self._sample_ids_buffer[split][idx] = sample_ids_list[i]
+
+        self._latentspace_buffer[split][indices_np] = model_output.latentspace.detach()
+        self._reconstruction_buffer[split][indices_np] = (
+            model_output.reconstruction.detach()
+        )
+
+        if model_output.latent_logvar is not None:
+            self._sigma_buffer[split][indices_np] = model_output.latent_logvar.detach()
+
+        if model_output.latent_mean is not None:
+            self._mu_buffer[split][indices_np] = model_output.latent_mean.detach()
+
+    def _dynamics_to_result(self, epoch: int, split: str):
+        def maybe_add(buffer, target):
+            if buffer[split] is not None and buffer[split].sum() != 0:
+                target.add(
+                    epoch=epoch, split=split, data=buffer[split].cpu().detach().numpy()
+                )
 
         self._result.latentspaces.add(
             epoch=epoch,
             split=split,
-            data=latentspaces.cpu().detach().numpy(),
+            data=self._latentspace_buffer[split].cpu().detach().numpy(),
         )
         self._result.reconstructions.add(
             epoch=epoch,
             split=split,
-            data=reconstructions.cpu().detach().numpy(),
+            data=self._reconstruction_buffer[split].cpu().detach().numpy(),
         )
-        self._result.sample_ids.add(epoch=epoch, split=split, data=sample_ids)
-        logvars = [
-            output.latent_logvar
-            for output in model_output
-            if output.latent_logvar is not None
-        ]
-        if logvars:
-            sigmas = torch.cat(
-                logvars,
-                dim=0,
-            )
-            self._result.sigmas.add(
-                epoch=epoch, split=split, data=sigmas.cpu().detach().numpy()
-            )
-        mus = [
-            output.latent_mean
-            for output in model_output
-            if output.latent_mean is not None
-        ]
-        if mus:
-            means = torch.cat(
-                mus,
-                dim=0,
-            )
-            self._result.mus.add(
-                epoch=epoch, split=split, data=means.cpu().detach().numpy()
-            )
+        self._result.sample_ids.add(
+            epoch=epoch, split=split, data=self._sample_ids_buffer[split]
+        )
+        maybe_add(self._mu_buffer, self._result.mus)
+        maybe_add(self._sigma_buffer, self._result.sigmas)
 
     def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
         """
@@ -264,14 +256,27 @@ class GeneralTrainer(BaseTrainer):
             shuffle=False,
             num_workers=self._config.n_workers,
         )
+        self.n_test = len(data)
+        self._init_buffers()
         inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
         with self._fabric.autocast(), torch.no_grad():
-            outputs = []
-            test_sample_ids= []
-            for _, (data, sample_ids) in enumerate(inference_loader):
-                test_sample_ids.append(list(sample_ids))
+            for idx, data, sample_ids in inference_loader:
                 model_output = model(data)
-                outputs.append(model_output)
-            self._capture_dynamics(epoch=-1, model_output=outputs, split="test", sample_ids=test_sample_ids)
+                self._capture_dynamics(
+                    model_output=model_output,
+                    split="test",
+                    sample_ids=sample_ids,
+                    indices=idx,
+                )
+        self._dynamics_to_result(epoch=-1, split="test")
 
         return self._result
+
+    def decode(self, x: torch.tensor):
+        with self._fabric.autocast(), torch.no_grad():
+            x = self._fabric.to_device(obj=x)
+            if not isinstance(x, torch.Tensor):
+                raise TypeError(
+                    f"Expected input to be a torch.Tensor, got {type(x)} instead."
+                )
+            return self._model.decode(x=x)

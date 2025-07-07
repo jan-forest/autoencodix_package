@@ -35,9 +35,17 @@ class BaseDataset(abc.ABC, Dataset):
         self.sample_ids = sample_ids
         self.feature_ids = feature_ids
 
+    def __len__(self) -> int:
+        """Returns the number of samples in the dataset.
+
+        Returns:
+            The number of samples in the dataset.
+        """
+        return len(self.data)
+
     def __getitem__(
         self, index: int
-    ) -> Union[Tuple[torch.Tensor, Any], Dict[str, Tuple[torch.Tensor, Any]]]:
+    ) -> Union[Tuple[torch.Tensor, Any], Dict[str, Tuple[Any, torch.Tensor, Any]]]:
         """Retrieves a single sample and its corresponding label.
 
         Args:
@@ -51,7 +59,7 @@ class BaseDataset(abc.ABC, Dataset):
             label = self.sample_ids[index]
         else:
             label = index
-        return self.data[index], label
+        return index, self.data[index], label
 
     def get_input_dim(self) -> int:
         """Gets the input dimension of the dataset (n_features)

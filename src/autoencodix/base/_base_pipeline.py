@@ -19,6 +19,7 @@ from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.utils._result import Result
 from autoencodix.utils._utils import Loader, Saver, config_method
 from autoencodix.utils.default_config import DataCase, DataInfo, DefaultConfig
+from autoencodix.visualize.visualize import Visualizer
 
 from ._base_autoencoder import BaseAutoencoder
 from ._base_dataset import BaseDataset
@@ -51,6 +52,11 @@ class BasePipeline(abc.ABC):
         _datasets: Split datasets after preprocessing.
         _evaluator: Component that assesses model performance. Not implemented yet
         _data_splitter: Component that divides data into train/validation/test sets.
+        _ontologies: Tuple of dictionaries containing the ontologies to be used to construct sparse decoder layers.
+            If a list is provided, it is assumed to be a list of file paths to ontology files.
+            First item in list or tuple will be treated as first layer (after latent space) and so on.
+
+        _
     """
 
     def __init__(
@@ -61,14 +67,15 @@ class BasePipeline(abc.ABC):
         loss_type: Type[BaseLoss],
         datasplitter_type: Type[DataSplitter],
         preprocessor_type: Type[BasePreprocessor],
-        visualizer: BaseVisualizer,
         data: Optional[
             Union[DataPackage, DatasetContainer, ad.AnnData, MuData, pd.DataFrame, dict]
         ],
-        evaluator: Evaluator,
-        result: Result,
+        visualizer: Optional[BaseVisualizer] = None,
+        evaluator: Optional[Evaluator] = None,
+        result: Optional[Result] = None,
         config: Optional[DefaultConfig] = None,
         custom_split: Optional[Dict[str, np.ndarray]] = None,
+        ontologies: Optional[Union[Tuple, Dict[Any, Any]]] = None,
         **kwargs: dict,
     ) -> None:
         """Initializes the pipeline with components and configuration.
@@ -122,21 +129,23 @@ class BasePipeline(abc.ABC):
             self.config.data_case = datacase
             self._fill_data_info()
 
+        self._ontologies = ontologies
         self._preprocessor = self._preprocessor_type(
-            config=self.config,
+            config=self.config, ontologies=self._ontologies
         )
-        self._visualizer = visualizer
+
+        self._visualizer = visualizer if visualizer is not None else Visualizer()
+        self._evaluator = evaluator if evaluator is not None else Evaluator()
+        self.result = result if result is not None else Result()
         self._dataset_type = dataset_type
-        self._evaluator = evaluator
-        self.result = result
         self._data_splitter = datasplitter_type(
             config=self.config, custom_splits=custom_split
         )
 
-
         self._datasets: Optional[DatasetContainer] = (
             processed_data  # None, or user input
         )
+
     def _validate_config(self, config: Any) -> None:
         """Sets config to default if None, or validates its type.
         Args:
@@ -170,16 +179,16 @@ class BasePipeline(abc.ABC):
                 dict,
                 type(None),
                 DatasetContainer,
-            )
+            ),
         ):
             raise TypeError(
                 f"Expected data type to be one of [DataPackage, AnnData, MuData, "
                 f"pd.DataFrame, dict, DatasetContainer], got {type(data)}."
             )
 
-
     def _handle_direct_user_data(
-        self, data,
+        self,
+        data,
     ) -> Tuple[DataPackage, DataCase]:
         """Converts raw user data into a standardized DataPackage format.
 
@@ -399,15 +408,9 @@ class BasePipeline(abc.ABC):
             raise NotImplementedError("Preprocessor not initialized")
         self._validate_user_data()
         if self.preprocessed_data is None:
-            if hasattr(self, "ontologies"):
-                self._datasets = self._preprocessor.preprocess(
-                    raw_user_data=self.raw_user_data,  # type: ignore
-                    ontologies=self.ontologies,  # Ontix
-                )
-            else:
-                self._datasets = self._preprocessor.preprocess(
-                    raw_user_data=self.raw_user_data # type: ignore
-                )
+            self._datasets = self._preprocessor.preprocess(
+                raw_user_data=self.raw_user_data,  # type: ignore
+            )
             self.result.datasets = self._datasets
         else:
             self._datasets = self.preprocessed_data
@@ -447,11 +450,6 @@ class BasePipeline(abc.ABC):
             raise ValueError(
                 "Datasets not built. Please run the preprocess method first."
             )
-        ## Overloading for ontix
-        if hasattr(self, "ontologies"):
-            ontologies = self.ontologies
-        else:
-            ontologies = None
 
         self._trainer = self._trainer_type(
             trainset=self._datasets.train,
@@ -460,7 +458,7 @@ class BasePipeline(abc.ABC):
             config=self.config,
             model_type=self._model_type,
             loss_type=self._loss_type,
-            ontologies=ontologies, # Ontix
+            ontologies=self._ontologies,  # Ontix
         )
         trainer_result = self._trainer.train()
         self.result.update(other=trainer_result)
@@ -575,9 +573,7 @@ class BasePipeline(abc.ABC):
         Raises:
             ValueError: If data type is unsupported or no test data is available.
         """
-        processed_data, _ = self._handle_direct_user_data(
-            data=data
-        )
+        processed_data, _ = self._handle_direct_user_data(data=data)
         predict_data = self._preprocessor.preprocess(
             raw_user_data=processed_data, predict_new_data=True
         )

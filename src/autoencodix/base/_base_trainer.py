@@ -76,7 +76,7 @@ class BaseTrainer(abc.ABC):
 
         # Model and optimizer setup
         self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
-        self._init_model_architecture(ontologies=ontologies) # Ontix
+        self._init_model_architecture(ontologies=ontologies)  # Ontix
 
         self._fabric = Fabric(
             accelerator=self._config.device,
@@ -138,11 +138,16 @@ class BaseTrainer(abc.ABC):
 
     def _init_model_architecture(self, ontologies: tuple) -> None:
         if ontologies is None:
-            self._model = self._model_type(config=self._config, input_dim=self._input_dim)
+            self._model = self._model_type(
+                config=self._config, input_dim=self._input_dim
+            )
         else:
             ## Ontix specific
             self._model = self._model_type(
-                config=self._config, input_dim=self._input_dim, ontologies=ontologies, feature_order=self._trainset.feature_ids,
+                config=self._config,
+                input_dim=self._input_dim,
+                ontologies=ontologies,
+                feature_order=self._trainset.feature_ids,
             )
 
     @abc.abstractmethod
@@ -155,7 +160,7 @@ class BaseTrainer(abc.ABC):
 
     @abc.abstractmethod
     def _capture_dynamics(
-        self, epoch: int, model_output: List[ModelOutput], split: str
+        self, model_output: ModelOutput, split: str, indices: torch.Tensor, sample_ids
     ) -> None:
         pass
 

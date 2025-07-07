@@ -3,6 +3,7 @@ from autoencodix.utils.default_config import DefaultConfig
 import torch
 from torch import nn
 from autoencodix.utils._model_output import ModelOutput
+from autoencodix.utils._annealer import AnnealingScheduler
 
 from typing import Optional, Tuple, Dict
 
@@ -21,7 +22,7 @@ class BaseLoss(nn.Module, ABC):
         compute_kernel: Function to compute kernel for MMD loss.
     """
 
-    def __init__(self, config: DefaultConfig):
+    def __init__(self, config: DefaultConfig, annealing_scheduler=None):
         """Initializes the loss module with the specified configuration.
 
         Args:
@@ -32,6 +33,7 @@ class BaseLoss(nn.Module, ABC):
                 loss type is specified.
         """
         super().__init__()
+        self.annealing_scheduler = annealing_scheduler or AnnealingScheduler()
         self.config = config
         self.recon_loss: nn.Module
 
@@ -191,7 +193,7 @@ class BaseLoss(nn.Module, ABC):
 
     @abstractmethod
     def forward(
-        self, model_output: ModelOutput, targets: torch.Tensor
+        self, model_output: ModelOutput, targets: torch.Tensor, epoch: int
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """Calculates the loss for the autoencoder.
 
@@ -207,6 +209,8 @@ class BaseLoss(nn.Module, ABC):
                 (e.g., reconstructed data, latent variables, etc.).
             targets: Target values for computing the loss. These should match
                 the shape and type expected by the reconstruction loss function.
+            epoch: The current training epoch.
+                We need this to calc the annealing factor, if we train with loss annealing.
 
         Returns:
             A tuple containing:

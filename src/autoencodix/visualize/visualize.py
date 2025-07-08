@@ -183,8 +183,7 @@ class Visualizer(BaseVisualizer):
         else:
             # Set Defaults
             if epoch is None:
-                # Infer total epochs from losses
-                epoch = len(result.losses.get()) - 1
+                epoch = result.model.config.epochs - 1
 
             if split == "all":
                 df_latent = pd.concat(
@@ -723,3 +722,79 @@ class Visualizer(BaseVisualizer):
 
         loss_df_melt["Loss Value"] = loss_df_melt["Loss Value"].astype(float)
         return loss_df_melt
+    
+    def plot_evaluation(
+            self,
+            result: Result,
+    ) -> matplotlib.figure.Figure:
+        """
+        Plots the evaluation results from the Result object.
+
+        Parameters:
+        result (Result): The Result object containing evaluation data.
+
+        Returns:
+        matplotlib.figure.Figure: The generated figure containing the evaluation plots.
+        """
+        ## Plot all results
+
+        ml_plots = dict()
+        plt.ioff()
+
+        for c in pd.unique(result.embedding_evaluation.CLINIC_PARAM):
+            ml_plots[c] = dict()
+            for m in pd.unique(result.embedding_evaluation.loc[result.embedding_evaluation.CLINIC_PARAM == c, "metric"]):
+
+                sns_plot = sns.catplot(
+                    data=result.embedding_evaluation[
+                        (result.embedding_evaluation.metric == m) & (result.embedding_evaluation.CLINIC_PARAM == c)
+                    ],
+                    x="score_split",
+                    y="value",
+                    row="ML_ALG",
+                    col="ML_TASK",
+                    hue="score_split",
+                    kind="bar",
+                )
+
+                min_y = result.embedding_evaluation[
+                    (result.embedding_evaluation.metric == m) & (result.embedding_evaluation.CLINIC_PARAM == c)
+                ].value.min()
+                if min_y > 0:
+                    min_y = 0                
+
+                ml_plots[c][m] = sns_plot.set(ylim=(min_y, None))
+
+        self.plots["ML_Evaluation"] = ml_plots
+
+        return ml_plots
+    
+    def show_evaluation(self,
+                        param: str,
+                        metric: str,
+                        ) -> None:
+        """
+        Displays the evaluation plot for a specific clinical parameter and metric.
+        Parameters:
+        param (str): The clinical parameter to visualize.
+        metric (str): The metric to visualize.
+        Returns:
+        None
+        """
+        if "ML_Evaluation" not in self.plots.keys():
+            print("ML Evaluation plots not found in the plots dictionary")
+            print("You need to run evaluate() method first")
+            return None
+        if param not in self.plots["ML_Evaluation"].keys():
+            print(f"Parameter {param} not found in the ML Evaluation plots")
+            print(f"Available parameters: {list(self.plots['ML_Evaluation'].keys())}")
+            return None
+        if metric not in self.plots["ML_Evaluation"][param].keys():
+            print(f"Metric {metric} not found in the ML Evaluation plots for {param}")
+            print(
+                f"Available metrics: {list(self.plots['ML_Evaluation'][param].keys())}"
+            )
+            return None
+        fig = self.plots["ML_Evaluation"][param][metric].figure
+        show_figure(fig)
+        plt.show()

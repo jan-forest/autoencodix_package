@@ -96,5 +96,5 @@ class VarixLoss(BaseLoss):
             "recon_loss": recon_loss,
             "var_loss": var_loss,
             "anneal_factor": torch.tensor(anneal_factor),
-            "effective_beta": torch.tensor(effective_beta),
+            "effective_beta_factor": torch.tensor(effective_beta),
         }

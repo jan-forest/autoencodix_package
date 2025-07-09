@@ -1,4 +1,5 @@
 from typing import Any, Union
+import warnings
 
 import pandas as pd
 from sklearn import linear_model
@@ -8,8 +9,11 @@ from sklearn.metrics import get_scorer
 
 from umap import UMAP
 from sklearn.manifold import TSNE
+from sklearn.base import ClassifierMixin, RegressorMixin
 
 from autoencodix.utils._result import Result
+from autoencodix.data._datasetcontainer import DatasetContainer
+
 
 
 class Evaluator:
@@ -17,21 +21,59 @@ class Evaluator:
         pass
 
     def evaluate(self,
-                datasets,
-                result,
-                ml_model_class: Any = linear_model.LogisticRegression(), # Default is sklearn LogisticRegression
-                ml_model_regression: Any = linear_model.LinearRegression(), # Default is sklearn LinearRegression
+                datasets: DatasetContainer,
+                result: Result,
+                ml_model_class: ClassifierMixin = linear_model.LogisticRegression(), # Default is sklearn LogisticRegression
+                ml_model_regression: RegressorMixin = linear_model.LinearRegression(), # Default is sklearn LinearRegression
                 params: Union[list, str]= "all",	# No default? ... or all params in annotation?
                 metric_class: str = "roc_auc_ovr", # Default is 'roc_auc_ovr' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
                 metric_regression: str = "r2", # Default is 'r2'
                 reference_methods: list = [], # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
                 split_type:str = "use-split", # Default is "use-split", other options: "CV-5", ... "LOOCV"?
                 ) -> Result:
-        # 'result = Result()'
+        """
+        Evaluate the performance of machine learning models on various feature representations and clinical parameters.
+        This method performs classification or regression tasks using specified machine learning models on different feature sets (e.g., latent space, PCA, UMAP, TSNE, RandomFeature) and clinical annotation parameters. It supports multiple evaluation strategies, including pre-defined train/valid/test splits, k-fold cross-validation, and leave-one-out cross-validation. The results are aggregated and stored in the provided `result` object.
+        Parameters
+        ----------
+        datasets : DatasetContainer
+            An DatasetContainer containing train, valid, and test datasets, each with `sample_ids` and `metadata` (either a DataFrame or a dictionary with a 'paired' key for clinical annotations).
+        result : Result
+            An Result object to store the evaluation results. Should have an `embedding_evaluation` attribute which updated (typically a DataFrame).
+        ml_model_class : ClassifierMixin, optional
+            The scikit-learn classifier to use for classification tasks (default: `sklearn.linear_model.LogisticRegression()`).
+        ml_model_regression : RegressorMixin, optional
+            The scikit-learn regressor to use for regression tasks (default: `sklearn.linear_model.LinearRegression()`).
+        params : list or str, optional
+            List of clinical annotation columns to evaluate, or "all" to use all columns (default: "all").
+        metric_class : str, optional
+            Scoring metric for classification tasks (default: "roc_auc_ovr").
+        metric_regression : str, optional
+            Scoring metric for regression tasks (default: "r2").
+        reference_methods : list, optional
+            List of feature representations to evaluate (e.g., "PCA", "UMAP", "TSNE", "RandomFeature"). "Latent" is always included (default: []).
+        split_type : str, optional
+            Evaluation strategy: "use-split" for pre-defined splits, "CV-N" for N-fold cross-validation, or "LOOCV" for leave-one-out cross-validation (default: "use-split").
+        Returns
+        -------
+        Result
+            The updated result object with evaluation results stored in `embedding_evaluation`.
+        Raises
+        ------
+        ValueError
+            If required annotation data is missing or improperly formatted, or if an unsupported split type is specified.
+        Notes
+        -----
+        - Samples with missing annotation values for a given parameter are excluded from the corresponding evaluation.
+        - For "RandomFeature", five random feature sets are evaluated.
+        - The method appends results to any existing `embedding_evaluation` in the result object.
+        """
 
         already_warned = False
 
         df_results = pd.DataFrame()
+
+        ## TODO when x-modalix is ready, check how to adjust evaluation of both latent spaces
         # if cfg["MODEL_TYPE"] == "x-modalix":
         #     if "Latent" in cfg["ML_TASKS"]:
         #         cfg["ML_TASKS"].remove("Latent")
@@ -234,19 +276,25 @@ class Evaluator:
 
                     df_results = pd.concat([df_results, results])
 
-
-        result.embedding_evaluation = df_results
+        ## Check if embedding_evaluation is empty
+        if hasattr(result, "embedding_evaluation") and len(result.embedding_evaluation) == 0:
+            result.embedding_evaluation = df_results
+        else:
+            # merge with existing results
+            result.embedding_evaluation = pd.concat(
+                [result.embedding_evaluation, df_results], axis=0
+            )
 
         return result
     
     @staticmethod
     def _single_ml(
-            df,
-            clin_data,
-            task_param,
-            sklearn_ml,
-            metric,
-            cv_folds=5,
+            df: pd.DataFrame,
+            clin_data: pd.DataFrame,
+            task_param: str,
+            sklearn_ml: Union[ClassifierMixin, RegressorMixin],
+            metric: str,
+            cv_folds: int =5,
                    ):
         """
         Function learns on the given data frame df and label data the provided sklearn model.
@@ -304,21 +352,43 @@ class Evaluator:
 
     @staticmethod
     def _single_ml_presplit(
-        sample_split, df, clin_data, task_param, sklearn_ml, metric, ml_type
+        sample_split: pd.DataFrame,
+        df: pd.DataFrame,
+        clin_data: pd.DataFrame,
+        task_param: str,
+        sklearn_ml: Union[ClassifierMixin, RegressorMixin],
+        metric: str,
+        ml_type: str
     ):
         """
-        Function learns on the given data frame df and label data the provided sklearn model.
-        Split infomation from autoencoder for samples are used and scores are returned as output as specified by metrics for each split
-        ARGS:
-            df (pd.DataFrame): Dataframe with input data
-            clin_data (pd.DataFrame): Dataframe with label data
-            task_param (str): Column name with label data
-            sklearn_ml (sklearn.module): Sklearn ML module specifying the ML algorithm
-            metrics (list): list of metrics (scores) to be calculated by cross validation
-            cfg (dict): dictionary of the yaml config
-        RETURNS:
-            score_df (pd.DataFrame): data frame containing metrics (scores) for all CV runs (long format)
+        Trains the provided sklearn model on the training split and evaluates it on train, valid, and test splits using the specified metric.
 
+        Parameters
+        ----------
+        sample_split : pd.DataFrame
+            DataFrame with sample IDs and their corresponding split ("train", "valid", "test").
+        df : pd.DataFrame
+            DataFrame with input features, indexed by sample IDs.
+        clin_data : pd.DataFrame
+            DataFrame with label/annotation data, indexed by sample IDs.
+        task_param : str
+            Column name in clin_data specifying the target variable.
+        sklearn_ml : ClassifierMixin or RegressorMixin
+            Instantiated sklearn model to use for training and evaluation.
+        metric : str
+            Scoring metric compatible with sklearn's get_scorer.
+        ml_type : str
+            Type of machine learning task ("classification" or "regression").
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing evaluation scores for each split (train, valid, test) and the specified metric.
+
+        Raises
+        ------
+        ValueError
+            If the provided metric is not supported by sklearn.
         """
         split_list = ["train", "valid", "test"]
 
@@ -331,7 +401,6 @@ class Evaluator:
         X_train = df.loc[sample_split.loc[sample_split.SPLIT == "train", "SAMPLE_ID"], :]
         train_samples = [s for s in X_train.index]
         Y_train = clin_data.loc[train_samples, task_param]
-
         # train model once on training data
         if len(Y_train.unique()) > 1:
             sklearn_ml.fit(X_train, Y_train)
@@ -362,43 +431,28 @@ class Evaluator:
                         Y = Y[Y.isin(Y_train.unique())]
                         # Adjust X as well
                         X = X.loc[Y.index, :]
-                    # y_proba = sklearn_ml.predict_proba(X)
-                    # if len(pd.unique(Y)) == 2:
-                    #     y_proba = y_proba[:, 1]
+
 
                 score_temp = sklearn_scorer(sklearn_ml, X, Y)
                 score_df["value"].append(score_temp)
-                # match metric:
-                #     case "roc_auc_ovo":
-                #         # Check that Y has only classes which are present in Y_train
-                #         if len(set(Y.unique()).difference(set(Y_train.unique()))) > 0:
-                #             print(f"Classes in split {split} are not present in training data")
-                #             # Adjust Y to only contain classes present in Y_train
-                #             Y = Y[Y.isin(Y_train.unique())]
-                #             # Adjust X as well
-                #             X = X.loc[Y.index, :]
-                #         y_proba = sklearn_ml.predict_proba(X)
-                #         if len(pd.unique(Y)) == 2:
-                #             y_proba = y_proba[:, 1]
-                        
-                #         roc_temp = roc_auc_score(
-                #             Y, y_proba, multi_class="ovo", average="macro", labels=np.sort(Y_train.unique())
-                #         )
-                #         score_df["value"].append(roc_temp)
-
-                #     case "r2":
-                #         r2_temp = r2_score(Y, sklearn_ml.predict(X))
-                #         score_df["value"].append(r2_temp)
-
-                #     case _:
-                #         logger.info(
-                #             f"Your metric: {metric} is not yet supported or valid for this ML type"
-                #         )
+        else:
+            ## Warning that there is only one class in the training data
+            warnings.warn(f"Warning: There is only one class in the training data for task parameter {task_param}. Skipping evaluation for this task.")
 
         return pd.DataFrame(score_df)
     
     @staticmethod
-    def _get_ml_type(clin_data, task_param):
+    def _get_ml_type(clin_data: pd.DataFrame, task_param: str) -> str:
+        """
+        Determines the machine learning task type (classification or regression) based on the data type of a specified column in clinical data.
+
+        Args:
+            clin_data (pd.DataFrame): The clinical data as a pandas DataFrame.
+            task_param (str): The column name in clin_data to inspect for determining the task type.
+
+        Returns:
+            str: "classification" if the first value in the specified column is a string, otherwise "regression".
+        """
         ## Auto-Detection
         if type(list(clin_data[task_param])[0]) is str:
             ml_type = "classification"
@@ -408,7 +462,24 @@ class Evaluator:
         return ml_type
     
     @staticmethod
-    def _load_input_for_ml(task, dataset, result):
+    def _load_input_for_ml(task: str, dataset: DatasetContainer, result: Result) -> pd.DataFrame:
+        """
+        Loads and processes input data for various machine learning tasks based on the specified task type.
+        Parameters:
+            task (str): The type of ML task. Supported values are "Latent", "UMAP", "PCA", "TSNE", and "RandomFeature".
+            dataset (DatasetContainer): The dataset container object holding train, validation, and test splits.
+            result (Result): The result object containing model configuration and methods to retrieve latent representations.
+        Returns:
+            pd.DataFrame: A DataFrame containing the processed input data suitable for the specified ML task.
+        Raises:
+            ValueError: If the provided task is not supported.
+        Task Details:
+            - "Latent": Concatenates latent representations from train, validation, and test splits at the final epoch.
+            - "UMAP": Applies UMAP dimensionality reduction to the concatenated dataset splits.
+            - "PCA": Applies PCA dimensionality reduction to the concatenated dataset splits.
+            - "TSNE": Applies t-SNE dimensionality reduction to the concatenated dataset splits.
+            - "RandomFeature": Randomly samples columns (features) from the concatenated dataset splits.
+        """
 
         final_epoch = result.model.config.epochs - 1
 

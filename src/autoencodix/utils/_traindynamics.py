@@ -95,7 +95,9 @@ class TrainingDynamics:
             self._data[epoch] = {}
         self._data[epoch][split] = data
 
-    def get(self, epoch: Optional[int] = None, split: Optional[str] = None) -> Union[
+    def get(
+        self, epoch: Optional[int] = None, split: Optional[str] = None
+    ) -> Union[
         np.ndarray,
         Dict[str, np.ndarray],
         Dict[int, Dict[str, np.ndarray]],
@@ -156,11 +158,17 @@ class TrainingDynamics:
 
         # we need the not in self._data check here, because in the predict step we save
         # the model outputs with epoch -1
-        if epoch < 0 and epoch not in self._data:
+        if epoch < 0 and epoch is not None:
             # -1 equals to the highest epoch, -2 to the second highest, etc.
-            epoch = max(self._data.keys()) + (epoch + 1)
+            # for the predict case, we save the model outputs with epoch -1
+            # so we can index with -1 directly
+            epoch = (
+                epoch
+                if epoch in self._data.keys() and split == "test"
+                else max(self._data.keys()) + (epoch + 1)
+            )
         # Case 2: Epoch specified
-        if epoch not in self._data:
+        if epoch > 0 and epoch not in self._data:
             if split is not None:
                 return np.array([])
             return {}

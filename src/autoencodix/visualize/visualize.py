@@ -616,9 +616,10 @@ class Visualizer(BaseVisualizer):
         matplotlib.figure.Figure
             The generated matplotlib figure containing the loss plots.
         """
+        fig_width = 5*len(df_plot["Loss Term"].unique())
         if plot_type == "absolute":
             fig, axes = plt.subplots(
-                1, len(df_plot["Loss Term"].unique()), figsize=(15, 5), sharey=False
+                1, len(df_plot["Loss Term"].unique()), figsize=(fig_width, 5), sharey=False
             )
             ax = 0
             for term in df_plot["Loss Term"].unique():
@@ -636,7 +637,7 @@ class Visualizer(BaseVisualizer):
         if plot_type == "relative":
             exclude = df_plot["Loss Term"] != "total_loss"
 
-            fig, axes = plt.subplots(1, 2, figsize=(15, 5), sharey=True)
+            fig, axes = plt.subplots(1, 2, figsize=(fig_width, 5), sharey=True)
 
             ax = 0
 
@@ -726,7 +727,7 @@ class Visualizer(BaseVisualizer):
     def plot_evaluation(
             self,
             result: Result,
-    ) -> matplotlib.figure.Figure:
+    ) -> dict:
         """
         Plots the evaluation results from the Result object.
 
@@ -734,7 +735,7 @@ class Visualizer(BaseVisualizer):
         result (Result): The Result object containing evaluation data.
 
         Returns:
-        matplotlib.figure.Figure: The generated figure containing the evaluation plots.
+        dict: The generated dictionary containing the evaluation plots.
         """
         ## Plot all results
 
@@ -744,43 +745,52 @@ class Visualizer(BaseVisualizer):
         for c in pd.unique(result.embedding_evaluation.CLINIC_PARAM):
             ml_plots[c] = dict()
             for m in pd.unique(result.embedding_evaluation.loc[result.embedding_evaluation.CLINIC_PARAM == c, "metric"]):
+                ml_plots[c][m] = dict()
+                for alg in pd.unique(result.embedding_evaluation.loc[
+                        (result.embedding_evaluation.CLINIC_PARAM == c) &
+                        (result.embedding_evaluation.metric == m), "ML_ALG"
+                    ]):
+                    data = result.embedding_evaluation[
+                        (result.embedding_evaluation.metric == m) &
+                        (result.embedding_evaluation.CLINIC_PARAM == c) &
+                        (result.embedding_evaluation.ML_ALG == alg)
+                    ]
 
-                sns_plot = sns.catplot(
-                    data=result.embedding_evaluation[
-                        (result.embedding_evaluation.metric == m) & (result.embedding_evaluation.CLINIC_PARAM == c)
-                    ],
-                    x="score_split",
-                    y="value",
-                    row="ML_ALG",
-                    col="ML_TASK",
-                    hue="score_split",
-                    kind="bar",
-                )
+                    sns_plot = sns.catplot(
+                        data=data,
+                        x="score_split",
+                        y="value",
+                        col="ML_TASK",
+                        hue="score_split",
+                        kind="bar",
+                    )
 
-                min_y = result.embedding_evaluation[
-                    (result.embedding_evaluation.metric == m) & (result.embedding_evaluation.CLINIC_PARAM == c)
-                ].value.min()
-                if min_y > 0:
-                    min_y = 0                
+                    min_y = data.value.min()
+                    if min_y > 0:
+                        min_y = 0
 
-                ml_plots[c][m] = sns_plot.set(ylim=(min_y, None))
+                    ml_plots[c][m][alg] = sns_plot.set(ylim=(min_y, None))
 
         self.plots["ML_Evaluation"] = ml_plots
 
         return ml_plots
     
-    def show_evaluation(self,
-                        param: str,
-                        metric: str,
-                        ) -> None:
+    def show_evaluation(
+        self,
+        param: str,
+        metric: str,
+        ml_alg: Optional[str] = None,
+    ) -> None:
         """
-        Displays the evaluation plot for a specific clinical parameter and metric.
+        Displays the evaluation plot for a specific clinical parameter, metric, and optionally ML algorithm.
         Parameters:
         param (str): The clinical parameter to visualize.
         metric (str): The metric to visualize.
+        ml_alg (str, optional): The ML algorithm to visualize. If None, plots all available algorithms.
         Returns:
         None
         """
+        plt.ioff()
         if "ML_Evaluation" not in self.plots.keys():
             print("ML Evaluation plots not found in the plots dictionary")
             print("You need to run evaluate() method first")
@@ -795,6 +805,19 @@ class Visualizer(BaseVisualizer):
                 f"Available metrics: {list(self.plots['ML_Evaluation'][param].keys())}"
             )
             return None
-        fig = self.plots["ML_Evaluation"][param][metric].figure
-        show_figure(fig)
-        plt.show()
+
+        algs = list(self.plots["ML_Evaluation"][param][metric].keys())
+        if ml_alg is not None:
+            if ml_alg not in algs:
+                print(f"ML algorithm {ml_alg} not found for {param} and {metric}")
+                print(f"Available ML algorithms: {algs}")
+                return None
+            fig = self.plots["ML_Evaluation"][param][metric][ml_alg].figure
+            show_figure(fig)
+            plt.show()
+        else:
+            for alg in algs:
+                print(f"Showing plot for ML algorithm: {alg}")
+                fig = self.plots["ML_Evaluation"][param][metric][alg].figure
+                show_figure(fig)
+                plt.show()

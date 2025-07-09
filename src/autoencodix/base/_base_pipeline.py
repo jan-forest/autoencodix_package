@@ -2,6 +2,7 @@ import abc
 import copy
 from typing import Dict, Optional, Tuple, Type, Union, Any
 
+import warnings
 import anndata as ad  # type: ignore
 import numpy as np
 import pandas as pd
@@ -10,6 +11,7 @@ from mudata import MuData  # type: ignore
 from torch.utils.data import Dataset
 # ML evaluation
 from sklearn import linear_model
+from sklearn.base import ClassifierMixin, RegressorMixin, is_classifier, is_regressor
 
 
 from autoencodix.data._datasetcontainer import DatasetContainer
@@ -779,8 +781,8 @@ class BasePipeline(abc.ABC):
     # @config_method(valid_params={"config"})
     def evaluate(
         self,
-        ml_model_class: Any = linear_model.LogisticRegression(), # Default is sklearn LogisticRegression
-        ml_model_regression: Any = linear_model.LinearRegression(), # Default is sklearn LinearRegression
+        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(), # Default is sklearn LogisticRegression
+        ml_model_regression: RegressorMixin = linear_model.LinearRegression(), # Default is sklearn LinearRegression
         params: Union[list, str]= [],	# Default empty list, to use all parameters use string "all"
         metric_class: str = "roc_auc_ovr", # Default is 'roc_auc_ovr' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
         metric_regression: str = "r2", # Default is 'r2'
@@ -794,6 +796,17 @@ class BasePipeline(abc.ABC):
             raise NotImplementedError(
                 "Model not trained. Please run the fit method first"
             )
+        if not is_classifier(ml_model_class):
+            warnings.warn(
+                "The provided model is not a sklearn-type classifier. "
+                "Evaluation continues but may produce incorrect results or errors."
+            )
+        if not is_regressor(ml_model_regression):
+            warnings.warn(
+                "The provided model is not a sklearn-type regressor. "
+                "Evaluation continues but may produce incorrect results or errors."
+            )
+
         self.result = self._evaluator.evaluate(
             datasets=self._datasets,
             result=self.result,

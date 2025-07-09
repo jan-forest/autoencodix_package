@@ -80,13 +80,16 @@ class VarixLoss(BaseLoss):
             n_epochs_pretrain=self.config.pretrain_epochs,
             current_epoch=epoch,
         )
-
+        print(f"Annealing epoch: {annealing_epoch}")
+        print(f"Total epochs: {self.config.epochs}")
+        print(f"Anneal function: {self.config.anneal_function}")
         # Get annealing weight
         anneal_factor = self.annealing_scheduler.get_weight(
             epoch_current=annealing_epoch,
             total_epoch=self.config.epochs,
             func=self.config.anneal_function,
         )
+        print(f"Anneal factor: {anneal_factor}")
 
         # Apply annealed beta
         effective_beta = self.config.beta * anneal_factor
@@ -96,5 +99,5 @@ class VarixLoss(BaseLoss):
             "recon_loss": recon_loss,
             "var_loss": var_loss,
             "anneal_factor": torch.tensor(anneal_factor),
-            "effective_beta": torch.tensor(effective_beta),
+            "effective_beta_factor": torch.tensor(effective_beta),
         }

@@ -141,7 +141,10 @@ class GeneralTrainer(BaseTrainer):
 
             total_loss += loss.item()
             for k, v in batch_sub_losses.items():
-                sub_losses[k] += v.item()
+                if "_factor" not in k:  # Skip factor losses
+                    sub_losses[k] += v.item()
+                else:
+                    sub_losses[k] = v.item()
 
             if should_checkpoint:
                 self._capture_dynamics(model_outputs, "train", indices, sample_ids)
@@ -161,7 +164,10 @@ class GeneralTrainer(BaseTrainer):
                 )
                 total_loss += loss.item()
                 for k, v in batch_sub_losses.items():
-                    sub_losses[k] += v.item()
+                    if "_factor" not in k:  # Skip factor losses
+                        sub_losses[k] += v.item()
+                    else:
+                        sub_losses[k] = v.item()
                 if should_checkpoint:
                     self._capture_dynamics(model_outputs, "valid", indices, sample_ids)
 
@@ -175,7 +181,16 @@ class GeneralTrainer(BaseTrainer):
         self._result.sub_losses.add(
             epoch=epoch,
             split=split,
-            data={k: v / dataset_len for k, v in sub_losses.items()},
+            data={
+                k: v / dataset_len if "_factor" not in k else v
+                for k, v in sub_losses.items()
+            },
+        )
+        self._fabric.print(
+            f"Epoch {epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {total_loss:.4f}"
+        )
+        self._fabric.print(
+            f"Sub-losses: {', '.join([f'{k}: {v:.4f}' for k, v in sub_losses.items()])}"
         )
 
     def _store_checkpoint(self, epoch):

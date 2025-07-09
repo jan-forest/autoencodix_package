@@ -23,5 +23,7 @@ class ImgData:
             f"    sample_id={self.sample_id!r},\n"
             f"    img_shape={self.img.shape},\n"
             f"    annotation_shape={self.annotation.shape}\n"
+            f" .  img: actual image data is not shown for brevity, use img attribute to access it"
             f")"
         )
+    

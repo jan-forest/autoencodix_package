@@ -26,7 +26,7 @@ class BaseAutoencoder(ABC, nn.Module):
     def __init__(
         self,
         config: Optional[DefaultConfig],
-        input_dim: int,
+        input_dim: Union[int, Tuple[int, ...]],
         ontologies: Optional[Union[Tuple, Dict]] = None,
         feature_order: Optional[Union[Tuple, Dict]] = None,
     ):

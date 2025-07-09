@@ -13,6 +13,61 @@ class ImageProcessingError(Exception):
     pass
 
 
+class ImageSizeFinder:
+    """Finds nearest quadratic image size that is dividable by 2^number_of_layers
+    to the given image size in the config file
+
+    """
+
+    def __init__(self, config):
+        self.config = config
+        found_image_type = False
+        for data_type in config.data_config.data_info.keys():
+            print(f"Checking data type: {data_type}")
+            if config.data_config.data_info[data_type].data_type == "IMG":
+                print("Found image type in config")
+                cur_data_info = config.data_config.data_info[data_type]
+                print(f"current data info: {cur_data_info}")
+                self.width = config.data_config.data_info[data_type].img_width_resize
+                self.height = config.data_config.data_info[data_type].img_height_resize
+                found_image_type = True
+        if not found_image_type:
+            raise ValueError("You need to provide a DATA_TYPE of with the TYPE key IMG")
+
+        self.n_conv_layers = 5
+
+    def _image_size_is_legal(self):
+        """Checks if image size is dividable by 2^number_of_layers
+        to the given image size in the config file
+
+        """
+        return self.width % 2**self.n_conv_layers == 0
+
+    def get_nearest_quadratic_image_size(self):
+        """Finds nearest quadratic image size that is dividable by 2^number_of_layers
+        to the given image size in the config file
+
+        """
+        if self._image_size_is_legal():
+            print(
+                f"Given image size is possible, rescaling images to: {self.width}x{self.height}"
+            )
+            return self.width, self.height
+        running_image_size = self.width
+        while_loop_counter = 0
+        while not running_image_size % 2**self.n_conv_layers == 0:
+            running_image_size += 1
+            while_loop_counter += 1
+            if while_loop_counter > 10000:
+                raise ValueError(
+                    f"Could not find a quadratic image size that is dividable by 2^{self.n_conv_layers}"
+                )
+        print(
+            f"Given image size{self.width}x{self.height} is not possible, rescaling to: {running_image_size}x{running_image_size}"
+        )
+        return running_image_size, running_image_size
+
+
 class ImageDataReader:
     """
     A utility class for reading and processing image data.
@@ -174,7 +229,11 @@ class ImageDataReader:
             subset = annotation_df[annotation_df["img_paths"] == img_path]
             if not subset.empty:
                 imgs.append(
-                    ImgData(img=img, sample_id=subset["sample_ids"].iloc[0], annotation=subset)
+                    ImgData(
+                        img=img,
+                        sample_id=subset["sample_ids"].iloc[0],
+                        annotation=subset,
+                    )
                 )
         return imgs
 
@@ -258,8 +317,8 @@ class ImageDataReader:
             List of ImgData objects for this image source.
         """
         img_dir = img_info.file_path
-        to_h = img_info.img_height_resize
-        to_w = img_info.img_width_resize
+        img_size_finder: ImageSizeFinder = ImageSizeFinder(config)
+        to_h, to_w = img_size_finder.get_nearest_quadratic_image_size()
 
         # Get annotation data
         if img_info.extra_anno_file is not None:
@@ -275,10 +334,9 @@ class ImageDataReader:
                 )
                 if not config.requires_paired:
                     if config.requires_paired is not None:
-                        
                         raise ValueError(
                             "Img specific annotation file is required for unpaired translation."
-                    )
+                        )
                 annotation = self.read_annotation_file(anno_info)
             except StopIteration:
                 raise ValueError("No annotation data found in the configuration.")

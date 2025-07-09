@@ -113,8 +113,8 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     # image specific ------------------------------
 
     img_root: Union[str, None] = Field(default=None)
-    img_width_resize: Union[int, None] = Field(default=None)
-    img_height_resize: Union[int, None] = Field(default=None)
+    img_width_resize: Union[int, None] = Field(default=64)
+    img_height_resize: Union[int, None] = Field(default=64)
     # annotation specific -------------------------
     # xmodalix specific -------------------------
     translate_direction: Union[Literal["from", "to"], None] = Field(default=None)
@@ -125,7 +125,18 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         if "X" not in v:
             raise ValueError('"X" must always be a part of the selected_layers list')
         return v
-
+    # add validation to only allow quadratic image resizing
+    @field_validator("img_width_resize", "img_height_resize")
+    @classmethod
+    def validate_image_resize(cls, v, values):
+        if v is not None and v <= 0:
+            raise ValueError("Image resize dimensions must be positive integers")
+        if "img_width_resize" in values and "img_height_resize" in values:
+            if values["img_width_resize"] != values["img_height_resize"]:
+                raise ValueError(
+                    "Image width and height must be the same for resizing"
+                )
+        return v
 
 class DataConfig(BaseModel, SchemaPrinterMixin):
     data_info: Dict[str, DataInfo]

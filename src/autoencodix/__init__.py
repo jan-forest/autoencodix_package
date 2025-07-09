@@ -10,5 +10,6 @@ from .vanillix import Vanillix
 from .varix import Varix
 from .stackix import Stackix
 from .ontix import Ontix
+from .xmodalix import XModalix
 
-__all__ = ["Vanillix", "Varix", "Stackix", "Ontix"]
+__all__ = ["Vanillix", "Varix", "Stackix", "Ontix", "XModalix"]

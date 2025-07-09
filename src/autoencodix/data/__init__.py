@@ -10,6 +10,7 @@ from ._stackix_preprocessor import StackixPreprocessor
 from .datapackage import DataPackage
 from .general_preprocessor import GeneralPreprocessor
 from ._sc_filter import SingleCellFilter
+from ._xmodal_preprocessor import XModalPreprocessor
 
 __all__ = [
     "DataSplitter",
@@ -24,4 +25,5 @@ __all__ = [
     "StackixPreprocessor",
     "StackixDataset",
     "SingleCellFilter",
+    "XModalPreprocessor",
 ]

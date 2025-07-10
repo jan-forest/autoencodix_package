@@ -28,7 +28,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
 
     def __init__(
         self,
-        input_dim: Tuple[int, int, int], # (C,W,H) the input image shape
+        input_dim: Tuple[int, int, int],  # (C,W,H) the input image shape
         config: Optional[DefaultConfig],
         # the input_dim is the number of channels in the image, e.g. 3
         hidden_dim: int = 16,
@@ -219,7 +219,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
 
     def translate(self, z: torch.Tensor) -> torch.Tensor:
         out = self.decode(z)
-        return out.view(self.img_shape)
+        return out.view(-1, *self.img_shape)
 
     def forward(self, x: torch.Tensor) -> ModelOutput:
         mu, logvar = self.encode(x)

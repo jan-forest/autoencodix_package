@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from typing import Optional, Type
+from typing import Optional, Type, Union, Tuple
 from collections import defaultdict
 from torch.utils.data import DataLoader
 
@@ -38,18 +38,21 @@ class GeneralTrainer(BaseTrainer):
 
         # we will set this later, in the predict method
         self.n_test: Optional[int] = None
-        self.n_train = len(trainset) if trainset else 0
-        self.n_valid = len(validset) if validset else 0
-        self.n_features = trainset.data.shape[1] if trainset else 0
+        self.n_train = len(trainset.data) if trainset else 0
+        self.n_valid = len(validset.data) if validset else 0
+        self.n_features = trainset.get_input_dim() if trainset else 0
         self.device = next(self._model.parameters()).device
 
         self._init_buffers()
 
     def _init_buffers(self):
-        def make_tensor_buffer(size, dim):
-            return torch.zeros((size, dim), device=self.device)
+        def make_tensor_buffer(size: int, dim: Union[int, Tuple[int, ...]]):
+            if isinstance(dim, int):
+                return torch.zeros((size, dim), device=self.device)
+            else:
+                return torch.zeros((size, *dim), device=self.device)
 
-        def make_numpy_buffer(size):
+        def make_numpy_buffer(size: int):
             return np.empty((size,), dtype=object)
 
         self._latentspace_buffer = {

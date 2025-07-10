@@ -62,7 +62,7 @@ class BaseDataset(abc.ABC, Dataset):
             label = index
         return index, self.data[index], label
 
-    def get_input_dim(self) -> 
+    def get_input_dim(self) -> Union[int, Tuple[int, ...]]:
         """Gets the input dimension of the dataset (n_features)
 
         Returns:

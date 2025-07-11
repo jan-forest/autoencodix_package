@@ -145,8 +145,8 @@ class Visualizer(BaseVisualizer):
         self,
         result: Result,
         plot_type: str = "2D-scatter",
-        label_list: Optional[Union[list, None]] = None,
-        param: str = "all",
+        label_list: Optional[Union[list, pd.Series, None]] = None,
+        param: Optional[Union[list, str]] = None,
         epoch: Optional[Union[int, None]] = None,
         split: str = "all",
     ) -> None:
@@ -162,7 +162,7 @@ class Visualizer(BaseVisualizer):
         label_list : list, optional
             List of labels for the data points in the latent space. Default is None.
         param : str, optional
-            Parameter to be used for plotting. Default is "all".
+            List of parameters provided and stored as metadata. Strings must match column names. If not a list, string "all" is expected for convenient way to make plots for all parameters available. Default is None where no colored labels are plotted.
         epoch : int, optional
             The epoch number to visualize. If None, the last epoch is inferred from the losses. Default is None.
         split : str, optional
@@ -185,6 +185,50 @@ class Visualizer(BaseVisualizer):
             if epoch is None:
                 epoch = result.model.config.epochs - 1
 
+          ## Getting clin_data
+            if hasattr(result.datasets.train, "metadata"):
+                # Check if metadata is a dictionary and contains 'paired'
+                if isinstance(result.datasets.train.metadata, dict):
+                    if "paired" in result.datasets.train.metadata:
+                        clin_data = result.datasets.train.metadata['paired']
+                        if hasattr(result.datasets, "test"):
+                            clin_data = pd.concat(
+                                [clin_data, result.datasets.test.metadata['paired']],
+                                axis=0,
+                            )
+                        if hasattr(result.datasets, "valid"):
+                            clin_data = pd.concat(
+                                [clin_data, result.datasets.valid.metadata['paired']],
+                                axis=0,
+                            )
+                    else:
+                        # Raise error no annotation given
+                        raise ValueError(
+                            "Please provide paired annotation data with key 'paired' in metadata dictionary."
+                        )
+                elif isinstance(result.datasets.train.metadata, pd.DataFrame):
+                    clin_data = result.datasets.train.metadata
+                    if hasattr(result.datasets, "test"):
+                        clin_data = pd.concat(
+                            [clin_data, result.datasets.test.metadata],
+                            axis=0,
+                        )
+                    if hasattr(result.datasets, "valid"):
+                        clin_data = pd.concat(
+                            [clin_data, result.datasets.valid.metadata],
+                            axis=0,
+                        )
+                else:
+                    # Raise error no annotation given
+                    raise ValueError(
+                        "Metadata is not a dictionary or DataFrame. Please provide a valid annotation data type."
+                    )
+            else:
+                # Raise error no annotation given
+                raise ValueError(
+                    "No annotation data found. Please provide a valid annotation data type."
+                )
+
             if split == "all":
                 df_latent = pd.concat(
                     [
@@ -195,53 +239,64 @@ class Visualizer(BaseVisualizer):
                 )
             else:
                 if split == "test":
-                    df_latent = pd.DataFrame(
-                        result.latentspaces.get(epoch=-1, split=split)
-                    )
                     df_latent = result.get_latent_df(epoch=-1, split=split)
                 else:
-                    # df_latent = pd.DataFrame(
-                    #     result.latentspaces.get(epoch=epoch, split=split)
-                    # )
                     df_latent = result.get_latent_df(epoch=epoch, split=split)
 
-            if label_list is None:
+            if label_list is None and param is None:
                 label_list = ["all"] * df_latent.shape[0]
-
-            if plot_type == "2D-scatter":
-                ## Make 2D Embedding with UMAP
-                if df_latent.shape[1] > 2:
-                    reducer = UMAP(n_components=2)
-                    embedding = pd.DataFrame(reducer.fit_transform(df_latent))
-                else:
-                    embedding = df_latent
-
-                # if not self.plots["2D-scatter"][epoch][split][
-                #     param
-                # ]:  ## Create when not exist
-                self.plots["2D-scatter"][epoch][split][param] = self.plot_2D(
-                    embedding=embedding,
-                    labels=label_list,
-                    param=param,
-                    layer=f"2D latent space (epoch {epoch})",
-                    figsize=(12, 8),
-                    center=True,
+            
+            if label_list is None and param == "all":
+                param = list(clin_data.columns)
+            
+            if label_list is not None and param is not None:
+                raise ValueError(
+                    "Please provide either label_list or param, not both. If you want to plot all parameters, set param to 'all' and label_list to None."
                 )
 
-                fig = self.plots["2D-scatter"][epoch][split][param]
-                show_figure(fig)
-                plt.show()
+            if label_list is not None and param is None:
+                if isinstance(label_list, pd.Series):                                
+                    param = label_list.name
+                    # Order by index of df_latent first, fill missing with "unknown"
+                    label_list = label_list.reindex(df_latent.index, fill_value="unknown").tolist()
+                else:                    
+                    param = ["user_label"]  # Default label if none provided
 
-            if plot_type == "Ridgeline":
-                ## Make ridgeline plot
+            for p in param:
+                if p in clin_data.columns:
+                    label_list = clin_data.loc[df_latent.index, p].tolist()
 
-                self.plots["Ridgeline"][epoch][split][param] = self.plot_latent_ridge(
-                    lat_space=df_latent, label_list=label_list, param=param
-                )
+                if plot_type == "2D-scatter":
+                    ## Make 2D Embedding with UMAP
+                    if df_latent.shape[1] > 2:
+                        reducer = UMAP(n_components=2)
+                        embedding = pd.DataFrame(reducer.fit_transform(df_latent))
+                    else:
+                        embedding = df_latent
 
-                fig = self.plots["Ridgeline"][epoch][split][param].figure
-                show_figure(fig)
-                plt.show()
+                    self.plots["2D-scatter"][epoch][split][p] = self.plot_2D(
+                        embedding=embedding,
+                        labels=label_list,
+                        param=p,
+                        layer=f"2D latent space (epoch {epoch})",
+                        figsize=(12, 8),
+                        center=True,
+                    )
+
+                    fig = self.plots["2D-scatter"][epoch][split][p]
+                    show_figure(fig)
+                    plt.show()
+
+                if plot_type == "Ridgeline":
+                    ## Make ridgeline plot
+
+                    self.plots["Ridgeline"][epoch][split][p] = self.plot_latent_ridge(
+                        lat_space=df_latent, label_list=label_list, param=p
+                    )
+
+                    fig = self.plots["Ridgeline"][epoch][split][p].figure
+                    show_figure(fig)
+                    plt.show()
 
     def show_weights(self) -> None:
         """
@@ -484,7 +539,7 @@ class Visualizer(BaseVisualizer):
     @staticmethod
     def plot_latent_ridge(
         lat_space: pd.DataFrame,
-        label_list: Optional[Union[list, None]] = None,
+        label_list: Optional[Union[list, pd.Series, None]] = None,
         param: Optional[Union[str, None]] = None,
     ) -> sns.FacetGrid:
         """

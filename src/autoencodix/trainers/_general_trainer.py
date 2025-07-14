@@ -186,12 +186,13 @@ class GeneralTrainer(BaseTrainer):
                 for k, v in sub_losses.items()
             },
         )
-        self._fabric.print(
-            f"Epoch {epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {total_loss:.4f}"
-        )
-        self._fabric.print(
-            f"Sub-losses: {', '.join([f'{k}: {v:.4f}' for k, v in sub_losses.items()])}"
-        )
+        if self._should_checkpoint(epoch):
+            self._fabric.print(
+                f"Epoch {epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {total_loss:.4f}"
+            )
+            self._fabric.print(
+                f"Sub-losses: {', '.join([f'{k}: {v:.4f}' for k, v in sub_losses.items()])}"
+            )
 
     def _store_checkpoint(self, epoch):
         self._result.model_checkpoints.add(epoch=epoch, data=self._model.state_dict())

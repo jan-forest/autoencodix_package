@@ -9,14 +9,16 @@ from autoencodix.base._base_visualizer import BaseVisualizer
 from autoencodix.base._base_preprocessor import BasePreprocessor
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.data._datasetcontainer import DatasetContainer
+from autoencodix.data._multimodal_dataset import MultiModalDataset
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
-from autoencodix.data._numeric_dataset import NumericDataset
+from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.data._xmodal_preprocessor import XModalPreprocessor
 from autoencodix.evaluate.evaluate import Evaluator
-from autoencodix.trainers._general_trainer import GeneralTrainer
+from autoencodix.trainers._xmodal_trainer import XModalTrainer
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.utils._losses import VarixLoss
 
 
 class XModalix(BasePipeline):
@@ -58,12 +60,12 @@ class XModalix(BasePipeline):
     def __init__(
         self,
         data: Optional[Union[DataPackage, DatasetContainer]] = None,
-        trainer_type: Type[BaseTrainer] = GeneralTrainer,
-        dataset_type: Type[BaseDataset] = NumericDataset,
+        trainer_type: Type[BaseTrainer] = XModalTrainer,
+        dataset_type: Type[BaseDataset] = MultiModalDataset,
         model_type: Type[
             BaseAutoencoder
-        ] = BaseAutoencoder,  # TODO make custom for XModalix
-        loss_type: Type[BaseLoss] = BaseLoss,  # TODO make custom for XModalix
+        ] = VarixArchitecture,  # TODO make custom for XModalix
+        loss_type: Type[BaseLoss] = VarixLoss,  # TODO make custom for XModalix
         preprocessor_type: Type[BasePreprocessor] = XModalPreprocessor,
         visualizer: Optional[BaseVisualizer] = None,
         evaluator: Optional[Evaluator] = None,
@@ -86,3 +88,17 @@ class XModalix(BasePipeline):
             config=config,
             custom_split=custom_splits,
         )
+
+
+    def fit(self): # TODO use from base
+        self._trainer = self._trainer_type(
+            trainset=self._datasets.train,
+            validset=self._datasets.valid,
+            result=self.result,
+            config=self.config,
+            model_type=self._model_type,
+            loss_type=self._loss_type,
+            ontologies=self._ontologies,  # Ontix
+        )
+        return self._trainer.train()
+

@@ -3,7 +3,7 @@ import numpy as np
 from typing import Optional, List, Union, Any
 import pandas as pd
 from autoencodix.utils.default_config import DefaultConfig
-from autoencodix.base._base_dataset import BaseDataset
+from autoencodix.base._base_dataset import BaseDataset, DataSetTypes
 
 
 class TensorAwareDataset(BaseDataset):
@@ -124,11 +124,8 @@ class NumericDataset(TensorAwareDataset):
 
         self.metadata = metadata
         self.split_indices = split_indices
+        self.mytype = DataSetTypes.NUM
 
     def __len__(self) -> int:
         """Returns the number of samples (rows) in the dataset"""
         return self.data.shape[0]
-
-    def __getitem__(self, idx):
-        """Get item at index - data is already converted to proper dtype"""
-        return idx, self.data[idx], self.sample_ids[idx] if self.sample_ids else idx

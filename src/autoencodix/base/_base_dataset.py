@@ -1,9 +1,16 @@
 import abc
+from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 from torch.utils.data import Dataset
+
 from autoencodix.data._imgdataclass import ImgData
+
+
+class DataSetTypes(str, Enum):
+    NUM = "NUM"
+    IMG = "IMG"
 
 
 class BaseDataset(abc.ABC, Dataset):
@@ -35,6 +42,7 @@ class BaseDataset(abc.ABC, Dataset):
         self.config = config
         self.sample_ids = sample_ids
         self.feature_ids = feature_ids
+        self.mytype: Enum # set in subclasses
 
     def __len__(self) -> int:
         """Returns the number of samples in the dataset.

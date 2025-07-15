@@ -1,8 +1,11 @@
 import torch
+import numpy as np
+import pandas as pd
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.data._numeric_dataset import TensorAwareDataset
 from typing import List, Tuple
 from autoencodix.data._imgdataclass import ImgData
+from autoencodix.base._base_dataset import DataSetTypes
 
 
 class ImageDataset(TensorAwareDataset):
@@ -10,7 +13,13 @@ class ImageDataset(TensorAwareDataset):
     A custom PyTorch dataset that handles image data with proper dtype conversion.
     """
 
-    def __init__(self, data: List[ImgData], config: DefaultConfig):
+    def __init__(
+        self,
+        data: List[ImgData],
+        config: DefaultConfig,
+        split_indices: np.ndarray = None,
+        metadata: pd.DataFrame = None,
+    ):
         """
         Initialize the dataset
 
@@ -21,8 +30,9 @@ class ImageDataset(TensorAwareDataset):
         config : DefaultConfig
             Configuration object
         """
-        self.raw_data = data  # Keep reference to original data
+        self.raw_data = data # image data before conversion to keep original infos
         self.config = config
+        self.mytype = DataSetTypes.IMG
 
         if self.config is None:
             raise ValueError("config cannot be None")
@@ -33,6 +43,10 @@ class ImageDataset(TensorAwareDataset):
 
         # Extract sample_ids for consistency
         self.sample_ids = [img_data.sample_id for img_data in data]
+
+        self.split_indices = split_indices
+        self.feature_ids = None
+        self.metadata = metadata
 
     def _convert_all_images_to_tensors(self, dtype: torch.dtype) -> List[torch.Tensor]:
         """

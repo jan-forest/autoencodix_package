@@ -1,11 +1,21 @@
-from autoencodix.base._base_preprocessor import BasePreprocessor
-from autoencodix.utils.default_config import DefaultConfig
-from typing import Optional, Union, Tuple, Dict
+from typing import Any, Dict, Optional, Tuple, Union
+
+import mudata as md
+import pandas as pd
+import torch
+
+from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.data._datasetcontainer import DatasetContainer
+from autoencodix.data._image_dataset import ImageDataset
+from autoencodix.data._imgdataclass import ImgData
+from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.datapackage import DataPackage
+from autoencodix.data.general_preprocessor import GeneralPreprocessor
+from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.data._multimodal_dataset import MultiModalDataset
 
 
-class XModalPreprocessor(BasePreprocessor):
+class XModalPreprocessor(GeneralPreprocessor):
     """
     Preprocessor for cross-modal data, handling multiple data types and their transformations.
     Inherits from BasePreprocessor.
@@ -18,16 +28,100 @@ class XModalPreprocessor(BasePreprocessor):
         self.data_config = config.data_config
 
     def preprocess(
-        self, raw_user_data: Optional[DataPackage] = None
+        self,
+        raw_user_data: Optional[DataPackage] = None,
+        predict_new_data: bool = False,
     ) -> DatasetContainer:
         """
         Preprocess the data according to the configuration.
         """
         self.dataset_dicts = self._general_preprocess()
+        datasets = {}
+        for split in ["train", "test", "valid"]:
+            cur_split = self.dataset_dicts.get(split)
+            if cur_split is None:
+                print(f"split is None: {split}")
+                continue
+            cur_data = cur_split.get("data")
+            if not isinstance(cur_data, DataPackage):
+                raise TypeError(
+                    f"expected type of cur_data to be DataPackage, got {type(cur_data)}"
+                )
+            cur_indices = cur_split.get("indices")
+            datasets[split] = MultiModalDataset(
+                datasets=self._process_dp(dp=cur_data, indices=cur_indices), config=self.config)
+
         for k, v in self.dataset_dicts.items():
             print(f"key: {k}, type: {type(v)}")
 
-        return DatasetContainer(train=None, test=None, valid=None)
+        return DatasetContainer(
+            train=datasets["train"], test=datasets["test"], valid=datasets["valid"]
+        )
 
     def format_reconstruction(self, reconstruction, result=None):
         pass
+
+    def _process_dp(self, dp: DataPackage, indices: Dict[str, Any]):
+        dataset_dict: Dict[str, BaseDataset] = {}
+        for k, v in dp:
+            dp_key, sub_key = k.split(".")
+            data = v
+            metadata = dp.annotation.get(sub_key)
+            if metadata is None:
+                metadata = dp.annotation.get("paired")
+
+            if dp_key == "multi_bulk":
+                if not isinstance(data, pd.DataFrame):
+                    raise ValueError(
+                        f"Expected data for multi_bulk: {k}, {v} to be pd.DataFrame, got {type(data)}"
+                    )
+                dataset_dict[k] = NumericDataset(
+                    data=torch.from_numpy(data.values),
+                    config=self.config,
+                    sample_ids=data.index,
+                    feature_ids=data.columns,
+                    split_indices=indices,
+                    metadata=metadata,
+                )
+            elif dp_key == "img":
+                if not isinstance(data, list):
+                    raise ValueError()
+                if not isinstance(data[0], ImgData):
+                    raise ValueError()
+                dataset_dict[k] = ImageDataset(
+                    data=data,
+                    config=self.config,
+                    split_indices=indices,
+                    metadata=metadata,
+                )
+            elif dp_key == "multi_sc":
+                if not isinstance(data, md.MuData):
+                    raise ValueError()
+                for mod_key, mod_data in data.mod.items():
+                    selected_layers = self.config.data_config.data_info[
+                        mod_key
+                    ].selected_layers
+                    if not selected_layers[0] == "X" and len(selected_layers) != 1:
+                        raise NotImplementedError(
+                            "Xmodalix works only with X layer of single cell data as of now"
+                        )
+                    x_data = torch.from_numpy(
+                        self._extract_primary_data(modality_data=mod_data)
+                    )
+                    dataset_dict[k] = NumericDataset(
+                        data=x_data,
+                        config=self.config,
+                        sample_ids=mod_data.obs_names,
+                        feature_ids=mod_data.var_names,
+                        split_indices=indices,
+                        metadata=mod_data.obs,
+                    )
+
+            elif dp_key == "annotation":
+                pass
+
+            else:
+                raise NotImplementedError(
+                    f"Got datapackage attribute: {k}, probably you have added an attribute to the Datapackage class without adjusting this method. Only supports: ['multi_bulk', 'multi_sc', 'img' and 'annotation']"
+                )
+        return dataset_dict

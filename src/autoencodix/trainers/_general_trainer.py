@@ -108,7 +108,7 @@ class GeneralTrainer(BaseTrainer):
     def train(self) -> Result:
         with self._fabric.autocast():
             for epoch in range(self._config.epochs):
-                should_checkpoint = self._should_checkpoint(epoch)
+                should_checkpoint: bool = self._should_checkpoint(epoch)
                 self._model.train()
 
                 epoch_loss, epoch_sub_losses = self._train_epoch(

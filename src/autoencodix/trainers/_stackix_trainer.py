@@ -199,12 +199,3 @@ class StackixTrainer(GeneralTrainer):
         self._result.update(other=pred_result)
         self._reconstruct(split="test")
         return self._result
-
-    def _capture_dynamics(
-        self,
-        epoch: int,
-        model_output: List[ModelOutput],
-        split: str,
-        sample_ids: Optional[List[int]] = None,
-    ) -> None:
-        return super()._capture_dynamics(epoch, model_output, split, sample_ids)

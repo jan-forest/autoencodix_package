@@ -401,6 +401,7 @@ class BasePipeline(abc.ABC):
         Raises:
             NotImplementedError: If preprocessor is not initialized.
         """
+        print("preprocessing")
         if self._preprocessor_type is None:
             raise NotImplementedError("Preprocessor not initialized")
         self._validate_user_data()

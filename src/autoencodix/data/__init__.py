@@ -13,6 +13,7 @@ from ._sc_filter import SingleCellFilter
 from ._xmodal_preprocessor import XModalPreprocessor
 from ._image_dataset import ImageDataset
 from ._multimodal_dataset import MultiModalDataset
+from ._image_processor import ImagePreprocessor
 
 
 __all__ = [
@@ -32,4 +33,5 @@ __all__ = [
     "ImageDataset",
     "TensorAwareDataset",
     "MultiModalDataset",
+    "ImagePreprocessor"
 ]

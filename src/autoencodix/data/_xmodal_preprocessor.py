@@ -35,7 +35,9 @@ class XModalPreprocessor(GeneralPreprocessor):
         """
         Preprocess the data according to the configuration.
         """
-        self.dataset_dicts = self._general_preprocess()
+        self.dataset_dicts = self._general_preprocess(
+            raw_user_data=raw_user_data, predict_new_data=predict_new_data
+        )
         datasets = {}
         for split in ["train", "test", "valid"]:
             cur_split = self.dataset_dicts.get(split)
@@ -49,7 +51,9 @@ class XModalPreprocessor(GeneralPreprocessor):
                 )
             cur_indices = cur_split.get("indices")
             datasets[split] = MultiModalDataset(
-                datasets=self._process_dp(dp=cur_data, indices=cur_indices), config=self.config)
+                datasets=self._process_dp(dp=cur_data, indices=cur_indices),
+                config=self.config,
+            )
 
         for k, v in self.dataset_dicts.items():
             print(f"key: {k}, type: {type(v)}")

@@ -128,7 +128,7 @@ class Visualizer(BaseVisualizer):
                 show_figure(fig)
                 plt.show()
         if plot_type == "relative":
-            if "relative_absolute" not in self.plots.keys():
+            if "loss_relative" not in self.plots.keys():
                 print("Relative loss plot not found in the plots dictionary")
                 print("You need to run visualize() method first")
             else:
@@ -246,8 +246,13 @@ class Visualizer(BaseVisualizer):
             if labels is None and param is None:
                 labels = ["all"] * df_latent.shape[0]
             
-            if labels is None and param == "all":
-                param = list(clin_data.columns)
+            if labels is None and isinstance(param, str):
+                if param == "all":
+                    param = list(clin_data.columns)
+                else:
+                    raise ValueError(
+                        "Please provide parameter to plot as a list not as string. If you want to plot all parameters, set param to 'all' and labels to None."
+                    )
             
             if labels is not None and param is not None:
                 raise ValueError(
@@ -671,10 +676,11 @@ class Visualizer(BaseVisualizer):
         matplotlib.figure.Figure
             The generated matplotlib figure containing the loss plots.
         """
-        fig_width = 5*len(df_plot["Loss Term"].unique())
+        fig_width_abs = 5*len(df_plot["Loss Term"].unique())
+        fig_width_rel = 5*len(df_plot["Split"].unique())
         if plot_type == "absolute":
             fig, axes = plt.subplots(
-                1, len(df_plot["Loss Term"].unique()), figsize=(fig_width, 5), sharey=False
+                1, len(df_plot["Loss Term"].unique()), figsize=(fig_width_abs, 5), sharey=False
             )
             ax = 0
             for term in df_plot["Loss Term"].unique():
@@ -690,9 +696,9 @@ class Visualizer(BaseVisualizer):
             plt.close()
 
         if plot_type == "relative":
-            exclude = df_plot["Loss Term"] != "total_loss"
+            exclude = (df_plot["Loss Term"] != "total_loss") & ~(df_plot["Loss Term"].str.contains("_factor"))
 
-            fig, axes = plt.subplots(1, 2, figsize=(fig_width, 5), sharey=True)
+            fig, axes = plt.subplots(1, 2, figsize=(fig_width_rel, 5), sharey=True)
 
             ax = 0
 
@@ -703,7 +709,7 @@ class Visualizer(BaseVisualizer):
                     hue="Loss Term",
                     multiple="fill",
                     weights="Loss Value",
-                    clip=[0, 30],
+                    clip=[0, df_plot["Epoch"].max()],
                     ax=axes[ax],
                 ).set_title(split)
                 ax += 1

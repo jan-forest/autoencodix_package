@@ -133,7 +133,8 @@ class GeneralTrainer(BaseTrainer):
             self._optimizer.zero_grad()
             model_outputs = self._model(features)
             loss, batch_sub_losses = self._loss_fn(
-                model_output=model_outputs, targets=features, epoch=epoch
+                # model_output=model_outputs, targets=features, epoch=epoch
+                model_output=model_outputs, targets=features, epoch=epoch, n_samples=len(self._trainloader.dataset) # Pass n_samples for disentangled loss calculations
             )
 
             self._fabric.backward(loss)
@@ -160,7 +161,8 @@ class GeneralTrainer(BaseTrainer):
             for indices, features, sample_ids in self._validloader:
                 model_outputs = self._model(features)
                 loss, batch_sub_losses = self._loss_fn(
-                    model_output=model_outputs, targets=features, epoch=epoch
+                    # model_output=model_outputs, targets=features, epoch=epoch
+                    model_output=model_outputs, targets=features, epoch=epoch, n_samples=len(self._validloader.dataset) # Pass n_samples for disentangled loss calculations
                 )
                 total_loss += loss.item()
                 for k, v in batch_sub_losses.items():

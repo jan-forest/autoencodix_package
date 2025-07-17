@@ -151,6 +151,10 @@ class DisentanglixLoss(BaseLoss):
             n_samples = n_samples, # Number of samples of whole dataset
             use_mss = self.config.use_mss,
         )
+        # Clip losses to avoid negative values
+        mut_info_loss = torch.clamp(mut_info_loss, min=0.0)
+        tot_corr_loss = torch.clamp(tot_corr_loss, min=0.0)
+        dimwise_kl_loss = torch.clamp(dimwise_kl_loss, min=0.0)
 
         return recon_loss, mut_info_loss, tot_corr_loss, dimwise_kl_loss
     

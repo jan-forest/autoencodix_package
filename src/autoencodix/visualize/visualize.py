@@ -1,6 +1,7 @@
 import os
 from dataclasses import field
 from typing import Any, Dict, Optional, Union
+import warnings
 
 import matplotlib.figure
 import numpy as np
@@ -128,7 +129,7 @@ class Visualizer(BaseVisualizer):
                 show_figure(fig)
                 plt.show()
         if plot_type == "relative":
-            if "relative_absolute" not in self.plots.keys():
+            if "loss_relative" not in self.plots.keys():
                 print("Relative loss plot not found in the plots dictionary")
                 print("You need to run visualize() method first")
             else:
@@ -172,13 +173,41 @@ class Visualizer(BaseVisualizer):
         --------
         None
         """
+        plt.ioff()
         if plot_type == "Coverage-Correlation":
-            ## TODO
-            print("Not implemented yet, empty figure will be shown instead")
-            fig = plt.figure()
-            self.plots["Coverage-Correlation"] = fig
-            show_figure(fig)
-            plt.show()
+            if "Coverage-Correlation" in self.plots:
+                fig = self.plots["Coverage-Correlation"] 
+                show_figure(fig)
+                plt.show()
+            else:
+                results = []
+                for epoch in range(result.model.config.checkpoint_interval, result.model.config.epochs + 1, result.model.config.checkpoint_interval):
+                    for split in ["train", "valid"]:
+                        latent_df = result.get_latent_df(epoch=epoch-1, split=split)
+                        tc = self._total_correlation(latent_df)
+                        cov = self._coverage_calc(latent_df)
+                        results.append({"epoch": epoch, "split": split, "total_correlation": tc, "coverage": cov})
+
+                df_metrics = pd.DataFrame(results)
+
+                fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+                # Total Correlation plot
+                ax1 = sns.lineplot(data=df_metrics, x="epoch", y="total_correlation", hue="split", ax=axes[0])
+                axes[0].set_title("Total Correlation")
+                axes[0].set_xlabel("Epoch")
+                axes[0].set_ylabel("Total Correlation")
+
+                # Coverage plot
+                ax2 = sns.lineplot(data=df_metrics, x="epoch", y="coverage", hue="split", ax=axes[1])
+                axes[1].set_title("Coverage")
+                axes[1].set_xlabel("Epoch")
+                axes[1].set_ylabel("Coverage")
+
+                plt.tight_layout()
+                self.plots["Coverage-Correlation"] = fig
+                show_figure(fig)
+                plt.show()
 
         else:
             # Set Defaults
@@ -246,8 +275,13 @@ class Visualizer(BaseVisualizer):
             if labels is None and param is None:
                 labels = ["all"] * df_latent.shape[0]
             
-            if labels is None and param == "all":
-                param = list(clin_data.columns)
+            if labels is None and isinstance(param, str):
+                if param == "all":
+                    param = list(clin_data.columns)
+                else:
+                    raise ValueError(
+                        "Please provide parameter to plot as a list not as string. If you want to plot all parameters, set param to 'all' and labels to None."
+                    )
             
             if labels is not None and param is not None:
                 raise ValueError(
@@ -445,7 +479,7 @@ class Visualizer(BaseVisualizer):
                         x=pd.Series(labels),
                         q=4,
                         labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
-                    ).astype(str)
+                    ).astype(str).to_list()
                 else:
                     center = False  ## Disable centering for numeric params
                     numeric = True
@@ -671,10 +705,11 @@ class Visualizer(BaseVisualizer):
         matplotlib.figure.Figure
             The generated matplotlib figure containing the loss plots.
         """
-        fig_width = 5*len(df_plot["Loss Term"].unique())
+        fig_width_abs = 5*len(df_plot["Loss Term"].unique())
+        fig_width_rel = 5*len(df_plot["Split"].unique())
         if plot_type == "absolute":
             fig, axes = plt.subplots(
-                1, len(df_plot["Loss Term"].unique()), figsize=(fig_width, 5), sharey=False
+                1, len(df_plot["Loss Term"].unique()), figsize=(fig_width_abs, 5), sharey=False
             )
             ax = 0
             for term in df_plot["Loss Term"].unique():
@@ -690,9 +725,30 @@ class Visualizer(BaseVisualizer):
             plt.close()
 
         if plot_type == "relative":
-            exclude = df_plot["Loss Term"] != "total_loss"
+            # Check if loss values are positive
+            if (df_plot["Loss Value"] < 0).any():
+                # Warning
+                warnings.warn(
+                    "Loss values contain negative values. Check your loss function if correct. Loss will be clipped to zero for plotting."
+                )
+                df_plot["Loss Value"] = df_plot["Loss Value"].clip(lower=0)
 
-            fig, axes = plt.subplots(1, 2, figsize=(fig_width, 5), sharey=True)
+            # Exclude loss terms where all Loss Value are zero or NaN over all epochs
+            valid_terms = [
+                term
+                for term in df_plot["Loss Term"].unique()
+                if (
+                    (df_plot[df_plot["Loss Term"] == term]["Loss Value"].notna().any())
+                    and (df_plot[df_plot["Loss Term"] == term]["Loss Value"] != 0).any()
+                )
+            ]
+            exclude = (
+                (df_plot["Loss Term"] != "total_loss")
+                & ~(df_plot["Loss Term"].str.contains("_factor"))
+                & (df_plot["Loss Term"].isin(valid_terms))
+            )
+
+            fig, axes = plt.subplots(1, 2, figsize=(fig_width_rel, 5), sharey=True)
 
             ax = 0
 
@@ -703,7 +759,7 @@ class Visualizer(BaseVisualizer):
                     hue="Loss Term",
                     multiple="fill",
                     weights="Loss Value",
-                    clip=[0, 30],
+                    clip=[0, df_plot["Epoch"].max()],
                     ax=axes[ax],
                 ).set_title(split)
                 ax += 1
@@ -876,3 +932,42 @@ class Visualizer(BaseVisualizer):
                 fig = self.plots["ML_Evaluation"][param][metric][alg].figure
                 show_figure(fig)
                 plt.show()
+    
+    @staticmethod
+    def _total_correlation(latent_space: pd.DataFrame) -> float:
+        """ Function to compute the total correlation as described here (Equation2): https://doi.org/10.3390/e21100921
+            
+        Args:
+            latent_space - (pd.DataFrame): latent space with dimension sample vs. latent dimensions
+        Returns:
+            tc - (float): total correlation across latent dimensions
+        """
+        lat_cov = np.cov(latent_space.T)
+        tc = 0.5 * (np.sum(np.log(np.diag(lat_cov))) - np.linalg.slogdet(lat_cov)[1])
+        return tc
+    
+    @staticmethod
+    def _coverage_calc(latent_space: pd.DataFrame) -> float:
+        """ Function to compute the coverage as described here (Equation3): https://doi.org/10.3390/e21100921
+            
+        Args:
+            latent_space - (pd.DataFrame): latent space with dimension sample vs. latent dimensions
+        Returns:
+            cov - (float): coverage across latent dimensions
+        """
+        bins_per_dim = int(
+            np.power(len(latent_space.index), 1 / len(latent_space.columns))
+        )
+        if bins_per_dim < 2:
+            warnings.warn(
+                "Coverage calculation fails since combination of sample size and latent dimension results in less than 2 bins."
+            )
+            cov = np.nan
+        else:
+            latent_bins = latent_space.apply(lambda x: pd.cut(x, bins=bins_per_dim))
+            latent_bins = pd.Series(zip(*[latent_bins[col] for col in latent_bins]))
+            cov = len(latent_bins.unique()) / np.power(
+                bins_per_dim, len(latent_space.columns)
+            )
+            
+        return cov

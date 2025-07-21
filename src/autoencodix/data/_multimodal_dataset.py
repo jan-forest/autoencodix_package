@@ -4,7 +4,6 @@ from typing import List, Dict, Any, Union, Tuple
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.utils.default_config import DefaultConfig
 
-# Remove duplicates and ensure batch size
 import numpy as np
 
 
@@ -60,6 +59,7 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):
             _, data, _ = ds[idx]  # assume (idx, tensor, sample_id)
             sample[mod] = data
         return sample
+
 
 class CoverageEnsuringSampler(torch.utils.data.Sampler):
     """
@@ -193,8 +193,6 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):
         return max(total_samples // self.batch_size, len(self.modality_samples))
 
 
-
-
 def create_multimodal_collate_fn(multimodal_dataset: MultiModalDataset):
     """
     Factory function to create a collate function with access to the dataset.
@@ -239,13 +237,14 @@ def create_multimodal_collate_fn(multimodal_dataset: MultiModalDataset):
                         result[modality]["sampled_index"].append(None)
 
                     idx = multimodal_dataset._id_to_idx[modality].get(sample_id)
-                    if idx < len(dataset.metadata):
-                        cur_metadata = dataset.metadata.iloc[idx]
+                    cur_metadata = dataset.metadata.iloc[idx]
 
-                result[modality]["metadata"].append(cur_metadata)
+                    result[modality]["metadata"].append(cur_metadata)
 
             result[modality]["data"] = torch.stack(result[modality]["data"])
-            # resutl[modality]["metadata"] = pd.DataFrame(
+            result[modality]["metadata"] = pd.concat(
+                result[modality]["metadata"], axis=1
+            ).T
         return result
 
     return collate_fn

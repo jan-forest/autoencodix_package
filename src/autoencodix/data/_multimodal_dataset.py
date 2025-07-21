@@ -1,4 +1,5 @@
 import torch
+import pandas as pd
 from typing import List, Dict, Any, Union, Tuple
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.utils.default_config import DefaultConfig
@@ -244,7 +245,7 @@ def create_multimodal_collate_fn(multimodal_dataset: MultiModalDataset):
                 result[modality]["metadata"].append(cur_metadata)
 
             result[modality]["data"] = torch.stack(result[modality]["data"])
-
+            # resutl[modality]["metadata"] = pd.DataFrame(
         return result
 
     return collate_fn

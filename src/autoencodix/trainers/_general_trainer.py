@@ -45,8 +45,12 @@ class GeneralTrainer(BaseTrainer):
 
         self._init_buffers()
 
-    def _init_buffers(self):
+    def _init_buffers(self, input_data: Optional[BaseDataset] = None):
+        if input_data:
+            self.n_features = input_data.get_input_dim()
+            print(f"setting n_features in init_buffers: {self.n_features}")
         def make_tensor_buffer(size: int, dim: Union[int, Tuple[int, ...]]):
+
             if isinstance(dim, int):
                 return torch.zeros((size, dim), device=self.device)
             else:
@@ -220,6 +224,11 @@ class GeneralTrainer(BaseTrainer):
             self._sample_ids_buffer[split][idx] = sample_ids_list[i]
 
         self._latentspace_buffer[split][indices_np] = model_output.latentspace.detach()
+        print(f"split: {split}")
+        print(
+            f"self._reconstruction_buffer shape: {self._reconstruction_buffer[split].shape}"
+        )
+        print(f"indices_np shape: {indices_np.shape}")
         self._reconstruction_buffer[split][indices_np] = (
             model_output.reconstruction.detach()
         )
@@ -275,7 +284,8 @@ class GeneralTrainer(BaseTrainer):
             num_workers=self._config.n_workers,
         )
         self.n_test = len(data)
-        self._init_buffers()
+        print(f"self.n_test: {self.n_test}")
+        self._init_buffers(input_data=data)
         inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
         with self._fabric.autocast(), torch.no_grad():
             for idx, data, sample_ids in inference_loader:

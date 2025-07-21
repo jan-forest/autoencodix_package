@@ -195,6 +195,8 @@ class StackixTrainer(GeneralTrainer):
         self.n_test = len(data) if data is not None else 0
         self._orchestrator.set_testset(testset=data)
         test_ds = self._orchestrator.prepare_latent_datasets(split="test")
+        self.testset = test_ds
+        print(test_ds)
         pred_result = super().predict(data=test_ds, model=model)
         self._result.update(other=pred_result)
         self._reconstruct(split="test")

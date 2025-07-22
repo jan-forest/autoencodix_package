@@ -49,8 +49,8 @@ class GeneralTrainer(BaseTrainer):
         if input_data:
             self.n_features = input_data.get_input_dim()
             print(f"setting n_features in init_buffers: {self.n_features}")
-        def make_tensor_buffer(size: int, dim: Union[int, Tuple[int, ...]]):
 
+        def make_tensor_buffer(size: int, dim: Union[int, Tuple[int, ...]]):
             if isinstance(dim, int):
                 return torch.zeros((size, dim), device=self.device)
             else:

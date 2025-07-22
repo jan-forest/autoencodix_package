@@ -29,21 +29,10 @@ class AnnealingScheduler:
         Returns:
             int or None: Annealing epoch number, or None if no annealing.
         """
-        # After pretraining phase - always return adjusted epoch
-        # if we are not in pretraining we still view pretrainng as a part of the training
-        # so the total epochs are epochs + pretraining epochs
-        # to start the annealing from the first epoch of training subtract pretraining epochs
-
-        if anneal_pretraining:
-            if current_epoch < n_epochs_pretrain:
-                return current_epoch
-            # account for pretraining epochs in the total epochs
-            else:
-                return current_epoch - n_epochs_pretrain
-        else:
-            if current_epoch < n_epochs_pretrain:
-                return None
-            return current_epoch - n_epochs_pretrain
+        raise NotImplementedError(
+            "Deprecated, for annealing the current epoch is passed, we split between training and \
+                                  pretraining, so no extra calculation is needed"
+        )
 
     def get_weight(
         self,

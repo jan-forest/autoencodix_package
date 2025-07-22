@@ -50,13 +50,13 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):
         Fetch a full multi-modal sample by ID.
         This replaces the collate_fn by returning a single structured sample.
         """
-        sample = {"sample_id": sample_id}
+        sample = {"sample_id": sample_id, "dtype": ""}
         for mod, ds in self.datasets.items():
             if sample_id not in self._id_to_idx[mod]:
-                sample[mod] = None  # optionally: pad or skip
+                sample[mod] = None
                 continue
             idx = self._id_to_idx[mod][sample_id]
-            _, data, _ = ds[idx]  # assume (idx, tensor, sample_id)
+            _, data, _ = ds[idx]
             sample[mod] = data
         return sample
 
@@ -216,6 +216,7 @@ def create_multimodal_collate_fn(multimodal_dataset: MultiModalDataset):
                 "metadata": [],
                 "sample_ids": [],
                 "sampled_index": [],
+                "dtype": [],
             }
 
             dataset = multimodal_dataset.datasets[modality]

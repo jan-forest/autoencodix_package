@@ -95,14 +95,16 @@ def config_method(valid_params: Optional[set[str]] = None):
         if valid_params:
             param_docs += "\n".join(f"- `{param}`" for param in sorted(valid_params))
         else:
-            param_docs += ("All keyword arguments not matching the function's "
-                           "signature are treated as potential configuration overrides.")
+            param_docs += (
+                "All keyword arguments not matching the function's "
+                "signature are treated as potential configuration overrides."
+            )
 
         if func.__doc__ is None:
             func.__doc__ = ""
         # Avoid duplicating if decorator is applied multiple times (though unlikely)
         if "Valid configuration parameters" not in func.__doc__:
-             func.__doc__ += param_docs
+            func.__doc__ += param_docs
         # --- End Docstring Modification ---
 
         @wraps(func)
@@ -113,10 +115,14 @@ def config_method(valid_params: Optional[set[str]] = None):
             # Get names of parameters in the decorated function's signature
             # that can accept keyword arguments (excluding self and config)
             func_sig_kwarg_names = {
-                name for name, param in sig.parameters.items()
-                if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                                  inspect.Parameter.KEYWORD_ONLY)
-                   and name not in ('self', 'config')
+                name
+                for name, param in sig.parameters.items()
+                if param.kind
+                in (
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    inspect.Parameter.KEYWORD_ONLY,
+                )
+                and name not in ("self", "config")
             }
 
             # Separate kwargs into those matching the signature and potential config overrides
@@ -131,67 +137,88 @@ def config_method(valid_params: Optional[set[str]] = None):
             # Determine the configuration object to use
             if user_config is None:
                 # No explicit config object, use self.config and apply overrides
-                if not hasattr(self, 'config'):
-                     raise AttributeError(f"{type(self).__name__} instance is missing 'config' attribute.")
+                if not hasattr(self, "config"):
+                    raise AttributeError(
+                        f"{type(self).__name__} instance is missing 'config' attribute."
+                    )
                 # Ensure self.config is the right type (or duck-types model_copy/model_dump)
-                if not hasattr(self.config, 'model_copy') or not hasattr(self.config, 'model_dump'):
-                     raise TypeError(f"'self.config' on {type(self).__name__} must have 'model_copy' and 'model_dump' methods.")
+                if not hasattr(self.config, "model_copy") or not hasattr(
+                    self.config, "model_dump"
+                ):
+                    raise TypeError(
+                        f"'self.config' on {type(self).__name__} must have 'model_copy' and 'model_dump' methods."
+                    )
 
-                final_config = self.config.model_copy(deep=True) # Start with a copy
+                final_config = self.config.model_copy(deep=True)  # Start with a copy
 
                 # Validate potential_config_kwargs against valid_params
                 if valid_params:
                     # Check for invalid *config* parameters among the potential overrides
-                    invalid_config_params = set(potential_config_kwargs.keys()) - valid_params
+                    invalid_config_params = (
+                        set(potential_config_kwargs.keys()) - valid_params
+                    )
                     if invalid_config_params:
-                        print(f"\nWarning: The following parameters are not valid "
-                              f"configuration overrides for {func.__name__}:")
-                        print(f"Invalid config parameters: {', '.join(invalid_config_params)}")
-                        print(f"Valid config parameters are: {', '.join(sorted(valid_params))}")
+                        print(
+                            f"\nWarning: The following parameters are not valid "
+                            f"configuration overrides for {func.__name__}:"
+                        )
+                        print(
+                            f"Invalid config parameters: {', '.join(invalid_config_params)}"
+                        )
+                        print(
+                            f"Valid config parameters are: {', '.join(sorted(valid_params))}"
+                        )
                         print("These parameters will be ignored.")
 
                     # Filter potential overrides to only include those listed in valid_params
                     # and that actually exist as fields in the config object
                     # (prevents adding arbitrary attributes if DefaultConfig uses Pydantic's extra='forbid')
                     valid_config_fields = {
-                        p for p in valid_params if hasattr(final_config, p) # Safer check
+                        p
+                        for p in valid_params
+                        if hasattr(final_config, p)  # Safer check
                     }
                     config_overrides = {
-                        k: v for k, v in potential_config_kwargs.items() if k in valid_config_fields
+                        k: v
+                        for k, v in potential_config_kwargs.items()
+                        if k in valid_config_fields
                     }
 
-                else: # valid_params is None: Allow all potential config kwargs as overrides
-                      # Optional: Add a check here if you want to ensure they exist in the config model
+                else:  # valid_params is None: Allow all potential config kwargs as overrides
+                    # Optional: Add a check here if you want to ensure they exist in the config model
                     config_overrides = potential_config_kwargs
 
                 # Apply the valid overrides
                 if config_overrides:
-                     final_config = final_config.model_copy(update=config_overrides)
+                    final_config = final_config.model_copy(update=config_overrides)
 
             else:
                 # User provided an explicit config object
                 # Add type check if DefaultConfig class is available
                 # Note: Replace 'object' with 'DefaultConfig' if it's imported/defined
                 if not isinstance(user_config, DefaultConfig):
-                     # Trying to be robust if DefaultConfig is not strictly enforced type
-                     if hasattr(user_config, 'model_copy') and hasattr(user_config, 'model_dump'):
-                         pass # Looks like a valid config object duck-typing Pydantic
-                     else:
-                         raise TypeError(
-                             "The 'config' parameter must be a valid configuration object "
-                             "(e.g., an instance of DefaultConfig or similar)."
-                         )
+                    # Trying to be robust if DefaultConfig is not strictly enforced type
+                    if hasattr(user_config, "model_copy") and hasattr(
+                        user_config, "model_dump"
+                    ):
+                        pass  # Looks like a valid config object duck-typing Pydantic
+                    else:
+                        raise TypeError(
+                            "The 'config' parameter must be a valid configuration object "
+                            "(e.g., an instance of DefaultConfig or similar)."
+                        )
                 final_config = user_config
                 # Decide what to do with potential_config_kwargs when user_config is provided.
                 # Option 1: Ignore them (current implementation below)
                 # Option 2: Raise an error if any exist
                 # Option 3: Apply them even to the user_config (might be unexpected)
                 if potential_config_kwargs:
-                    print(f"\nWarning: Additional keyword arguments provided "
-                          f"({', '.join(potential_config_kwargs.keys())}) "
-                          f"while an explicit 'config' object was also passed to {func.__name__}. "
-                          f"These additional arguments will be ignored as configuration overrides.")
-
+                    print(
+                        f"\nWarning: Additional keyword arguments provided "
+                        f"({', '.join(potential_config_kwargs.keys())}) "
+                        f"while an explicit 'config' object was also passed to {func.__name__}. "
+                        f"These additional arguments will be ignored as configuration overrides."
+                    )
 
             # Call the original function with the correct arguments
             # Pass: self, original *args, the determined config object,
@@ -203,6 +230,8 @@ def config_method(valid_params: Optional[set[str]] = None):
         return wrapper
 
     return decorator
+
+
 # internal check done
 # write tests: done
 # def config_method(valid_params: Optional[set[str]] = None):
@@ -421,3 +450,31 @@ class Loader:
         else:
             print("Model state file not found. Skipping model state load.")
             return None
+
+
+def flip_labels(labels: torch.Tensor) -> torch.Tensor:
+    """Randomly flip modality labels with probability (1 - 1/n_modalities), vectorized."""
+    device = labels.device
+    n_modalities = labels.unique().numel()
+    batch_size = labels.size(0)
+    flip_prob = 1.0 - 1.0 / n_modalities
+
+    # Decide which labels to flip
+    flip_mask = torch.rand(batch_size, device=device) < flip_prob
+
+    # Sample random labels for flipping
+    rand_labels = torch.randint(0, n_modalities, size=(batch_size,), device=device)
+
+    # Ensure sampled labels are different from original labels
+    needs_resample = (rand_labels == labels) & flip_mask
+    while needs_resample.any():
+        rand_labels[needs_resample] = torch.randint(
+            0, n_modalities, size=(needs_resample.sum(),), device=device
+        )
+        needs_resample = (rand_labels == labels) & flip_mask
+
+    # Apply flipped labels where needed
+    flipped = labels.clone()
+    flipped[flip_mask] = rand_labels[flip_mask]
+
+    return flipped

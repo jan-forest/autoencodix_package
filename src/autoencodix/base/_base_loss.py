@@ -194,10 +194,7 @@ class BaseLoss(nn.Module, ABC):
     @abstractmethod
     def forward(
         self,
-        model_output: ModelOutput,
-        targets: torch.Tensor,
-        epoch: Optional[int] = None,
-        total_epochs: Optional[int] = None
+        **kwargs,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """Calculates the loss for the autoencoder.
 
@@ -208,15 +205,7 @@ class BaseLoss(nn.Module, ABC):
         output and the provided targets.
 
         Args:
-            model_output: Output from the autoencoder model. This should be an
-                instance of `ModelOutput` containing the necessary tensors
-                (e.g., reconstructed data, latent variables, etc.).
-            targets: Target values for computing the loss. These should match
-                the shape and type expected by the reconstruction loss function.
-            epoch: The current training epoch.
-                We need this to calc the annealing factor, if we train with loss annealing.
-            total_epochs: If we use pretraining we can pass a custom value here, if it is None (Default) we
-                use the 'epochs' value from the config object.
+            *kwargs depending on the loss type and pipeline
 
         Returns:
             A tuple containing:

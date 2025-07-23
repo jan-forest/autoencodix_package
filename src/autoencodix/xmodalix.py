@@ -18,7 +18,7 @@ from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.trainers._xmodal_trainer import XModalTrainer
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
-from autoencodix.utils._losses import VarixLoss
+from autoencodix.utils._losses import XModalLoss
 
 
 class XModalix(BasePipeline):
@@ -65,7 +65,7 @@ class XModalix(BasePipeline):
         model_type: Type[
             BaseAutoencoder
         ] = VarixArchitecture,  # TODO make custom for XModalix
-        loss_type: Type[BaseLoss] = VarixLoss,  # TODO make custom for XModalix
+        loss_type: Type[BaseLoss] = XModalLoss,  # TODO make custom for XModalix
         preprocessor_type: Type[BasePreprocessor] = XModalPreprocessor,
         visualizer: Optional[BaseVisualizer] = None,
         evaluator: Optional[Evaluator] = None,

@@ -1,8 +1,10 @@
 import torch
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, Any
+from collections import defaultdict
 from autoencodix.base._base_loss import BaseLoss
 from autoencodix.utils._model_output import ModelOutput
 from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.utils._utils import flip_labels
 
 
 class VanillixLoss(BaseLoss):
@@ -84,17 +86,62 @@ class XModalLoss(BaseLoss):
     def __init__(self, config: DefaultConfig, annealing_scheduler=None):
         super().__init__(config)
 
-    def forward():
-        pass
+    def forward(
+        self,
+        batch: Dict[str, Dict[str, Any]],
+        modality_dynamics: Dict[str, Dict[str, Any]],
+        clf_scores: torch.Tensor,
+        labels: torch.Tensor,
+        clf_loss_fn: torch.nn.Module,
+    ):
+        adver_loss = self._calc_adversial_loss(
+            labels=labels, clf_loss_fn=clf_loss_fn, clf_scores=clf_scores
+        )
+        aggregated_sub_losses = self._sum_sub_losses(
+            modality_dynamics=modality_dynamics
+        )
+        paired_loss = self._calc_paired_loss(
+            batch=batch, modality_dynamics=modality_dynamics
+        )
+        class_loss = self._calc_class_loss(
+            batch=batch, modality_dynamics=modality_dynamics
+        )
+        total_loss = adver_loss + aggregated_sub_losses + paired_loss + class_loss
+        return total_loss, {
+            "total_loss": total_loss,
+            "adver_loss": adver_loss,
+            "aggregated_sub_losses": aggregated_sub_losses,
+            "paired_loss": paired_loss,
+            "class_loss": class_loss,
+        }
 
-    def _calc_paired_loss():
-        pass
+    def _calc_paired_loss(
+        self,
+        batch: Dict[str, Dict[str, Any]],
+        modality_dynamics: Dict[str, Dict[str, Any]],
+    ):
+        return torch.tensor(0)  # TODO
 
-    def _calc_class_loss():
-        pass
+    def _calc_class_loss(
+        self,
+        batch: Dict[str, Dict[str, Any]],
+        modality_dynamics: Dict[str, Dict[str, Any]],
+    ):
+        return torch.tensor(0)  # TODO
 
-    def _weight_sub_losses():
-        pass
+    def sum_sub_losses(
+        self, modality_dynamics: Dict[str, Dict[str, Any]]
+    ) -> torch.Tensor:
+        """Computes the average total loss for all modalities."""
+        losses = [helper["loss"] for helper in modality_dynamics.values()]
+        return torch.stack(losses).mean()
 
-    def _weight_adversial_loss():
-        pass
+    def _calc_adversial_loss(
+        self,
+        labels: torch.Tensor,
+        clf_scores: torch.Tensor,
+        clf_loss_fn: torch.nn.Module,
+    ):
+        flipped_labels = flip_labels(labels=labels)
+        adversarial_loss = clf_loss_fn(clf_scores, flipped_labels)
+        return adversarial_loss

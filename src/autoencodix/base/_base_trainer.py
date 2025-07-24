@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, Type, List, cast
+from typing import Optional, Type, List, cast, Any
 
 import torch
 from lightning_fabric import Fabric
@@ -49,6 +49,7 @@ class BaseTrainer(abc.ABC):
         self._validset = validset
         self._result = result
         self._config = config
+        self.ontologies = ontologies
 
         # Call this first for tests to work
         self._input_validation()
@@ -58,6 +59,33 @@ class BaseTrainer(abc.ABC):
 
         # Internal data handling
         self._model: BaseAutoencoder
+        self._fabric = Fabric(
+            accelerator=self._config.device,
+            devices=self._config.n_gpus,
+            precision=self._config.float_precision,
+            strategy=self._config.gpu_strategy,
+        )
+
+        self._init_loaders()
+        self._setup_fabric()
+
+    def _setup_fabric(self):
+        self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
+        self._init_model_architecture(ontologies=self.ontologies)  # Ontix
+
+        self._optimizer = torch.optim.AdamW(
+            params=self._model.parameters(),
+            lr=self._config.learning_rate,
+            weight_decay=self._config.weight_decay,
+        )
+
+        self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
+        self._trainloader = self._fabric.setup_dataloaders(self._trainloader)  # type: ignore
+        if self._validloader is not None:
+            self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
+        self._fabric.launch()
+
+    def _init_loaders(self):
         self._trainloader = DataLoader(
             cast(BaseDataset, self._trainset),
             batch_size=self._config.batch_size,
@@ -73,29 +101,6 @@ class BaseTrainer(abc.ABC):
             )
         else:
             self._validloader = None  # type: ignore
-
-        # Model and optimizer setup
-        self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
-        self._init_model_architecture(ontologies=ontologies)  # Ontix
-
-        self._fabric = Fabric(
-            accelerator=self._config.device,
-            devices=self._config.n_gpus,
-            precision=self._config.float_precision,
-            strategy=self._config.gpu_strategy,
-        )
-
-        self._optimizer = torch.optim.AdamW(
-            params=self._model.parameters(),
-            lr=self._config.learning_rate,
-            weight_decay=self._config.weight_decay,
-        )
-
-        self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
-        self._trainloader = self._fabric.setup_dataloaders(self._trainloader)  # type: ignore
-        if self._validloader is not None:
-            self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
-        self._fabric.launch()
 
     def _input_validation(self) -> None:
         if self._trainset is None:
@@ -147,8 +152,13 @@ class BaseTrainer(abc.ABC):
                 config=self._config,
                 input_dim=self._input_dim,
                 ontologies=ontologies,
-                feature_order=self._trainset.feature_ids,
+                feature_order=self._trainset.feature_ids, # type: ignore
             )
+
+    def _should_checkpoint(self, epoch: int):
+        return (
+            epoch + 1
+        ) % self._config.checkpoint_interval == 0 or epoch == self._config.epochs - 1
 
     @abc.abstractmethod
     def train(self) -> Result:
@@ -160,8 +170,13 @@ class BaseTrainer(abc.ABC):
 
     @abc.abstractmethod
     def _capture_dynamics(
-        self, model_output: ModelOutput, split: str, indices: torch.Tensor, sample_ids
-    ) -> None:
+        self,
+        model_output: Any,
+        split: str,
+        indices: Optional[torch.Tensor] = None,
+        sample_ids: Optional[Any] = None,
+        **kwargs,
+    ) -> Any:
         pass
 
     @abc.abstractmethod

@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from typing import Optional, Type, Union, Tuple
+from typing import Optional, Type, Union, Tuple, Any
 from collections import defaultdict
 from torch.utils.data import DataLoader
 
@@ -104,11 +104,7 @@ class GeneralTrainer(BaseTrainer):
     def _apply_post_backward_processing(self):
         pass
 
-    def _should_checkpoint(self, epoch: int):
-        return (
-            epoch + 1
-        ) % self._config.checkpoint_interval == 0 or epoch == self._config.epochs - 1
-
+  
     def train(self) -> Result:
         with self._fabric.autocast():
             for epoch in range(self._config.epochs):
@@ -207,8 +203,8 @@ class GeneralTrainer(BaseTrainer):
             self._dynamics_to_result(epoch, "valid")
 
     def _capture_dynamics(
-        self, model_output: ModelOutput, split: str, indices: torch.Tensor, sample_ids
-    ) -> None:
+        self, model_output: Union[ModelOutput, Any], split: str, indices: torch.Tensor, sample_ids, **kwargs
+    ) -> Union[Any, None]:
         indices_np = (
             indices.cpu().numpy()
             if isinstance(indices, torch.Tensor)

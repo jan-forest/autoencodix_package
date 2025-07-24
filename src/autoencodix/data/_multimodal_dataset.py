@@ -10,6 +10,7 @@ import numpy as np
 class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):
     def __init__(self, datasets: Dict[str, BaseDataset], config: DefaultConfig):
         self.datasets = datasets
+        self.n_modalities = len(self.datasets.keys())
         self.sample_to_modalities = self._build_sample_map()
         self.sample_ids: List[Any] = list(self.sample_to_modalities.keys())
         self.config = config

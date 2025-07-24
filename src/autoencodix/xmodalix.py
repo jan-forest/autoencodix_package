@@ -100,5 +100,6 @@ class XModalix(BasePipeline):
             loss_type=self._loss_type,
             ontologies=self._ontologies,  # Ontix
         )
-        return self._trainer.train()
+        trainer_result =  self._trainer.train()
+        self.result.update(other=trainer_result)
 

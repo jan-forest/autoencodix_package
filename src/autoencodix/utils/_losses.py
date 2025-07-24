@@ -118,19 +118,38 @@ class XModalLoss(BaseLoss):
         loss_dict.update(sub_losses)
         return total_loss, loss_dict
 
-    def _calc_paired_loss(
-        self,
-        batch: Dict[str, Dict[str, Any]],
-        modality_dynamics: Dict[str, Dict[str, Any]],
-    ):
-        return torch.tensor(0)  # TODO
-
     def _calc_class_loss(
         self,
         batch: Dict[str, Dict[str, Any]],
         modality_dynamics: Dict[str, Dict[str, Any]],
     ):
         return torch.tensor(0)  # TODO
+
+    def _calc_paired_loss(
+        self,
+        batch: Dict[str, Dict[str, Any]],
+        modality_dynamics: Dict[str, Dict[str, Any]],
+    ) -> torch.Tensor:
+        latentspaces = {
+            mod_name: dynamics["mp"].latentspace
+            for mod_name, dynamics in modality_dynamics.items()
+        }
+
+        sample_ids = {
+            mod_name: mod_data["sample_ids"] for mod_name, mod_data in batch.items()
+        }
+
+        if len(latentspaces) < 2:
+            # Return a zero tensor that requires gradients to avoid issues in the graph
+            # Assuming at least one tensor exists to get the device
+            any_latent_tensor = next(iter(latentspaces.values()))
+            return torch.tensor(
+                0.0, device=any_latent_tensor.device, requires_grad=True
+            )
+
+        return self.compute_paired_loss(
+            latentspaces=latentspaces, sample_ids=sample_ids
+        )
 
     def _sum_sub_losses(
         self, modality_dynamics: Dict[str, Dict[str, Any]]

@@ -138,7 +138,6 @@ class XModalTrainer(BaseTrainer):
         for k, v in batch.items():
             model = self._modality_dynamics[k]["model"]
             data = v["data"]
-            print(data.shape)
 
             mp = model(data)
             loss, loss_stats = self.sub_loss(

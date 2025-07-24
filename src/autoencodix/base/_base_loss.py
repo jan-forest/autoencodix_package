@@ -1,11 +1,12 @@
 from abc import abstractmethod, ABC
+import itertools
 from autoencodix.utils.default_config import DefaultConfig
 import torch
 from torch import nn
 from autoencodix.utils._model_output import ModelOutput
 from autoencodix.utils._annealer import AnnealingScheduler
 
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, Any
 
 
 class BaseLoss(nn.Module, ABC):
@@ -131,18 +132,7 @@ class BaseLoss(nn.Module, ABC):
             raise ValueError(
                 f"Shape mismatch: mu has shape {mu.shape}, but logvar has shape {logvar.shape}."
             )
-        if self.config.loss_reduction == "sum":
-            return -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-
-        elif self.config.loss_reduction == "mean":
-            return -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
-        # this should not happen unless we change something in our DefaultConfig
-        # mean is default value in Pydantic Basemodel (DefaultConfig)
-        # we allow only mean and sum via Pydantic, so other values should throw an error before
-        else:
-            raise NotImplementedError(
-                f"Unsupported value {self.config.loss_reduction}, only mean and sum are allowed"
-            )
+        return -0.5 * self.reduction_fn(1 + logvar - mu.pow(2) - logvar.exp())
 
     def compute_variational_loss(
         self,
@@ -191,11 +181,66 @@ class BaseLoss(nn.Module, ABC):
                 f"Only 'kl' and 'mmd' are supported."
             )
 
+    def compute_paired_loss(
+        self,
+        latentspaces: dict[str, torch.Tensor],
+        sample_ids: dict[str, list],
+    ) -> torch.Tensor:
+        """
+        Calculates the paired distance loss across all pairs of modalities in a batch.
+
+        Args:
+            latentspaces: A dictionary mapping modality names to their latent space tensors.
+                        e.g., {'RNA': tensor_rna, 'ATAC': tensor_atac}
+            sample_ids: A dictionary mapping modality names to their list of sample IDs.
+            reduction: The type of reduction to apply ('mean' or 'sum').
+
+        Returns:
+            A single scalar tensor representing the total paired loss.
+        """
+
+        loss_helper = []
+        modality_names = list(latentspaces.keys())
+
+        # 1. Iterate through all unique pairs of modalities
+        for mod_a, mod_b in itertools.combinations(modality_names, 2):
+            ids_a = sample_ids[mod_a]
+            ids_b = sample_ids[mod_b]
+
+            # 2. Find the intersection of sample IDs
+            common_ids = set(ids_a) & set(ids_b)
+
+            if not common_ids:
+                print("no common ids")
+                continue
+
+            # 3. Create a mapping from sample ID to index for efficient lookup
+            id_to_idx_a = {sample_id: i for i, sample_id in enumerate(ids_a)}
+            id_to_idx_b = {sample_id: i for i, sample_id in enumerate(ids_b)}
+
+            # Get the corresponding indices for the common samples
+            indices_a = [id_to_idx_a[common_id] for common_id in common_ids]
+            indices_b = [id_to_idx_b[common_id] for common_id in common_ids]
+
+            # 4. Select the latent vectors for the paired samples
+            paired_latents_a = latentspaces[mod_a][indices_a]
+            paired_latents_b = latentspaces[mod_b][indices_b]
+
+            # 5. Calculate the distance between the aligned latent vectors
+            # L1 distance, averaged over latent dimensions and then over samples
+            distance = torch.abs(paired_latents_a - paired_latents_b).mean(dim=1)
+            pair_loss = self.reduction_fn(distance)
+            loss_helper.append(pair_loss)
+        if not loss_helper:
+            return torch.tensor(0.0)
+        return torch.stack(loss_helper).mean()
+
     @abstractmethod
     def forward(
         self,
+        *args,
         **kwargs,
-    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    ) -> Any:
         """Calculates the loss for the autoencoder.
 
         This method must be implemented by subclasses to define the specific

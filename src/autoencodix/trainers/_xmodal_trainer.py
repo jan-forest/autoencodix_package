@@ -220,7 +220,8 @@ class XModalTrainer(BaseTrainer):
             self._epoch_loss += batch_loss.item()
             for k, v in loss_dict.items():
                 if "_factor" not in k:  # Skip factor losses from accumulation
-                    sub_losses[k] += v.item()
+                    value_to_add = v.item() if hasattr(v, 'item') else v
+                    sub_losses[k] += value_to_add 
                 else:
                     sub_losses[k] = v
 
@@ -239,7 +240,12 @@ class XModalTrainer(BaseTrainer):
             # Get dynamics and losses from the training epoch
             train_epoch_dynamics, train_sub_losses = self._train_one_epoch()
 
-            self._log_losses(epoch=epoch,total_loss=self._epoch_loss, split="train", sub_losses=train_sub_losses)
+            self._log_losses(
+                epoch=epoch,
+                total_loss=self._epoch_loss,
+                split="train",
+                sub_losses=train_sub_losses,
+            )
 
             # if self._validloader:
             #     valid_total_loss, valid_sub_losses = self._validate_epoch(...)
@@ -247,7 +253,9 @@ class XModalTrainer(BaseTrainer):
 
             if self._is_checkpoint_epoch:
                 self._fabric.print(f"Storing checkpoint for epoch {epoch}...")
-                self._store_checkpoint(epoch, train_epoch_dynamics)
+                self._store_checkpoint(
+                    epoch=epoch, split="train", epoch_dynamics=train_epoch_dynamics
+                )
 
         return self._result
 
@@ -305,7 +313,9 @@ class XModalTrainer(BaseTrainer):
 
         return captured_data
 
-    def _log_losses(self, epoch: int, split: str, total_loss: float, sub_losses: Dict[str, float]):
+    def _log_losses(
+        self, epoch: int, split: str, total_loss: float, sub_losses: Dict[str, float]
+    ):
         dataset_len = 1  # Avoid division by zero if something is wrong
         if split == "train":
             dataset_len = len(self._trainloader.dataset)
@@ -371,7 +381,7 @@ class XModalTrainer(BaseTrainer):
                 data={k: np.concatenate(v) for k, v in final_data["sigmas"].items()},
             )
 
-    def _store_checkpoint(self, epoch: int, train_epoch_dynamics: List[Dict]):
+    def _store_checkpoint(self, epoch: int, split: str, epoch_dynamics: List[Dict]):
         """
         Saves the model state and the consolidated training dynamics.
 
@@ -387,7 +397,9 @@ class XModalTrainer(BaseTrainer):
         self._result.model_checkpoints.add(epoch=epoch, data=state_to_save)
 
         # Process and store the dynamics
-        self._dynamics_to_result(epoch, "train", train_epoch_dynamics)
+        self._dynamics_to_result(
+            epoch=epoch, split=split, epoch_dynamics=epoch_dynamics
+        )
 
         # Note: A full implementation would also handle validation dynamics
         # if self._validset:

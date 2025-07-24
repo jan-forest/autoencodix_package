@@ -100,6 +100,7 @@ class XModalLoss(BaseLoss):
         aggregated_sub_losses = self._sum_sub_losses(
             modality_dynamics=modality_dynamics
         )
+        sub_losses = self._store_sub_losses(modality_dynamics=modality_dynamics)
         paired_loss = self._calc_paired_loss(
             batch=batch, modality_dynamics=modality_dynamics
         )
@@ -107,13 +108,15 @@ class XModalLoss(BaseLoss):
             batch=batch, modality_dynamics=modality_dynamics
         )
         total_loss = adver_loss + aggregated_sub_losses + paired_loss + class_loss
-        return total_loss, {
+        loss_dict = {
             "total_loss": total_loss,
             "adver_loss": adver_loss,
             "aggregated_sub_losses": aggregated_sub_losses,
             "paired_loss": paired_loss,
             "class_loss": class_loss,
         }
+        loss_dict.update(sub_losses)
+        return total_loss, loss_dict
 
     def _calc_paired_loss(
         self,
@@ -135,6 +138,21 @@ class XModalLoss(BaseLoss):
         """Computes the average total loss for all modalities."""
         losses = [helper["loss"] for helper in modality_dynamics.values()]
         return torch.stack(losses).mean()
+
+    def _store_sub_losses(
+        self, modality_dynamics: Dict[str, Dict[str, Any]]
+    ) -> Dict[str, float]:
+        sub_losses = {}
+        for k, v in modality_dynamics.items():
+            for k2, v2 in v.items():
+                if isinstance(v2, dict):
+                    for k3, v3 in v2.items():
+                        new_key = f"{k}.{k3}"
+                        sub_losses[new_key] = v3.item()
+                if k2 == "loss":
+                    sub_losses[f"{k}.loss"] = v2.item()
+
+        return sub_losses
 
     def _calc_adversial_loss(
         self,

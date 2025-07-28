@@ -11,10 +11,10 @@ class Classifier(nn.Module):
         self.n_modalities = n_modalities
         self.classifier = nn.Sequential(
             nn.Linear(input_dim, n_hidden),
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=False),
             nn.Dropout(0.1),
             nn.Linear(n_hidden, n_hidden // 2),
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=False),
             nn.Dropout(0.1),
             nn.Linear(n_hidden // 2, n_modalities),
         )

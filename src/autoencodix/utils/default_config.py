@@ -180,7 +180,10 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     )
     skip_preprocessing: bool = Field(
         default=False, description="If set don't scale, filter or clean the input data."
+
     )
+
+    class_param: str = Field(default=None)
 
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(
@@ -221,6 +224,9 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     beta: float = Field(
         default=0.1, ge=0, description="Beta weighting factor for VAE loss"
     )
+    gamma: float = Field(default=10.0, ge=0, description="Gamma weighting factor for Adversial Loss Term i.e. for XModal Classfier training")
+    delta_pair: float = Field(default=5.0, ge=0, description="Delta weighting factor for paired loss term in XModale Training")
+    delta_class: float = Field(default=5.0, ge=0, description="Delta weighting factor for class loss term in XModale Training")
     min_samples_per_split: int = Field(
         default=1, ge=1, description="Minimum number of samples per split"
     )

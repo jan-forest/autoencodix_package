@@ -1,5 +1,7 @@
 import torch
-from typing import Dict, Tuple, Optional, Any
+import numpy as np
+import pandas as pd
+from typing import Dict, Tuple, Optional, Any, List
 from collections import defaultdict
 from autoencodix.base._base_loss import BaseLoss
 from autoencodix.utils._model_output import ModelOutput
@@ -86,6 +88,9 @@ class XModalLoss(BaseLoss):
     def __init__(self, config: DefaultConfig, annealing_scheduler=None):
         super().__init__(config)
 
+        self.class_means: Dict[str, torch.Tensor] = {}
+        self.sample_to_class_map: Dict[str, Any] = {}
+
     def forward(
         self,
         batch: Dict[str, Dict[str, Any]],
@@ -107,7 +112,12 @@ class XModalLoss(BaseLoss):
         class_loss = self._calc_class_loss(
             batch=batch, modality_dynamics=modality_dynamics
         )
-        total_loss = adver_loss + aggregated_sub_losses + paired_loss + class_loss
+        total_loss = (
+            self.config.gamma * adver_loss
+            + aggregated_sub_losses  # beta already applied when calcing sub_loss in train loop (works because of distributive law.)
+            + self.config.delta_pair * paired_loss
+            + self.config.delta_class * class_loss
+        )
         loss_dict = {
             "total_loss": total_loss,
             "adver_loss": adver_loss,
@@ -122,8 +132,88 @@ class XModalLoss(BaseLoss):
         self,
         batch: Dict[str, Dict[str, Any]],
         modality_dynamics: Dict[str, Dict[str, Any]],
-    ):
-        return torch.tensor(0)  # TODO
+    ) -> torch.Tensor:
+        device = next(iter(modality_dynamics.values()))["mp"].latentspace.device
+
+        if not self.config.class_param:
+            return torch.tensor(0.0, device=device)
+
+        # Step 1: Dynamically update maps and discover new classes from the batch
+        for mod_name, mod_data in batch.items():
+            metadata_df = mod_data.get("metadata")
+            if metadata_df is None:
+                continue
+
+            batch_map = metadata_df[self.config.class_param]
+            self.sample_to_class_map.update(batch_map.to_dict())
+
+            for label in batch_map.unique():
+                if label not in self.class_means:
+                    self.class_means[label] = torch.zeros(
+                        self.config.latent_dim, device=device
+                    )
+
+        # Step 2: Calculate the loss for the current batch
+        total_class_loss = torch.tensor(0.0, device=device)
+        for mod_name, mod_data in batch.items():
+            if mod_data.get("metadata") is None:
+                continue
+
+            latents = modality_dynamics[mod_name]["mp"].latentspace
+            metadata_df = mod_data["metadata"]
+            batch_class_labels = metadata_df[self.config.class_param].tolist()
+
+            target_means_list = [
+                self.class_means[label] for label in batch_class_labels
+            ]
+            target_means_tensor = torch.stack(target_means_list).to(latents.device)
+
+            distance = torch.abs(latents - target_means_tensor).mean(dim=1)
+            total_class_loss += self.reduction_fn(distance)
+
+        num_modalities_in_batch = len(batch)
+        return (
+            total_class_loss / num_modalities_in_batch
+            if num_modalities_in_batch > 0
+            else total_class_loss
+        )
+
+    def update_class_means(self, epoch_dynamics: List[Dict], device):
+        """
+        Method to be called by the Trainer at the end of an epoch to update the
+        target class mean vectors.
+        """
+        if not self.config.class_param or not epoch_dynamics:
+            return
+
+        final_latents = defaultdict(list)
+        final_sample_ids = defaultdict(list)
+        for batch_data in epoch_dynamics:
+            for mod_name, data in batch_data["latentspaces"].items():
+                final_latents[mod_name].append(data)
+            for mod_name, data in batch_data["sample_ids"].items():
+                final_sample_ids[mod_name].append(data)
+
+        all_latents_df_list = []
+        for mod_name in final_latents.keys():
+            mod_latents = np.concatenate(final_latents[mod_name])
+            mod_ids = np.concatenate(final_sample_ids[mod_name])
+            all_latents_df_list.append(pd.DataFrame(mod_latents, index=mod_ids))
+
+        if not all_latents_df_list:
+            return
+
+        all_latents_df = pd.concat(all_latents_df_list)
+        all_latents_df["class_label"] = all_latents_df.index.map(
+            self.sample_to_class_map
+        )
+
+        new_means_df = all_latents_df.groupby("class_label").mean()
+
+        for label, mean_values in new_means_df.iterrows():
+            self.class_means[label] = torch.tensor(
+                mean_values.values, dtype=torch.float32, device=device
+            )
 
     def _calc_paired_loss(
         self,

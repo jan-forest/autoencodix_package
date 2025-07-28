@@ -55,7 +55,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
                 padding=1,
                 bias=False,
             ),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=False),
             nn.Conv2d(
                 in_channels=self.hidden_dim,
                 out_channels=self.hidden_dim * 2,
@@ -65,7 +65,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
                 bias=False,
             ),
             nn.BatchNorm2d(self.hidden_dim * 2),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=False),
             nn.Conv2d(
                 in_channels=self.hidden_dim * 2,
                 out_channels=self.hidden_dim * 4,
@@ -75,7 +75,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
                 bias=False,
             ),
             nn.BatchNorm2d(self.hidden_dim * 4),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=False),
             nn.Conv2d(
                 in_channels=self.hidden_dim * 4,
                 out_channels=self.hidden_dim * 8,
@@ -85,7 +85,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
                 bias=False,
             ),
             nn.BatchNorm2d(self.hidden_dim * 8),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=False),
             nn.Conv2d(
                 in_channels=self.hidden_dim * 8,
                 out_channels=self.hidden_dim * 8,
@@ -95,7 +95,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
                 bias=False,
             ),
             nn.BatchNorm2d(self.hidden_dim * 8),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=False),
         )
 
         # to Calculate the image shape after the _encoder, we need to know the number of layers
@@ -127,7 +127,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
                 self.latent_dim,
                 self.hidden_dim * 8 * self.spatial_dim * self.spatial_dim,
             ),
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=False),
         )
         self._decoder = nn.Sequential(
             nn.ConvTranspose2d(
@@ -139,7 +139,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
                 bias=False,
             ),
             nn.BatchNorm2d(self.hidden_dim * 8),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=False),
             nn.ConvTranspose2d(
                 in_channels=self.hidden_dim * 8,
                 out_channels=self.hidden_dim * 4,
@@ -149,7 +149,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
                 bias=False,
             ),
             nn.BatchNorm2d(self.hidden_dim * 4),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=False),
             nn.ConvTranspose2d(
                 in_channels=self.hidden_dim * 4,
                 out_channels=self.hidden_dim * 2,
@@ -159,7 +159,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
                 bias=False,
             ),
             nn.BatchNorm2d(self.hidden_dim * 2),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=False),
             nn.ConvTranspose2d(
                 in_channels=self.hidden_dim * 2,
                 out_channels=self.hidden_dim,
@@ -169,7 +169,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
                 bias=False,
             ),
             nn.BatchNorm2d(self.hidden_dim),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=False),
             nn.ConvTranspose2d(
                 in_channels=self.hidden_dim,
                 out_channels=self.nc,

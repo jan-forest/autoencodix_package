@@ -7,7 +7,8 @@ import inspect
 import os
 from collections import defaultdict
 from functools import wraps
-from typing import Any, Callable, Optional, get_type_hints
+from typing import Any, Callable, Optional, get_type_hints, Dict, List
+
 
 import dill as pickle
 import torch
@@ -478,3 +479,53 @@ def flip_labels(labels: torch.Tensor) -> torch.Tensor:
     flipped[flip_mask] = rand_labels[flip_mask]
 
     return flipped
+
+
+def find_translation_keys(
+    config: DefaultConfig, trained_modalities: List[str]
+) -> Dict[str, str]:
+    """
+    Finds the 'from' and 'to' modalities for cross-modal prediction.
+
+    Raises:
+        ValueError: If exactly one 'from' and one 'to' modality are not found.
+    """
+    data_info = config.data_config.data_info
+    from_key: Optional[str] = None
+    to_key: Optional[str] = None
+
+    for name in trained_modalities:
+        # Assumes format like 'prefix.NAME' -> 'NAME'
+        simple_name = name.split(".")[1]
+
+        cur_info = data_info.get(simple_name)
+        if not cur_info or not hasattr(cur_info, "translate_direction"):
+            continue
+
+        direction = cur_info.translate_direction
+        if direction == "to":
+            # Safety Check: Ensure we haven't already found a 'to' key
+            if to_key is not None:
+                raise ValueError(
+                    f"Multiple 'to' directions found: '{to_key}' and '{name}'"
+                )
+            to_key = name
+        elif direction == "from":
+            # Safety Check: Ensure we haven't already found a 'from' key
+            if from_key is not None:
+                raise ValueError(
+                    f"Multiple 'from' directions found: '{from_key}' and '{name}'"
+                )
+            from_key = name
+
+    # Final Safety Checks: Ensure both a 'from' and a 'to' key were found
+    if from_key is None:
+        raise ValueError(
+            "No modality with a 'from' direction was specified in the config."
+        )
+    if to_key is None:
+        raise ValueError(
+            "No modality with a 'to' direction was specified in the config."
+        )
+
+    return {"from": from_key, "to": to_key}

@@ -112,7 +112,9 @@ class XModalLoss(BaseLoss):
             batch=batch, modality_dynamics=modality_dynamics
         )
         class_loss = self._calc_class_loss(
-            batch=batch, modality_dynamics=modality_dynamics, is_training=is_training,
+            batch=batch,
+            modality_dynamics=modality_dynamics,
+            is_training=is_training,
         )
         total_loss = (
             self.config.gamma * adver_loss
@@ -140,7 +142,9 @@ class XModalLoss(BaseLoss):
 
         if not self.config.class_param:
             return torch.tensor(0.0, device=device)
-        class_means_dict = self.class_means_train if is_training else self.class_means_valid
+        class_means_dict = (
+            self.class_means_train if is_training else self.class_means_valid
+        )
         # Step 1: Dynamically update maps and discover new classes from the batch
         for mod_name, mod_data in batch.items():
             metadata_df = mod_data.get("metadata")
@@ -181,14 +185,18 @@ class XModalLoss(BaseLoss):
             else total_class_loss
         )
 
-    def update_class_means(self, epoch_dynamics: List[Dict], device: str, is_training:bool):
+    def update_class_means(
+        self, epoch_dynamics: List[Dict], device: str, is_training: bool
+    ):
         """
         Method to be called by the Trainer at the end of an epoch to update the
         target class mean vectors.
         """
         if not self.config.class_param or not epoch_dynamics:
             return
-        class_means_dict = self.class_means_train if is_training else self.class_means_valid
+        class_means_dict = (
+            self.class_means_train if is_training else self.class_means_valid
+        )
         final_latents = defaultdict(list)
         final_sample_ids = defaultdict(list)
         for batch_data in epoch_dynamics:

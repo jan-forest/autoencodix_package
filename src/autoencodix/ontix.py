@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Type, Union
+from typing import Dict, Optional, Type, Union, Tuple, List
 import torch
 import numpy as np
 
@@ -66,7 +66,7 @@ class Ontix(BasePipeline):
 
     def __init__(
         self,
-        ontologies: Union[tuple, list],  # Addition to Varix, mandotory for Ontix
+        ontologies: Union[Tuple, List],  # Addition to Varix, mandotory for Ontix
         sep: Optional[str] = "\t",  # Addition to Varix, optional to read in ontologies
         data: Optional[Union[DataPackage, DatasetContainer]] = None,
         trainer_type: Type[BaseTrainer] = OntixTrainer,

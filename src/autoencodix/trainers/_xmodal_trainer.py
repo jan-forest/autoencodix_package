@@ -1,5 +1,6 @@
 from collections import defaultdict
-from typing import Optional, Tuple, Type, Union, Dict, Any, List
+import os
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -11,16 +12,17 @@ from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.data._multimodal_dataset import (
     CoverageEnsuringSampler,
-    create_multimodal_collate_fn,
     MultiModalDataset,
+    create_multimodal_collate_fn,
 )
+from autoencodix.modeling._classifier import Classifier
 from autoencodix.modeling._imagevae_architecture import ImageVAEArchitecture
 from autoencodix.modeling._varix_architecture import VarixArchitecture
-from autoencodix.modeling._classifier import Classifier
 from autoencodix.utils._losses import VarixLoss
 from autoencodix.utils._model_output import ModelOutput
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.utils._internals import model_trainer_map
 
 
 class XModalTrainer(BaseTrainer):
@@ -32,16 +34,21 @@ class XModalTrainer(BaseTrainer):
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
-        ontologies: Optional[Tuple] = None,
         sub_loss_type: Type[BaseLoss] = VarixLoss,
         model_map: Dict[DataSetTypes, Type[BaseAutoencoder]] = {
             DataSetTypes.NUM: VarixArchitecture,
             DataSetTypes.IMG: ImageVAEArchitecture,
         },
+        ontologies: Optional[Union[Tuple, List]] = None,
     ):
         self._trainset = trainset
         self._n_train_modalities = self._trainset.n_modalities  # type: ignore
         self.model_map = model_map
+        self.model_trainer_map = model_trainer_map
+        self._n_cpus = os.cpu_count()
+        if self._n_cpus is None:
+            self._n_cpus = 0
+
         super().__init__(
             trainset, validset, result, config, model_type, loss_type, ontologies
         )
@@ -53,6 +60,7 @@ class XModalTrainer(BaseTrainer):
         self.n_features = trainset.get_input_dim() if trainset else 0
         self._cur_epoch: int = 0
         self._is_checkpoint_epoch: Optional[bool] = None
+        self._sub_loss_type = sub_loss_type
         self.sub_loss = sub_loss_type(config=self._config)
         self._clf_epoch_loss: float = 0.0
         self._epoch_loss: float = 0.0
@@ -63,7 +71,6 @@ class XModalTrainer(BaseTrainer):
         pass
 
     def _setup_fabric(self):
-        print("setup fabric")
         self._init_adversarial_training()
         self._init_modality_training()
         for dynamics in self._modality_dynamics.values():
@@ -81,7 +88,6 @@ class XModalTrainer(BaseTrainer):
         self._fabric.launch()
 
     def _init_loaders(self):
-        print("called init loaders")
         trainsampler = CoverageEnsuringSampler(multimodal_dataset=self._trainset)
         validsampler = CoverageEnsuringSampler(multimodal_dataset=self._validset)
         collate_fn = create_multimodal_collate_fn(multimodal_dataset=self._trainset)
@@ -103,7 +109,19 @@ class XModalTrainer(BaseTrainer):
         self._modality_dynamics = {
             mod_name: None for mod_name in self._trainset.datasets.keys()
         }
+
+        self._result.sub_results = {
+            mod_name: None for mod_name in self._trainset.datasets.keys()
+        }
+
+        data_info = self._config.data_config.data_info
         for mod_name, ds in self._trainset.datasets.items():
+            simple_name = mod_name.split(".")[1]
+            pretrain_epochs = (
+                data_info[simple_name].pretrain_epochs
+                if data_info[simple_name].pretrain_epochs
+                else self._config.pretrain_epochs
+            )
             model_type = self.model_map.get(ds.mytype)
             if model_type is None:
                 raise ValueError(
@@ -120,6 +138,10 @@ class XModalTrainer(BaseTrainer):
                 "optim": optimizer,
                 "mp": [],
                 "losses": [],
+                "config_name": simple_name,
+                "pretrain_epochs": pretrain_epochs,
+                "mytype": ds.mytype,
+                "pretrain_result": None,
             }
 
     def _init_adversarial_training(self):
@@ -145,10 +167,6 @@ class XModalTrainer(BaseTrainer):
             loss, loss_stats = self.sub_loss(
                 model_output=mp, targets=data, epoch=self._cur_epoch
             )
-            if "IMG" in k:
-                print(loss_stats)
-                print("MP")
-                print(mp)
 
             self._modality_dynamics[k]["loss_stats"] = loss_stats
             self._modality_dynamics[k]["loss"] = loss
@@ -259,7 +277,6 @@ class XModalTrainer(BaseTrainer):
             # --- Stage 2: Train the Classifier ---
             latents, labels = self._prep_adver_training()
             n_samples_total += len(labels)
-            print(f"len labels in train: {len(labels)}")
             self._train_clf(latents=latents, labels=labels)
 
             # --- Stage 3: Train the Autoencoders ---
@@ -299,7 +316,36 @@ class XModalTrainer(BaseTrainer):
 
         return epoch_dynamics, sub_losses, n_samples_total
 
+    def _pretraining(self):
+        for mod_name, dynamic in self._modality_dynamics.items():
+            mytype = dynamic.get("mytype")
+            pretrain_epochs = dynamic.get("pretrain_epochs")
+            print(f"Check if we need to pretrain: {mod_name}")
+            print(f"pretrain epochs : {pretrain_epochs}")
+            if not pretrain_epochs:
+                print(f"No pretraining for {mod_name}")
+                continue
+            model_type = self.model_map.get(mytype)
+            pretrainer_type = self.model_trainer_map.get(model_type)
+            print(f"Starting Pretraining for: {mod_name} with {pretrainer_type}")
+            trainset = self._trainset.datasets.get(mod_name)
+            validset = self._validset.datasets.get(mod_name)
+            pretrainer = pretrainer_type(
+                trainset=trainset,
+                validset=validset,
+                result=Result(),
+                config=self._config,
+                model_type=model_type,
+                loss_type=self._sub_loss_type,
+                ontologies=self.ontologies,
+            )
+            pretrain_result = pretrainer.train(epochs_overwrite=pretrain_epochs)
+            self._result.sub_results[f"pretrain.{mod_name}"] = pretrain_result
+            self._modality_dynamics[mod_name]["pretrain_result"] = pretrain_result
+            self._modality_dynamics[mod_name]["model"] = pretrain_result.model
+
     def train(self):
+        self._pretraining()
         for epoch in range(self._config.epochs):
             self._cur_epoch = epoch
             self._is_checkpoint_epoch = self._should_checkpoint(epoch=epoch)
@@ -312,7 +358,6 @@ class XModalTrainer(BaseTrainer):
                 split="train",
                 total_loss=self._epoch_loss,
                 sub_losses=train_sub_losses,
-                loader=self._trainloader,
                 n_samples=n_samples_train,
             )
 
@@ -324,7 +369,6 @@ class XModalTrainer(BaseTrainer):
                     split="valid",
                     total_loss=self._epoch_loss_valid,
                     sub_losses=valid_sub_losses,
-                    loader=self._validloader,
                     n_samples=n_samples_valid,
                 )
             if self._config.class_param:
@@ -352,8 +396,14 @@ class XModalTrainer(BaseTrainer):
 
         return self._result
 
-    def decode(self, x: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError("Multimodal decoding needs specific implementation")
+    def decode(self, x: torch.Tensor):
+        with self._fabric.autocast(), torch.no_grad():
+            x = self._fabric.to_device(obj=x)
+            if not isinstance(x, torch.Tensor):
+                raise TypeError(
+                    f"Expected input to be a torch.Tensor, got {type(x)} instead."
+                )
+            return self._model.decode(x=x)
 
     def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
         raise NotImplementedError("Multimodal prediction needs specific implementation")
@@ -395,7 +445,6 @@ class XModalTrainer(BaseTrainer):
         split: str,
         total_loss: float,
         sub_losses: Dict[str, float],
-        loader: DataLoader,
         n_samples: int,
     ):
         print(f"split: {split}, n_samples: {n_samples}")

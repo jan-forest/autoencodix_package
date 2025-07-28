@@ -185,47 +185,30 @@ class XModalTrainer(BaseTrainer):
         self._clf_optim.step()
         self._clf_epoch_loss += clf_loss.item()
 
-    def _run_batch_forward(
-        self, batch: Dict[str, Dict[str, Any]]
-    ) -> Tuple[torch.Tensor, Dict]:
-        """Performs a forward pass for validation."""
-        self._modalities_forward(batch=batch)
-        self._latents, self._labels = self._prep_adver_training()
-        clf_scores = self._latent_clf(self._latents)
-        batch_loss, loss_dict = self._loss_fn(
-            batch=batch,
-            modality_dynamics=self._modality_dynamics,
-            clf_scores=clf_scores,
-            labels=self._labels,
-            clf_loss_fn=self._clf_loss_fn,
-        )
-        return batch_loss, loss_dict
-
-    def _validate_one_epoch(self) -> Tuple[List[Dict], Dict[str, float], float, float]:
+    def _validate_one_epoch(self) -> Tuple[List[Dict], Dict[str, float], int]:
         """
         Runs a single, combined validation pass for the entire model,
         including dedicated metrics for the classifier.
         """
-        # Set models to evaluation mode
         for dynamics in self._modality_dynamics.values():
             dynamics["model"].eval()
         self._latent_clf.eval()
 
-        # Initialize accumulators
         self._epoch_loss_valid = 0.0
         total_clf_loss = 0.0
 
         epoch_dynamics: List[Dict] = []
         sub_losses: Dict[str, float] = defaultdict(float)
+        # we calc this manually because of unpaired data case
+        n_samples_total = 0
 
         with torch.no_grad():
             for batch in self._validloader:
-                # --- 1. Perform Forward Pass (Same for all metrics) ---
                 self._modalities_forward(batch=batch)
                 latents, labels = self._prep_adver_training()
+                n_samples_total += len(labels)
                 clf_scores = self._latent_clf(latents)
 
-                # --- 2. Calculate Main Combined Loss ---
                 batch_loss, loss_dict = self._loss_fn(
                     batch=batch,
                     modality_dynamics=self._modality_dynamics,
@@ -241,50 +224,16 @@ class XModalTrainer(BaseTrainer):
                     else:
                         sub_losses[k] = value
 
-                # --- 3. Calculate Classifier-Only Loss and Accuracy ---
                 clf_loss = self._clf_loss_fn(clf_scores, labels)
                 total_clf_loss += clf_loss.item()
-
-                _, predicted_labels = torch.max(clf_scores, 1)
-
-                # --- 4. Capture Dynamics for Checkpointing (if needed) ---
                 if self._is_checkpoint_epoch:
                     batch_capture = self._capture_dynamics(batch)
                     epoch_dynamics.append(batch_capture)
 
         sub_losses["clf_loss"] = total_clf_loss
-        return epoch_dynamics, sub_losses
+        return epoch_dynamics, sub_losses, n_samples_total
 
-    # def _validate_one_epoch(self) -> Tuple[List[Dict], Dict[str, float]]:
-    #     """Runs the validation loop for one epoch."""
-    #     for dynamics in self._modality_dynamics.values():
-    #         dynamics["model"].eval()
-    #     self._latent_clf.eval()
-
-    #     self._epoch_loss_valid = 0.0
-    #     self._clf_epoch_loss_valid = 0.0
-    #     epoch_dynamics: List[Dict] = []
-    #     sub_losses: Dict[str, float] = defaultdict(float)
-
-    #     with torch.no_grad():
-    #         for batch in self._validloader:
-    #             batch_loss, loss_dict = self._run_batch_forward(batch)
-    #             self._epoch_loss_valid += batch_loss.item()
-    #             for k, v in loss_dict.items():
-    #                 value = v.item() if hasattr(v, "item") else v
-    #                 if "_factor" not in k:
-    #                     sub_losses[k] += value
-    #                 else:
-    #                     sub_losses[k] = (
-    #                         value  # _factors are constants, so we can just overwrite this.
-    #                     )
-    #             if self._is_checkpoint_epoch:
-    #                 batch_capture = self._capture_dynamics(batch)
-    #                 epoch_dynamics.append(batch_capture)
-    #         sub_losses["clf_loss"] = self._ep
-    #     return epoch_dynamics, sub_losses
-
-    def _train_one_epoch(self) -> Tuple[List[Dict], Dict[str, float]]:
+    def _train_one_epoch(self) -> Tuple[List[Dict], Dict[str, float], int]:
         """Runs the training loop with corrected adversarial logic."""
         for dynamics in self._modality_dynamics.values():
             dynamics["model"].train()
@@ -294,6 +243,7 @@ class XModalTrainer(BaseTrainer):
         self._epoch_loss = 0
         epoch_dynamics: List[Dict] = []
         sub_losses: Dict[str, float] = defaultdict(float)
+        n_samples_total: int = 0  # because of unpaired training we need to sum the samples instead of using len(dataset)
 
         for batch in self._trainloader:
             # --- Stage 1: forward for each data modality ---
@@ -301,6 +251,8 @@ class XModalTrainer(BaseTrainer):
 
             # --- Stage 2: Train the Classifier ---
             latents, labels = self._prep_adver_training()
+            n_samples_total += len(labels)
+            print(f"len labels in train: {len(labels)}")
             self._train_clf(latents=latents, labels=labels)
 
             # --- Stage 3: Train the Autoencoders ---
@@ -337,29 +289,35 @@ class XModalTrainer(BaseTrainer):
                 epoch_dynamics.append(batch_capture)
         sub_losses["clf_loss"] = self._clf_epoch_loss
 
-        return epoch_dynamics, sub_losses
+        return epoch_dynamics, sub_losses, n_samples_total
 
     def train(self):
         for epoch in range(self._config.epochs):
             self._cur_epoch = epoch
             self._is_checkpoint_epoch = self._should_checkpoint(epoch=epoch)
             self._fabric.print(f"--- Epoch {epoch + 1}/{self._config.epochs} ---")
-            train_epoch_dynamics, train_sub_losses = self._train_one_epoch()
+            train_epoch_dynamics, train_sub_losses, n_samples_train = (
+                self._train_one_epoch()
+            )
 
             self._log_losses(
                 split="train",
                 total_loss=self._epoch_loss,
                 sub_losses=train_sub_losses,
                 loader=self._trainloader,
+                n_samples=n_samples_train,
             )
 
             if self._validset:
-                valid_epoch_dynamics, valid_sub_losses = self._validate_one_epoch()
+                valid_epoch_dynamics, valid_sub_losses, n_samples_valid = (
+                    self._validate_one_epoch()
+                )
                 self._log_losses(
                     split="valid",
                     total_loss=self._epoch_loss_valid,
                     sub_losses=valid_sub_losses,
                     loader=self._validloader,
+                    n_samples=n_samples_valid,
                 )
             if self._config.class_param:
                 self._loss_fn.update_class_means(
@@ -422,15 +380,14 @@ class XModalTrainer(BaseTrainer):
         total_loss: float,
         sub_losses: Dict[str, float],
         loader: DataLoader,
+        n_samples: int,
     ):
-        # epoch loss is summed for each batch, so we average over n_batches
-        n_batches = len(loader)  # len of PyTorch DataLoader gives n_batches
-
-        avg_total_loss = total_loss / n_batches
+        print(f"split: {split}, n_samples: {n_samples}")
+        avg_total_loss = total_loss / n_samples
         self._result.losses.add(epoch=self._cur_epoch, split=split, data=avg_total_loss)
 
         avg_sub_losses = {
-            k: v / n_batches if "_factor" not in k else v for k, v in sub_losses.items()
+            k: v / n_samples if "_factor" not in k else v for k, v in sub_losses.items()
         }
         self._result.sub_losses.add(
             epoch=self._cur_epoch,

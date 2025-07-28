@@ -168,16 +168,6 @@ class BaseTrainer(abc.ABC):
     def decode(self, x: torch.Tensor) -> torch.Tensor:
         pass
 
-    @abc.abstractmethod
-    def _capture_dynamics(
-        self,
-        model_output: Any,
-        split: str,
-        indices: Optional[torch.Tensor] = None,
-        sample_ids: Optional[Any] = None,
-        **kwargs,
-    ) -> Any:
-        pass
 
     @abc.abstractmethod
     def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:

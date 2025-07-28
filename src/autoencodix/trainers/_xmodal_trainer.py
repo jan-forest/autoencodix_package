@@ -23,6 +23,7 @@ from autoencodix.utils._model_output import ModelOutput
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._internals import model_trainer_map
+from autoencodix.utils._utils import find_translation_keys
 
 
 class XModalTrainer(BaseTrainer):
@@ -228,32 +229,33 @@ class XModalTrainer(BaseTrainer):
 
         with torch.no_grad():
             for batch in self._validloader:
-                self._modalities_forward(batch=batch)
-                latents, labels = self._prep_adver_training()
-                n_samples_total += len(labels)
-                clf_scores = self._latent_clf(latents)
+                with self._fabric.autocast():
+                    self._modalities_forward(batch=batch)
+                    latents, labels = self._prep_adver_training()
+                    n_samples_total += len(labels)
+                    clf_scores = self._latent_clf(latents)
 
-                batch_loss, loss_dict = self._loss_fn(
-                    batch=batch,
-                    modality_dynamics=self._modality_dynamics,
-                    clf_scores=clf_scores,
-                    labels=labels,
-                    clf_loss_fn=self._clf_loss_fn,
-                    is_training=False,
-                )
-                self._epoch_loss_valid += batch_loss.item()
-                for k, v in loss_dict.items():
-                    value = v.item() if hasattr(v, "item") else v
-                    if "_factor" not in k:
-                        sub_losses[k] += value
-                    else:
-                        sub_losses[k] = value
+                    batch_loss, loss_dict = self._loss_fn(
+                        batch=batch,
+                        modality_dynamics=self._modality_dynamics,
+                        clf_scores=clf_scores,
+                        labels=labels,
+                        clf_loss_fn=self._clf_loss_fn,
+                        is_training=False,
+                    )
+                    self._epoch_loss_valid += batch_loss.item()
+                    for k, v in loss_dict.items():
+                        value = v.item() if hasattr(v, "item") else v
+                        if "_factor" not in k:
+                            sub_losses[k] += value
+                        else:
+                            sub_losses[k] = value
 
-                clf_loss = self._clf_loss_fn(clf_scores, labels)
-                total_clf_loss += clf_loss.item()
-                if self._is_checkpoint_epoch:
-                    batch_capture = self._capture_dynamics(batch)
-                    epoch_dynamics.append(batch_capture)
+                    clf_loss = self._clf_loss_fn(clf_scores, labels)
+                    total_clf_loss += clf_loss.item()
+                    if self._is_checkpoint_epoch:
+                        batch_capture = self._capture_dynamics(batch)
+                        epoch_dynamics.append(batch_capture)
 
         sub_losses["clf_loss"] = total_clf_loss
         return epoch_dynamics, sub_losses, n_samples_total
@@ -271,31 +273,32 @@ class XModalTrainer(BaseTrainer):
         n_samples_total: int = 0  # because of unpaired training we need to sum the samples instead of using len(dataset)
 
         for batch in self._trainloader:
-            # --- Stage 1: forward for each data modality ---
-            self._modalities_forward(batch=batch)
+            with self._fabric.autocast():
+                # --- Stage 1: forward for each data modality ---
+                self._modalities_forward(batch=batch)
 
-            # --- Stage 2: Train the Classifier ---
-            latents, labels = self._prep_adver_training()
-            n_samples_total += len(labels)
-            self._train_clf(latents=latents, labels=labels)
+                # --- Stage 2: Train the Classifier ---
+                latents, labels = self._prep_adver_training()
+                n_samples_total += len(labels)
+                self._train_clf(latents=latents, labels=labels)
 
-            # --- Stage 3: Train the Autoencoders ---
-            for _, dynamics in self._modality_dynamics.items():
-                dynamics["optim"].zero_grad()
+                # --- Stage 3: Train the Autoencoders ---
+                for _, dynamics in self._modality_dynamics.items():
+                    dynamics["optim"].zero_grad()
 
-            # We re-calculate scores here and cannot reuse the `clf_scores` from Stage 2.
-            # The previous scores were from detached latents and would block the gradients
-            # needed to train the autoencoders adversarially.
-            clf_scores_for_adv = self._latent_clf(latents)
+                # We re-calculate scores here and cannot reuse the `clf_scores` from Stage 2.
+                # The previous scores were from detached latents and would block the gradients
+                # needed to train the autoencoders adversarially.
+                clf_scores_for_adv = self._latent_clf(latents)
 
-            batch_loss, loss_dict = self._loss_fn(
-                batch=batch,
-                modality_dynamics=self._modality_dynamics,
-                clf_scores=clf_scores_for_adv,
-                labels=labels,
-                clf_loss_fn=self._clf_loss_fn,
-                is_training=True,
-            )
+                batch_loss, loss_dict = self._loss_fn(
+                    batch=batch,
+                    modality_dynamics=self._modality_dynamics,
+                    clf_scores=clf_scores_for_adv,
+                    labels=labels,
+                    clf_loss_fn=self._clf_loss_fn,
+                    is_training=True,
+                )
             self._fabric.backward(batch_loss)
             for _, dynamics in self._modality_dynamics.items():
                 dynamics["optim"].step()
@@ -405,8 +408,85 @@ class XModalTrainer(BaseTrainer):
                 )
             return self._model.decode(x=x)
 
-    def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
-        raise NotImplementedError("Multimodal prediction needs specific implementation")
+    def predict(self, data: MultiModalDataset, model: Optional[Any]) -> Result:
+        """
+        Performs cross-modal prediction from a specified 'from' modality to a 'to' modality.
+
+        The direction is determined by the 'translate_direction' attribute in the config.
+        Results are stored in the Result object under split='test' and epoch=-1.
+
+        Args:
+            data: A MultiModalDataset containing the input data for the 'from' modality.
+
+        Returns:
+            The Result object populated with prediction results.
+        """
+        print("Starting cross-modal prediction...")
+        predict_keys = find_translation_keys(
+            config=self._config, trained_modalities=list(self._modality_dynamics.keys())
+        )
+        from_key, to_key = predict_keys["from"], predict_keys["to"]
+
+        # Get the trained models and set them to evaluation mode
+        from_modality = self._modality_dynamics[from_key]
+        to_modality = self._modality_dynamics[to_key]
+        from_model = from_modality["model"]
+        to_model = to_modality["model"]
+
+        from_model.eval()
+        to_model.eval()
+
+        print(f"Translating from '{from_key}' to '{to_key}'...")
+
+        inference_loader = DataLoader(
+            data,
+            batch_sampler=CoverageEnsuringSampler(multimodal_dataset=data),
+            collate_fn=create_multimodal_collate_fn(multimodal_dataset=data),
+        )
+        inference_loader = self._fabric.setup_dataloaders(inference_loader)
+
+        all_latents = []
+        all_translations = []
+        all_sample_ids = []
+
+        with torch.inference_mode():  # Faster than torch.no_grad()
+            for batch in inference_loader:
+                from_data = batch[from_key]["data"]
+
+                # Encode the input data to get the latent representation
+                from_mu, from_logvar = from_model.encode(x=from_data)
+                from_z = from_model.reparametrize(mu=from_mu, logvar=from_logvar)
+
+                # Decode the latent representation using the target model
+                translated = to_model.decode(x=from_z)
+
+                all_latents.append(from_z.cpu().numpy())
+                all_translations.append(translated.cpu().numpy())
+                all_sample_ids.extend(batch[from_key]["sample_ids"])
+
+        if not all_latents:
+            print(
+                "Warning: No predictions were generated. The input data might not contain the 'from' modality."
+            )
+            return self._result
+
+        # Consolidate the results from all batches
+        final_latents = np.concatenate(all_latents, axis=0)
+        final_translations = np.concatenate(all_translations, axis=0)
+
+        # Store under epoch = -1 and split = 'test'
+        self._result.latentspaces.add(
+            epoch=-1, split="test", data=final_latents
+        )
+        self._result.reconstructions.add(
+            epoch=-1, split="test", data=final_translations
+        )
+        self._result.sample_ids.add(
+            epoch=-1, split="test", data={from_key: np.array(all_sample_ids)}
+        )
+
+        print("Prediction complete.")
+        return self._result
 
     def _capture_dynamics(
         self,

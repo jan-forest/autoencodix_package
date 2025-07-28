@@ -15,6 +15,7 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):
         self.sample_ids: List[Any] = list(self.sample_to_modalities.keys())
         self.config = config
         self.data = next(iter(self.datasets.values())).data
+        self.feature_ids = None # TODO
 
         # Build reverse lookup tables once
         self._id_to_idx = {

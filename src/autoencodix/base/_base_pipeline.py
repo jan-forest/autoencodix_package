@@ -596,6 +596,9 @@ class BasePipeline(abc.ABC):
     ):
         """Process and store latent space results."""
         latent = predictor_results.latentspaces.get(epoch=-1, split="test")
+        if isinstance(latent, dict):
+            print("Detected dictionary in latent results, extracting array...")
+            latent = next(iter(latent.values())) # TODO better adjust for xmodal
         self.result.adata_latent = ad.AnnData(latent)
         self.result.adata_latent.obs_names = predict_data.test.sample_ids  # type: ignore
         self.result.adata_latent.uns["var_names"] = predict_data.test.feature_ids  # type: ignore

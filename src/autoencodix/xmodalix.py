@@ -1,6 +1,7 @@
 from typing import Dict, Optional, Type, Union
 import numpy as np
 
+import anndata as ad  # type: ignore
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_pipeline import BasePipeline
@@ -89,8 +90,7 @@ class XModalix(BasePipeline):
             custom_split=custom_splits,
         )
 
-
-    def fit(self): # TODO use from base
+    def fit(self):  # TODO use from base
         self._trainer = self._trainer_type(
             trainset=self._datasets.train,
             validset=self._datasets.valid,
@@ -100,6 +100,18 @@ class XModalix(BasePipeline):
             loss_type=self._loss_type,
             ontologies=self._ontologies,  # Ontix
         )
-        trainer_result =  self._trainer.train()
+        trainer_result = self._trainer.train()
         self.result.update(other=trainer_result)
 
+    def _process_latent_results(
+        self, predictor_results, predict_data: DatasetContainer
+    ):
+        """Process and store latent space results."""
+        latent = predictor_results.latentspaces.get(epoch=-1, split="test")
+        if isinstance(latent, dict):
+            print("Detected dictionary in latent results, extracting array...")
+            latent = next(iter(latent.values()))  # TODO better adjust for xmodal
+        self.result.adata_latent = ad.AnnData(latent)
+        # self.result.adata_latent.obs_names = predict_data.test.sample_ids  # type: ignore
+        # self.result.adata_latent.uns["var_names"] = predict_data.test.feature_ids  # type: ignore
+        self.result.update(predictor_results)

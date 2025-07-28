@@ -88,7 +88,8 @@ class XModalLoss(BaseLoss):
     def __init__(self, config: DefaultConfig, annealing_scheduler=None):
         super().__init__(config)
 
-        self.class_means: Dict[str, torch.Tensor] = {}
+        self.class_means_train: Dict[str, torch.Tensor] = {}
+        self.class_means_valid: Dict[str, torch.Tensor] = {}
         self.sample_to_class_map: Dict[str, Any] = {}
 
     def forward(
@@ -98,6 +99,7 @@ class XModalLoss(BaseLoss):
         clf_scores: torch.Tensor,
         labels: torch.Tensor,
         clf_loss_fn: torch.nn.Module,
+        is_training: bool = True,
     ):
         adver_loss = self._calc_adversial_loss(
             labels=labels, clf_loss_fn=clf_loss_fn, clf_scores=clf_scores
@@ -110,7 +112,7 @@ class XModalLoss(BaseLoss):
             batch=batch, modality_dynamics=modality_dynamics
         )
         class_loss = self._calc_class_loss(
-            batch=batch, modality_dynamics=modality_dynamics
+            batch=batch, modality_dynamics=modality_dynamics, is_training=is_training,
         )
         total_loss = (
             self.config.gamma * adver_loss
@@ -132,12 +134,13 @@ class XModalLoss(BaseLoss):
         self,
         batch: Dict[str, Dict[str, Any]],
         modality_dynamics: Dict[str, Dict[str, Any]],
+        is_training: bool,
     ) -> torch.Tensor:
         device = next(iter(modality_dynamics.values()))["mp"].latentspace.device
 
         if not self.config.class_param:
             return torch.tensor(0.0, device=device)
-
+        class_means_dict = self.class_means_train if is_training else self.class_means_valid
         # Step 1: Dynamically update maps and discover new classes from the batch
         for mod_name, mod_data in batch.items():
             metadata_df = mod_data.get("metadata")
@@ -148,8 +151,8 @@ class XModalLoss(BaseLoss):
             self.sample_to_class_map.update(batch_map.to_dict())
 
             for label in batch_map.unique():
-                if label not in self.class_means:
-                    self.class_means[label] = torch.zeros(
+                if label not in class_means_dict:
+                    class_means_dict[label] = torch.zeros(
                         self.config.latent_dim, device=device
                     )
 
@@ -164,7 +167,7 @@ class XModalLoss(BaseLoss):
             batch_class_labels = metadata_df[self.config.class_param].tolist()
 
             target_means_list = [
-                self.class_means[label] for label in batch_class_labels
+                self.class_means_train[label] for label in batch_class_labels
             ]
             target_means_tensor = torch.stack(target_means_list).to(latents.device)
 
@@ -178,14 +181,14 @@ class XModalLoss(BaseLoss):
             else total_class_loss
         )
 
-    def update_class_means(self, epoch_dynamics: List[Dict], device):
+    def update_class_means(self, epoch_dynamics: List[Dict], device: str, is_training:bool):
         """
         Method to be called by the Trainer at the end of an epoch to update the
         target class mean vectors.
         """
         if not self.config.class_param or not epoch_dynamics:
             return
-
+        class_means_dict = self.class_means_train if is_training else self.class_means_valid
         final_latents = defaultdict(list)
         final_sample_ids = defaultdict(list)
         for batch_data in epoch_dynamics:
@@ -211,7 +214,7 @@ class XModalLoss(BaseLoss):
         new_means_df = all_latents_df.groupby("class_label").mean()
 
         for label, mean_values in new_means_df.iterrows():
-            self.class_means[label] = torch.tensor(
+            class_means_dict[label] = torch.tensor(
                 mean_values.values, dtype=torch.float32, device=device
             )
 

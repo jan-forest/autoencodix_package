@@ -141,9 +141,15 @@ class XModalTrainer(BaseTrainer):
             data = v["data"]
 
             mp = model(data)
+
             loss, loss_stats = self.sub_loss(
                 model_output=mp, targets=data, epoch=self._cur_epoch
             )
+            if "IMG" in k:
+                print(loss_stats)
+                print("MP")
+                print(mp)
+
             self._modality_dynamics[k]["loss_stats"] = loss_stats
             self._modality_dynamics[k]["loss"] = loss
             self._modality_dynamics[k]["mp"] = mp
@@ -215,6 +221,7 @@ class XModalTrainer(BaseTrainer):
                     clf_scores=clf_scores,
                     labels=labels,
                     clf_loss_fn=self._clf_loss_fn,
+                    is_training=False,
                 )
                 self._epoch_loss_valid += batch_loss.item()
                 for k, v in loss_dict.items():
@@ -270,6 +277,7 @@ class XModalTrainer(BaseTrainer):
                 clf_scores=clf_scores_for_adv,
                 labels=labels,
                 clf_loss_fn=self._clf_loss_fn,
+                is_training=True,
             )
             self._fabric.backward(batch_loss)
             for _, dynamics in self._modality_dynamics.items():
@@ -321,8 +329,16 @@ class XModalTrainer(BaseTrainer):
                 )
             if self._config.class_param:
                 self._loss_fn.update_class_means(
-                    epoch_dynamics=train_epoch_dynamics, device=self._fabric.device
+                    epoch_dynamics=train_epoch_dynamics,
+                    device=self._fabric.device,
+                    is_training=True,
                 )
+                if self._validset:
+                    self._loss_fn.update_class_means(
+                        epoch_dynamics=valid_epoch_dynamics,
+                        device=self._fabric.device,
+                        is_training=False,
+                    )
             if self._is_checkpoint_epoch:
                 self._fabric.print(f"Storing checkpoint for epoch {epoch}...")
                 self._store_checkpoint(

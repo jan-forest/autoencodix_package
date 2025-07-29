@@ -466,6 +466,8 @@ class BasePipeline(abc.ABC):
         self,
         data: Optional[Union[DataPackage, DatasetContainer, ad.AnnData, MuData]] = None,
         config: Optional[Union[None, DefaultConfig]] = None,
+        from_key: Optional[str] = None,
+        to_key: Optional[str] = None,
         **kwargs,
     ):
         """Generates predictions using the trained model.
@@ -488,7 +490,9 @@ class BasePipeline(abc.ABC):
         original_input = data
         predict_data = self._prepare_prediction_data(data=data)
 
-        predictor_results = self._generate_predictions(predict_data=predict_data)
+        predictor_results = self._generate_predictions(
+            predict_data=predict_data, from_key=from_key, to_key=to_key
+        )
 
         self._process_latent_results(
             predictor_results=predictor_results, predict_data=predict_data
@@ -586,10 +590,20 @@ class BasePipeline(abc.ABC):
                 f"attribute, got: {predict_data}"
             )
 
-    def _generate_predictions(self, predict_data: DatasetContainer):
+    def _generate_predictions(
+        self,
+        predict_data: DatasetContainer,
+        from_key: Optional[str] = None,
+        to_key: Optional[str] = None,
+    ):
         """Generate predictions using the trained model."""
         self._validate_prediction_data(predict_data=predict_data)
-        return self._trainer.predict(data=predict_data.test, model=self.result.model)  # type: ignore
+        return self._trainer.predict(
+            data=predict_data.test,
+            model=self.result.model,
+            from_key=from_key,
+            to_key=to_key,
+        )  # type: ignore
 
     def _process_latent_results(
         self, predictor_results, predict_data: DatasetContainer
@@ -598,7 +612,7 @@ class BasePipeline(abc.ABC):
         latent = predictor_results.latentspaces.get(epoch=-1, split="test")
         if isinstance(latent, dict):
             print("Detected dictionary in latent results, extracting array...")
-            latent = next(iter(latent.values())) # TODO better adjust for xmodal
+            latent = next(iter(latent.values()))  # TODO better adjust for xmodal
         self.result.adata_latent = ad.AnnData(latent)
         self.result.adata_latent.obs_names = predict_data.test.sample_ids  # type: ignore
         self.result.adata_latent.uns["var_names"] = predict_data.test.feature_ids  # type: ignore

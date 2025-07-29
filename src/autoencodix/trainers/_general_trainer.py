@@ -289,7 +289,7 @@ class GeneralTrainer(BaseTrainer):
         self.n_test = len(data)
         self._init_buffers(input_data=data)
         inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
-        with self._fabric.autocast(), torch.no_grad():
+        with self._fabric.autocast(), torch.inference_mode():
             for idx, data, sample_ids in inference_loader:
                 model_output = model(data)
                 self._capture_dynamics(

@@ -102,7 +102,6 @@ class BaseTrainer(abc.ABC):
                 dataset=self._validset,
                 batch_size=self._config.batch_size,
                 shuffle=False,
-
             )
         else:
             self._validloader = None  # type: ignore
@@ -174,5 +173,7 @@ class BaseTrainer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
+    def predict(
+        self, data: BaseDataset, model: Optional[torch.nn.Module] = None, **kwargs
+    ) -> Result:
         pass

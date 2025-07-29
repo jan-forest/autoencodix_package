@@ -7,10 +7,9 @@ import inspect
 import os
 from collections import defaultdict
 from functools import wraps
-from typing import Any, Callable, Optional, get_type_hints, Dict, List
+from typing import Any, Callable, Dict, List, Optional, Union, get_type_hints
 
-
-import dill as pickle
+import dill as pickle # type: ignore
 import torch
 from matplotlib import pyplot as plt
 
@@ -482,20 +481,37 @@ def flip_labels(labels: torch.Tensor) -> torch.Tensor:
 
 
 def find_translation_keys(
-    config: DefaultConfig, trained_modalities: List[str]
-) -> Dict[str, str]:
+    config: DefaultConfig,
+    trained_modalities: List[str],
+    from_key: Optional[str] = None,
+    to_key: Optional[str] = None,
+) -> Dict[str, str]: # type: ignore
     """
     Finds the 'from' and 'to' modalities for cross-modal prediction.
 
     Raises:
         ValueError: If exactly one 'from' and one 'to' modality are not found.
     """
-    data_info = config.data_config.data_info
-    from_key: Optional[str] = None
-    to_key: Optional[str] = None
+    from_key_final: Optional[str] = None
+    to_key_final: Optional[str] = None
+    simple_names: List[str] = [tm.split(".")[1] for tm in trained_modalities]
 
+    if from_key and to_key:
+        for name in trained_modalities:
+            simple_name = name.split(".")[1]
+            if from_key == simple_name or from_key == name:
+                from_key_final = name
+            elif to_key == simple_name or from_key == name:
+                to_key_final = name
+        # if the users passes from_key and to_key and we don't find them, we raise an error
+        if not (from_key_final and to_key_final):
+            raise ValueError(
+                f"Invalid translation keys: {from_key} => {to_key}, valid keys are: {simple_names}"
+            )
+        return {"from": from_key_final, "to": to_key_final}
+
+    data_info = config.data_config.data_info
     for name in trained_modalities:
-        # Assumes format like 'prefix.NAME' -> 'NAME'
         simple_name = name.split(".")[1]
 
         cur_info = data_info.get(simple_name)
@@ -504,28 +520,26 @@ def find_translation_keys(
 
         direction = cur_info.translate_direction
         if direction == "to":
-            # Safety Check: Ensure we haven't already found a 'to' key
-            if to_key is not None:
+            if to_key_final is not None:
                 raise ValueError(
-                    f"Multiple 'to' directions found: '{to_key}' and '{name}'"
+                    f"Multiple 'to' directions found: '{to_key_final}' and '{name}'"
                 )
-            to_key = name
+            to_key_final = name
         elif direction == "from":
-            # Safety Check: Ensure we haven't already found a 'from' key
-            if from_key is not None:
+            if from_key_final is not None:
                 raise ValueError(
-                    f"Multiple 'from' directions found: '{from_key}' and '{name}'"
+                    f"Multiple 'from' directions found: '{from_key_final}' and '{name}'"
                 )
-            from_key = name
+            from_key_final = name
 
-    # Final Safety Checks: Ensure both a 'from' and a 'to' key were found
-    if from_key is None:
+    if from_key_final is None:
         raise ValueError(
             "No modality with a 'from' direction was specified in the config."
         )
-    if to_key is None:
+    if to_key_final is None:
         raise ValueError(
             "No modality with a 'to' direction was specified in the config."
         )
+    assert from_key_final is not None and to_key_final is not None
 
-    return {"from": from_key, "to": to_key}
+    return {"from": from_key_final, "to": to_key_final}

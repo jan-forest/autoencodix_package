@@ -408,7 +408,13 @@ class XModalTrainer(BaseTrainer):
                 )
             return self._model.decode(x=x)
 
-    def predict(self, data: MultiModalDataset, model: Optional[Any]) -> Result:
+    def predict(
+        self,
+        data: BaseDataset,
+        from_key: Optional[str] = None,
+        to_key: Optional[str] = None,
+        model: Optional[Any] = None,
+    ) -> Result: # type: ignore
         """
         Performs cross-modal prediction from a specified 'from' modality to a 'to' modality.
 
@@ -421,13 +427,18 @@ class XModalTrainer(BaseTrainer):
         Returns:
             The Result object populated with prediction results.
         """
+        if not isinstance(data, MultiModalDataset):
+            raise TypeError(
+                f"type of data has to be MultiModalDataset, got: {type(data)}"
+            )
         print("Starting cross-modal prediction...")
         predict_keys = find_translation_keys(
-            config=self._config, trained_modalities=list(self._modality_dynamics.keys())
+            config=self._config,
+            trained_modalities=list(self._modality_dynamics.keys()),
+            from_key=from_key,
+            to_key=to_key,
         )
         from_key, to_key = predict_keys["from"], predict_keys["to"]
-
-        # Get the trained models and set them to evaluation mode
         from_modality = self._modality_dynamics[from_key]
         to_modality = self._modality_dynamics[to_key]
         from_model = from_modality["model"]
@@ -443,41 +454,29 @@ class XModalTrainer(BaseTrainer):
             batch_sampler=CoverageEnsuringSampler(multimodal_dataset=data),
             collate_fn=create_multimodal_collate_fn(multimodal_dataset=data),
         )
-        inference_loader = self._fabric.setup_dataloaders(inference_loader)
+        inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
 
-        all_latents = []
-        all_translations = []
-        all_sample_ids = []
+        all_latents: List[np.ndarray] = []
+        all_translations: List[np.ndarray] = []
+        all_sample_ids: List[str] = []
 
-        with torch.inference_mode():  # Faster than torch.no_grad()
+        with (
+            self._fabric.autocast(),
+            torch.inference_mode(),
+        ):
             for batch in inference_loader:
                 from_data = batch[from_key]["data"]
-
-                # Encode the input data to get the latent representation
                 from_mu, from_logvar = from_model.encode(x=from_data)
                 from_z = from_model.reparametrize(mu=from_mu, logvar=from_logvar)
-
-                # Decode the latent representation using the target model
                 translated = to_model.decode(x=from_z)
-
                 all_latents.append(from_z.cpu().numpy())
                 all_translations.append(translated.cpu().numpy())
                 all_sample_ids.extend(batch[from_key]["sample_ids"])
 
-        if not all_latents:
-            print(
-                "Warning: No predictions were generated. The input data might not contain the 'from' modality."
-            )
-            return self._result
+        final_latents = np.concatenate(all_latents)
+        final_translations = np.concatenate(all_translations)
 
-        # Consolidate the results from all batches
-        final_latents = np.concatenate(all_latents, axis=0)
-        final_translations = np.concatenate(all_translations, axis=0)
-
-        # Store under epoch = -1 and split = 'test'
-        self._result.latentspaces.add(
-            epoch=-1, split="test", data=final_latents
-        )
+        self._result.latentspaces.add(epoch=-1, split="test", data=final_latents)
         self._result.reconstructions.add(
             epoch=-1, split="test", data=final_translations
         )

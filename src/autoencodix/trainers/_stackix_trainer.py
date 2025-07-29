@@ -190,7 +190,7 @@ class StackixTrainer(GeneralTrainer):
 
         self._result.sub_reconstructions = modality_reconstructions
 
-    def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
+    def predict(self, data: BaseDataset, model: Optional[torch.nn.Module] = None, **kwargs) -> Result:
         """ """
         self.n_test = len(data) if data is not None else 0
         self._orchestrator.set_testset(testset=data)

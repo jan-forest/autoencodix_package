@@ -150,6 +150,7 @@ class Visualizer(BaseVisualizer):
         param: Optional[Union[list, str]] = None,
         epoch: Optional[Union[int, None]] = None,
         split: str = "all",
+        **kwargs,
     ) -> None:
         """
         Visualizes the latent space of the given result using different types of plots.
@@ -362,14 +363,15 @@ class Visualizer(BaseVisualizer):
         """
         all_weights = []
         names = []
-        if model.ontologies is not None:
-            # If model is Ontix
-            # Get node names from ontologies
-            node_names = list()
-            for ontology in model.ontologies:
-                node_names.append(ontology.keys())
+        if hasattr(model, "ontologies"):
+            if model.ontologies is not None:
+                # If model is Ontix
+                # Get node names from ontologies
+                node_names = list()
+                for ontology in model.ontologies:
+                    node_names.append(ontology.keys())
 
-            node_names.append(model.feature_order)  # Add feature order as last layer
+                node_names.append(model.feature_order)  # Add feature order as last layer
 
         for name, param in model.named_parameters():
             if "weight" in name and len(param.shape) == 2:

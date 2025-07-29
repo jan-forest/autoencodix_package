@@ -143,7 +143,12 @@ class GeneralTrainer(BaseTrainer):
             model_outputs = self._model(features)
             loss, batch_sub_losses = self._loss_fn(
                 # model_output=model_outputs, targets=features, epoch=epoch
-                model_output=model_outputs, targets=features, epoch=epoch, n_samples=len(self._trainloader.dataset) # Pass n_samples for disentangled loss calculations
+                model_output=model_outputs,
+                targets=features,
+                epoch=epoch,
+                n_samples=len(
+                    self._trainloader.dataset
+                ),  # Pass n_samples for disentangled loss calculations
             )
 
             self._fabric.backward(loss)
@@ -171,7 +176,12 @@ class GeneralTrainer(BaseTrainer):
                 model_outputs = self._model(features)
                 loss, batch_sub_losses = self._loss_fn(
                     # model_output=model_outputs, targets=features, epoch=epoch
-                    model_output=model_outputs, targets=features, epoch=epoch, n_samples=len(self._validloader.dataset) # Pass n_samples for disentangled loss calculations
+                    model_output=model_outputs,
+                    targets=features,
+                    epoch=epoch,
+                    n_samples=len(
+                        self._validloader.dataset
+                    ),  # Pass n_samples for disentangled loss calculations
                 )
                 total_loss += loss.item()
                 for k, v in batch_sub_losses.items():
@@ -204,7 +214,6 @@ class GeneralTrainer(BaseTrainer):
         self._fabric.print(
             f"Sub-losses: {', '.join([f'{k}: {v:.4f}' for k, v in sub_losses.items()])}"
         )
-
 
     def _store_checkpoint(self, epoch):
         self._result.model_checkpoints.add(epoch=epoch, data=self._model.state_dict())
@@ -270,7 +279,9 @@ class GeneralTrainer(BaseTrainer):
         maybe_add(self._mu_buffer, self._result.mus)
         maybe_add(self._sigma_buffer, self._result.sigmas)
 
-    def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
+    def predict(
+        self, data: BaseDataset, model: Optional[torch.nn.Module] = None, **kwargs
+    ) -> Result:
         """
         Decided to add predict method to the trainer class.
         This violates SRP, but the trainer class has a lot of attributes and methods

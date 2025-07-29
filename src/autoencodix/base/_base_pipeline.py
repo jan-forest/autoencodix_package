@@ -9,6 +9,7 @@ import pandas as pd
 import torch
 from mudata import MuData  # type: ignore
 from torch.utils.data import Dataset
+
 # ML evaluation
 from sklearn import linear_model
 from sklearn.base import ClassifierMixin, RegressorMixin, is_classifier, is_regressor
@@ -638,26 +639,40 @@ class BasePipeline(abc.ABC):
         Raises:
             ValueError: If reconstruction fails or data types are incompatible.
         """
-        raw_recon = torch.from_numpy(
+        raw_recon: Union[Dict, np.ndarray, torch.Tensor] = (
             self.result.reconstructions.get(epoch=-1, split="test")
         )
+        if isinstance(raw_recon, np.ndarray):
+            raw_recon = torch.from_numpy(raw_recon)  # type: ignore
+        elif isinstance(raw_recon, dict):
+            raw_recon = raw_recon.get("translation")  # type: ignore
+            if raw_recon is None:
+                raise ValueError(
+                    f"Raw recon is dict, but has no translation key, this should not happen: {raw_recon}"
+                )
+            raw_recon = torch.from_numpy(raw_recon)  # type: ignore
+        else:
+            raise ValueError(
+                f"type of raw_recon has to be 'dict' or 'np.ndarray', got: {type(raw_recon)}"
+            )
 
         if original_input is None:
             # Using existing datasets
             self._handle_dataset_container_reconstruction(
-                raw_recon=raw_recon,
+                raw_recon=raw_recon,  # type: ignore
                 dataset_container=predict_data,
                 context="existing datasets",
             )
         elif isinstance(original_input, DatasetContainer):
             self._handle_dataset_container_reconstruction(
-                raw_recon=raw_recon,
+                raw_recon=raw_recon,  # type: ignore
                 dataset_container=original_input,
                 context="provided DatasetContainer",
             )
         elif self.config.data_case == DataCase.MULTI_SINGLE_CELL:
             self._handle_multi_single_cell_reconstruction(
-                raw_recon=raw_recon, predictor_results=predictor_results
+                raw_recon=raw_recon,
+                predictor_results=predictor_results,  # type: ignore
             )
         elif isinstance(
             original_input, (DataPackage, ad.AnnData, MuData, dict, pd.DataFrame)
@@ -799,15 +814,17 @@ class BasePipeline(abc.ABC):
     # @config_method(valid_params={"config"})
     def evaluate(
         self,
-        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(), # Default is sklearn LogisticRegression
-        ml_model_regression: RegressorMixin = linear_model.LinearRegression(), # Default is sklearn LinearRegression
-        params: Union[list, str]= [],	# Default empty list, to use all parameters use string "all"
-        metric_class: str = "roc_auc_ovr", # Default is 'roc_auc_ovr' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
-        metric_regression: str = "r2", # Default is 'r2'
-        reference_methods: list = [], # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
-        split_type:str = "use-split", # Default is "use-split", other options: "CV-5", ... "LOOCV"?
+        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(),  # Default is sklearn LogisticRegression
+        ml_model_regression: RegressorMixin = linear_model.LinearRegression(),  # Default is sklearn LinearRegression
+        params: Union[
+            list, str
+        ] = [],  # Default empty list, to use all parameters use string "all"
+        metric_class: str = "roc_auc_ovr",  # Default is 'roc_auc_ovr' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
+        metric_regression: str = "r2",  # Default is 'r2'
+        reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
+        split_type: str = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
     ) -> Result:
-        """ TODO"""
+        """TODO"""
         if self._evaluator is None:
             raise NotImplementedError("Evaluator not initialized")
         if self.result.model is None:
@@ -839,8 +856,8 @@ class BasePipeline(abc.ABC):
 
         ml_plots = self._visualizer.plot_evaluation(result=self.result)
 
-        
         return self.result
+
     #     self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
     # ) -> None:
     #     """Not Implemented yet"""
@@ -902,7 +919,6 @@ class BasePipeline(abc.ABC):
         self.preprocess()
         self.fit()
         self.predict(data=data)
-        # self.evaluate()
         self.visualize()
         return self.result
 

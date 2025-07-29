@@ -17,6 +17,7 @@ class VanillixLoss(BaseLoss):
         model_output: ModelOutput,
         targets: torch.Tensor,
         epoch: Optional[int] = None,
+        **kwargs
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """Forward pass for vanilla autoencoder - ignores epoch."""
         total_loss = self.recon_loss(model_output.reconstruction, targets)
@@ -53,6 +54,7 @@ class VarixLoss(BaseLoss):
         targets: torch.Tensor,
         epoch: Optional[int] = None,
         total_epochs: Optional[int] = None,
+        **kwargs,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """Forward pass with conditional annealing."""
         recon_loss, var_loss = self._compute_losses(model_output, targets)
@@ -101,6 +103,7 @@ class XModalLoss(BaseLoss):
         labels: torch.Tensor,
         clf_loss_fn: torch.nn.Module,
         is_training: bool = True,
+        **kwargs,
     ):
         adver_loss = self._calc_adversial_loss(
             labels=labels, clf_loss_fn=clf_loss_fn, clf_scores=clf_scores

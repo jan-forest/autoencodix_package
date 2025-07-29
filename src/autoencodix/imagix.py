@@ -175,5 +175,5 @@ class Imagix(BasePipeline):
         )
 
         with self._trainer._fabric.autocast(), torch.no_grad():
-            z = self._trainer._model.reparametrize(mu_t, logvar_t)
+            z = self._trainer._model.reparameterize(mu_t, logvar_t)
             return z

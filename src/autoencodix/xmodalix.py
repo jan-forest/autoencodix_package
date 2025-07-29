@@ -20,6 +20,7 @@ from autoencodix.trainers._xmodal_trainer import XModalTrainer
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._losses import XModalLoss
+from autoencodix.utils._utils import find_translation_keys
 
 
 class XModalix(BasePipeline):
@@ -103,15 +104,87 @@ class XModalix(BasePipeline):
         trainer_result = self._trainer.train()
         self.result.update(other=trainer_result)
 
+    # def _process_latent_results(
+    #     self, predictor_results, predict_data: DatasetContainer
+    # ):
+    #     """Process and store latent space results."""
+    #     latent = predictor_results.latentspaces.get(epoch=-1, split="test")
+    #     if isinstance(latent, dict):
+    #         print("Detected dictionary in latent results, extracting array...")
+    #         latent = next(iter(latent.values()))  # TODO better adjust for xmodal
+    #     self.result.adata_latent = ad.AnnData(latent)
+    #     # self.result.adata_latent.obs_names = predict_data.test.sample_ids  # type: ignore
+    #     # self.result.adata_latent.uns["var_names"] = predict_data.test.feature_ids  # type: ignore
+    #     self.result.update(predictor_results)
+
     def _process_latent_results(
-        self, predictor_results, predict_data: DatasetContainer
+        self, predictor_results: Result, predict_data: DatasetContainer
     ):
-        """Process and store latent space results."""
-        latent = predictor_results.latentspaces.get(epoch=-1, split="test")
-        if isinstance(latent, dict):
-            print("Detected dictionary in latent results, extracting array...")
-            latent = next(iter(latent.values()))  # TODO better adjust for xmodal
+        """
+        Processes latent space results into a single AnnData object for the source modality.
+
+        This method identifies the source ('from') modality used for translation,
+        extracts its latent space and sample IDs, and creates a single, informative
+        AnnData object. The original feature names from the source dataset are
+        also stored for reference.
+
+        The final AnnData object is stored in `self.result.adata_latent`.
+
+        Args:
+            predictor_results: The Result object returned by the `predict` method.
+            predict_data: The MultiModalDataset used for prediction, to access metadata.
+        """
+        print("Processing latent space results into a single AnnData object...")
+        all_latents = predictor_results.latentspaces.get(epoch=-1, split="test")
+        all_sample_ids = predictor_results.sample_ids.get(epoch=-1, split="test")
+        all_recons = predictor_results.reconstructions.get(epoch=-1, split="test")
+
+        if not all(
+            [isinstance(res, dict) for res in [all_latents, all_sample_ids, all_recons]]
+        ):
+            raise TypeError("Expected prediction results to be dictionaries.")
+
+        try:
+            predict_keys = find_translation_keys(
+                config=self.config,
+                trained_modalities=all_latents.keys(),  # type: ignore
+            )
+            from_key = predict_keys["from"]
+        except Exception as e:
+            # Provide a helpful error if the key can't be determined.
+            raise ValueError(
+                "Could not determine the 'from_key' for translation. "
+                "Ensure the translation direction is specified in the config."
+            ) from e
+
+        print(f"Identified source modality for latent space: '{from_key}'")
+
+        latent = all_latents.get(from_key)  # type: ignore
+        sample_ids = all_sample_ids.get(from_key)  # type: ignore
+
+        if latent is None:
+            raise ValueError(
+                f"Latent space for source modality '{from_key}' not found."
+            )
+
         self.result.adata_latent = ad.AnnData(latent)
-        # self.result.adata_latent.obs_names = predict_data.test.sample_ids  # type: ignore
-        # self.result.adata_latent.uns["var_names"] = predict_data.test.feature_ids  # type: ignore
+        self.result.adata_latent.var_names = [
+            f"latent_{i}" for i in range(latent.shape[1])
+        ]
+
+        if sample_ids is not None:
+            self.result.adata_latent.obs_names = sample_ids
+
+        source_dataset = predict_data.test.datasets.get(from_key)  # type: ignore
+        if (
+            source_dataset
+            and hasattr(source_dataset, "feature_ids")
+            and source_dataset.feature_ids is not None
+        ):
+            self.result.adata_latent.uns["feature_ids"] = source_dataset.feature_ids
+            print(
+                f"  - Added {len(source_dataset.feature_ids)} source feature IDs to .uns"
+            )
+
         self.result.update(predictor_results)
+        print("Finished processing latent results.")

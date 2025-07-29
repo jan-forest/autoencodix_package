@@ -35,7 +35,7 @@ class VarixArchitecture(BaseAutoencoder):
         Decode the latent tensor x
     forward(x: torch.Tensor) -> ModelOutput
         Forward pass of the model, fills in the reconstruction and latentspace attributes of ModelOutput class.
-    reparametrize(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor
+    reparameterize(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor
         Reparameterization trick for VAE
     """
 
@@ -145,7 +145,7 @@ class VarixArchitecture(BaseAutoencoder):
         mu = torch.where(mu < 0.0000001, torch.zeros_like(mu), mu)
         return mu, logvar
 
-    def reparametrize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+    def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
         """
         Reparameterization trick for VAE
 
@@ -177,7 +177,7 @@ class VarixArchitecture(BaseAutoencoder):
 
         """
         mu, logvar = self.encode(x)
-        z = self.reparametrize(mu, logvar)
+        z = self.reparameterize(mu, logvar)
         return z
 
     def decode(self, x: torch.Tensor) -> torch.Tensor:
@@ -213,7 +213,7 @@ class VarixArchitecture(BaseAutoencoder):
 
         """
         mu, logvar = self.encode(x)
-        z = self.reparametrize(mu, logvar)
+        z = self.reparameterize(mu, logvar)
         x_hat = self.decode(z)
         return ModelOutput(
             reconstruction=x_hat,

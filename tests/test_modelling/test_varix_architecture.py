@@ -60,7 +60,7 @@ class TestVarixArchitecture:
         model = VarixArchitecture(config=config, input_dim=data.shape[1])
         mu, logvar = model.encode(data)
 
-        latent = model.reparametrize(mu, logvar)
+        latent = model.reparameterize(mu, logvar)
         decoder_output = model.decode(latent)
         # multiple asserts because we don't want to calc the model output multiple times
         assert latent.shape == (data.shape[0], config.latent_dim)

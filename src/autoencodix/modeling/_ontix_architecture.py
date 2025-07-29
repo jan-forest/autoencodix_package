@@ -35,12 +35,16 @@ class OntixArchitecture(BaseAutoencoder):
         Decode the latent tensor x
     forward(x: torch.Tensor) -> ModelOutput
         Forward pass of the model, fills in the reconstruction and latentspace attributes of ModelOutput class.
-    reparametrize(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor
+    reparameterize(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor
         Reparameterization trick for VAE
     """
 
     def __init__(
-        self, config: Optional[Union[None, DefaultConfig]], input_dim: int, ontologies: tuple, feature_order: list,
+        self,
+        config: Optional[Union[None, DefaultConfig]],
+        input_dim: int,
+        ontologies: tuple,
+        feature_order: list,
     ) -> None:
         """
         Initialize the Vanilla Autoencoder with the given configuration.
@@ -60,13 +64,15 @@ class OntixArchitecture(BaseAutoencoder):
         # create masks for sparse decoder
         self.ontologies = ontologies
         self.feature_order = feature_order
-        self.masks = self._make_masks(config = self._config, feature_order=feature_order)
+        self.masks = self._make_masks(config=self._config, feature_order=feature_order)
         self.latent_dim = self.masks[0].shape[1]
         print("Latent Dim: " + str(self.latent_dim))
         # populate self.encoder and self.decoder
         self._build_network()
         self.apply(self._init_weights)
-        self._decoder.apply(self._positive_dec) # Sparse decoder only has positive weights
+        self._decoder.apply(
+            self._positive_dec
+        )  # Sparse decoder only has positive weights
 
         # Apply weight mask to create ontology-based decoder
         with torch.no_grad():
@@ -82,8 +88,9 @@ class OntixArchitecture(BaseAutoencoder):
                 for i, mask in enumerate(self.masks):
                     self._decoder[i].weight.mul_(mask)
 
-
-    def _make_masks(self, config: DefaultConfig, feature_order: list) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _make_masks(
+        self, config: DefaultConfig, feature_order: list
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Create masks for sparse decoder based on ontology via config
 
@@ -110,22 +117,23 @@ class OntixArchitecture(BaseAutoencoder):
         print(f"All possible feature names length: {len(all_feature_names)}")
         print(f"Feature order length: {len(feature_order)}")
         # Check if all features in feature_order are present in all_feature_names
-        feature_names =  [f for f in feature_order]
+        feature_names = [f for f in feature_order]
         missing_features = [f for f in feature_order if f not in all_feature_names]
         if missing_features:
-            print(f"Features in feature_order not found in all_feature_names: {missing_features}")
+            print(
+                f"Features in feature_order not found in all_feature_names: {missing_features}"
+            )
         print(f"Feature names without filtering: {len(feature_names)}")
 
         # Enumerate through the ontologies
         for x, ont_dic in enumerate(self.ontologies):
-
             prev_lay_dim = len(ont_dic.keys())
 
             if x == len(self.ontologies) - 1:
                 # fixed sort of feature list
                 node_list = feature_names
             else:
-                node_list = list(self.ontologies[x+1].keys())
+                node_list = list(self.ontologies[x + 1].keys())
             next_lay_dim = len(node_list)
             # create masks for sparse decoder
             mask = torch.zeros(next_lay_dim, prev_lay_dim)
@@ -152,7 +160,8 @@ class OntixArchitecture(BaseAutoencoder):
                 )
                 print("Returning zero mask")
             print(
-                f"Mask layer {x} with shape {mask.shape} and {torch.sum(mask)} connections")
+                f"Mask layer {x} with shape {mask.shape} and {torch.sum(mask)} connections"
+            )
             masks += (mask,)
 
         if torch.max(mask) < 1:
@@ -168,7 +177,7 @@ class OntixArchitecture(BaseAutoencoder):
 
         Handles cases where `n_layers=0` by skipping the encoder and using only mu/logvar.
         """
-		#### Encoder copied from varix architecture ####
+        #### Encoder copied from varix architecture ####
         enc_dim = LayerFactory.get_layer_dimensions(
             feature_dim=self.input_dim,
             latent_dim=self.latent_dim,
@@ -204,22 +213,24 @@ class OntixArchitecture(BaseAutoencoder):
             self._encoder = nn.Sequential(*encoder_layers)
             self._mu = nn.Linear(enc_dim[-2], self.latent_dim)
             self._logvar = nn.Linear(enc_dim[-2], self.latent_dim)
-		#### Encoder copied from varix architecture ####
+        #### Encoder copied from varix architecture ####
 
         # Construct Decoder with Sparse Connections via masks
         # Decoder dimension is determined by the masks
-        dec_dim = [self.latent_dim] + [mask.shape[0] for mask in self.masks] #+ [self.input_dim]
+        dec_dim = [self.latent_dim] + [
+            mask.shape[0] for mask in self.masks
+        ]  # + [self.input_dim]
         decoder_layers = []
         for i, (in_features, out_features) in enumerate(zip(dec_dim[:-1], dec_dim[1:])):
             # last_layer = i == len(dec_dim) - 2
-            last_layer = True ## Only linear layers in sparse decoder
+            last_layer = True  ## Only linear layers in sparse decoder
             decoder_layers.extend(
                 LayerFactory.create_layer(
                     in_features=in_features,
                     out_features=out_features,
-                    dropout_p=0, ## No dropout in sparse decoder
+                    dropout_p=0,  ## No dropout in sparse decoder
                     last_layer=last_layer,
-                    # only_linear=True, 
+                    # only_linear=True,
                 )
             )
 
@@ -261,7 +272,7 @@ class OntixArchitecture(BaseAutoencoder):
         mu = torch.where(mu < 0.0000001, torch.zeros_like(mu), mu)
         return mu, logvar
 
-    def reparametrize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+    def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
         """
         Reparameterization trick for VAE
 
@@ -312,7 +323,7 @@ class OntixArchitecture(BaseAutoencoder):
 
         """
         mu, logvar = self.encode(x)
-        z = self.reparametrize(mu, logvar)
+        z = self.reparameterize(mu, logvar)
         x_hat = self.decode(z)
         return ModelOutput(
             reconstruction=x_hat,
@@ -338,5 +349,5 @@ class OntixArchitecture(BaseAutoencoder):
 
         """
         mu, logvar = self.encode(x)
-        z = self.reparametrize(mu, logvar)
+        z = self.reparameterize(mu, logvar)
         return z

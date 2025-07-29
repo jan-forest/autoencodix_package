@@ -411,10 +411,9 @@ class XModalTrainer(BaseTrainer):
     def predict(
         self,
         data: BaseDataset,
-        from_key: Optional[str] = None,
-        to_key: Optional[str] = None,
         model: Optional[Any] = None,
-    ) -> Result: # type: ignore
+        **kwargs,
+    ) -> Result:
         """
         Performs cross-modal prediction from a specified 'from' modality to a 'to' modality.
 
@@ -431,7 +430,8 @@ class XModalTrainer(BaseTrainer):
             raise TypeError(
                 f"type of data has to be MultiModalDataset, got: {type(data)}"
             )
-        print("Starting cross-modal prediction...")
+        from_key = kwargs.pop("from_key", None)
+        to_key = kwargs.pop("to_key", None)
         predict_keys = find_translation_keys(
             config=self._config,
             trained_modalities=list(self._modality_dynamics.keys()),
@@ -443,49 +443,61 @@ class XModalTrainer(BaseTrainer):
         to_modality = self._modality_dynamics[to_key]
         from_model = from_modality["model"]
         to_model = to_modality["model"]
-
-        from_model.eval()
-        to_model.eval()
-
-        print(f"Translating from '{from_key}' to '{to_key}'...")
-
+        from_model.eval(), to_model.eval()
         inference_loader = DataLoader(
             data,
             batch_sampler=CoverageEnsuringSampler(multimodal_dataset=data),
             collate_fn=create_multimodal_collate_fn(multimodal_dataset=data),
         )
         inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
-
-        all_latents: List[np.ndarray] = []
-        all_translations: List[np.ndarray] = []
-        all_sample_ids: List[str] = []
-
+        epoch_dynamics: List[Dict] = []
         with (
             self._fabric.autocast(),
             torch.inference_mode(),
         ):
             for batch in inference_loader:
-                from_data = batch[from_key]["data"]
-                from_mu, from_logvar = from_model.encode(x=from_data)
-                from_z = from_model.reparametrize(mu=from_mu, logvar=from_logvar)
+                # needed for visualize later
+                self._get_vis_dynamics(batch=batch)
+                from_z = self._modality_dynamics[from_key]["mp"].latentspace
                 translated = to_model.decode(x=from_z)
-                all_latents.append(from_z.cpu().numpy())
-                all_translations.append(translated.cpu().numpy())
-                all_sample_ids.extend(batch[from_key]["sample_ids"])
 
-        final_latents = np.concatenate(all_latents)
-        final_translations = np.concatenate(all_translations)
+                # for reference
+                to_z = self._modality_dynamics[to_key]["mp"].latentspace
+                to_to_reference = to_model.decode(x=to_z)
 
-        self._result.latentspaces.add(epoch=-1, split="test", data=final_latents)
-        self._result.reconstructions.add(
-            epoch=-1, split="test", data=final_translations
-        )
-        self._result.sample_ids.add(
-            epoch=-1, split="test", data={from_key: np.array(all_sample_ids)}
-        )
+                batch_capture = self._capture_dynamics(batch)
+                translation_key = "translation"
+
+                reference_key = f"reference_{to_key}_to_{to_key}"
+                batch_capture["reconstructions"][translation_key] = (
+                    translated.cpu().numpy()
+                )
+
+                batch_capture["reconstructions"][reference_key] = (
+                    to_to_reference.cpu().numpy()
+                )
+
+                if "sample_ids" in batch[from_key]:
+                    batch_capture["sample_ids"][translation_key] = np.array(
+                        batch[from_key]["sample_ids"]
+                    )
+                if "sample_ids" in batch[to_key]:
+                    batch_capture["sample_ids"][reference_key] = np.array(
+                        batch[to_key]["sample_ids"]
+                    )
+
+                epoch_dynamics.append(batch_capture)
+
+        self._dynamics_to_result(split="test", epoch_dynamics=epoch_dynamics)
 
         print("Prediction complete.")
         return self._result
+
+    def _get_vis_dynamics(self, batch: Dict[str, Dict[str, Any]]):
+        for mod_name, mod_data in batch.items():
+            model = self._modality_dynamics[mod_name]["model"]
+            # Store model output (containing latents, recons, etc.)
+            self._modality_dynamics[mod_name]["mp"] = model(mod_data["data"])
 
     def _capture_dynamics(
         self,
@@ -518,29 +530,6 @@ class XModalTrainer(BaseTrainer):
             if sample_ids is not None:
                 captured_data["sample_ids"][mod_name] = np.array(sample_ids)
         return captured_data
-
-    def _log_losses(
-        self,
-        split: str,
-        total_loss: float,
-        sub_losses: Dict[str, float],
-        n_samples: int,
-    ):
-        print(f"split: {split}, n_samples: {n_samples}")
-        avg_total_loss = total_loss / n_samples
-        self._result.losses.add(epoch=self._cur_epoch, split=split, data=avg_total_loss)
-
-        avg_sub_losses = {
-            k: v / n_samples if "_factor" not in k else v for k, v in sub_losses.items()
-        }
-        self._result.sub_losses.add(
-            epoch=self._cur_epoch,
-            split=split,
-            data=avg_sub_losses,
-        )
-        self._fabric.print(
-            f"Epoch {self._cur_epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {avg_total_loss:.4f}"
-        )
 
     def _dynamics_to_result(self, split: str, epoch_dynamics: List[Dict]):
         final_data: Dict[str, Any] = defaultdict(lambda: defaultdict(list))
@@ -581,6 +570,29 @@ class XModalTrainer(BaseTrainer):
                 split=split,
                 data={k: np.concatenate(v) for k, v in final_data["sigmas"].items()},
             )
+
+    def _log_losses(
+        self,
+        split: str,
+        total_loss: float,
+        sub_losses: Dict[str, float],
+        n_samples: int,
+    ):
+        print(f"split: {split}, n_samples: {n_samples}")
+        avg_total_loss = total_loss / n_samples
+        self._result.losses.add(epoch=self._cur_epoch, split=split, data=avg_total_loss)
+
+        avg_sub_losses = {
+            k: v / n_samples if "_factor" not in k else v for k, v in sub_losses.items()
+        }
+        self._result.sub_losses.add(
+            epoch=self._cur_epoch,
+            split=split,
+            data=avg_sub_losses,
+        )
+        self._fabric.print(
+            f"Epoch {self._cur_epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {avg_total_loss:.4f}"
+        )
 
     def _store_checkpoint(self, split: str, epoch_dynamics: List[Dict]):
         state_to_save = {

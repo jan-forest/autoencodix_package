@@ -166,5 +166,5 @@ class Stackix(BasePipeline):
         logvar_t = logvar_t.to(device=stacked_model.device, dtype=stacked_model.dtype)
 
         with self._trainer._trainer._fabric.autocast(), torch.no_grad():
-            z = stacked_model.reparametrize(mu_t, logvar_t)
+            z = stacked_model.reparameterize(mu_t, logvar_t)
             return z

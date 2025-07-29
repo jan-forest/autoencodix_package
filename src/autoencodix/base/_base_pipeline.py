@@ -633,26 +633,39 @@ class BasePipeline(abc.ABC):
         Raises:
             ValueError: If reconstruction fails or data types are incompatible.
         """
-        raw_recon = torch.from_numpy(
-            self.result.reconstructions.get(epoch=-1, split="test")
+        raw_recon: Union[Dict, np.ndarray, torch.Tensor] = self.result.reconstructions.get(
+            epoch=-1, split="test"
         )
+        if isinstance(raw_recon, np.ndarray):
+            raw_recon = torch.from_numpy(raw_recon) # type: ignore
+        elif isinstance(raw_recon, dict):
+            raw_recon = raw_recon.get("translation") # type: ignore
+            if raw_recon is None:
+                raise ValueError(
+                    f"Raw recon is dict, but has no translation key, this should not happen: {raw_recon}"
+                )
+            raw_recon = torch.from_numpy(raw_recon) # type: ignore
+        else:
+            raise ValueError(
+                f"type of raw_recon has to be 'dict' or 'np.ndarray', got: {type(raw_recon)}"
+            )
 
         if original_input is None:
             # Using existing datasets
             self._handle_dataset_container_reconstruction(
-                raw_recon=raw_recon,
+                raw_recon=raw_recon, # type: ignore
                 dataset_container=predict_data,
                 context="existing datasets",
             )
         elif isinstance(original_input, DatasetContainer):
             self._handle_dataset_container_reconstruction(
-                raw_recon=raw_recon,
+                raw_recon=raw_recon, # type: ignore
                 dataset_container=original_input,
                 context="provided DatasetContainer",
             )
         elif self.config.data_case == DataCase.MULTI_SINGLE_CELL:
             self._handle_multi_single_cell_reconstruction(
-                raw_recon=raw_recon, predictor_results=predictor_results
+                raw_recon=raw_recon, predictor_results=predictor_results # type: ignore
             )
         elif isinstance(
             original_input, (DataPackage, ad.AnnData, MuData, dict, pd.DataFrame)

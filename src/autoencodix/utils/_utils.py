@@ -1,21 +1,21 @@
 """
 Stores utility functions for the autoencodix package.
-Uuse of OOP would be overkill for the simple functions in this module.
+Use of OOP would be overkill for the simple functions in this module.
 """
 
 import inspect
 import os
 from collections import defaultdict
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Union, get_type_hints
+from typing import Any, Callable, Dict, List, Optional
 
-import dill as pickle # type: ignore
+import dill as pickle  # type: ignore
 import torch
 from matplotlib import pyplot as plt
 
 from .default_config import DefaultConfig
 
-
+# only for type hints, to avoid circual import
 class BasePipeline:
     pass
 
@@ -232,78 +232,6 @@ def config_method(valid_params: Optional[set[str]] = None):
     return decorator
 
 
-# internal check done
-# write tests: done
-# def config_method(valid_params: Optional[set[str]] = None):
-#     """
-#     Decorator for methods that accept configuration parameters.
-#     Parameters
-#     ----------
-#     valid_params : set[str]
-#         Set of valid parameter names for this method. If None, all config parameters are valid.
-#     """
-
-#     def decorator(func: Callable) -> Callable:
-#         get_type_hints(func)  ## noqa: F841
-#         sig = inspect.signature(func)  ## noqa: F841
-#         func_param_names = set(sig.parameters.keys())
-
-#         param_docs = "\nValid configuration parameters:\n"
-#         if valid_params:
-#             param_docs += "\n".join(f"- {param}" for param in sorted(valid_params))
-#         else:
-#             param_docs += "All configuration parameters are valid for this method."
-
-#         if func.__doc__ is None:
-#             func.__doc__ = ""
-#         func.__doc__ += param_docs
-
-#         @wraps(func)
-#         def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
-#             user_config = kwargs.pop("config", None)
-
-#             if user_config is None:
-#                 config = self.config.model_copy(deep=True)
-
-#                 # Check for invalid parameters and warn user
-#                 if valid_params:
-#                     invalid_params = set(kwargs.keys()) - valid_params
-#                     if invalid_params:
-#                         print(
-#                             f"\nWarning: The following parameters are not valid for {func.__name__}:"
-#                         )
-#                         print(f"Invalid parameters: {', '.join(invalid_params)}")
-#                         print(
-#                             f"Valid parameters are: {', '.join(sorted(valid_params))}"
-#                         )
-#                     # check if parameter is a config parameter
-
-#                     # Filter out invalid parameters
-#                     valid_config_params = {
-#                         p for p in valid_params if p in config.model_dump()
-#                     }
-#                     config_overrides = {
-#                         k: v for k, v in kwargs.items() if k in valid_config_params
-#                     }
-#                 else:
-#                     config_overrides = kwargs
-
-#                 config = config.model_copy(update=config_overrides)
-#             else:
-#                 if not isinstance(user_config, DefaultConfig):
-#                     raise TypeError(
-#                         "The 'config' parameter must be of type DefaultConfig"
-#                     )
-#                 config = user_config
-
-#             return func(self, *args, config=config, **kwargs)
-
-#         setattr(wrapper, "valid_params", valid_params)
-#         return wrapper
-
-#     return decorator
-
-
 class Saver:
     """
     Handles the saving of BasePipeline objects.
@@ -328,7 +256,7 @@ class Saver:
             pipeline: The BasePipeline object to save.
         """
         self._save_pipeline_object(pipeline)
-        self._save_preprocessor(pipeline._preprocessor)
+        self._save_preprocessor(pipeline._preprocessor)  # type: ignore
         self._save_model_state(pipeline)
 
     def _save_pipeline_object(self, pipeline: "BasePipeline"):
@@ -351,9 +279,9 @@ class Saver:
                 raise e
 
     def _save_model_state(self, pipeline: "BasePipeline"):
-        if pipeline.result is not None and pipeline.result.model is not None:
+        if pipeline.result is not None and pipeline.result.model is not None:  # type: ignore
             try:
-                torch.save(pipeline.result.model.state_dict(), self.model_state_path)
+                torch.save(pipeline.result.model.state_dict(), self.model_state_path)  # type: ignore
                 print("Model state saved successfully.")
             except (TypeError, OSError) as e:
                 print(f"Error saving model state: {e}")
@@ -427,15 +355,15 @@ class Loader:
         if os.path.exists(self.model_state_path):
             try:
                 if (
-                    loaded_obj.result is not None
-                    and loaded_obj.result.model is not None
+                    loaded_obj.result is not None  # type: ignore
+                    and loaded_obj.result.model is not None  # type: ignore
                 ):
                     model_state = torch.load(self.model_state_path)
                     try:
-                        loaded_obj.result.model.load_state_dict(model_state)
+                        loaded_obj.result.model.load_state_dict(model_state)  # type: ignore
 
                         print("Model state loaded successfully.")
-                        return loaded_obj.result.model
+                        return loaded_obj.result.model  # type: ignore
                     except Exception as e:
                         print(
                             f"Error when loading model, filling obj.result.model with None: {e}"
@@ -485,7 +413,7 @@ def find_translation_keys(
     trained_modalities: List[str],
     from_key: Optional[str] = None,
     to_key: Optional[str] = None,
-) -> Dict[str, str]: # type: ignore
+) -> Dict[str, str]:  # type: ignore
     """
     Finds the 'from' and 'to' modalities for cross-modal prediction.
 
@@ -501,7 +429,8 @@ def find_translation_keys(
             simple_name = name.split(".")[1]
             if from_key == simple_name or from_key == name:
                 from_key_final = name
-            elif to_key == simple_name or from_key == name:
+            # use if instead of elif to allow for reference prediciton where from_key == to_key
+            if to_key == simple_name or from_key == name:
                 to_key_final = name
         # if the users passes from_key and to_key and we don't find them, we raise an error
         if not (from_key_final and to_key_final):

@@ -15,11 +15,14 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):
         self.sample_ids: List[Any] = list(self.sample_to_modalities.keys())
         self.config = config
         self.data = next(iter(self.datasets.values())).data
-        self.feature_ids = None # TODO
+        self.feature_ids = None  # TODO
 
         # Build reverse lookup tables once
+        for ds_name, ds in self.datasets.items():
+            if ds.sample_ids is None:
+                raise ValueError(f"There are no sample_ids for {ds_name}")
         self._id_to_idx = {
-            mod: {sid: idx for idx, sid in enumerate(ds.sample_ids)}
+            mod: {sid: idx for idx, sid in enumerate(ds.sample_ids)} # type: ignore
             for mod, ds in self.datasets.items()
         }
         self.paired_sample_ids = self._get_paired_sample_ids()

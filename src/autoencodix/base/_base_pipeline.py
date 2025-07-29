@@ -2,12 +2,17 @@ import abc
 import copy
 from typing import Dict, Optional, Tuple, Type, Union, Any
 
+import warnings
 import anndata as ad  # type: ignore
 import numpy as np
 import pandas as pd
 import torch
 from mudata import MuData  # type: ignore
 from torch.utils.data import Dataset
+# ML evaluation
+from sklearn import linear_model
+from sklearn.base import ClassifierMixin, RegressorMixin, is_classifier, is_regressor
+
 
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
@@ -804,13 +809,56 @@ class BasePipeline(abc.ABC):
 
         return self._trainer.decode(x=latent_tensor)
 
-    @config_method(valid_params={"config"})
+    # @config_method(valid_params={"config"})
     def evaluate(
-        self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
-    ) -> None:
-        """Not Implemented yet"""
-        if config is None:
-            config = self.config
+        self,
+        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(), # Default is sklearn LogisticRegression
+        ml_model_regression: RegressorMixin = linear_model.LinearRegression(), # Default is sklearn LinearRegression
+        params: Union[list, str]= [],	# Default empty list, to use all parameters use string "all"
+        metric_class: str = "roc_auc_ovr", # Default is 'roc_auc_ovr' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
+        metric_regression: str = "r2", # Default is 'r2'
+        reference_methods: list = [], # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
+        split_type:str = "use-split", # Default is "use-split", other options: "CV-5", ... "LOOCV"?
+    ) -> Result:
+        """ TODO"""
+        if self._evaluator is None:
+            raise NotImplementedError("Evaluator not initialized")
+        if self.result.model is None:
+            raise NotImplementedError(
+                "Model not trained. Please run the fit method first"
+            )
+        if not is_classifier(ml_model_class):
+            warnings.warn(
+                "The provided model is not a sklearn-type classifier. "
+                "Evaluation continues but may produce incorrect results or errors."
+            )
+        if not is_regressor(ml_model_regression):
+            warnings.warn(
+                "The provided model is not a sklearn-type regressor. "
+                "Evaluation continues but may produce incorrect results or errors."
+            )
+
+        self.result = self._evaluator.evaluate(
+            datasets=self._datasets,
+            result=self.result,
+            ml_model_class=ml_model_class,
+            ml_model_regression=ml_model_regression,
+            params=params,
+            metric_class=metric_class,
+            metric_regression=metric_regression,
+            reference_methods=reference_methods,
+            split_type=split_type,
+        )
+
+        ml_plots = self._visualizer.plot_evaluation(result=self.result)
+
+        
+        return self.result
+    #     self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
+    # ) -> None:
+    #     """Not Implemented yet"""
+    #     if config is None:
+    #         config = self.config
 
     @config_method(valid_params={"config"})
     def visualize(self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs):
@@ -867,7 +915,7 @@ class BasePipeline(abc.ABC):
         self.preprocess()
         self.fit()
         self.predict(data=data)
-        self.evaluate()
+        # self.evaluate()
         self.visualize()
         return self.result
 

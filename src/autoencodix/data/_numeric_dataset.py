@@ -66,6 +66,21 @@ class TensorAwareDataset(BaseDataset):
         }
         # Default to torch.float32 if the precision is not recognized
         return precision_mapping.get(float_precision, torch.float32)
+    
+
+    def _to_df(self) -> pd.DataFrame:
+        """
+        Convert the dataset to a pandas DataFrame.
+
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the dataset
+        """
+        if isinstance(self.data, torch.Tensor):
+            return pd.DataFrame(self.data.numpy(), columns=self.feature_ids, index=self.sample_ids)
+        else:
+            raise TypeError("Data is not a torch.Tensor and cannot be converted to DataFrame.")
 
     def _get_target_dtype(self) -> torch.dtype:
         """Get the target dtype based on config, with MPS compatibility check."""

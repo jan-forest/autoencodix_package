@@ -142,7 +142,8 @@ class GeneralTrainer(BaseTrainer):
             self._optimizer.zero_grad()
             model_outputs = self._model(features)
             loss, batch_sub_losses = self._loss_fn(
-                model_output=model_outputs, targets=features, epoch=epoch
+                # model_output=model_outputs, targets=features, epoch=epoch
+                model_output=model_outputs, targets=features, epoch=epoch, n_samples=len(self._trainloader.dataset) # Pass n_samples for disentangled loss calculations
             )
 
             self._fabric.backward(loss)
@@ -169,7 +170,8 @@ class GeneralTrainer(BaseTrainer):
             for indices, features, sample_ids in self._validloader:
                 model_outputs = self._model(features)
                 loss, batch_sub_losses = self._loss_fn(
-                    model_output=model_outputs, targets=features, epoch=epoch
+                    # model_output=model_outputs, targets=features, epoch=epoch
+                    model_output=model_outputs, targets=features, epoch=epoch, n_samples=len(self._validloader.dataset) # Pass n_samples for disentangled loss calculations
                 )
                 total_loss += loss.item()
                 for k, v in batch_sub_losses.items():
@@ -195,12 +197,14 @@ class GeneralTrainer(BaseTrainer):
                 for k, v in sub_losses.items()
             },
         )
+
         self._fabric.print(
             f"Epoch {epoch + 1} - {split.capitalize()} Loss: {total_loss:.4f}"
         )
         self._fabric.print(
             f"Sub-losses: {', '.join([f'{k}: {v:.4f}' for k, v in sub_losses.items()])}"
         )
+
 
     def _store_checkpoint(self, epoch):
         self._result.model_checkpoints.add(epoch=epoch, data=self._model.state_dict())

@@ -195,16 +195,9 @@ class StackixTrainer(GeneralTrainer):
         self.n_test = len(data) if data is not None else 0
         self._orchestrator.set_testset(testset=data)
         test_ds = self._orchestrator.prepare_latent_datasets(split="test")
+        self.testset = test_ds
+        print(test_ds)
         pred_result = super().predict(data=test_ds, model=model)
         self._result.update(other=pred_result)
         self._reconstruct(split="test")
         return self._result
-
-    def _capture_dynamics(
-        self,
-        epoch: int,
-        model_output: List[ModelOutput],
-        split: str,
-        sample_ids: Optional[List[int]] = None,
-    ) -> None:
-        return super()._capture_dynamics(epoch, model_output, split, sample_ids)

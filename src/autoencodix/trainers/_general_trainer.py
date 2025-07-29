@@ -1,6 +1,7 @@
 import torch
+import os
 import numpy as np
-from typing import Optional, Type
+from typing import Optional, Type, Union, Tuple, Any, Dict, List
 from collections import defaultdict
 from torch.utils.data import DataLoader
 
@@ -22,8 +23,12 @@ class GeneralTrainer(BaseTrainer):
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
-        ontologies: Optional[tuple] = None,
+        ontologies: Optional[Union[Tuple, List]] = None,
     ):
+        self._n_cpus = os.cpu_count()
+        if self._n_cpus is None:
+            self._n_cpus = 0
+
         super().__init__(
             trainset, validset, result, config, model_type, loss_type, ontologies
         )
@@ -38,18 +43,24 @@ class GeneralTrainer(BaseTrainer):
 
         # we will set this later, in the predict method
         self.n_test: Optional[int] = None
-        self.n_train = len(trainset) if trainset else 0
-        self.n_valid = len(validset) if validset else 0
-        self.n_features = trainset.data.shape[1] if trainset else 0
+        self.n_train = len(trainset.data) if trainset else 0
+        self.n_valid = len(validset.data) if validset else 0
+        self.n_features = trainset.get_input_dim() if trainset else 0
         self.device = next(self._model.parameters()).device
 
         self._init_buffers()
 
-    def _init_buffers(self):
-        def make_tensor_buffer(size, dim):
-            return torch.zeros((size, dim), device=self.device)
+    def _init_buffers(self, input_data: Optional[BaseDataset] = None):
+        if input_data:
+            self.n_features = input_data.get_input_dim()
 
-        def make_numpy_buffer(size):
+        def make_tensor_buffer(size: int, dim: Union[int, Tuple[int, ...]]):
+            if isinstance(dim, int):
+                return torch.zeros((size, dim), device=self.device)
+            else:
+                return torch.zeros((size, *dim), device=self.device)
+
+        def make_numpy_buffer(size: int):
             return np.empty((size,), dtype=object)
 
         self._latentspace_buffer = {
@@ -97,15 +108,13 @@ class GeneralTrainer(BaseTrainer):
     def _apply_post_backward_processing(self):
         pass
 
-    def _should_checkpoint(self, epoch: int):
-        return (
-            epoch + 1
-        ) % self._config.checkpoint_interval == 0 or epoch == self._config.epochs - 1
-
-    def train(self) -> Result:
+    def train(self, epochs_overwrite=None) -> Result:
+        epochs = self._config.epochs
+        if epochs_overwrite:
+            epochs = epochs_overwrite
         with self._fabric.autocast():
-            for epoch in range(self._config.epochs):
-                should_checkpoint = self._should_checkpoint(epoch)
+            for epoch in range(epochs):
+                should_checkpoint: bool = self._should_checkpoint(epoch)
                 self._model.train()
 
                 epoch_loss, epoch_sub_losses = self._train_epoch(
@@ -127,7 +136,7 @@ class GeneralTrainer(BaseTrainer):
 
     def _train_epoch(self, should_checkpoint: bool, epoch: int):
         total_loss = 0.0
-        sub_losses = defaultdict(float)
+        sub_losses: Dict[str, float] = defaultdict(float)
 
         for indices, features, sample_ids in self._trainloader:
             self._optimizer.zero_grad()
@@ -154,7 +163,7 @@ class GeneralTrainer(BaseTrainer):
 
     def _validate_epoch(self, should_checkpoint: bool, epoch: int):
         total_loss = 0.0
-        sub_losses = defaultdict(float)
+        sub_losses: Dict[str, float] = defaultdict(float)
         self._model.eval()
 
         with torch.no_grad():
@@ -188,13 +197,14 @@ class GeneralTrainer(BaseTrainer):
                 for k, v in sub_losses.items()
             },
         )
-        if self._should_checkpoint(epoch):
-            self._fabric.print(
-                f"Epoch {epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {total_loss:.4f}"
-            )
-            self._fabric.print(
-                f"Sub-losses: {', '.join([f'{k}: {v:.4f}' for k, v in sub_losses.items()])}"
-            )
+
+        self._fabric.print(
+            f"Epoch {epoch + 1} - {split.capitalize()} Loss: {total_loss:.4f}"
+        )
+        self._fabric.print(
+            f"Sub-losses: {', '.join([f'{k}: {v:.4f}' for k, v in sub_losses.items()])}"
+        )
+
 
     def _store_checkpoint(self, epoch):
         self._result.model_checkpoints.add(epoch=epoch, data=self._model.state_dict())
@@ -203,21 +213,28 @@ class GeneralTrainer(BaseTrainer):
             self._dynamics_to_result(epoch, "valid")
 
     def _capture_dynamics(
-        self, model_output: ModelOutput, split: str, indices: torch.Tensor, sample_ids
-    ) -> None:
+        self,
+        model_output: Union[ModelOutput, Any],
+        split: str,
+        indices: torch.Tensor,
+        sample_ids,
+        **kwargs,
+    ):
         indices_np = (
             indices.cpu().numpy()
             if isinstance(indices, torch.Tensor)
             else np.array(indices)
         )
-        sample_ids_list = (
-            sample_ids.tolist()
-            if isinstance(sample_ids, torch.Tensor)
-            else list(sample_ids)
-        )
+        # sample_ids_list = (
+        #     sample_ids.tolist()
+        #     if isinstance(sample_ids, torch.Tensor)
+        #     else list(sample_ids)
+        # )
 
-        for i, idx in enumerate(indices_np):
-            self._sample_ids_buffer[split][idx] = sample_ids_list[i]
+        # for i, idx in enumerate(indices_np):
+        #     self._sample_ids_buffer[split][idx] = sample_ids_list[i]
+
+        self._sample_ids_buffer[split][indices_np] = np.array(sample_ids)
 
         self._latentspace_buffer[split][indices_np] = model_output.latentspace.detach()
         self._reconstruction_buffer[split][indices_np] = (
@@ -272,12 +289,11 @@ class GeneralTrainer(BaseTrainer):
             data,
             batch_size=self._config.batch_size,
             shuffle=False,
-            num_workers=self._config.n_workers,
         )
         self.n_test = len(data)
-        self._init_buffers()
+        self._init_buffers(input_data=data)
         inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
-        with self._fabric.autocast(), torch.no_grad():
+        with self._fabric.autocast(), torch.inference_mode():
             for idx, data, sample_ids in inference_loader:
                 model_output = model(data)
                 self._capture_dynamics(
@@ -290,7 +306,7 @@ class GeneralTrainer(BaseTrainer):
 
         return self._result
 
-    def decode(self, x: torch.tensor):
+    def decode(self, x: torch.Tensor):
         with self._fabric.autocast(), torch.no_grad():
             x = self._fabric.to_device(obj=x)
             if not isinstance(x, torch.Tensor):

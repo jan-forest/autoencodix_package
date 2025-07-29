@@ -3,7 +3,6 @@ from typing import Any, Dict, Literal, Optional, List, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-
 class SchemaPrinterMixin:
     """Mixin class that adds schema printing functionality to Pydantic models."""
 
@@ -18,7 +17,7 @@ class SchemaPrinterMixin:
             Dictionary containing field name, type, default value, and description if available
         """
         fields_info = {}
-        for name, field in cls.model_fields.items():
+        for name, field in cls.model_fields.items(): # type: ignore
             fields_info[name] = {
                 "type": str(field.annotation),
                 "default": field.default,
@@ -113,17 +112,33 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     # image specific ------------------------------
 
     img_root: Union[str, None] = Field(default=None)
-    img_width_resize: Union[int, None] = Field(default=None)
-    img_height_resize: Union[int, None] = Field(default=None)
+    img_width_resize: Union[int, None] = Field(default=64)
+    img_height_resize: Union[int, None] = Field(default=64)
     # annotation specific -------------------------
     # xmodalix specific -------------------------
     translate_direction: Union[Literal["from", "to"], None] = Field(default=None)
+    pretrain_epochs: int = Field(
+        default=0,
+        ge=0,
+        description="Number of pretraining epochs. This overwrites the global 'pretraining_epochs' in DefaultConfig class to have different number of pretraining epochs for each data modality",
+    )
 
     @field_validator("selected_layers")
     @classmethod
     def validate_selected_layers(cls, v):
         if "X" not in v:
             raise ValueError('"X" must always be a part of the selected_layers list')
+        return v
+
+    # add validation to only allow quadratic image resizing
+    @field_validator("img_width_resize", "img_height_resize")
+    @classmethod
+    def validate_image_resize(cls, v, values):
+        if v is not None and v <= 0:
+            raise ValueError("Image resize dimensions must be positive integers")
+        if "img_width_resize" in values and "img_height_resize" in values:
+            if values["img_width_resize"] != values["img_height_resize"]:
+                raise ValueError("Image width and height must be the same for resizing")
         return v
 
 
@@ -170,6 +185,8 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     skip_preprocessing: bool = Field(
         default=False, description="If set don't scale, filter or clean the input data."
     )
+
+    class_param: str = Field(default=None)
 
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(
@@ -222,6 +239,21 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     use_mss: bool = Field(
         default=True, description="Using minibatch stratified sampling for disentangled VAE loss calculation (faster estimation)"
     )
+    gamma: float = Field(
+        default=10.0,
+        ge=0,
+        description="Gamma weighting factor for Adversial Loss Term i.e. for XModal Classfier training",
+    )
+    delta_pair: float = Field(
+        default=5.0,
+        ge=0,
+        description="Delta weighting factor for paired loss term in XModale Training",
+    )
+    delta_class: float = Field(
+        default=5.0,
+        ge=0,
+        description="Delta weighting factor for class loss term in XModale Training",
+    )
     min_samples_per_split: int = Field(
         default=1, ge=1, description="Minimum number of samples per split"
     )
@@ -241,7 +273,9 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         description="Annealing function strategy for VAE loss scheduling",
     )
     pretrain_epochs: int = Field(
-        default=0, ge=0, description="Number of pretraining epochs"
+        default=0,
+        ge=0,
+        description="Number of pretraining epochs, can be overwritten in DataInfo to have different number of pretraining epochs for each data modality",
     )
 
     # Hardware configuration --------------------------------------------------
@@ -297,7 +331,6 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=False, description="Whether to ensure reproducibility"
     )
     global_seed: int = Field(default=1, ge=0, description="Global random seed")
-
     ##### VALIDATION ##### -----------------------------------------------------
     ##### ----------------- -----------------------------------------------------
     @field_validator("data_config")
@@ -495,7 +528,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         return fields_info
 
     @classmethod
-    def print_schema(cls, filter_params: Optional[None] = None) -> None:
+    def print_schema(cls, filter_params: Optional[None] = None) -> None: # type: ignore
         """
         Print a human-readable schema of all config parameters.
         """
@@ -512,5 +545,5 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
                 continue
             print(f"\n{name}:")
             print(f"  Type: {info['type']}")
-            print(f"  Default: {info['default']}")
+            print(f"  Default: {info['default']}") # type: ignore
             print(f"  Description: {info['description']}")

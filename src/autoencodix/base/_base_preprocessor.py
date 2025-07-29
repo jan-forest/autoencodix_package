@@ -154,8 +154,8 @@ class BasePreprocessor(abc.ABC):
         process_map = {
             DataCase.MULTI_SINGLE_CELL: self._process_multi_single_cell,
             DataCase.MULTI_BULK: self._process_multi_bulk_case,
-            DataCase.BULK_TO_BULK: self._process_bulk_to_bulk_case,
-            DataCase.SINGLE_CELL_TO_SINGLE_CELL: self._process_sc_to_sc_case,
+            DataCase.BULK_TO_BULK: self._process_multi_bulk_case,
+            DataCase.SINGLE_CELL_TO_SINGLE_CELL: self._process_multi_single_cell,
             DataCase.IMG_TO_BULK: self._process_img_to_bulk_case,
             DataCase.SINGLE_CELL_TO_IMG: self._process_sc_to_img_case,
             DataCase.IMG_TO_IMG: self._process_img_to_img_case,
@@ -169,7 +169,7 @@ class BasePreprocessor(abc.ABC):
 
         This method handles the common preprocessing steps for different data cases,
         including splitting the data package, removing NaNs, and applying
-        odality-specific processors.
+        modality-specific processors.
 
         Args::
             data_package: The DataPackage object to be processed.
@@ -303,10 +303,9 @@ class BasePreprocessor(abc.ABC):
         if raw_user_data is None:
             bulkreader = self.data_readers[DataCase.MULTI_BULK]
             bulk_dfs, annotation = bulkreader.read_data()
+            print(f"bulk_dfs keys in process_multi_bulk: {bulk_dfs.keys()}")
 
-            data_package = DataPackage()
-            data_package.multi_bulk = bulk_dfs
-            data_package.annotation = annotation
+            data_package = DataPackage(multi_bulk=bulk_dfs, annotation=annotation)
         else:
             data_package = raw_user_data
         if self.config.requires_paired:
@@ -618,177 +617,6 @@ class BasePreprocessor(abc.ABC):
 
         return processed_splits
 
-    def _process_bulk_to_bulk_case(
-        self, raw_user_data: Optional[DataPackage] = None
-    ) -> Union[dict[str, dict[str, Union[Any, DataPackage]]]]:
-        """Process BULK_TO_BULK case.
-
-        Reads bulk data, prepares from/to modalities, performs data splitting,
-        NaN removal, and applies filtering and scaling to from and to bulk dataframes.
-
-        Args:
-            raw_user_data: Optional DataPackage containing user-provided data.
-                If provided, the data reading step is skipped.
-        Returns:
-            A dictionary containing processed DataPackage objects for each data split.
-        Raises:
-            TypeError: If from_key or to_key is None, indicating that translation keys must be specified.
-
-        """
-        if self.from_key is None or self.to_key is None:
-            raise TypeError("from_key and to_key cannot be None for Translation")
-        if raw_user_data is None:
-            bulkreader = self.data_readers[DataCase.BULK_TO_BULK]
-            bulk_dfs, annotation = bulkreader.read_data()
-
-            data_package = DataPackage()
-            data_package.from_modality = {self.from_key: bulk_dfs[self.from_key]}
-            data_package.to_modality = {self.to_key: bulk_dfs[self.to_key]}
-            data_package.multi_bulk = None
-            data_package.annotation = {
-                "from": annotation[self.from_key],
-                "to": annotation[self.to_key],
-            }
-        else:
-            data_package = raw_user_data
-
-        if self.config.requires_paired:
-            common_ids = data_package.get_common_ids()
-
-            data_package.from_modality = {
-                k: v.loc[common_ids]  # type: ignore
-                for k, v in data_package.from_modality.items()  # type: ignore
-            }  # type: ignore
-            data_package.to_modality = {
-                k: v.loc[common_ids]  # type: ignore
-                for k, v in data_package.to_modality.items()  # type: ignore
-            }  # type: ignore
-
-            data_package.annotation = {
-                k: v.loc[common_ids] for k, v in data_package.annotation.items()
-            }  # type: ignore
-
-        def presplit_processor(
-            modality_data: Dict[str, pd.DataFrame],
-        ) -> Dict[str, pd.DataFrame]:
-            return modality_data  # no presplit processing needed for multi bulk
-
-        def postsplit_processor(
-            split_data: Dict[str, Dict[str, Any]], datapackage_key: str
-        ) -> Dict[str, Dict[str, Any]]:
-            return self._postsplit_multi_bulk(
-                split_data=split_data, datapackage_key=datapackage_key
-            )
-
-        return self._process_data_case(
-            data_package,
-            modality_processors={
-                "from_modality": (
-                    presplit_processor,
-                    lambda data: postsplit_processor(data, "from_modality"),
-                ),
-                "to_modality": (
-                    presplit_processor,
-                    lambda data: postsplit_processor(data, "to_modality"),
-                ),
-            },
-        )
-
-    def _process_sc_to_sc_case(
-        self, raw_user_data: Optional[DataPackage] = None
-    ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
-        """Process SINGLE_CELL_TO_SINGLE_CELL case.
-
-        Reads single-cell data, prepares from/to modalities, performs data splitting,
-        NaN removal, and applies single-cell specific filtering to from and to mudata objects.
-
-        Args:
-            raw_user_data: Optional DataPackage containing user-provided data.
-                If provided, the data reading step is skipped.
-        Returns:
-            A dictionary containing processed DataPackage objects for each data split.
-        Raises:
-            TypeError: If from_key or to_key is None, indicating that translation keys must be specified.
-        """
-        if self.from_key is None or self.to_key is None:
-            raise TypeError("from_key and to_key cannot be None for Translation")
-
-        if raw_user_data is None:
-            screader = self.data_readers[DataCase.SINGLE_CELL_TO_SINGLE_CELL]
-            mudata = screader.read_data(config=self.config)
-            mod_dict = mudata["multi_sc"]
-
-            data_package = DataPackage()
-            data_package.from_modality = {self.from_key: mod_dict[self.from_key]}
-            data_package.to_modality = {self.to_key: mod_dict[self.to_key]}
-        else:
-            data_package = raw_user_data
-        if self.config.requires_paired:
-            common_ids = data_package.get_common_ids()
-
-            # Subset both from_modality and to_modality
-            data_package.from_modality = {
-                k: v[common_ids]
-                for k, v in data_package.from_modality.items()  # type: ignore
-            }
-            data_package.to_modality = {
-                k: v[common_ids]
-                for k, v in data_package.to_modality.items()  # type: ignore
-            }
-
-        def presplit_processor(
-            modality_data: Dict[str, Union[AnnData, Any]],
-            modality_key: str,
-        ) -> Dict[str, Any]:
-            from mudata import MuData
-
-            if modality_data is None:
-                return modality_data
-            sc_filter = SingleCellFilter(
-                data_info=self.config.data_config.data_info, config=self.config
-            )
-            modality_data = modality_data[modality_key]
-            # Check if it is AnnData and convert to MuData if needed
-            if isinstance(modality_data, AnnData):
-                mudata = MuData({modality_key: modality_data})
-                return {modality_key: sc_filter.presplit_processing(multi_sc=mudata)}
-
-            elif isinstance(modality_data, MuData):
-                return {
-                    modality_key: sc_filter.presplit_processing(multi_sc=modality_data)
-                }
-            else:
-                raise TypeError(
-                    f"Expected AnnData or MuData, got {type(modality_data)}"
-                )
-
-        def postsplit_processor(
-            split_data: Dict[str, Dict[str, Any]],
-            datapackage_key: str,
-            modality_key: str,
-        ) -> Dict[str, Dict[str, Any]]:
-            return self._postsplit_multi_single_cell(
-                split_data=split_data,
-                datapackage_key=datapackage_key,
-                modality_key=modality_key,
-            )
-
-        return self._process_data_case(
-            data_package,
-            modality_processors={
-                "from_modality": (
-                    lambda data: presplit_processor(data, self.from_key),
-                    lambda data: postsplit_processor(
-                        data, "from_modality", self.from_key
-                    ),
-                ),
-                "to_modality": (
-                    lambda data: presplit_processor(data, self.to_key),
-                    lambda data: postsplit_processor(data, "to_modality", self.to_key),
-                ),
-            },
-        )
-
     def _process_img_to_bulk_case(
         self, raw_user_data: Optional[DataPackage] = None
     ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
@@ -805,8 +633,6 @@ class BasePreprocessor(abc.ABC):
         Raises:
             TypeError: If from_key or to_key is None, indicating that translation keys must be specified.
         """
-        if self.from_key is None or self.to_key is None:
-            raise TypeError("from_key and to_key cannot be None for Translation")
 
         if raw_user_data is None:
             bulkreader = self.data_readers[DataCase.IMG_TO_BULK]["bulk"]
@@ -815,69 +641,22 @@ class BasePreprocessor(abc.ABC):
             bulk_dfs, annotation = bulkreader.read_data()
             images = imgreader.read_data(config=self.config)
 
-            data_package = DataPackage()
+            data_package = DataPackage(
+                multi_bulk=bulk_dfs, img=images, annotation=annotation
+            )
 
-            if self.to_key in bulk_dfs.keys():
-                # IMG -> BULK direction
-                data_package.from_modality = {self.from_key: images[self.from_key]}
-                data_package.to_modality = {self.to_key: bulk_dfs[self.to_key]}
-                to_annotation = next(iter(annotation.keys()))
-                data_package.annotation = {
-                    "from": None,
-                    "to": annotation[to_annotation],
-                }
-            else:
-                # BULK -> IMG direction
-                data_package.from_modality = {self.from_key: bulk_dfs[self.from_key]}
-                data_package.to_modality = {self.to_key: images[self.to_key]}
-                from_annotation = next(iter(annotation.keys()))
-                data_package.annotation = {
-                    "from": annotation[from_annotation],
-                    "to": None,
-                }
         else:
             data_package = raw_user_data
 
-        if self.config.requires_paired:
-            common_ids = data_package.get_common_ids()
-            if data_package.from_modality is not None:
-                for k, v in data_package.from_modality.items():
-                    if self._is_image_data(v):
-                        filtered_list = [
-                            img for img in v if img.sample_id in common_ids
-                        ]
-                        data_package.from_modality[k] = filtered_list
-                    else:
-                        data_package.from_modality[k] = v.loc[common_ids]
-
-            if data_package.to_modality is not None:
-                for k, v in data_package.to_modality.items():
-                    if self._is_image_data(v):
-                        filtered_list = [
-                            img for img in v if img.sample_id in common_ids
-                        ]
-                        data_package.to_modality[k] = filtered_list
-                    else:
-                        data_package.to_modality[k] = v.loc[common_ids]
-
-            if data_package.annotation is not None:
-                for side in ["from", "to"]:
-                    ann = data_package.annotation.get(side)
-                    if ann is not None:
-                        data_package.annotation[side] = ann.loc[common_ids]
-
         def presplit_processor(
             modality_data: Dict[str, Union[pd.DataFrame, List[ImgData]]],
-            modality_key: str,
         ) -> Dict[str, Union[pd.DataFrame, List[ImgData]]]:
-            if modality_key not in modality_data:
-                raise ValueError(f"Modality key '{modality_key}' not found in data.")
-            data = modality_data[modality_key]
-            if self._is_image_data(data=data):
-                modality_data[modality_key] = self._normalize_image_data(
-                    images=modality_data[modality_key],
-                    info_key=modality_key,  # type: ignore
-                )
+            for modality_key, data in modality_data.items():
+                if self._is_image_data(data=data):
+                    modality_data[modality_key] = self._normalize_image_data(
+                        images=data,  # type: ignore
+                        info_key=modality_key,  # type: ignore
+                    )
             # we don't need to filter bulk data here
             # because we do it in the postsplit step
             return modality_data
@@ -885,36 +664,26 @@ class BasePreprocessor(abc.ABC):
         def postsplit_processor(
             split_data: Dict[str, Dict[str, Any]], datapackage_key: str
         ) -> Dict[str, Dict[str, Any]]:
-            non_empty_split = None
-            for _, split_content in split_data.items():
-                if split_content["data"][
-                    datapackage_key
-                ]:  # Check if the split has data
-                    non_empty_split = split_content["data"][datapackage_key]
-                    break
-
-            if non_empty_split is None:
-                return split_data
-
-            for _, modality_data in non_empty_split.items():
-                if isinstance(modality_data, pd.DataFrame):  # Bulk data
-                    return self._postsplit_multi_bulk(
-                        split_data=split_data, datapackage_key=datapackage_key
-                    )
-                elif isinstance(modality_data, list):  # Image data
-                    continue
+            if datapackage_key == "multi_bulk":
+                return self._postsplit_multi_bulk(
+                    split_data=split_data, datapackage_key=datapackage_key
+                )
             return split_data  # for img data we don't need to do anything
 
         return self._process_data_case(
             data_package,
             modality_processors={
-                "from_modality": (
-                    lambda data: presplit_processor(data, self.from_key),
-                    lambda data: postsplit_processor(data, "from_modality"),
+                "multi_bulk": (  # TODO change to multi_bulk and img for all translation cases and ajdust processors accordingly
+                    lambda data: presplit_processor(modality_data=data),
+                    lambda data: postsplit_processor(
+                        split_data=data, datapackage_key="multi_bulk"
+                    ),
                 ),
-                "to_modality": (
-                    lambda data: presplit_processor(data, self.to_key),
-                    lambda data: postsplit_processor(data, "to_modality"),
+                "img": (
+                    lambda data: presplit_processor(modality_data=data),
+                    lambda data: postsplit_processor(
+                        split_data=data, datapackage_key="img"
+                    ),
                 ),
             },
         )
@@ -936,93 +705,64 @@ class BasePreprocessor(abc.ABC):
         Raises:
             TypeError: If from_key or to_key is None, indicating that translation keys must be specified.
         """
-        if self.from_key is None or self.to_key is None:
-            raise TypeError("to and from keys cant be None for SC-to-Img")
         if raw_user_data is None:
             screader = self.data_readers[DataCase.SINGLE_CELL_TO_IMG]["sc"]
             imgreader = self.data_readers[DataCase.SINGLE_CELL_TO_IMG]["img"]
 
             # only one mudata type in this case we know this
-            mudata = next(iter(screader.read_data(config=self.config).values()))
+            mudata_dict = screader.read_data(config=self.config)
             images = imgreader.read_data(config=self.config)
 
             data_package = DataPackage()
+            data_package.multi_sc = mudata_dict
+            data_package.img = images
         else:
             data_package = raw_user_data
 
-        if self.from_key in images.keys():
-            data_package.from_modality = {self.from_key: images[self.from_key]}
-            data_package.to_modality = {self.to_key: mudata}
-        else:
-            data_package.from_modality = {self.from_key: mudata}
-            data_package.to_modality = {self.to_key: images[self.to_key]}
-
-        if self.config.requires_paired:
-            common_ids = data_package.get_common_ids()
-            if data_package.from_modality is not None:
-                for k, v in data_package.from_modality.items():
-                    if self._is_image_data(v):
-                        filtered_list = [
-                            img for img in v if img.sample_id in common_ids
-                        ]
-                        data_package.from_modality[k] = filtered_list
-                    else:
-                        data_package.from_modality[k] = v.loc[common_ids]
-
-            if data_package.to_modality is not None:
-                for k, v in data_package.to_modality.items():
-                    if self._is_image_data(v):
-                        filtered_list = [
-                            img for img in v if img.sample_id in common_ids
-                        ]
-                        data_package.to_modality[k] = filtered_list
-                    else:
-                        data_package.to_modality[k] = v.loc[common_ids]
-
         def presplit_processor(
-            modality_data: Dict[str, Union[Any, List[ImgData]]], modality_key: str
+            modality_data: Dict[str, Union[Any, List[ImgData]]],
         ) -> Dict[str, Union[Any, List[ImgData]]]:
-            if modality_key not in modality_data:
-                raise ValueError(f"Modality key '{modality_key}' not found in data.")
+            was_image = False
+            for modality_key, data in modality_data.items():
+                if self._is_image_data(data=data):
+                    was_image = True
+                    modality_data[modality_key] = self._normalize_image_data(
+                        images=data,  # type: ignore
+                        info_key=modality_key,  # type: ignore
+                    )
 
-            if isinstance(modality_data[modality_key], list):  # Image data
-                modality_data[modality_key] = self._normalize_image_data(
-                    images=modality_data[modality_key], info_key=modality_key
+            if was_image:
+                return modality_data
+            else:
+                sc_filter = SingleCellFilter(
+                    data_info=self.config.data_config.data_info, config=self.config
                 )
-            return modality_data
+                return sc_filter.presplit_processing(multi_sc=modality_data)
 
         def postsplit_processor(
             split_data: Dict[str, Dict[str, Any]], datapackage_key: str
         ) -> Dict[str, Dict[str, Any]]:
-            non_empty_split = None
-            for _, split_content in split_data.items():
-                if split_content["data"][datapackage_key]:
-                    non_empty_split = split_content["data"][datapackage_key]
-                    break
-
-            if non_empty_split is None:
-                return split_data
-
-            for _, modality_data in non_empty_split.items():
-                if isinstance(modality_data, MuData):  # Single-cell data
-                    return self._postsplit_multi_single_cell(
-                        split_data=split_data, datapackage_key=datapackage_key
-                    )
-                elif isinstance(modality_data, list):  # Image data
-                    # No postsplit processing needed for image data
-                    continue
+            if datapackage_key == "multi_sc":
+                return self._postsplit_multi_single_cell(
+                    split_data=split_data, datapackage_key=datapackage_key
+                )
+            # No postsplit processing needed for image data
             return split_data
 
         return self._process_data_case(
             data_package,
             modality_processors={
-                "from_modality": (
-                    lambda data: presplit_processor(data, self.from_key),
-                    lambda data: postsplit_processor(data, "from_modality"),
+                "multi_sc": (
+                    lambda data: presplit_processor(modality_data=data),
+                    lambda data: postsplit_processor(
+                        split_data=data, datapackage_key="multi_sc"
+                    ),
                 ),
-                "to_modality": (
-                    lambda data: presplit_processor(data, self.to_key),
-                    lambda data: postsplit_processor(data, "to_modality"),
+                "img": (
+                    lambda data: presplit_processor(modality_data=data),
+                    lambda data: postsplit_processor(
+                        split_data=data, datapackage_key="img"
+                    ),
                 ),
             },
         )
@@ -1043,15 +783,11 @@ class BasePreprocessor(abc.ABC):
         Raises:
             TypeError: If from_key or to_key is None, indicating that translation keys must be specified.
         """
-        if self.from_key is None or self.to_key is None:
-            raise TypeError("from_key and to_key cannot be None for Translation")
         if raw_user_data is None:
             imgreader = self.data_readers[DataCase.IMG_TO_IMG]
             images = imgreader.read_data(config=self.config)
 
-            data_package = DataPackage()
-            data_package.from_modality = {self.from_key: images[self.from_key]}
-            data_package.to_modality = {self.to_key: images[self.to_key]}
+            data_package = DataPackage(img=images)
         else:
             data_package = raw_user_data
 
@@ -1065,27 +801,17 @@ class BasePreprocessor(abc.ABC):
                         filtered.append(imgdata)
                 return filtered
 
-            data_package.from_modality[self.from_key] = filter_imgdata_list(
-                data_package.from_modality[self.from_key], common_ids
-            )
+            images = data_package.img
+            data_package.img = {
+                k: filter_imgdata_list(img_list=v, ids=common_ids)
+                for k, v in images.items()
+            }
 
-            data_package.to_modality[self.to_key] = filter_imgdata_list(
-                data_package.to_modality[self.to_key], common_ids
-            )
-
-        def presplit_processor(
-            modality_data: Dict[str, List], modality_key: str
-        ) -> Dict[str, List]:
+        def presplit_processor(modality_data: Dict[str, List]) -> Dict[str, List]:
             """Processes img-to-img modality data with normalization for images."""
-            if modality_key is None:
-                raise TypeError("modality_key cannot be None for translation")
-            if modality_data and modality_key in modality_data:
-                data = modality_data[modality_key]
-                if self._is_image_data(data):
-                    return {
-                        modality_key: self._normalize_image_data(data, modality_key)
-                    }
-            return modality_data
+            return {
+                k: self._normalize_image_data(v, k) for k, v in modality_data.items()
+            }
 
         def postsplit_processor(
             split_data: Dict[str, Dict[str, Any]],
@@ -1099,14 +825,12 @@ class BasePreprocessor(abc.ABC):
                 "from_modality": (
                     lambda data: presplit_processor(
                         data,
-                        self.from_key,  # type: ignore
                     ),
                     postsplit_processor,
                 ),
                 "to_modality": (
                     lambda data: presplit_processor(
                         data,
-                        self.to_key,  # type: ignore
                     ),
                     postsplit_processor,
                 ),

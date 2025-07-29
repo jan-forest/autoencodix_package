@@ -1,5 +1,7 @@
 import abc
-from typing import Optional, Type, List, cast
+import os
+import warnings
+from typing import Optional, Type, List, cast, Tuple, Union
 
 import torch
 from lightning_fabric import Fabric
@@ -8,7 +10,6 @@ from torch.utils.data import DataLoader
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_autoencoder import BaseAutoencoder
-from autoencodix.utils._model_output import ModelOutput
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 
@@ -42,13 +43,16 @@ class BaseTrainer(abc.ABC):
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
-        ontologies: Optional[tuple] = None,  # Addition to Varix, mandotory for Ontix
+        ontologies: Optional[
+            Union[Tuple, List]
+        ] = None,  # Addition to Varix, mandotory for Ontix
     ):
         self._trainset = trainset
         self._model_type = model_type
         self._validset = validset
         self._result = result
         self._config = config
+        self.ontologies = ontologies
 
         # Call this first for tests to work
         self._input_validation()
@@ -58,32 +62,22 @@ class BaseTrainer(abc.ABC):
 
         # Internal data handling
         self._model: BaseAutoencoder
-        self._trainloader = DataLoader(
-            cast(BaseDataset, self._trainset),
-            batch_size=self._config.batch_size,
-            shuffle=True,  # best practice to shuffle in training
-            num_workers=self._config.n_workers,
-        )
-        if self._validset:
-            self._validloader = DataLoader(
-                dataset=self._validset,
-                batch_size=self._config.batch_size,
-                shuffle=False,
-                num_workers=self._config.n_workers,
-            )
-        else:
-            self._validloader = None  # type: ignore
-
-        # Model and optimizer setup
-        self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
-        self._init_model_architecture(ontologies=ontologies)  # Ontix
-
         self._fabric = Fabric(
             accelerator=self._config.device,
             devices=self._config.n_gpus,
             precision=self._config.float_precision,
             strategy=self._config.gpu_strategy,
         )
+
+        self._init_loaders()
+        self._setup_fabric()
+        self._n_cpus = os.cpu_count()
+        if self._n_cpus is None:
+            self._n_cpus = 0
+
+    def _setup_fabric(self):
+        self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
+        self._init_model_architecture(ontologies=self.ontologies)  # Ontix
 
         self._optimizer = torch.optim.AdamW(
             params=self._model.parameters(),
@@ -96,6 +90,21 @@ class BaseTrainer(abc.ABC):
         if self._validloader is not None:
             self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
         self._fabric.launch()
+
+    def _init_loaders(self):
+        self._trainloader = DataLoader(
+            cast(BaseDataset, self._trainset),
+            batch_size=self._config.batch_size,
+            shuffle=True,  # best practice to shuffle in training
+        )
+        if self._validset:
+            self._validloader = DataLoader(
+                dataset=self._validset,
+                batch_size=self._config.batch_size,
+                shuffle=False,
+            )
+        else:
+            self._validloader = None  # type: ignore
 
     def _input_validation(self) -> None:
         if self._trainset is None:
@@ -147,11 +156,16 @@ class BaseTrainer(abc.ABC):
                 config=self._config,
                 input_dim=self._input_dim,
                 ontologies=ontologies,
-                feature_order=self._trainset.feature_ids,
+                feature_order=self._trainset.feature_ids,  # type: ignore
             )
 
+    def _should_checkpoint(self, epoch: int):
+        return (
+            epoch + 1
+        ) % self._config.checkpoint_interval == 0 or epoch == self._config.epochs - 1
+
     @abc.abstractmethod
-    def train(self) -> Result:
+    def train(self, epochs_overwrite: Optional[int]) -> Result:
         pass
 
     @abc.abstractmethod
@@ -159,11 +173,7 @@ class BaseTrainer(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def _capture_dynamics(
-        self, model_output: ModelOutput, split: str, indices: torch.Tensor, sample_ids
-    ) -> None:
-        pass
-
-    @abc.abstractmethod
-    def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
+    def predict(
+        self, data: BaseDataset, model: Optional[torch.nn.Module] = None, **kwargs
+    ) -> Result:
         pass

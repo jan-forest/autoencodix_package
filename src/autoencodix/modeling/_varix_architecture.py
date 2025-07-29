@@ -52,9 +52,9 @@ class VarixArchitecture(BaseAutoencoder):
         """
         if config is None:
             config = DefaultConfig()
-        self._config = config
-        super().__init__(config, input_dim)
-        self.input_dim = input_dim
+        self._config: DefaultConfig = config
+        super().__init__(config=config, input_dim=input_dim)
+        self.input_dim: int = input_dim
         self._mu: nn.Module
         self._logvar: nn.Module
 

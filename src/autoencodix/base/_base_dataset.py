@@ -1,8 +1,16 @@
 import abc
+from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 from torch.utils.data import Dataset
+
+from autoencodix.data._imgdataclass import ImgData
+
+
+class DataSetTypes(str, Enum):
+    NUM = "NUM"
+    IMG = "IMG"
 
 
 class BaseDataset(abc.ABC, Dataset):
@@ -17,7 +25,7 @@ class BaseDataset(abc.ABC, Dataset):
 
     def __init__(
         self,
-        data: torch.Tensor,
+        data: Union[torch.Tensor, List[ImgData]],
         config: Optional[Any] = None,
         sample_ids: Optional[List[Any]] = None,
         feature_ids: Optional[List[Any]] = None,
@@ -34,6 +42,7 @@ class BaseDataset(abc.ABC, Dataset):
         self.config = config
         self.sample_ids = sample_ids
         self.feature_ids = feature_ids
+        self.mytype: Enum # set in subclasses
 
     def __len__(self) -> int:
         """Returns the number of samples in the dataset.
@@ -61,10 +70,15 @@ class BaseDataset(abc.ABC, Dataset):
             label = index
         return index, self.data[index], label
 
-    def get_input_dim(self) -> int:
+    def get_input_dim(self) -> Union[int, Tuple[int, ...]]:
         """Gets the input dimension of the dataset (n_features)
 
         Returns:
             The input dimension of the dataset's feature space.
         """
-        return self.data.shape[1]
+        if isinstance(self.data, torch.Tensor):
+            return self.data.shape[1]
+        elif isinstance(self.data, list) and isinstance(self.data[0], ImgData):
+            return self.data[0].img.shape[0]
+        else:
+            raise ValueError("Unsupported data type for input dimension retrieval.")

@@ -1,6 +1,7 @@
 import os
 from dataclasses import field
 from typing import Any, Dict, Optional, Union
+import warnings
 
 import matplotlib.figure
 import numpy as np
@@ -128,7 +129,7 @@ class Visualizer(BaseVisualizer):
                 show_figure(fig)
                 plt.show()
         if plot_type == "relative":
-            if "relative_absolute" not in self.plots.keys():
+            if "loss_relative" not in self.plots.keys():
                 print("Relative loss plot not found in the plots dictionary")
                 print("You need to run visualize() method first")
             else:
@@ -145,8 +146,8 @@ class Visualizer(BaseVisualizer):
         self,
         result: Result,
         plot_type: str = "2D-scatter",
-        label_list: Optional[Union[list, None]] = None,
-        param: str = "all",
+        labels: Optional[Union[list, pd.Series, None]] = None,
+        param: Optional[Union[list, str]] = None,
         epoch: Optional[Union[int, None]] = None,
         split: str = "all",
     ) -> None:
@@ -159,10 +160,10 @@ class Visualizer(BaseVisualizer):
             The result object containing latent spaces and losses.
         plot_type : str, optional
             The type of plot to generate. Options are "2D-scatter", "Ridgeline", and "Coverage-Correlation". Default is "2D-scatter".
-        label_list : list, optional
+        labels : list, optional
             List of labels for the data points in the latent space. Default is None.
         param : str, optional
-            Parameter to be used for plotting. Default is "all".
+            List of parameters provided and stored as metadata. Strings must match column names. If not a list, string "all" is expected for convenient way to make plots for all parameters available. Default is None where no colored labels are plotted.
         epoch : int, optional
             The epoch number to visualize. If None, the last epoch is inferred from the losses. Default is None.
         split : str, optional
@@ -172,19 +173,90 @@ class Visualizer(BaseVisualizer):
         --------
         None
         """
+        plt.ioff()
         if plot_type == "Coverage-Correlation":
-            ## TODO
-            print("Not implemented yet, empty figure will be shown instead")
-            fig = plt.figure()
-            self.plots["Coverage-Correlation"] = fig
-            show_figure(fig)
-            plt.show()
+            if "Coverage-Correlation" in self.plots:
+                fig = self.plots["Coverage-Correlation"] 
+                show_figure(fig)
+                plt.show()
+            else:
+                results = []
+                for epoch in range(result.model.config.checkpoint_interval, result.model.config.epochs + 1, result.model.config.checkpoint_interval):
+                    for split in ["train", "valid"]:
+                        latent_df = result.get_latent_df(epoch=epoch-1, split=split)
+                        tc = self._total_correlation(latent_df)
+                        cov = self._coverage_calc(latent_df)
+                        results.append({"epoch": epoch, "split": split, "total_correlation": tc, "coverage": cov})
+
+                df_metrics = pd.DataFrame(results)
+
+                fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+                # Total Correlation plot
+                ax1 = sns.lineplot(data=df_metrics, x="epoch", y="total_correlation", hue="split", ax=axes[0])
+                axes[0].set_title("Total Correlation")
+                axes[0].set_xlabel("Epoch")
+                axes[0].set_ylabel("Total Correlation")
+
+                # Coverage plot
+                ax2 = sns.lineplot(data=df_metrics, x="epoch", y="coverage", hue="split", ax=axes[1])
+                axes[1].set_title("Coverage")
+                axes[1].set_xlabel("Epoch")
+                axes[1].set_ylabel("Coverage")
+
+                plt.tight_layout()
+                self.plots["Coverage-Correlation"] = fig
+                show_figure(fig)
+                plt.show()
 
         else:
             # Set Defaults
             if epoch is None:
-                # Infer total epochs from losses
-                epoch = len(result.losses.get()) - 1
+                epoch = result.model.config.epochs - 1
+
+          ## Getting clin_data
+            if hasattr(result.datasets.train, "metadata"):
+                # Check if metadata is a dictionary and contains 'paired'
+                if isinstance(result.datasets.train.metadata, dict):
+                    if "paired" in result.datasets.train.metadata:
+                        clin_data = result.datasets.train.metadata['paired']
+                        if hasattr(result.datasets, "test"):
+                            clin_data = pd.concat(
+                                [clin_data, result.datasets.test.metadata['paired']],
+                                axis=0,
+                            )
+                        if hasattr(result.datasets, "valid"):
+                            clin_data = pd.concat(
+                                [clin_data, result.datasets.valid.metadata['paired']],
+                                axis=0,
+                            )
+                    else:
+                        # Raise error no annotation given
+                        raise ValueError(
+                            "Please provide paired annotation data with key 'paired' in metadata dictionary."
+                        )
+                elif isinstance(result.datasets.train.metadata, pd.DataFrame):
+                    clin_data = result.datasets.train.metadata
+                    if hasattr(result.datasets, "test"):
+                        clin_data = pd.concat(
+                            [clin_data, result.datasets.test.metadata],
+                            axis=0,
+                        )
+                    if hasattr(result.datasets, "valid"):
+                        clin_data = pd.concat(
+                            [clin_data, result.datasets.valid.metadata],
+                            axis=0,
+                        )
+                else:
+                    # Raise error no annotation given
+                    raise ValueError(
+                        "Metadata is not a dictionary or DataFrame. Please provide a valid annotation data type."
+                    )
+            else:
+                # Raise error no annotation given
+                raise ValueError(
+                    "No annotation data found. Please provide a valid annotation data type."
+                )
 
             if split == "all":
                 df_latent = pd.concat(
@@ -196,53 +268,69 @@ class Visualizer(BaseVisualizer):
                 )
             else:
                 if split == "test":
-                    df_latent = pd.DataFrame(
-                        result.latentspaces.get(epoch=-1, split=split)
-                    )
                     df_latent = result.get_latent_df(epoch=-1, split=split)
                 else:
-                    # df_latent = pd.DataFrame(
-                    #     result.latentspaces.get(epoch=epoch, split=split)
-                    # )
                     df_latent = result.get_latent_df(epoch=epoch, split=split)
 
-            if label_list is None:
-                label_list = ["all"] * df_latent.shape[0]
-
-            if plot_type == "2D-scatter":
-                ## Make 2D Embedding with UMAP
-                if df_latent.shape[1] > 2:
-                    reducer = UMAP(n_components=2)
-                    embedding = pd.DataFrame(reducer.fit_transform(df_latent))
+            if labels is None and param is None:
+                labels = ["all"] * df_latent.shape[0]
+            
+            if labels is None and isinstance(param, str):
+                if param == "all":
+                    param = list(clin_data.columns)
                 else:
-                    embedding = df_latent
-
-                # if not self.plots["2D-scatter"][epoch][split][
-                #     param
-                # ]:  ## Create when not exist
-                self.plots["2D-scatter"][epoch][split][param] = self.plot_2D(
-                    embedding=embedding,
-                    labels=label_list,
-                    param=param,
-                    layer=f"2D latent space (epoch {epoch})",
-                    figsize=(12, 8),
-                    center=True,
+                    raise ValueError(
+                        "Please provide parameter to plot as a list not as string. If you want to plot all parameters, set param to 'all' and labels to None."
+                    )
+            
+            if labels is not None and param is not None:
+                raise ValueError(
+                    "Please provide either labels or param, not both. If you want to plot all parameters, set param to 'all' and labels to None."
                 )
 
-                fig = self.plots["2D-scatter"][epoch][split][param]
-                show_figure(fig)
-                plt.show()
+            if labels is not None and param is None:
+                if isinstance(labels, pd.Series):                                
+                    param = [labels.name]
+                    # Order by index of df_latent first, fill missing with "unknown"
+                    labels = labels.reindex(df_latent.index, fill_value="unknown").tolist()
+                else:                    
+                    param = ["user_label"]  # Default label if none provided
 
-            if plot_type == "Ridgeline":
-                ## Make ridgeline plot
+            for p in param:
+                if p in clin_data.columns:
+                    labels = clin_data.loc[df_latent.index, p].tolist()
 
-                self.plots["Ridgeline"][epoch][split][param] = self.plot_latent_ridge(
-                    lat_space=df_latent, label_list=label_list, param=param
-                )
+                if plot_type == "2D-scatter":
+                    ## Make 2D Embedding with UMAP
+                    if df_latent.shape[1] > 2:
+                        reducer = UMAP(n_components=2)
+                        embedding = pd.DataFrame(reducer.fit_transform(df_latent))
+                    else:
+                        embedding = df_latent
 
-                fig = self.plots["Ridgeline"][epoch][split][param].figure
-                show_figure(fig)
-                plt.show()
+                    self.plots["2D-scatter"][epoch][split][p] = self.plot_2D(
+                        embedding=embedding,
+                        labels=labels,
+                        param=p,
+                        layer=f"2D latent space (epoch {epoch})",
+                        figsize=(12, 8),
+                        center=True,
+                    )
+
+                    fig = self.plots["2D-scatter"][epoch][split][p]
+                    show_figure(fig)
+                    plt.show()
+
+                if plot_type == "Ridgeline":
+                    ## Make ridgeline plot
+
+                    self.plots["Ridgeline"][epoch][split][p] = self.plot_latent_ridge(
+                        lat_space=df_latent, labels=labels, param=p
+                    )
+
+                    fig = self.plots["Ridgeline"][epoch][split][p].figure
+                    show_figure(fig)
+                    plt.show()
 
     def show_weights(self) -> None:
         """
@@ -391,7 +479,7 @@ class Visualizer(BaseVisualizer):
                         x=pd.Series(labels),
                         q=4,
                         labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
-                    ).astype(str)
+                    ).astype(str).to_list()
                 else:
                     center = False  ## Disable centering for numeric params
                     numeric = True
@@ -485,14 +573,14 @@ class Visualizer(BaseVisualizer):
     @staticmethod
     def plot_latent_ridge(
         lat_space: pd.DataFrame,
-        label_list: Optional[Union[list, None]] = None,
+        labels: Optional[Union[list, pd.Series, None]] = None,
         param: Optional[Union[str, None]] = None,
     ) -> sns.FacetGrid:
         """
         Creates a ridge line plot of latent space dimension where each row shows the density of a latent dimension and groups (ridges).
         ARGS:
             lat_space (pd.DataFrame): DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
-            label_list (list): List of labels for each sample. If None, all samples are considered as one group.
+            labels (list): List of labels for each sample. If None, all samples are considered as one group.
             param (str): Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
         RETURNS:
             g (sns.FacetGrid): FacetGrid object containing the ridge line plot
@@ -504,22 +592,22 @@ class Visualizer(BaseVisualizer):
         df = pd.melt(lat_space, var_name="latent dim", value_name="latent intensity")
         df["sample"] = len(lat_space.columns) * list(lat_space.index)
 
-        if label_list is None:
+        if labels is None:
             param = "all"
-            label_list = ["all"] * len(df)
+            labels = ["all"] * len(df)
 
         # print(labels[0])
-        if not isinstance(label_list[0], str):
-            if len(np.unique(label_list)) > 3:
-                label_list = pd.qcut(
-                    x=pd.Series(label_list),
+        if not isinstance(labels[0], str):
+            if len(np.unique(labels)) > 3:
+                labels = pd.qcut(
+                    x=pd.Series(labels),
                     q=4,
                     labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
                 ).astype(str)
             else:
-                label_list = [str(x) for x in label_list]
+                labels = [str(x) for x in labels]
 
-        df[param] = len(lat_space.columns) * label_list  # type: ignore
+        df[param] = len(lat_space.columns) * labels  # type: ignore
 
         exclude_missing_info = (df[param] == "unknown") | (df[param] == "nan")
 
@@ -617,9 +705,11 @@ class Visualizer(BaseVisualizer):
         matplotlib.figure.Figure
             The generated matplotlib figure containing the loss plots.
         """
+        fig_width_abs = 5*len(df_plot["Loss Term"].unique())
+        fig_width_rel = 5*len(df_plot["Split"].unique())
         if plot_type == "absolute":
             fig, axes = plt.subplots(
-                1, len(df_plot["Loss Term"].unique()), figsize=(15, 5), sharey=False
+                1, len(df_plot["Loss Term"].unique()), figsize=(fig_width_abs, 5), sharey=False
             )
             ax = 0
             for term in df_plot["Loss Term"].unique():
@@ -635,9 +725,30 @@ class Visualizer(BaseVisualizer):
             plt.close()
 
         if plot_type == "relative":
-            exclude = df_plot["Loss Term"] != "total_loss"
+            # Check if loss values are positive
+            if (df_plot["Loss Value"] < 0).any():
+                # Warning
+                warnings.warn(
+                    "Loss values contain negative values. Check your loss function if correct. Loss will be clipped to zero for plotting."
+                )
+                df_plot["Loss Value"] = df_plot["Loss Value"].clip(lower=0)
 
-            fig, axes = plt.subplots(1, 2, figsize=(15, 5), sharey=True)
+            # Exclude loss terms where all Loss Value are zero or NaN over all epochs
+            valid_terms = [
+                term
+                for term in df_plot["Loss Term"].unique()
+                if (
+                    (df_plot[df_plot["Loss Term"] == term]["Loss Value"].notna().any())
+                    and (df_plot[df_plot["Loss Term"] == term]["Loss Value"] != 0).any()
+                )
+            ]
+            exclude = (
+                (df_plot["Loss Term"] != "total_loss")
+                & ~(df_plot["Loss Term"].str.contains("_factor"))
+                & (df_plot["Loss Term"].isin(valid_terms))
+            )
+
+            fig, axes = plt.subplots(1, 2, figsize=(fig_width_rel, 5), sharey=True)
 
             ax = 0
 
@@ -648,7 +759,7 @@ class Visualizer(BaseVisualizer):
                     hue="Loss Term",
                     multiple="fill",
                     weights="Loss Value",
-                    clip=[0, 30],
+                    clip=[0, df_plot["Epoch"].max()],
                     ax=axes[ax],
                 ).set_title(split)
                 ax += 1
@@ -723,3 +834,140 @@ class Visualizer(BaseVisualizer):
 
         loss_df_melt["Loss Value"] = loss_df_melt["Loss Value"].astype(float)
         return loss_df_melt
+    
+    def plot_evaluation(
+            self,
+            result: Result,
+    ) -> dict:
+        """
+        Plots the evaluation results from the Result object.
+
+        Parameters:
+        result (Result): The Result object containing evaluation data.
+
+        Returns:
+        dict: The generated dictionary containing the evaluation plots.
+        """
+        ## Plot all results
+
+        ml_plots = dict()
+        plt.ioff()
+
+        for c in pd.unique(result.embedding_evaluation.CLINIC_PARAM):
+            ml_plots[c] = dict()
+            for m in pd.unique(result.embedding_evaluation.loc[result.embedding_evaluation.CLINIC_PARAM == c, "metric"]):
+                ml_plots[c][m] = dict()
+                for alg in pd.unique(result.embedding_evaluation.loc[
+                        (result.embedding_evaluation.CLINIC_PARAM == c) &
+                        (result.embedding_evaluation.metric == m), "ML_ALG"
+                    ]):
+                    data = result.embedding_evaluation[
+                        (result.embedding_evaluation.metric == m) &
+                        (result.embedding_evaluation.CLINIC_PARAM == c) &
+                        (result.embedding_evaluation.ML_ALG == alg)
+                    ]
+
+                    sns_plot = sns.catplot(
+                        data=data,
+                        x="score_split",
+                        y="value",
+                        col="ML_TASK",
+                        hue="score_split",
+                        kind="bar",
+                    )
+
+                    min_y = data.value.min()
+                    if min_y > 0:
+                        min_y = 0
+
+                    ml_plots[c][m][alg] = sns_plot.set(ylim=(min_y, None))
+
+        self.plots["ML_Evaluation"] = ml_plots
+
+        return ml_plots
+    
+    def show_evaluation(
+        self,
+        param: str,
+        metric: str,
+        ml_alg: Optional[str] = None,
+    ) -> None:
+        """
+        Displays the evaluation plot for a specific clinical parameter, metric, and optionally ML algorithm.
+        Parameters:
+        param (str): The clinical parameter to visualize.
+        metric (str): The metric to visualize.
+        ml_alg (str, optional): The ML algorithm to visualize. If None, plots all available algorithms.
+        Returns:
+        None
+        """
+        plt.ioff()
+        if "ML_Evaluation" not in self.plots.keys():
+            print("ML Evaluation plots not found in the plots dictionary")
+            print("You need to run evaluate() method first")
+            return None
+        if param not in self.plots["ML_Evaluation"].keys():
+            print(f"Parameter {param} not found in the ML Evaluation plots")
+            print(f"Available parameters: {list(self.plots['ML_Evaluation'].keys())}")
+            return None
+        if metric not in self.plots["ML_Evaluation"][param].keys():
+            print(f"Metric {metric} not found in the ML Evaluation plots for {param}")
+            print(
+                f"Available metrics: {list(self.plots['ML_Evaluation'][param].keys())}"
+            )
+            return None
+
+        algs = list(self.plots["ML_Evaluation"][param][metric].keys())
+        if ml_alg is not None:
+            if ml_alg not in algs:
+                print(f"ML algorithm {ml_alg} not found for {param} and {metric}")
+                print(f"Available ML algorithms: {algs}")
+                return None
+            fig = self.plots["ML_Evaluation"][param][metric][ml_alg].figure
+            show_figure(fig)
+            plt.show()
+        else:
+            for alg in algs:
+                print(f"Showing plot for ML algorithm: {alg}")
+                fig = self.plots["ML_Evaluation"][param][metric][alg].figure
+                show_figure(fig)
+                plt.show()
+    
+    @staticmethod
+    def _total_correlation(latent_space: pd.DataFrame) -> float:
+        """ Function to compute the total correlation as described here (Equation2): https://doi.org/10.3390/e21100921
+            
+        Args:
+            latent_space - (pd.DataFrame): latent space with dimension sample vs. latent dimensions
+        Returns:
+            tc - (float): total correlation across latent dimensions
+        """
+        lat_cov = np.cov(latent_space.T)
+        tc = 0.5 * (np.sum(np.log(np.diag(lat_cov))) - np.linalg.slogdet(lat_cov)[1])
+        return tc
+    
+    @staticmethod
+    def _coverage_calc(latent_space: pd.DataFrame) -> float:
+        """ Function to compute the coverage as described here (Equation3): https://doi.org/10.3390/e21100921
+            
+        Args:
+            latent_space - (pd.DataFrame): latent space with dimension sample vs. latent dimensions
+        Returns:
+            cov - (float): coverage across latent dimensions
+        """
+        bins_per_dim = int(
+            np.power(len(latent_space.index), 1 / len(latent_space.columns))
+        )
+        if bins_per_dim < 2:
+            warnings.warn(
+                "Coverage calculation fails since combination of sample size and latent dimension results in less than 2 bins."
+            )
+            cov = np.nan
+        else:
+            latent_bins = latent_space.apply(lambda x: pd.cut(x, bins=bins_per_dim))
+            latent_bins = pd.Series(zip(*[latent_bins[col] for col in latent_bins]))
+            cov = len(latent_bins.unique()) / np.power(
+                bins_per_dim, len(latent_space.columns)
+            )
+            
+        return cov

@@ -123,6 +123,9 @@ class Result:
     sub_results: Optional[Dict[str, Any]] = field(default=None)
     sub_reconstructions: Optional[Dict[str, Any]] = field(default=None)
 
+    # Embedding evaluation results
+    embedding_evaluation: pd.DataFrame = pd.DataFrame()
+
     # plots: Dict[str, Any] = field(
     #     default_factory=nested_dict
     # )  ## Nested dictionary of plots as figure handles

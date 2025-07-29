@@ -1,5 +1,6 @@
 import abc
 from typing import Optional, Union
+import pandas as pd
 
 
 from autoencodix.utils._result import Result 
@@ -36,8 +37,8 @@ class BaseVisualizer(abc.ABC):
         self,
         result: Result,
         plot_type: str = "2D-scatter",
-        label_list: Optional[Union[list, None]] = None,
-        param: str = "all",
+        labels: Optional[Union[list, pd.Series, None]] = None,
+        param: Optional[Union[list, str]] = None,
         epoch: Optional[Union[int, None]] = None,
         split: str = "all",
     ) -> None:

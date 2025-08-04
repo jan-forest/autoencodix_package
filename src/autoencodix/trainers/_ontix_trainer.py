@@ -38,6 +38,7 @@ class OntixTrainer(GeneralTrainer):
         """Apply ontology-specific processing after backward pass."""
         # Apply positive weight constraint to decoder
         self._model._decoder.apply(self._model._positive_dec)
+        print("_apply_post_backward_processing is called")
 
         # Apply ontology-based weight masking
         with torch.no_grad():

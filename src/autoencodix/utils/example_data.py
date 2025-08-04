@@ -41,9 +41,12 @@ def generate_example_data(
     )
 
     # Create additional metadata features that correlate with the clusters
+    # Convert integer cluster labels to string labels like "Cluster_1"
+    str_cluster_labels = np.array([f"Cluster_{i+1}" for i in cluster_labels])
+
     metadata_df = pd.DataFrame(
         {
-            "cluster": cluster_labels,
+            "cluster": str_cluster_labels,
             "age": np.random.normal(30, 10, n_samples)
             + cluster_labels * 5,  # Age correlates with cluster
             "size": np.random.uniform(0, 10, n_samples)
@@ -62,6 +65,7 @@ def generate_example_data(
 
     ids = [f"sample_{i}" for i in range(n_samples)]
     metadata_df["sample_id"] = ids
+    metadata_df.index = ids  # Set sample IDs as index
     data_tensor = torch.tensor(X, dtype=torch.float32)
 
     # Get split ratios from DefaultConfig
@@ -103,7 +107,7 @@ def generate_example_data(
         data=data_tensor[train_idx],
         config=DefaultConfig(),
         sample_ids=[ids[i] for i in train_idx],
-        metadata=metadata_df.iloc[train_idx].reset_index(drop=True),
+        metadata=metadata_df.iloc[train_idx],
         split_indices=train_split,
         feature_ids=[f"feature_{i}" for i in range(n_features)],
     )
@@ -112,7 +116,7 @@ def generate_example_data(
         data=data_tensor[val_idx],
         config=DefaultConfig(),
         sample_ids=[ids[i] for i in val_idx],
-        metadata=metadata_df.iloc[val_idx].reset_index(drop=True),
+        metadata=metadata_df.iloc[val_idx],
         split_indices=val_split,
         feature_ids=[f"feature_{i}" for i in range(n_features)],
     )
@@ -121,7 +125,7 @@ def generate_example_data(
         data=data_tensor[test_idx],
         config=DefaultConfig(),
         sample_ids=[ids[i] for i in test_idx],
-        metadata=metadata_df.iloc[test_idx].reset_index(drop=True),
+        metadata=metadata_df.iloc[test_idx],
         split_indices=test_split,
         feature_ids=[f"feature_{i}" for i in range(n_features)],
     )

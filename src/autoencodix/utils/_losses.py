@@ -128,10 +128,10 @@ class XModalLoss(BaseLoss):
         )
         loss_dict = {
             "total_loss": total_loss,
-            "adver_loss": adver_loss,
+            "adver_loss": self.config.gamma * adver_loss,
             "aggregated_sub_losses": aggregated_sub_losses,
-            "paired_loss": paired_loss,
-            "class_loss": class_loss,
+            "paired_loss": self.config.delta_pair * paired_loss,
+            "class_loss": self.config.delta_class * class_loss,
         }
         loss_dict.update(sub_losses)
         return total_loss, loss_dict
@@ -425,15 +425,16 @@ class DisentanglixLoss(BaseLoss):
         """Forward pass with annealing - calculates annealing factor from epoch."""
         recon_loss, mut_info_loss, tot_corr_loss, dimwise_kl_loss = self._compute_losses(model_output, targets, n_samples)
 
-        annealing_epoch = self.annealing_scheduler.get_annealing_epoch(
-            anneal_pretraining=self.config.anneal_pretraining,
-            n_epochs_pretrain=self.config.pretrain_epochs,
-            current_epoch=epoch,
-        )
+        # annealing_epoch = self.annealing_scheduler.get_annealing_epoch(
+        #     anneal_pretraining=self.config.anneal_pretraining,
+        #     n_epochs_pretrain=self.config.pretrain_epochs,
+        #     current_epoch=epoch,
+        # )
 
         # Get annealing weight
         anneal_factor = self.annealing_scheduler.get_weight(
-            epoch_current=annealing_epoch,
+            # epoch_current=annealing_epoch,
+            epoch_current=epoch,
             total_epoch=self.config.epochs,
             func=self.config.anneal_function,
         )

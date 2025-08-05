@@ -16,6 +16,7 @@ from autoencodix.utils._result import Result
 from autoencodix.utils._utils import nested_dict, nested_to_tuple, show_figure
 from autoencodix.utils.default_config import DefaultConfig
 
+sns.set_style("whitegrid")
 
 class Visualizer(BaseVisualizer):
     plots: Dict[str, Any] = field(
@@ -29,6 +30,8 @@ class Visualizer(BaseVisualizer):
         self.plots[key] = elem
 
     def visualize(self, result: Result, config: DefaultConfig) -> Result:
+
+        
         ## Make Model Weights plot
         self.plots["ModelWeights"] = self.plot_model_weights(model=result.model)
 
@@ -801,8 +804,9 @@ class Visualizer(BaseVisualizer):
         plt.close()
         return g
 
+    @staticmethod
     def make_loss_plot(
-        self, df_plot: pd.DataFrame, plot_type: str
+        df_plot: pd.DataFrame, plot_type: str
     ) -> matplotlib.figure.Figure:
         """
         Generates a plot for visualizing loss values from a DataFrame.
@@ -889,7 +893,8 @@ class Visualizer(BaseVisualizer):
 
         return fig
 
-    def make_loss_format(self, result: Result, config: DefaultConfig) -> pd.DataFrame:
+    @staticmethod
+    def make_loss_format(result: Result, config: DefaultConfig) -> pd.DataFrame:
         loss_df_melt = pd.DataFrame()
         for term in result.sub_losses.keys():
             # Get the loss values and ensure it's a dictionary

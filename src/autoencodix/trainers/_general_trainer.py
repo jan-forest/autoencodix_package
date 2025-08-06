@@ -152,6 +152,7 @@ class GeneralTrainer(BaseTrainer):
             )
 
             self._fabric.backward(loss)
+            self._apply_post_backward_processing()
             self._optimizer.step()
 
             total_loss += loss.item()

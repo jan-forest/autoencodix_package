@@ -16,7 +16,6 @@ from autoencodix.utils._result import Result
 from autoencodix.utils._utils import nested_dict, nested_to_tuple, show_figure
 from autoencodix.utils.default_config import DefaultConfig
 
-sns.set_style("whitegrid")
 
 class Visualizer(BaseVisualizer):
     plots: Dict[str, Any] = field(
@@ -30,8 +29,6 @@ class Visualizer(BaseVisualizer):
         self.plots[key] = elem
 
     def visualize(self, result: Result, config: DefaultConfig) -> Result:
-
-        
         ## Make Model Weights plot
         self.plots["ModelWeights"] = self.plot_model_weights(model=result.model)
 

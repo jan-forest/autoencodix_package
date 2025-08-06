@@ -638,8 +638,9 @@ class BasePreprocessor(abc.ABC):
             bulkreader = self.data_readers[DataCase.IMG_TO_BULK]["bulk"]
             imgreader = self.data_readers[DataCase.IMG_TO_BULK]["img"]
 
-            bulk_dfs, annotation = bulkreader.read_data()
-            images = imgreader.read_data(config=self.config)
+            bulk_dfs, annotation_bulk = bulkreader.read_data()
+            images, annotation_img = imgreader.read_data(config=self.config)
+            annotation = {**annotation_bulk, **annotation_img}
 
             data_package = DataPackage(
                 multi_bulk=bulk_dfs, img=images, annotation=annotation
@@ -711,11 +712,11 @@ class BasePreprocessor(abc.ABC):
 
             # only one mudata type in this case we know this
             mudata_dict = screader.read_data(config=self.config)
-            images = imgreader.read_data(config=self.config)
+            images, annotation = imgreader.read_data(config=self.config)
 
-            data_package = DataPackage()
-            data_package.multi_sc = mudata_dict
-            data_package.img = images
+            data_package = DataPackage(
+                multi_sc=mudata_dict, img=images, annotation=annotation
+            )
         else:
             data_package = raw_user_data
 
@@ -785,9 +786,9 @@ class BasePreprocessor(abc.ABC):
         """
         if raw_user_data is None:
             imgreader = self.data_readers[DataCase.IMG_TO_IMG]
-            images = imgreader.read_data(config=self.config)
+            images, annotation = imgreader.read_data(config=self.config)
 
-            data_package = DataPackage(img=images)
+            data_package = DataPackage(img=images, annotation=annotation)
         else:
             data_package = raw_user_data
 

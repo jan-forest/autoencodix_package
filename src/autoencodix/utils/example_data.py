@@ -67,11 +67,7 @@ def generate_example_data(
 
     ids = [f"sample_{i}" for i in range(n_samples)]
     metadata_df["sample_id"] = ids
-<<<<<<< HEAD
-    metadata_df.index = ids  # Set sample IDs as index
-=======
     metadata_df.index = ids  # Set sample_id as index
->>>>>>> 983c62ff4274f18cb3c28c61023bdc7c3bd76c3a
     data_tensor = torch.tensor(X, dtype=torch.float32)
 
     # Get split ratios from DefaultConfig

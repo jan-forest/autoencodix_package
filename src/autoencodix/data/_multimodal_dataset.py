@@ -22,7 +22,7 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):
             if ds.sample_ids is None:
                 raise ValueError(f"There are no sample_ids for {ds_name}")
         self._id_to_idx = {
-            mod: {sid: idx for idx, sid in enumerate(ds.sample_ids)} # type: ignore
+            mod: {sid: idx for idx, sid in enumerate(ds.sample_ids)}  # type: ignore
             for mod, ds in self.datasets.items()
         }
         self.paired_sample_ids = self._get_paired_sample_ids()
@@ -242,15 +242,14 @@ def create_multimodal_collate_fn(multimodal_dataset: MultiModalDataset):
                     else:
                         result[modality]["sampled_index"].append(None)
 
-                    idx = multimodal_dataset._id_to_idx[modality].get(sample_id)
-                    cur_metadata = dataset.metadata.iloc[idx]
+                    cur_metadata = dataset.metadata.loc[sample_id] # type: ignore
 
                     result[modality]["metadata"].append(cur_metadata)
 
             result[modality]["data"] = torch.stack(result[modality]["data"])
             result[modality]["metadata"] = pd.concat(
                 result[modality]["metadata"], axis=1
-            ).T
+            ).T # type: ignore
         return result
 
     return collate_fn

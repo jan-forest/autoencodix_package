@@ -354,6 +354,92 @@ class Visualizer(BaseVisualizer):
             show_figure(fig)
             plt.show()
 
+
+    # def plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:
+    #     """
+    #     Visualization of model weights in encoder and decoder layers as heatmap for each layer as subplot.
+    #     ARGS:
+    #         model (torch.nn.Module): PyTorch model instance.
+    #         filepath (str): Path specifying save name and location.
+    #     RETURNS:
+    #         fig (matplotlib.figure): Figure handle (of last plot)
+    #     """
+    #     all_weights = []
+    #     names = []
+    #     if hasattr(model, "ontologies"):
+    #         if model.ontologies is not None:
+    #             # If model is Ontix
+    #             # Get node names from ontologies
+    #             node_names = list()
+    #             for ontology in model.ontologies:
+    #                 node_names.append(ontology.keys())
+
+    #             node_names.append(model.feature_order)  # Add feature order as last layer
+
+    #     for name, param in model.named_parameters():
+    #         if "weight" in name and len(param.shape) == 2:
+    #             if "var" not in name:  ## For VAE plot only mu weights
+    #                 all_weights.append(param.detach().cpu().numpy())
+    #                 names.append(name[:-7])
+
+    #     layers = int(len(all_weights) / 2)
+    #     fig, axes = plt.subplots(2, layers, sharex=False, figsize=(20, 10))
+
+    #     for layer in range(layers):
+    #         ## Encoder Layer
+    #         if layers > 1:
+    #             sns.heatmap(
+    #                 all_weights[layer],
+    #                 cmap=sns.color_palette("Spectral", as_cmap=True),
+    #                 ax=axes[0, layer],
+    #             ).set(title=names[layer])
+    #             ## Decoder Layer
+    #             sns.heatmap(
+    #                 all_weights[layers + layer],
+    #                 cmap=sns.color_palette("Spectral", as_cmap=True),
+    #                 ax=axes[1, layer],
+    #             ).set(title=names[layers + layer])
+    #             axes[1, layer].set_xlabel("In Node", size=12)
+    #             if model.ontologies is not None:
+    #                 axes[1, layer].set_xticks(
+    #                     ticks=range(len(node_names[layer])),
+    #                     labels=node_names[layer],
+    #                     rotation=90,
+    #                     fontsize=8,
+    #                 )
+    #                 axes[1, layer].set_yticks(
+    #                     ticks=range(len(node_names[layer + 1])),
+    #                     labels=node_names[layer + 1],
+    #                     rotation=0,
+    #                     fontsize=8,
+    #                 )
+    #         else:
+    #             sns.heatmap(
+    #                 all_weights[layer],
+    #                 cmap=sns.color_palette("Spectral", as_cmap=True),
+    #                 ax=axes[layer],
+    #             ).set(title=names[layer])
+    #             ## Decoder Layer
+    #             sns.heatmap(
+    #                 all_weights[layer + 2],
+    #                 cmap=sns.color_palette("Spectral", as_cmap=True),
+    #                 ax=axes[layer + 1],
+    #             ).set(title=names[layer + 2])
+    #             axes[1].set_xlabel("In Node", size=12)
+
+    #     if layers > 1:
+    #         axes[1, 0].set_ylabel("Out Node", size=12)
+    #         axes[0, 0].set_ylabel("Out Node", size=12)
+    #     else:
+    #         axes[1].set_ylabel("Out Node", size=12)
+    #         axes[0].set_ylabel("Out Node", size=12)
+
+    #     ## Add title
+    #     fig.suptitle("Model Weights", size=20)
+    #     plt.close()
+    #     return fig
+    
+    ## NEW VERSION
     @staticmethod
     # def plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:
     #     """

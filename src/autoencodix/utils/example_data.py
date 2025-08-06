@@ -40,6 +40,8 @@ def generate_example_data(
         random_state=random_seed,
     )
 
+    # Convert integer cluster labels to string labels like "Cluster_1"
+    str_cluster_labels = np.array([f"Cluster_{i+1}" for i in cluster_labels])
     # Create additional metadata features that correlate with the clusters
     # Convert integer cluster labels to string labels like "Cluster_1"
     str_cluster_labels = np.array([f"Cluster_{i+1}" for i in cluster_labels])
@@ -65,7 +67,11 @@ def generate_example_data(
 
     ids = [f"sample_{i}" for i in range(n_samples)]
     metadata_df["sample_id"] = ids
+<<<<<<< HEAD
     metadata_df.index = ids  # Set sample IDs as index
+=======
+    metadata_df.index = ids  # Set sample_id as index
+>>>>>>> 983c62ff4274f18cb3c28c61023bdc7c3bd76c3a
     data_tensor = torch.tensor(X, dtype=torch.float32)
 
     # Get split ratios from DefaultConfig

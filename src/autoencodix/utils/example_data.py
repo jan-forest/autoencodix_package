@@ -43,6 +43,9 @@ def generate_example_data(
     # Convert integer cluster labels to string labels like "Cluster_1"
     str_cluster_labels = np.array([f"Cluster_{i+1}" for i in cluster_labels])
     # Create additional metadata features that correlate with the clusters
+    # Convert integer cluster labels to string labels like "Cluster_1"
+    str_cluster_labels = np.array([f"Cluster_{i+1}" for i in cluster_labels])
+
     metadata_df = pd.DataFrame(
         {
             "cluster": str_cluster_labels,

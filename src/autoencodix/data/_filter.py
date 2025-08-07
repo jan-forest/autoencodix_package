@@ -5,7 +5,7 @@ Ignoring types for scipy and sklearn, because it stubs require Python > 3.9, whi
 import pandas as pd
 import warnings
 import numpy as np
-from typing import Optional, List, Set, Tuple, Any
+from typing import Optional, List, Set, Tuple, Any, Union
 from scipy.stats import median_abs_deviation  # type: ignore
 from sklearn.preprocessing import (  # type: ignore
     MinMaxScaler,
@@ -14,7 +14,7 @@ from sklearn.preprocessing import (  # type: ignore
     MaxAbsScaler,
 )  # type: ignore
 from enum import Enum
-from autoencodix.utils.default_config import DataInfo
+from autoencodix.utils.default_config import DataInfo, DefaultConfig
 from sklearn.cluster import AgglomerativeClustering  # type: ignore
 from scipy.spatial.distance import pdist, squareform  # type: ignore
 
@@ -52,18 +52,22 @@ class DataFilter:
                                                 on the training data. None initially.
     """
 
-    def __init__(self,
-                data_info: DataInfo,
-                ontologies: Optional[tuple] = None):  # Addition to Varix, mandotory for Ontix
+    def __init__(
+        self,
+        data_info: DataInfo,
+        config: DefaultConfig,
+        ontologies: Optional[tuple] = None,
+    ):  # Addition to Varix, mandotory for Ontix
         """Initializes the DataFilter with a configuration.
 
         Args:
             data_info: Configuration object containing preprocessing parameters.
         """
         self.data_info = data_info
+        self.config = config
         self.filtered_features: Optional[Set[str]] = None
         self._scaler = None
-        self.ontologies= ontologies  # Addition to Varix, mandotory for Ontix
+        self.ontologies = ontologies  # Addition to Varix, mandotory for Ontix
 
     def _filter_nonzero_variance(self, df: pd.DataFrame) -> pd.DataFrame:
         """Removes features with zero variance.
@@ -159,9 +163,7 @@ class DataFilter:
 
     def filter(
         self, df: pd.DataFrame, genes_to_keep: Optional[List] = None
-    ) -> Tuple[
-        pd.DataFrame, List[str]
-    ]:
+    ) -> Tuple[pd.DataFrame, List[str]]:
         """Applies the configured filtering method to the dataframe.
 
         This method is intended to be called on the training data to determine
@@ -202,9 +204,9 @@ class DataFilter:
         filtered_df = df.copy()
 
         ## Remove features which are not in the ontology for Ontix architecture
-        ## must be done before other filtering is applied 
-        if hasattr(self, 'ontologies') and self.ontologies is not None:
-            all_feature_names = set()
+        ## must be done before other filtering is applied
+        if hasattr(self, "ontologies") and self.ontologies is not None:
+            all_feature_names: Union[Set, List] = set()
             for key, values in self.ontologies[-1].items():
                 all_feature_names.update(values)
             all_feature_names = list(all_feature_names)
@@ -213,10 +215,12 @@ class DataFilter:
             ## Filter out features not in the ontology
             feature_order = [f for f in feature_order if f in all_feature_names]
             if missing_features:
-                print(f"Features in feature_order not found in all_feature_names: {missing_features}")
+                print(
+                    f"Features in feature_order not found in all_feature_names: {missing_features}"
+                )
 
-            filtered_df = filtered_df.loc[:,feature_order]         
-            
+            filtered_df = filtered_df.loc[:, feature_order]
+
         ####
 
         if filtering_method == FilterMethod.NOFILT:
@@ -254,6 +258,8 @@ class DataFilter:
     def _init_scaler(self) -> None:
         """Initializes the scaler based on the configured scaling method."""
         method = self.data_info.scaling
+        if method == "NONE":
+            method = self.config.scaling
         if method == "MINMAX":
             self._scaler = MinMaxScaler(clip=True)
         elif method == "STANDARD":
@@ -292,7 +298,7 @@ class DataFilter:
             Scaled dataframe.
         """
         if scaler is None:
-            warnings.warn("No scaler has been fitted yet or scaling is set to NONE.")
+            warnings.warn("No scaler has been fitted yet or scaling is set to none.")
             return df
 
         df_scaled = pd.DataFrame(

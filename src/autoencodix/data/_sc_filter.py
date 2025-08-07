@@ -36,6 +36,7 @@ class SingleCellFilter:
         self.data_info = data_info
         self.total_features = config.k_filter
         self._is_data_info_dict = isinstance(data_info, dict)
+        self.config = config
 
     def _get_data_info_for_modality(self, mod_key: str) -> DataInfo:
         """
@@ -124,8 +125,8 @@ class SingleCellFilter:
     def presplit_processing(
         self, multi_sc: Union[MuData, Dict[str, MuData]]
     ) -> Dict[str, MuData]:
-
         from mudata import MuData
+
         if isinstance(multi_sc, MuData):
             return self._presplit_processing(mudata=multi_sc)
         res = {k: None for k in multi_sc.keys()}
@@ -267,67 +268,16 @@ class SingleCellFilter:
         # Construct new MuData from filtered modalities
         return md.MuData(processed_mods), kept_genes
 
-    # def sc_postsplit_processing(
-    #     self, mudata: MuData, gene_map: Optional[Dict[str, List[str]]] = None
-    # ) -> Tuple[MuData, Dict[str, List[str]]]:
-    #     """
-    #     Preprocess the data using modality-specific configurations.
-
-    #     Parameters
-    #     ----------
-    #     gene_filter_dict : Optional[dict[str, list[str]]]
-    #         Dictionary mapping modality keys to the list of genes to keep.
-    #         If a modality key is not provided or its value is None,
-    #         genes are filtered using `min_cells`.
-
-    #     Returns
-    #     -------
-    #     Tuple[MuData, Dict[str, List[str]]]
-    #         Preprocessed MuData and a dictionary mapping modality keys to the names of kept genes.
-    #     """
-    #     kept_genes: Dict[str, List] = {}
-
-    #     for mod_key, mod_data in mudata.mod.items():
-    #         data_info = self._get_data_info_for_modality(mod_key)
-    #         if data_info is None:
-    #             raise ValueError(f"No data info found for modality {mod_key}")
-    #         gene_list = gene_map.get(mod_key) if gene_map else None
-    #         if gene_list is not None:
-    #             gene_mask = mod_data.var_names.isin(gene_list)
-    #             mod_data._inplace_subset_var(gene_mask)
-    #         else:
-    #             sc.pp.filter_genes(mod_data, min_cells=data_info.min_cells)
-
-    #         kept_genes[mod_key] = mod_data.var_names.tolist()
-
-    #         # Process layers with a unified loop and simplified conditions
-    #         layers_to_process = self._get_layers_for_modality(mod_key, mod_data)
-    #         for layer in layers_to_process:
-    #             if layer == "X":
-    #                 if data_info.normalize_counts:
-    #                     sc.pp.normalize_total(mod_data)
-    #             else:
-    #                 # Create a temporary view to process a specific layer
-    #                 temp_view = mod_data.copy()
-    #                 temp_view.X = mod_data.layers[layer].copy()
-    #                 if data_info.normalize_counts:
-    #                     sc.pp.normalize_total(temp_view)
-    #                 mod_data.layers[layer] = temp_view.X.copy()
-
-    #         mudata.mod[mod_key] = mod_data
-    #     mudata.update_var()
-    #     return mudata, kept_genes
-
     def _apply_general_filtering(
         self, df: pd.DataFrame, data_info: DataInfo, gene_list: Optional[List]
     ) -> Tuple[pd.DataFrame, List]:
-        data_processor = DataFilter(data_info=data_info)
+        data_processor = DataFilter(data_info=data_info, config=self.config)
         return data_processor.filter(df=df, genes_to_keep=gene_list)
 
     def _apply_scaling(
         self, df: pd.DataFrame, data_info: DataInfo, scaler: Any
     ) -> Tuple[pd.DataFrame, Any]:
-        data_processor = DataFilter(data_info=data_info)
+        data_processor = DataFilter(data_info=data_info, config=self.config)
         if scaler is None:
             scaler = data_processor.fit_scaler(df=df)
         scaled_df = data_processor.scale(df=df, scaler=scaler)
@@ -427,99 +377,6 @@ class SingleCellFilter:
             obsm=original_adata.obsm.copy(),
             varm=original_adata.varm.copy(),
         )
-
-    # def general_postsplit_processing(
-    #     self,
-    #     mudata: MuData,
-    #     gene_map: Optional[Dict[str, List]],
-    #     scaler_map: Optional[Dict[str, Dict[str, Any]]] = None,
-    # ) -> Tuple[MuData, Dict[str, List], Dict[str, Dict[str, Any]]]:
-    #     """
-    #     Process the single-cell data by preprocessing, filtering, and scaling.
-    #     Returns
-    #     -------
-    #     mudata.MuData
-    #         Processed MuData object with filtered and scaled values, and synchronized metadata
-    #     """
-    #     # At the beginning of the general_postsplit_processing method:
-    #     feature_distribution = self.distribute_features_across_modalities(
-    #         mudata, self.total_features
-    #     )
-    #     out_gene_map: Dict[str, List] = {}
-    #     out_scaler_map: Dict[str, Dict[str, Any]] = {
-    #         mod_key: {} for mod_key in mudata.mod.keys()
-    #     }  # Initialize scaler map for each modality
-
-    #     for mod_key, mod_data in mudata.mod.items():
-    #         data_info = self._get_data_info_for_modality(mod_key)
-    #         data_info.k_filter = feature_distribution[mod_key]
-
-    #         gene_list = gene_map.get(mod_key) if gene_map else None
-
-    #         if data_info is None:
-    #             raise ValueError(f"No data info found for modality {mod_key}")
-
-    #         layers_to_process = self._get_layers_for_modality(mod_key, mod_data)
-    #         df = self._to_dataframe(mod_data, layer=None)  # Get DataFrame for .X
-    #         print(f"df in general_postsplit_processing: {df.shape}")
-    #         filtered_df, gene_list = self._apply_general_filtering(
-    #             df=df, gene_list=gene_list, data_info=data_info
-    #         )
-    #         print(f"filtered_df in general_postsplit_processing: {filtered_df.shape}")
-    #         out_gene_map[mod_key] = gene_list
-
-    #         if scaler_map is not None:
-    #             scaler = scaler_map[mod_key].get("X")
-    #         else:
-    #             scaler = None
-    #         scaled_df, scaler = self._apply_scaling(
-    #             df=filtered_df, data_info=data_info, scaler=scaler
-    #         )
-    #         out_scaler_map[mod_key]["X"] = scaler
-
-    #         updated_mod_data = self._from_dataframe(
-    #             scaled_df, mod_data, layer=None
-    #         )  # Update .X
-    #         mudata.mod[mod_key] = updated_mod_data
-    #         mudata.mod[mod_key].var_names = list(filtered_df.columns)
-
-    #         for layer in layers_to_process:
-    #             if layer == "X":
-    #                 continue  # X already processed
-
-    #             if layer not in mod_data.layers:
-    #                 raise ValueError(
-    #                     f"Layer '{layer}' not found in modality '{mod_key}'."
-    #                 )
-
-    #             current_mod_data = mudata.mod[mod_key].copy()
-    #             temp_view = current_mod_data.copy()
-    #             temp_view.X = current_mod_data.layers[layer].copy()
-    #             df = self._to_dataframe(mod_data=temp_view, layer=None)
-    #             filtered_df, _ = self._apply_general_filtering(
-    #                 df=df,
-    #                 gene_list=gene_list,  # Use the same gene_list as for .X
-    #                 data_info=data_info,
-    #             )  # dont update gene_map here, because we havae the same genes as in X
-
-    #             if scaler_map is not None:
-    #                 scaler = scaler_map[mod_key].get(layer)
-    #             else:
-    #                 scaler = None
-    #             scaled_df, scaler = self._apply_scaling(
-    #                 df=filtered_df, data_info=data_info, scaler=scaler
-    #             )
-    #             out_scaler_map[mod_key][layer] = scaler
-    #             scaled_view = self._from_dataframe(
-    #                 df=scaled_df, mod_data=temp_view, layer=None
-    #             )
-    #             mod = mudata.mod[mod_key]
-    #             mod.layers[layer] = scaled_view.X.copy()
-    #             mod.var_names = filtered_df.columns.tolist()
-
-    #         mudata.update_var()
-
-    #     return mudata, out_gene_map, out_scaler_map
 
     def distribute_features_across_modalities(
         self, mudata: MuData, total_features: Optional[int]

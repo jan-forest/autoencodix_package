@@ -3,6 +3,7 @@ from typing import Any, Dict, Literal, Optional, List, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+
 class SchemaPrinterMixin:
     """Mixin class that adds schema printing functionality to Pydantic models."""
 
@@ -17,7 +18,7 @@ class SchemaPrinterMixin:
             Dictionary containing field name, type, default value, and description if available
         """
         fields_info = {}
-        for name, field in cls.model_fields.items(): # type: ignore
+        for name, field in cls.model_fields.items():  # type: ignore
             fields_info[name] = {
                 "type": str(field.annotation),
                 "default": field.default,
@@ -72,8 +73,10 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         default="NUMERIC"
     )
     scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE"] = Field(
-        default="STANDARD"
-    )
+        default="NONE",
+        description="Setting the scaling here in DataInfo overrides the globally set scaling method for the specific data modality",
+    )  # can also be set globally, for all data modalities.
+
     filtering: Literal["VAR", "MAD", "CORR", "VARCORR", "NOFILT", "NONZEROVAR"] = Field(
         default="VAR"
     )
@@ -182,6 +185,11 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     k_filter: Union[int, None] = Field(
         default=20, description="Number of features to keep"
     )
+    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE"] = Field(
+        default="STANDARD",
+        description="Setting the scaling here for all data modalities, can per overruled by setting scaling at data modality level per data modality")
+
+
     skip_preprocessing: bool = Field(
         default=False, description="If set don't scale, filter or clean the input data."
     )
@@ -228,16 +236,23 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=1, ge=0, description="Beta weighting factor for VAE loss"
     )
     beta_mi: float = Field(
-        default=1, ge=0, description="Beta weighting factor for mutual information term in disentangled VAE loss"
+        default=1,
+        ge=0,
+        description="Beta weighting factor for mutual information term in disentangled VAE loss",
     )
     beta_tc: float = Field(
-        default=1, ge=0, description="Beta weighting factor for total correlation term in disentangled VAE loss"
+        default=1,
+        ge=0,
+        description="Beta weighting factor for total correlation term in disentangled VAE loss",
     )
     beta_dimKL: float = Field(
-        default=1, ge=0, description="Beta weighting factor for dimension-wise KL in disentangled VAE loss"
+        default=1,
+        ge=0,
+        description="Beta weighting factor for dimension-wise KL in disentangled VAE loss",
     )
     use_mss: bool = Field(
-        default=True, description="Using minibatch stratified sampling for disentangled VAE loss calculation (faster estimation)"
+        default=True,
+        description="Using minibatch stratified sampling for disentangled VAE loss calculation (faster estimation)",
     )
     gamma: float = Field(
         default=10.0,
@@ -331,6 +346,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=False, description="Whether to ensure reproducibility"
     )
     global_seed: int = Field(default=1, ge=0, description="Global random seed")
+
     ##### VALIDATION ##### -----------------------------------------------------
     ##### ----------------- -----------------------------------------------------
     @field_validator("data_config")
@@ -528,7 +544,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         return fields_info
 
     @classmethod
-    def print_schema(cls, filter_params: Optional[None] = None) -> None: # type: ignore
+    def print_schema(cls, filter_params: Optional[None] = None) -> None:  # type: ignore
         """
         Print a human-readable schema of all config parameters.
         """
@@ -545,5 +561,5 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
                 continue
             print(f"\n{name}:")
             print(f"  Type: {info['type']}")
-            print(f"  Default: {info['default']}") # type: ignore
+            print(f"  Default: {info['default']}")  # type: ignore
             print(f"  Description: {info['description']}")

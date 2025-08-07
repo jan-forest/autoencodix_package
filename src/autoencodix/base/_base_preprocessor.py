@@ -557,6 +557,7 @@ class BasePreprocessor(abc.ABC):
 
                 data_processor = DataFilter(
                     data_info=self.config.data_config.data_info[k],
+                    config=self.config,
                     ontologies=self._ontologies,
                 )
                 filtered_df, genes_to_keep = data_processor.filter(df=v)
@@ -597,6 +598,7 @@ class BasePreprocessor(abc.ABC):
                     continue
                 data_processor = DataFilter(
                     data_info=self.config.data_config.data_info[k],
+                    config=self.config,
                     ontologies=self._ontologies,
                 )
                 filtered_df, _ = data_processor.filter(
@@ -921,7 +923,10 @@ class BasePreprocessor(abc.ABC):
         Returns:
             A list of processed image data objects with normalized image data.
         """
+        
         scaling_method = self.config.data_config.data_info[info_key].scaling
+        if scaling_method == "NONE":
+            scaling_method = self.config.scaling
         processed_images = []
         normalizer = ImageNormalizer()  # Instance created once here
 

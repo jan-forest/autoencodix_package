@@ -20,7 +20,7 @@ from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.utils._result import Result
-from autoencodix.utils._utils import Loader, Saver, config_method
+from autoencodix.utils._utils import Loader, Saver
 from autoencodix.utils.default_config import DataCase, DataInfo, DefaultConfig
 from autoencodix.visualize.visualize import Visualizer
 
@@ -393,7 +393,6 @@ class BasePipeline(abc.ABC):
                     "provided."
                 )
 
-    @config_method(valid_params={"config"})
     def preprocess(self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs):
         """Filters, normalizes and prepares data for model training.
 
@@ -420,23 +419,6 @@ class BasePipeline(abc.ABC):
             self._datasets = self.preprocessed_data
             self.result.datasets = self.preprocessed_data
 
-    @config_method(
-        valid_params={
-            "config",
-            "batch_size",
-            "epochs",
-            "learning_rate",
-            "n_workers",
-            "device",
-            "n_gpus",
-            "gpu_strategy",
-            "weight_decay",
-            "reproducible",
-            "global_seed",
-            "reconstruction_loss",
-            "checkpoint_interval",
-        }
-    )
     def fit(self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs):
         """Trains the model on preprocessed data.
 
@@ -467,7 +449,6 @@ class BasePipeline(abc.ABC):
         trainer_result = self._trainer.train()
         self.result.update(other=trainer_result)
 
-    @config_method(valid_params={"config"})
     def predict(
         self,
         data: Optional[Union[DataPackage, DatasetContainer, ad.AnnData, MuData]] = None,
@@ -811,7 +792,6 @@ class BasePipeline(abc.ABC):
 
         return self._trainer.decode(x=latent_tensor)
 
-    # @config_method(valid_params={"config"})
     def evaluate(
         self,
         ml_model_class: ClassifierMixin = linear_model.LogisticRegression(),  # Default is sklearn LogisticRegression
@@ -864,7 +844,6 @@ class BasePipeline(abc.ABC):
     #     if config is None:
     #         config = self.config
 
-    @config_method(valid_params={"config"})
     def visualize(self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs):
         """Creates visualizations of model results and performance.
 

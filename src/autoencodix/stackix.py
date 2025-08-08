@@ -19,11 +19,10 @@ from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._losses import VarixLoss
-from autoencodix.visualize.visualize import Visualizer
 from autoencodix.data._stackix_preprocessor import StackixPreprocessor
 from autoencodix.data._stackix_dataset import StackixDataset
 from autoencodix.trainers._stackix_trainer import StackixTrainer
-
+from autoencodix.visualize._general_visualizer import GeneralVisualizer
 
 class Stackix(BasePipeline):
     """
@@ -53,7 +52,7 @@ class Stackix(BasePipeline):
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = StackixPreprocessor,
-        visualizer: Optional[BaseVisualizer] = None,
+        visualizer: Type[BaseVisualizer] = GeneralVisualizer,
         evaluator: Optional[Evaluator] = None,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,

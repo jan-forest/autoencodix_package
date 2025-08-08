@@ -20,8 +20,7 @@ from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._losses import VanillixLoss
-from autoencodix.visualize.visualize import Visualizer
-
+from autoencodix.visualize._general_visualizer import GeneralVisualizer
 
 class Vanillix(BasePipeline):
     """
@@ -58,7 +57,7 @@ class Vanillix(BasePipeline):
         model_type: Type[BaseAutoencoder] = VanillixArchitecture,
         loss_type: Type[BaseLoss] = VanillixLoss,
         preprocessor_type: Type[BasePreprocessor] = GeneralPreprocessor,
-        visualizer: Optional[BaseVisualizer] = None,
+        visualizer: Type[BaseVisualizer] = GeneralVisualizer,
         evaluator: Optional[Evaluator] = None,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,

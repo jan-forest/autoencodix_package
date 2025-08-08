@@ -22,8 +22,7 @@ from autoencodix.trainers._ontix_trainer import OntixTrainer
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._losses import VarixLoss
-from autoencodix.visualize.visualize import Visualizer
-
+from autoencodix.visualize._general_visualizer import GeneralVisualizer
 
 ## Copy from Varix with ontology addition
 class Ontix(BasePipeline):
@@ -74,7 +73,7 @@ class Ontix(BasePipeline):
         model_type: Type[BaseAutoencoder] = OntixArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = GeneralPreprocessor,
-        visualizer: Optional[BaseVisualizer] = None,
+        visualizer: Type[BaseVisualizer] = GeneralVisualizer,
         evaluator: Optional[Evaluator] = None,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,

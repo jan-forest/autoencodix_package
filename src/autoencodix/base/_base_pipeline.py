@@ -22,7 +22,6 @@ from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.utils._result import Result
 from autoencodix.utils._utils import Loader, Saver, config_method
 from autoencodix.utils.default_config import DataCase, DataInfo, DefaultConfig
-from autoencodix.visualize.visualize import Visualizer
 
 from ._base_autoencoder import BaseAutoencoder
 from ._base_dataset import BaseDataset
@@ -137,7 +136,7 @@ class BasePipeline(abc.ABC):
             config=self.config, ontologies=self._ontologies
         )
 
-        self._visualizer = visualizer if visualizer is not None else Visualizer()
+        self._visualizer = visualizer() if visualizer is not None else BaseVisualizer()
         self._evaluator = evaluator if evaluator is not None else Evaluator()
         self.result = result if result is not None else Result()
         self._dataset_type = dataset_type

@@ -1,4 +1,3 @@
-import os
 from dataclasses import field
 from typing import Any, Dict, Optional, Union
 import warnings
@@ -13,11 +12,11 @@ from umap import UMAP  # type: ignore
 
 from autoencodix.base._base_visualizer import BaseVisualizer
 from autoencodix.utils._result import Result
-from autoencodix.utils._utils import nested_dict, nested_to_tuple, show_figure
+from autoencodix.utils._utils import nested_dict, show_figure
 from autoencodix.utils.default_config import DefaultConfig
 
 
-class Visualizer(BaseVisualizer):
+class GeneralVisualizer(BaseVisualizer):
     plots: Dict[str, Any] = field(
         default_factory=nested_dict
     )  ## Nested dictionary of plots as figure handles
@@ -47,100 +46,6 @@ class Visualizer(BaseVisualizer):
         return result
 
     ## Plotting methods ##
-
-    def save_plots(
-        self, path: str, which: Union[str, list] = "all", format: str = "png"
-    ) -> None:
-        """
-        Save specified plots to the given path in the specified format.
-
-        Parameters:
-        path (str): The directory path where the plots will be saved.
-        which (list or str): A list of plot names to save or a string specifying which plots to save.
-                             If 'all', all plots in the plots dictionary will be saved.
-                             If a single plot name is provided as a string, only that plot will be saved.
-        format (str): The file format in which to save the plots (e.g., 'png', 'jpg').
-
-        Returns:
-        None
-
-        Raises:
-        ValueError: If the 'which' parameter is not a list or a string.
-        """
-        if not isinstance(which, list):
-            ## Case when which is a string
-            if which == "all":
-                ## Case when all plots are to be saved
-                if len(self.plots) == 0:
-                    print("No plots found in the plots dictionary")
-                    print("You need to run  visualize() method first")
-                else:
-                    for item in nested_to_tuple(self.plots):
-                        fig = item[-1]  ## Figure is in last element of the tuple
-                        filename = "_".join(str(x) for x in item[0:-1])
-                        fullpath = os.path.join(path, filename)
-                        fig.savefig(f"{fullpath}.{format}")
-            else:
-                ## Case when a single plot is provided as string
-                if which not in self.plots.keys():
-                    print(f"Plot {which} not found in the plots dictionary")
-                    print(f"All available plots are: {list(self.plots.keys())}")
-                else:
-                    for item in nested_to_tuple(
-                        self.plots[which]
-                    ):  # Plot all epochs and splits of type which
-                        fig = item[-1]  ## Figure is in last element of the tuple
-                        filename = which + "_" + "_".join(str(x) for x in item[0:-1])
-                        fullpath = os.path.join(path, filename)
-                        fig.savefig(f"{fullpath}.{format}")
-        else:
-            ## Case when which is a list of plot specified as strings
-            for key in which:
-                if key not in self.plots.keys():
-                    print(f"Plot {key} not found in the plots dictionary")
-                    print(f"All available plots are: {list(self.plots.keys())}")
-                    continue
-                else:
-                    for item in nested_to_tuple(
-                        self.plots[key]
-                    ):  # Plot all epochs and splits of type key
-                        fig = item[-1]  ## Figure is in last element of the tuple
-                        filename = key + "_" + "_".join(str(x) for x in item[0:-1])
-                        fullpath = os.path.join(path, filename)
-                        fig.savefig(f"{fullpath}.{format}")
-
-    def show_loss(self, plot_type: str = "absolute") -> None:
-        """
-        Display the loss plot.
-        Parameters:
-        plot_type (str): The type of loss plot to display.
-                    Options are "absolute" for the absolute loss plot and
-                    "relative" for the relative loss plot.
-                    Defaults to "absolute".
-        Returns:
-        None
-        """
-        if plot_type == "absolute":
-            if "loss_absolute" not in self.plots.keys():
-                print("Absolute loss plot not found in the plots dictionary")
-                print("You need to run visualize() method first")
-            else:
-                fig = self.plots["loss_absolute"]
-                show_figure(fig)
-                plt.show()
-        if plot_type == "relative":
-            if "loss_relative" not in self.plots.keys():
-                print("Relative loss plot not found in the plots dictionary")
-                print("You need to run visualize() method first")
-            else:
-                fig = self.plots["loss_relative"]
-                show_figure(fig)
-                plt.show()
-
-        if plot_type not in ["absolute", "relative"]:
-            print(
-                "Type of loss plot not recognized. Please use 'absolute' or 'relative'"
-            )
 
     def show_latent_space(
         self,
@@ -352,177 +257,8 @@ class Visualizer(BaseVisualizer):
             plt.show()
 
 
-    # def plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:
-    #     """
-    #     Visualization of model weights in encoder and decoder layers as heatmap for each layer as subplot.
-    #     ARGS:
-    #         model (torch.nn.Module): PyTorch model instance.
-    #         filepath (str): Path specifying save name and location.
-    #     RETURNS:
-    #         fig (matplotlib.figure): Figure handle (of last plot)
-    #     """
-    #     all_weights = []
-    #     names = []
-    #     if hasattr(model, "ontologies"):
-    #         if model.ontologies is not None:
-    #             # If model is Ontix
-    #             # Get node names from ontologies
-    #             node_names = list()
-    #             for ontology in model.ontologies:
-    #                 node_names.append(ontology.keys())
-
-    #             node_names.append(model.feature_order)  # Add feature order as last layer
-
-    #     for name, param in model.named_parameters():
-    #         if "weight" in name and len(param.shape) == 2:
-    #             if "var" not in name:  ## For VAE plot only mu weights
-    #                 all_weights.append(param.detach().cpu().numpy())
-    #                 names.append(name[:-7])
-
-    #     layers = int(len(all_weights) / 2)
-    #     fig, axes = plt.subplots(2, layers, sharex=False, figsize=(20, 10))
-
-    #     for layer in range(layers):
-    #         ## Encoder Layer
-    #         if layers > 1:
-    #             sns.heatmap(
-    #                 all_weights[layer],
-    #                 cmap=sns.color_palette("Spectral", as_cmap=True),
-    #                 ax=axes[0, layer],
-    #             ).set(title=names[layer])
-    #             ## Decoder Layer
-    #             sns.heatmap(
-    #                 all_weights[layers + layer],
-    #                 cmap=sns.color_palette("Spectral", as_cmap=True),
-    #                 ax=axes[1, layer],
-    #             ).set(title=names[layers + layer])
-    #             axes[1, layer].set_xlabel("In Node", size=12)
-    #             if model.ontologies is not None:
-    #                 axes[1, layer].set_xticks(
-    #                     ticks=range(len(node_names[layer])),
-    #                     labels=node_names[layer],
-    #                     rotation=90,
-    #                     fontsize=8,
-    #                 )
-    #                 axes[1, layer].set_yticks(
-    #                     ticks=range(len(node_names[layer + 1])),
-    #                     labels=node_names[layer + 1],
-    #                     rotation=0,
-    #                     fontsize=8,
-    #                 )
-    #         else:
-    #             sns.heatmap(
-    #                 all_weights[layer],
-    #                 cmap=sns.color_palette("Spectral", as_cmap=True),
-    #                 ax=axes[layer],
-    #             ).set(title=names[layer])
-    #             ## Decoder Layer
-    #             sns.heatmap(
-    #                 all_weights[layer + 2],
-    #                 cmap=sns.color_palette("Spectral", as_cmap=True),
-    #                 ax=axes[layer + 1],
-    #             ).set(title=names[layer + 2])
-    #             axes[1].set_xlabel("In Node", size=12)
-
-    #     if layers > 1:
-    #         axes[1, 0].set_ylabel("Out Node", size=12)
-    #         axes[0, 0].set_ylabel("Out Node", size=12)
-    #     else:
-    #         axes[1].set_ylabel("Out Node", size=12)
-    #         axes[0].set_ylabel("Out Node", size=12)
-
-    #     ## Add title
-    #     fig.suptitle("Model Weights", size=20)
-    #     plt.close()
-    #     return fig
-    
-    ## NEW VERSION
+	## TODO move to BaseVisualizer? need to iterate then over each VAE
     @staticmethod
-    # def plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:
-    #     """
-    #     Visualization of model weights in encoder and decoder layers as heatmap for each layer as subplot.
-    #     ARGS:
-    #         model (torch.nn.Module): PyTorch model instance.
-    #         filepath (str): Path specifying save name and location.
-    #     RETURNS:
-    #         fig (matplotlib.figure): Figure handle (of last plot)
-    #     """
-    #     all_weights = []
-    #     names = []
-    #     if hasattr(model, "ontologies"):
-    #         if model.ontologies is not None:
-    #             # If model is Ontix
-    #             # Get node names from ontologies
-    #             node_names = list()
-    #             for ontology in model.ontologies:
-    #                 node_names.append(ontology.keys())
-
-    #             node_names.append(model.feature_order)  # Add feature order as last layer
-
-    #     for name, param in model.named_parameters():
-    #         if "weight" in name and len(param.shape) == 2:
-    #             if "var" not in name:  ## For VAE plot only mu weights
-    #                 all_weights.append(param.detach().cpu().numpy())
-    #                 names.append(name[:-7])
-
-    #     layers = int(len(all_weights) / 2)
-    #     fig, axes = plt.subplots(2, layers, sharex=False, figsize=(20, 10))
-
-    #     for layer in range(layers):
-    #         ## Encoder Layer
-    #         if layers > 1:
-    #             sns.heatmap(
-    #                 all_weights[layer],
-    #                 cmap=sns.color_palette("Spectral", as_cmap=True),
-    #                 ax=axes[0, layer],
-    #             ).set(title=names[layer])
-    #             ## Decoder Layer
-    #             sns.heatmap(
-    #                 all_weights[layers + layer],
-    #                 cmap=sns.color_palette("Spectral", as_cmap=True),
-    #                 ax=axes[1, layer],
-    #             ).set(title=names[layers + layer])
-    #             axes[1, layer].set_xlabel("In Node", size=12)
-    #             if model.ontologies is not None:
-    #                 axes[1, layer].set_xticks(
-    #                     ticks=range(len(node_names[layer])),
-    #                     labels=node_names[layer],
-    #                     rotation=90,
-    #                     fontsize=8,
-    #                 )
-    #                 axes[1, layer].set_yticks(
-    #                     ticks=range(len(node_names[layer + 1])),
-    #                     labels=node_names[layer + 1],
-    #                     rotation=0,
-    #                     fontsize=8,
-    #                 )
-    #         else:
-    #             sns.heatmap(
-    #                 all_weights[layer],
-    #                 cmap=sns.color_palette("Spectral", as_cmap=True),
-    #                 ax=axes[layer],
-    #             ).set(title=names[layer])
-    #             ## Decoder Layer
-    #             sns.heatmap(
-    #                 all_weights[layer + 2],
-    #                 cmap=sns.color_palette("Spectral", as_cmap=True),
-    #                 ax=axes[layer + 1],
-    #             ).set(title=names[layer + 2])
-    #             axes[1].set_xlabel("In Node", size=12)
-
-    #     if layers > 1:
-    #         axes[1, 0].set_ylabel("Out Node", size=12)
-    #         axes[0, 0].set_ylabel("Out Node", size=12)
-    #     else:
-    #         axes[1].set_ylabel("Out Node", size=12)
-    #         axes[0].set_ylabel("Out Node", size=12)
-
-    #     ## Add title
-    #     fig.suptitle("Model Weights", size=20)
-    #     plt.close()
-    #     return fig
-
-    ## NEW VERSION
     def plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:
         """
         Visualization of model weights in encoder and decoder layers as heatmap for each layer as subplot.
@@ -777,6 +513,7 @@ class Visualizer(BaseVisualizer):
         plt.close()
         return fig
 
+    ## TODO Might be moved to BaseVisualizer if Ridgeline per Modality is used as in notebook
     @staticmethod
     def plot_latent_ridge(
         lat_space: pd.DataFrame,
@@ -976,74 +713,7 @@ class Visualizer(BaseVisualizer):
 
         return fig
 
-    @staticmethod
-    def make_loss_format(result: Result, config: DefaultConfig) -> pd.DataFrame:
-        loss_df_melt = pd.DataFrame()
-        for term in result.sub_losses.keys():
-            # Get the loss values and ensure it's a dictionary
-            loss_values = result.sub_losses.get(key=term).get()
-
-            # Add explicit type checking/conversion
-            if not isinstance(loss_values, dict):
-                # If it's not a dict, try to convert it or handle appropriately
-                if hasattr(loss_values, "to_dict"):
-                    loss_values = loss_values.to_dict()
-                else:
-                    # For non-convertible types, you might need a custom solution
-                    # For numpy arrays, you could do something like:
-                    if hasattr(loss_values, "shape"):
-                        # For numpy arrays, create a dict with indices as keys
-                        loss_values = {i: val for i, val in enumerate(loss_values)}
-
-            # Now create the DataFrame
-            loss_df = pd.DataFrame.from_dict(loss_values, orient="index")  # type: ignore
-
-            # Rest of your code remains the same
-            if term == "var_loss":
-                loss_df = loss_df * config.beta
-            loss_df["Epoch"] = loss_df.index + 1
-            loss_df["Loss Term"] = term
-
-            loss_df_melt = pd.concat(
-                [
-                    loss_df_melt,
-                    loss_df.melt(
-                        id_vars=["Epoch", "Loss Term"],
-                        var_name="Split",
-                        value_name="Loss Value",
-                    ),
-                ],
-                axis=0,
-            ).reset_index(drop=True)
-
-        # Similar handling for the total losses
-        loss_values = result.losses.get()
-        if not isinstance(loss_values, dict):
-            if hasattr(loss_values, "to_dict"):
-                loss_values = loss_values.to_dict()
-            else:
-                if hasattr(loss_values, "shape"):
-                    loss_values = {i: val for i, val in enumerate(loss_values)}
-
-        loss_df = pd.DataFrame.from_dict(loss_values, orient="index")  # type: ignore
-        loss_df["Epoch"] = loss_df.index + 1
-        loss_df["Loss Term"] = "total_loss"
-
-        loss_df_melt = pd.concat(
-            [
-                loss_df_melt,
-                loss_df.melt(
-                    id_vars=["Epoch", "Loss Term"],
-                    var_name="Split",
-                    value_name="Loss Value",
-                ),
-            ],
-            axis=0,
-        ).reset_index(drop=True)
-
-        loss_df_melt["Loss Value"] = loss_df_melt["Loss Value"].astype(float)
-        return loss_df_melt
-    
+	   
     def plot_evaluation(
             self,
             result: Result,

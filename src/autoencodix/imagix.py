@@ -21,6 +21,7 @@ from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
 from autoencodix.utils._losses import VarixLoss
+from autoencodix.visualize._imagix_visualizer import ImagixVisualizer
 
 
 class Imagix(BasePipeline):
@@ -67,7 +68,7 @@ class Imagix(BasePipeline):
         model_type: Type[BaseAutoencoder] = ImageVAEArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = ImagePreprocessor,
-        visualizer: Optional[BaseVisualizer] = None,
+        visualizer: Optional[BaseVisualizer] = ImagixVisualizer,
         evaluator: Optional[Evaluator] = None,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,

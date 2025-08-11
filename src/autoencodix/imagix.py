@@ -19,7 +19,7 @@ from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.modeling._imagevae_architecture import ImageVAEArchitecture
 from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._losses import VarixLoss
 
 

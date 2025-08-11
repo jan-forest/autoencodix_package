@@ -4,7 +4,7 @@ from typing import Dict, Optional
 import numpy as np
 from sklearn.model_selection import train_test_split  # type: ignore
 
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 # internal check done

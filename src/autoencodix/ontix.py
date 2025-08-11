@@ -20,7 +20,9 @@ from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.modeling._ontix_architecture import OntixArchitecture
 from autoencodix.trainers._ontix_trainer import OntixTrainer
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
+
+from autoencodix.configs.ontix_config import OntixConfig
 from autoencodix.utils._losses import VarixLoss
 from autoencodix.visualize.visualize import Visualizer
 
@@ -117,7 +119,7 @@ class Ontix(BasePipeline):
         config : Optional[DefaultConfig]
             Configuration for all pipeline components
         """
-
+        self._default_config = OntixConfig()
         if isinstance(ontologies, tuple):
             self.ontologies = ontologies
         elif isinstance(ontologies, list):
@@ -149,6 +151,10 @@ class Ontix(BasePipeline):
             custom_split=custom_splits,
             ontologies=self.ontologies,
         )
+        if not isinstance(self.config, OntixConfig):
+            raise TypeError(
+                f"For Ontix Pipeline, we only allow OntixConfig as type for config, got {type(self.config)}"
+            )
 
     def sample_latent_space(self, split: str = "test", epoch: int = -1) -> torch.Tensor:
         """

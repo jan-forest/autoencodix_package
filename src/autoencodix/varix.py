@@ -19,7 +19,8 @@ from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
+from autoencodix.configs.varix_config import VarixConfig
 from autoencodix.utils._losses import VarixLoss
 from autoencodix.visualize.visualize import Visualizer
 
@@ -106,7 +107,7 @@ class Varix(BasePipeline):
         config : Optional[DefaultConfig]
             Configuration for all pipeline components
         """
-
+        self._default_config = VarixConfig()
         super().__init__(
             data=data,
             dataset_type=dataset_type,

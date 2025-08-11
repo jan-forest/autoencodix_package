@@ -17,7 +17,9 @@ from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
+
+from autoencodix.configs.stackix_config import StackixConfig
 from autoencodix.utils._losses import VarixLoss
 from autoencodix.visualize.visualize import Visualizer
 from autoencodix.data._stackix_preprocessor import StackixPreprocessor
@@ -92,6 +94,7 @@ class Stackix(BasePipeline):
         config : Optional[DefaultConfig]
             Configuration object
         """
+        self._default_config = StackixConfig()
         super().__init__(
             data=data,
             dataset_type=dataset_type

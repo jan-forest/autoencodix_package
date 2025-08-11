@@ -13,7 +13,7 @@ import dill as pickle  # type: ignore
 import torch
 from matplotlib import pyplot as plt
 
-from .default_config import DefaultConfig
+from ..configs.default_config import DefaultConfig
 
 # only for type hints, to avoid circual import
 class BasePipeline:

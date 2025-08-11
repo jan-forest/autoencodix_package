@@ -21,7 +21,7 @@ from autoencodix.data.datapackage import DataPackage
 from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.utils._result import Result
 from autoencodix.utils._utils import Loader, Saver
-from autoencodix.utils.default_config import DataCase, DataInfo, DefaultConfig
+from autoencodix.configs.default_config import DataCase, DataInfo, DefaultConfig
 from autoencodix.visualize.visualize import Visualizer
 
 from ._base_autoencoder import BaseAutoencoder
@@ -101,6 +101,20 @@ class BasePipeline(abc.ABC):
         Raises:
             TypeError: If inputs have incorrect types.
         """
+        if not hasattr(self, "_default_config"):
+            raise ValueError(
+                """
+                            The _default_config attribute has not been specified in your pipeline class.
+
+                            Example:
+                            self._default_config = XModalixConfig()
+
+                            This error typically occurs when a new architecture is added without setting the
+                            _default_config in its corresponding pipeline class.
+
+                            For more details, please refer to the 'how to add a new architecture' section in our documentation.
+                            """
+            )
 
         self._validate_config(config=config)
         self._validate_user_input(data=data)
@@ -157,11 +171,15 @@ class BasePipeline(abc.ABC):
             TypeError: If config is not of type DefaultConfig
         """
         if config is None:
-            self.config = DefaultConfig()
+            self.config = self._default_config  # type: ignore
         else:
             if not isinstance(config, DefaultConfig):
                 raise TypeError(
                     f"Expected config type to be DefaultConfig, got {type(config)}."
+                )
+            if not isinstance(config, type(self._default_config)):  # type: ignore
+                warnings.warn(
+                    f"Your config is of type: {type(config)}, for this pipeline the default params of: {type(self._default_config)} work best"
                 )
             self.config = config
 

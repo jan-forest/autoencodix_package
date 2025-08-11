@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from typing import Tuple, Optional
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._model_output import ModelOutput
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 

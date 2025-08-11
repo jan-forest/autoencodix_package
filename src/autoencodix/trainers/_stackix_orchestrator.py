@@ -14,7 +14,7 @@ from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data._stackix_dataset import StackixDataset
 from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class StackixOrchestrator:

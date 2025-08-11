@@ -7,7 +7,7 @@ import scanpy as sc  # type: ignore
 from anndata import AnnData  # type: ignore
 
 from autoencodix.data._filter import DataFilter
-from autoencodix.utils.default_config import DataInfo, DefaultConfig
+from autoencodix.configs.default_config import DataInfo, DefaultConfig
 
 if TYPE_CHECKING:
     import mudata as md  # type: ignore

@@ -5,7 +5,7 @@ from typing import List, Literal, Optional, Union, Dict, Tuple
 import cv2
 import numpy as np
 import pandas as pd
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.data._imgdataclass import ImgData
 
 

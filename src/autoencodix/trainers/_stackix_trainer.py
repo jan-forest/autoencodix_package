@@ -13,7 +13,7 @@ from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.trainers._stackix_orchestrator import StackixOrchestrator
 from autoencodix.utils._model_output import ModelOutput
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class StackixTrainer(GeneralTrainer):

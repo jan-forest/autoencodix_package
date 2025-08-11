@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 import torch
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.data._numeric_dataset import NumericDataset
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class StackixDataset(NumericDataset):

@@ -14,7 +14,7 @@ from umap import UMAP  # type: ignore
 from autoencodix.base._base_visualizer import BaseVisualizer
 from autoencodix.utils._result import Result
 from autoencodix.utils._utils import nested_dict, nested_to_tuple, show_figure
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class Visualizer(BaseVisualizer):

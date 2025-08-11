@@ -2,7 +2,7 @@ import torch
 import pandas as pd
 from typing import List, Dict, Any, Union, Tuple
 from autoencodix.base._base_dataset import BaseDataset
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 import numpy as np
 

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import pytest
 
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._losses import VarixLoss
 from autoencodix.utils._model_output import ModelOutput
 

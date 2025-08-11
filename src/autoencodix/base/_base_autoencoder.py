@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 from autoencodix.utils._model_output import ModelOutput
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class BaseAutoencoder(ABC, nn.Module):

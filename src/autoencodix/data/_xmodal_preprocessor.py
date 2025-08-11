@@ -11,7 +11,7 @@ from autoencodix.data._imgdataclass import ImgData
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data.general_preprocessor import GeneralPreprocessor
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.data._multimodal_dataset import MultiModalDataset
 
 

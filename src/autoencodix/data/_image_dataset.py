@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import pandas as pd
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.data._numeric_dataset import TensorAwareDataset
 from typing import List, Tuple
 from autoencodix.data._imgdataclass import ImgData

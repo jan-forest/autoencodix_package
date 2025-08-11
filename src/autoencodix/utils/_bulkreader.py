@@ -3,7 +3,7 @@ from typing import Dict, Set, Tuple, Optional, Union
 
 import pandas as pd
 
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class BulkDataReader:

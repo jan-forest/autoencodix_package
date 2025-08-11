@@ -13,7 +13,7 @@ from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DataCase, DefaultConfig
+from autoencodix.configs.default_config import DataCase, DefaultConfig
 
 
 class GeneralPreprocessor(BasePreprocessor):

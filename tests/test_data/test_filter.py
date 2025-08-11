@@ -9,7 +9,7 @@ from sklearn.preprocessing import (
     RobustScaler,
     MaxAbsScaler,
 )
-from autoencodix.utils.default_config import DataInfo, DefaultConfig
+from autoencodix.configs.default_config import DataInfo, DefaultConfig
 from autoencodix.data._filter import DataFilter, FilterMethod
 
 

@@ -18,7 +18,8 @@ from autoencodix.data._xmodal_preprocessor import XModalPreprocessor
 from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.trainers._xmodal_trainer import XModalTrainer
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
+from autoencodix.configs.xmodalix_config import XModalixConfig
 from autoencodix.utils._losses import XModalLoss
 from autoencodix.utils._utils import find_translation_keys
 
@@ -76,6 +77,7 @@ class XModalix(BasePipeline):
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
         config: Optional[DefaultConfig] = None,
     ) -> None:
+        self._default_config = XModalixConfig()
         super().__init__(
             data=data,
             dataset_type=dataset_type,

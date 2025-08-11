@@ -5,9 +5,9 @@ from sklearn.datasets import make_blobs  # type: ignore
 from sklearn.model_selection import train_test_split  # type: ignore
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._numeric_dataset import NumericDataset
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.data.datapackage import DataPackage
-from autoencodix.utils.default_config import DataCase
+from autoencodix.configs.default_config import DataCase
 import mudata
 import anndata
 

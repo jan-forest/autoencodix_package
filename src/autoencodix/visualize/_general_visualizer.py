@@ -29,17 +29,17 @@ class GeneralVisualizer(BaseVisualizer):
 
     def visualize(self, result: Result, config: DefaultConfig) -> Result:
         ## Make Model Weights plot
-        self.plots["ModelWeights"] = self.plot_model_weights(model=result.model)
+        self.plots["ModelWeights"] = self._plot_model_weights(model=result.model)
 
         ## Make long format of losses
-        loss_df_melt = self.make_loss_format(result=result, config=config)
+        loss_df_melt = self._make_loss_format(result=result, config=config)
 
         ## Make plot loss absolute
-        self.plots["loss_absolute"] = self.make_loss_plot(
+        self.plots["loss_absolute"] = self._make_loss_plot(
             df_plot=loss_df_melt, plot_type="absolute"
         )
         ## Make plot loss relative
-        self.plots["loss_relative"] = self.make_loss_plot(
+        self.plots["loss_relative"] = self._make_loss_plot(
             df_plot=loss_df_melt, plot_type="relative"
         )
 
@@ -178,6 +178,7 @@ class GeneralVisualizer(BaseVisualizer):
                 else:
                     df_latent = result.get_latent_df(epoch=epoch, split=split)
 
+            ## Label options
             if labels is None and param is None:
                 labels = ["all"] * df_latent.shape[0]
             
@@ -214,7 +215,7 @@ class GeneralVisualizer(BaseVisualizer):
                     else:
                         embedding = df_latent
 
-                    self.plots["2D-scatter"][epoch][split][p] = self.plot_2D(
+                    self.plots["2D-scatter"][epoch][split][p] = self._plot_2D(
                         embedding=embedding,
                         labels=labels,
                         param=p,
@@ -230,7 +231,7 @@ class GeneralVisualizer(BaseVisualizer):
                 if plot_type == "Ridgeline":
                     ## Make ridgeline plot
 
-                    self.plots["Ridgeline"][epoch][split][p] = self.plot_latent_ridge(
+                    self.plots["Ridgeline"][epoch][split][p] = self._plot_latent_ridge(
                         lat_space=df_latent, labels=labels, param=p
                     )
 
@@ -256,129 +257,56 @@ class GeneralVisualizer(BaseVisualizer):
             show_figure(fig)
             plt.show()
 
-
-	## TODO move to BaseVisualizer? need to iterate then over each VAE
-    @staticmethod
-    def plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:
+    def show_evaluation(
+        self,
+        param: str,
+        metric: str,
+        ml_alg: Optional[str] = None,
+    ) -> None:
         """
-        Visualization of model weights in encoder and decoder layers as heatmap for each layer as subplot.
-        Handles non-symmetrical autoencoder architectures.
-        Plots _mu layer for encoder as well.
-        Uses node_names for decoder layers if model has ontologies.
-        ARGS:
-            model (torch.nn.Module): PyTorch model instance.
-        RETURNS:
-            fig (matplotlib.figure): Figure handle (of last plot)
+        Displays the evaluation plot for a specific clinical parameter, metric, and optionally ML algorithm.
+        Parameters:
+        param (str): The clinical parameter to visualize.
+        metric (str): The metric to visualize.
+        ml_alg (str, optional): The ML algorithm to visualize. If None, plots all available algorithms.
+        Returns:
+        None
         """
-        all_weights = []
-        names = []
-        node_names = None
-        if hasattr(model, "ontologies"):
-            if model.ontologies is not None:
-                node_names = []
-                for ontology in model.ontologies:
-                    node_names.append(list(ontology.keys()))
-                node_names.append(model.feature_order)
+        plt.ioff()
+        if "ML_Evaluation" not in self.plots.keys():
+            print("ML Evaluation plots not found in the plots dictionary")
+            print("You need to run evaluate() method first")
+            return None
+        if param not in self.plots["ML_Evaluation"].keys():
+            print(f"Parameter {param} not found in the ML Evaluation plots")
+            print(f"Available parameters: {list(self.plots['ML_Evaluation'].keys())}")
+            return None
+        if metric not in self.plots["ML_Evaluation"][param].keys():
+            print(f"Metric {metric} not found in the ML Evaluation plots for {param}")
+            print(
+                f"Available metrics: {list(self.plots['ML_Evaluation'][param].keys())}"
+            )
+            return None
 
-        # Collect encoder and decoder weights separately
-        encoder_weights = []
-        encoder_names = []
-        decoder_weights = []
-        decoder_names = []
-        for name, param in model.named_parameters():
-            # print(name)
-            if "weight" in name and len(param.shape) == 2:
-                if "encoder" in name and "var" not in name and "_mu" not in name:
-                    encoder_weights.append(param.detach().cpu().numpy())
-                    encoder_names.append(name[:-7])
-                elif "_mu" in name:
-                    encoder_weights.append(param.detach().cpu().numpy())
-                    encoder_names.append(name[:-7])
-                elif "decoder" in name and "var" not in name:
-                    decoder_weights.append(param.detach().cpu().numpy())
-                    decoder_names.append(name[:-7])
-                elif "encoder" not in name and "decoder" not in name and "var" not in name:
-                    # fallback for models without explicit encoder/decoder in name
-                    all_weights.append(param.detach().cpu().numpy())
-                    names.append(name[:-7])
-
-        if encoder_weights or decoder_weights:
-            n_enc = len(encoder_weights)
-            n_dec = len(decoder_weights)
-            n_cols = max(n_enc, n_dec)
-            fig, axes = plt.subplots(2, n_cols, sharex=False, figsize=(15 * n_cols, 15))
-            if n_cols == 1:
-                axes = axes.reshape(2, 1)
-            # Plot encoder weights
-            for i in range(n_enc):
-                ax = axes[0, i]
-                sns.heatmap(
-                    encoder_weights[i],
-                    cmap=sns.color_palette("Spectral", as_cmap=True),
-                    center=0,
-                    ax=ax,
-                ).set(title=encoder_names[i])
-                ax.set_ylabel("Out Node", size=12)
-            # Hide unused encoder subplots
-            for i in range(n_enc, n_cols):
-                axes[0, i].axis('off')
-            # Plot decoder weights
-            for i in range(n_dec):
-                ax = axes[1, i]
-                heatmap_kwargs = {}
-
-                sns.heatmap(
-                    decoder_weights[i],
-                    cmap=sns.color_palette("Spectral", as_cmap=True),
-                    center=0,
-                    ax=ax,
-                    **heatmap_kwargs
-                ).set(title=decoder_names[i])
-                if model.ontologies is not None:
-                    axes[1, i].set_xticks(
-                        ticks=range(len(node_names[i])),
-                        labels=node_names[i],
-                        rotation=90,
-                        fontsize=8,
-                    )
-                    axes[1, i].set_yticks(
-                        ticks=range(len(node_names[i + 1])),
-                        labels=node_names[i + 1],
-                        rotation=0,
-                        fontsize=8,
-                    )
-                ax.set_xlabel("In Node", size=12)
-                ax.set_ylabel("Out Node", size=12)
-            # Hide unused decoder subplots
-            for i in range(n_dec, n_cols):
-                axes[1, i].axis('off')
+        algs = list(self.plots["ML_Evaluation"][param][metric].keys())
+        if ml_alg is not None:
+            if ml_alg not in algs:
+                print(f"ML algorithm {ml_alg} not found for {param} and {metric}")
+                print(f"Available ML algorithms: {algs}")
+                return None
+            fig = self.plots["ML_Evaluation"][param][metric][ml_alg].figure
+            show_figure(fig)
+            plt.show()
         else:
-            # fallback: plot all weights in order, split in half for encoder/decoder
-            n_layers = len(all_weights) // 2
-            fig, axes = plt.subplots(2, n_layers, sharex=False, figsize=(5 * n_layers, 10))
-            for layer in range(n_layers):
-                sns.heatmap(
-                    all_weights[layer],
-                    cmap=sns.color_palette("Spectral", as_cmap=True),
-                    center=0,
-                    ax=axes[0, layer],
-                ).set(title=names[layer])
-                sns.heatmap(
-                    all_weights[n_layers + layer],
-                    cmap=sns.color_palette("Spectral", as_cmap=True),
-                    center=0,
-                    ax=axes[1, layer],
-                ).set(title=names[n_layers + layer])
-                axes[1, layer].set_xlabel("In Node", size=12)
-                axes[0, layer].set_ylabel("Out Node", size=12)
-                axes[1, layer].set_ylabel("Out Node", size=12)
+            for alg in algs:
+                print(f"Showing plot for ML algorithm: {alg}")
+                fig = self.plots["ML_Evaluation"][param][metric][alg].figure
+                show_figure(fig)
+                plt.show()
 
-        fig.suptitle("Model Weights", size=20)
-        plt.close()
-        return fig
-
+### Utilities ###
     @staticmethod
-    def plot_2D(
+    def _plot_2D(
         embedding: pd.DataFrame,
         labels: list,
         param: Optional[Union[str, None]] = None,
@@ -515,7 +443,7 @@ class GeneralVisualizer(BaseVisualizer):
 
     ## TODO Might be moved to BaseVisualizer if Ridgeline per Modality is used as in notebook
     @staticmethod
-    def plot_latent_ridge(
+    def _plot_latent_ridge(
         lat_space: pd.DataFrame,
         labels: Optional[Union[list, pd.Series, None]] = None,
         param: Optional[Union[str, None]] = None,
@@ -624,97 +552,7 @@ class GeneralVisualizer(BaseVisualizer):
         plt.close()
         return g
 
-    @staticmethod
-    def make_loss_plot(
-        df_plot: pd.DataFrame, plot_type: str
-    ) -> matplotlib.figure.Figure:
-        """
-        Generates a plot for visualizing loss values from a DataFrame.
-
-        Parameters:
-        -----------
-        df_plot : pd.DataFrame
-            DataFrame containing the loss values to be plotted. It should have the columns:
-            - "Loss Term": The type of loss term (e.g., "total_loss", "reconstruction_loss").
-            - "Epoch": The epoch number.
-            - "Loss Value": The value of the loss.
-            - "Split": The data split (e.g., "train", "validation").
-
-        plot_type : str
-            The type of plot to generate. It can be either "absolute" or "relative".
-            - "absolute": Generates a line plot for each unique loss term.
-            - "relative": Generates a density plot for each data split, excluding the "total_loss" term.
-
-        Returns:
-        --------
-        matplotlib.figure.Figure
-            The generated matplotlib figure containing the loss plots.
-        """
-        fig_width_abs = 5*len(df_plot["Loss Term"].unique())
-        fig_width_rel = 5*len(df_plot["Split"].unique())
-        if plot_type == "absolute":
-            fig, axes = plt.subplots(
-                1, len(df_plot["Loss Term"].unique()), figsize=(fig_width_abs, 5), sharey=False
-            )
-            ax = 0
-            for term in df_plot["Loss Term"].unique():
-                axes[ax] = sns.lineplot(
-                    data=df_plot[(df_plot["Loss Term"] == term)],
-                    x="Epoch",
-                    y="Loss Value",
-                    hue="Split",
-                    ax=axes[ax],
-                ).set_title(term)
-                ax += 1
-
-            plt.close()
-
-        if plot_type == "relative":
-            # Check if loss values are positive
-            if (df_plot["Loss Value"] < 0).any():
-                # Warning
-                warnings.warn(
-                    "Loss values contain negative values. Check your loss function if correct. Loss will be clipped to zero for plotting."
-                )
-                df_plot["Loss Value"] = df_plot["Loss Value"].clip(lower=0)
-
-            # Exclude loss terms where all Loss Value are zero or NaN over all epochs
-            valid_terms = [
-                term
-                for term in df_plot["Loss Term"].unique()
-                if (
-                    (df_plot[df_plot["Loss Term"] == term]["Loss Value"].notna().any())
-                    and (df_plot[df_plot["Loss Term"] == term]["Loss Value"] != 0).any()
-                )
-            ]
-            exclude = (
-                (df_plot["Loss Term"] != "total_loss")
-                & ~(df_plot["Loss Term"].str.contains("_factor"))
-                & (df_plot["Loss Term"].isin(valid_terms))
-            )
-
-            fig, axes = plt.subplots(1, 2, figsize=(fig_width_rel, 5), sharey=True)
-
-            ax = 0
-
-            for split in df_plot["Split"].unique():
-                axes[ax] = sns.kdeplot(
-                    data=df_plot[exclude & (df_plot["Split"] == split)],
-                    x="Epoch",
-                    hue="Loss Term",
-                    multiple="fill",
-                    weights="Loss Value",
-                    clip=[0, df_plot["Epoch"].max()],
-                    ax=axes[ax],
-                ).set_title(split)
-                ax += 1
-
-            plt.close()
-
-        return fig
-
-	   
-    def plot_evaluation(
+    def _plot_evaluation(
             self,
             result: Result,
     ) -> dict:
@@ -765,53 +603,7 @@ class GeneralVisualizer(BaseVisualizer):
 
         return ml_plots
     
-    def show_evaluation(
-        self,
-        param: str,
-        metric: str,
-        ml_alg: Optional[str] = None,
-    ) -> None:
-        """
-        Displays the evaluation plot for a specific clinical parameter, metric, and optionally ML algorithm.
-        Parameters:
-        param (str): The clinical parameter to visualize.
-        metric (str): The metric to visualize.
-        ml_alg (str, optional): The ML algorithm to visualize. If None, plots all available algorithms.
-        Returns:
-        None
-        """
-        plt.ioff()
-        if "ML_Evaluation" not in self.plots.keys():
-            print("ML Evaluation plots not found in the plots dictionary")
-            print("You need to run evaluate() method first")
-            return None
-        if param not in self.plots["ML_Evaluation"].keys():
-            print(f"Parameter {param} not found in the ML Evaluation plots")
-            print(f"Available parameters: {list(self.plots['ML_Evaluation'].keys())}")
-            return None
-        if metric not in self.plots["ML_Evaluation"][param].keys():
-            print(f"Metric {metric} not found in the ML Evaluation plots for {param}")
-            print(
-                f"Available metrics: {list(self.plots['ML_Evaluation'][param].keys())}"
-            )
-            return None
-
-        algs = list(self.plots["ML_Evaluation"][param][metric].keys())
-        if ml_alg is not None:
-            if ml_alg not in algs:
-                print(f"ML algorithm {ml_alg} not found for {param} and {metric}")
-                print(f"Available ML algorithms: {algs}")
-                return None
-            fig = self.plots["ML_Evaluation"][param][metric][ml_alg].figure
-            show_figure(fig)
-            plt.show()
-        else:
-            for alg in algs:
-                print(f"Showing plot for ML algorithm: {alg}")
-                fig = self.plots["ML_Evaluation"][param][metric][alg].figure
-                show_figure(fig)
-                plt.show()
-    
+ 
     @staticmethod
     def _total_correlation(latent_space: pd.DataFrame) -> float:
         """ Function to compute the total correlation as described here (Equation2): https://doi.org/10.3390/e21100921

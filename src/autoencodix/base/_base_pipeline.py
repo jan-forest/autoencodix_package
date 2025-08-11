@@ -853,15 +853,10 @@ class BasePipeline(abc.ABC):
             split_type=split_type,
         )
 
-        ml_plots = self._visualizer.plot_evaluation(result=self.result)
+        ml_plots = self._visualizer._plot_evaluation(result=self.result)
 
         return self.result
 
-    #     self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
-    # ) -> None:
-    #     """Not Implemented yet"""
-    #     if config is None:
-    #         config = self.config
 
     @config_method(valid_params={"config"})
     def visualize(self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs):

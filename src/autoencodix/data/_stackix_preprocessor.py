@@ -175,13 +175,18 @@ class StackixPreprocessor(BasePreprocessor):
             if attr_name == "multi_bulk":
                 df = datapackage[attr_name][dict_key]
                 tensor = torch.from_numpy(df.values)
+                if dict_key in datapackage["annotation"].keys():
+                    metadata = datapackage["annotation"][dict_key]
+                else:
+                    print(datapackage["annotation"].keys())
+                    metadata = datapackage["annotation"]["paired"]
 
                 ds = NumericDataset(
                     data=tensor,
                     config=self.config,
                     sample_ids=df.index,
                     feature_ids=df.columns,
-                    metadata=datapackage["annotation"][dict_key],
+                    metadata=metadata,
                     split_indices=split_indices,
                 )
                 dataset_dict[dict_key] = ds

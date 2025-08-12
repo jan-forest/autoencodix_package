@@ -2,6 +2,7 @@ from typing import Dict, Optional, Type, Union
 import torch
 import numpy as np
 
+import anndata as ad  # type: ignore
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.utils._utils import config_method
 from autoencodix.base._base_loss import BaseLoss
@@ -171,3 +172,34 @@ class Stackix(BasePipeline):
         with self._trainer._trainer._fabric.autocast(), torch.no_grad():
             z = stacked_model.reparameterize(mu_t, logvar_t)
             return z
+
+    def _process_latent_results(
+        self, predictor_results: Result, predict_data: DatasetContainer
+    ):
+        """
+        Processes the latent spaces from the StackixTrainer prediction results
+        and creates a correctly annotated AnnData object.
+
+        This method overrides the BasePipeline implementation to specifically handle
+        the aligned latent space from the unpaired/stacked workflow.
+        """
+        latent = predictor_results.latentspaces.get(epoch=-1, split="test")
+        sample_ids = predictor_results.sample_ids.get(epoch=-1, split="test")
+        if latent is None:
+            import warnings
+
+            warnings.warn(
+                "No latent space found in predictor results. Cannot create AnnData object."
+            )
+            return
+
+        self.result.adata_latent = ad.AnnData(X=latent)
+        self.result.adata_latent.obs_names = sample_ids
+        self.result.adata_latent.var_names = [
+            f"Latent_{i}" for i in range(latent.shape[1])
+        ]
+
+        # 4. Update the main result object with the rest of the prediction results.
+        self.result.update(predictor_results)
+
+        print("Successfully created annotated latent space object (adata_latent).")

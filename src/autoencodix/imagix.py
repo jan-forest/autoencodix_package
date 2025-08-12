@@ -103,7 +103,7 @@ class Imagix(BasePipeline):
         config : Optional[DefaultConfig]
             Configuration for all pipeline components
         """
-
+        self._default_config = DefaultConfig()
         super().__init__(
             data=data,
             dataset_type=dataset_type,

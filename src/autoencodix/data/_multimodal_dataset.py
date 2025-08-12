@@ -242,14 +242,14 @@ def create_multimodal_collate_fn(multimodal_dataset: MultiModalDataset):
                     else:
                         result[modality]["sampled_index"].append(None)
 
-                    cur_metadata = dataset.metadata.loc[sample_id] # type: ignore
+                    cur_metadata = dataset.metadata.loc[sample_id]  # type: ignore
 
                     result[modality]["metadata"].append(cur_metadata)
 
             result[modality]["data"] = torch.stack(result[modality]["data"])
             result[modality]["metadata"] = pd.concat(
                 result[modality]["metadata"], axis=1
-            ).T # type: ignore
+            ).T  # type: ignore
         return result
 
     return collate_fn

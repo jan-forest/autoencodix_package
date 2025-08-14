@@ -326,3 +326,5 @@ class GeneralTrainer(BaseTrainer):
                     f"Expected input to be a torch.Tensor, got {type(x)} instead."
                 )
             return self._model.decode(x=x)
+    def get_model(self) -> torch.nn.Module:
+        return self._model

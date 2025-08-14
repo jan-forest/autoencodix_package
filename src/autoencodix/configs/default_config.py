@@ -170,8 +170,9 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         Print a human-readable schema of all config parameters.
 
     """
+
     # Input validation
-    model_config = ConfigDict(extra='forbid') 
+    model_config = ConfigDict(extra="forbid")
     # Datasets configuration --------------------------------------------------
     data_config: DataConfig = DataConfig(data_info={})
     requires_paired: Union[bool, None] = Field(
@@ -188,8 +189,8 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     )
     scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE"] = Field(
         default="STANDARD",
-        description="Setting the scaling here for all data modalities, can per overruled by setting scaling at data modality level per data modality")
-
+        description="Setting the scaling here for all data modalities, can per overruled by setting scaling at data modality level per data modality",
+    )
 
     skip_preprocessing: bool = Field(
         default=False, description="If set don't scale, filter or clean the input data."
@@ -218,7 +219,11 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     learning_rate: float = Field(
         default=0.001, gt=0, description="Learning rate for optimization"
     )
-    batch_size: int = Field(default=32, ge=1, description="Number of samples per batch")
+    batch_size: int = Field(
+        default=32,
+        ge=2,
+        description="Number of samples per batch, has to be > 1, because we use BatchNorm() Layer",
+    )
     epochs: int = Field(default=3, ge=1, description="Number of training epochs")
     weight_decay: float = Field(
         default=0.01, ge=0, description="L2 regularization factor"

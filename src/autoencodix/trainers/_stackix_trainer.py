@@ -174,23 +174,42 @@ class StackixTrainer(GeneralTrainer):
         )
         self.concat_idx = self._orchestrator.concat_idx
 
+    # def _reconstruct(self, split: str) -> None:
+    #     stacked_recon = self._result.reconstructions.get(epoch=-1, split=split)
+
+    #     modality_reconstructions = {}
+    #     for name, (start_idx, end_idx) in self.concat_idx.items():
+    #         stacked_input = stacked_recon[:, start_idx:end_idx]
+    #         stacked_tensor = torch.tensor(stacked_input, dtype=torch.float32)
+    #         with self._fabric.autocast() and torch.no_grad():
+    #             model = self._modality_results[name].model
+    #             stacked_tensor = self._fabric.to_device(stacked_tensor)
+    #             model = self._fabric.to_device(model)
+    #             model.eval()
+    #             modality_reconstructions[name] = model.decode(stacked_tensor).cpu()
+
+    #     self._result.sub_reconstructions = modality_reconstructions
+
     def _reconstruct(self, split: str) -> None:
+        """
+        Orchestrates the reconstruction by delegating the task to the StackixOrchestrator.
+        """
         stacked_recon = self._result.reconstructions.get(epoch=-1, split=split)
+        if stacked_recon is None:
+            print(f"Warning: No reconstruction found for split '{split}'. Skipping.")
+            return
 
-        modality_reconstructions = {}
-        for name, (start_idx, end_idx) in self.concat_idx.items():
-            stacked_input = stacked_recon[:, start_idx:end_idx]
-            stacked_tensor = torch.tensor(stacked_input, dtype=torch.float32)
-            with self._fabric.autocast() and torch.no_grad():
-                model = self._modality_results[name].model
-                stacked_tensor = self._fabric.to_device(stacked_tensor)
-                model = self._fabric.to_device(model)
-                model.eval()
-                modality_reconstructions[name] = model.decode(stacked_tensor).cpu()
+        # The orchestrator handles the de-concatenation, re-assembly, and decoding.
+        modality_reconstructions = self._orchestrator.reconstruct_from_stack(
+            reconstructed_stack=torch.from_numpy(stacked_recon).to(self._fabric.device)
+        )
 
+        # The result is the final, full-sized data reconstructions.
         self._result.sub_reconstructions = modality_reconstructions
 
-    def predict(self, data: BaseDataset, model: Optional[torch.nn.Module] = None, **kwargs) -> Result:
+    def predict(
+        self, data: BaseDataset, model: Optional[torch.nn.Module] = None, **kwargs
+    ) -> Result:
         """ """
         self.n_test = len(data) if data is not None else 0
         self._orchestrator.set_testset(testset=data)

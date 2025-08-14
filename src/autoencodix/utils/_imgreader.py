@@ -351,7 +351,7 @@ class ImageDataReader:
         annotations = pd.concat([img.annotation for img in images])
         annotations.index = annotations.sample_ids
 
-        del annotation["sample_ids"]
+        del annotations["sample_ids"]
         return images, annotations
 
 

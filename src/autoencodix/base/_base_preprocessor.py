@@ -10,7 +10,7 @@ from anndata import AnnData  # type: ignore
 
 from autoencodix.data._datapackage_splitter import DataPackageSplitter
 from autoencodix.data._datasetcontainer import DatasetContainer
-from autoencodix.data._datasplitter import DataSplitter
+from autoencodix.data._datasplitter import PairedUnpairedSplitter
 from autoencodix.data._filter import DataFilter
 from autoencodix.data._imgdataclass import ImgData
 from autoencodix.data._nanremover import NaNRemover
@@ -21,6 +21,7 @@ from autoencodix.utils._imgreader import ImageDataReader, ImageNormalizer
 from autoencodix.utils._screader import SingleCellDataReader
 from autoencodix.configs.default_config import DataCase, DefaultConfig
 from autoencodix.utils._result import Result
+
 
 if TYPE_CHECKING:
     import mudata as md  # type: ignore
@@ -840,40 +841,86 @@ class BasePreprocessor(abc.ABC):
             },
         )
 
+    # This method would be inside your GeneralPreprocessor or a similar class
     def _split_data_package(
         self, data_package: DataPackage
     ) -> Tuple[Dict[str, Optional[Dict[str, Any]]], Dict[str, Any]]:
-        """Splits data package into train/validation/test sets.
+        """
+        Splits a data package into train/validation/test sets using a
+        pairing-aware strategy.
 
-        Uses DataSplitter and DataPackageSplitter to divide the DataPackage
-        into training, validation, and test sets based on the configuration.
+        This method first uses PairedUnpairedSplitter to generate a single,
+        synchronized set of indices for all modalities. It then uses
+        DataPackageSplitter to apply these indices to the data.
 
         Args:
             data_package: The DataPackage to be split.
 
         Returns:
-            A dictionary containing the split DataPackages, keyed by split names
-            ('train', 'validation', 'test').
-
-            split_indiced_config - (dict): the actual indicies used for splitting
+            A tuple containing:
+            1. A dictionary of the split DataPackages.
+            2. A dictionary of the synchronized integer indices used for the split.
         """
-        data_splitter = DataSplitter(config=self.config)
-        n_samples = data_package.get_n_samples()
-        split_indices_config = n_samples.copy()
+        print("--- Running Pairing-Aware Split ---")
 
-        print(f" n_samples: {n_samples}")
-        for k, v in n_samples.items():
-            for subkey, n in v.items():
-                if n == 0 or n is None:
-                    split_indices_config[k][subkey] = None
-                    continue
-                split_indices_config[k][subkey] = data_splitter.split(n_samples=n)
-        data_splitter_instance = DataPackageSplitter(
+        # 1. Instantiate our new pairing-aware splitter with the full data package.
+        pairing_splitter = PairedUnpairedSplitter(
+            data_package=data_package, config=self.config
+        )
+
+        # 2. Generate the single, synchronized dictionary of indices.
+        # This is the exact `split_indices_config` you want to return.
+        split_indices_config = pairing_splitter.split()
+        print("Successfully generated synchronized indices for all modalities.")
+
+        # 3. Instantiate your original DataPackageSplitter.
+        # It now receives indices that are guaranteed to be consistent.
+        data_package_splitter = DataPackageSplitter(
             data_package=data_package,
             config=self.config,
             indices=split_indices_config,
         )
-        return data_splitter_instance.split(), split_indices_config
+
+        # 4. Perform the actual split using the synchronized indices.
+        split_datasets = data_package_splitter.split()
+
+        # 5. Return both the split data and the indices used, just like your old method.
+        return split_datasets, split_indices_config
+
+    # def _split_data_package(
+    #     self, data_package: DataPackage
+    # ) -> Tuple[Dict[str, Optional[Dict[str, Any]]], Dict[str, Any]]:
+    #     """Splits data package into train/validation/test sets.
+
+    #     Uses DataSplitter and DataPackageSplitter to divide the DataPackage
+    #     into training, validation, and test sets based on the configuration.
+
+    #     Args:
+    #         data_package: The DataPackage to be split.
+
+    #     Returns:
+    #         A dictionary containing the split DataPackages, keyed by split names
+    #         ('train', 'validation', 'test').
+
+    #         split_indiced_config - (dict): the actual indicies used for splitting
+    #     """
+    #     data_splitter = DataSplitter(config=self.config)
+    #     n_samples = data_package.get_n_samples()
+    #     split_indices_config = n_samples.copy()
+
+    #     print(f" n_samples: {n_samples}")
+    #     for k, v in n_samples.items():
+    #         for subkey, n in v.items():
+    #             if n == 0 or n is None:
+    #                 split_indices_config[k][subkey] = None
+    #                 continue
+    #             split_indices_config[k][subkey] = data_splitter.split(n_samples=n)
+    #     data_splitter_instance = DataPackageSplitter(
+    #         data_package=data_package,
+    #         config=self.config,
+    #         indices=split_indices_config,
+    #     )
+    #     return data_splitter_instance.split(), split_indices_config
 
     def _is_image_data(self, data: Any) -> bool:
         """Check if data is image data.
@@ -923,7 +970,7 @@ class BasePreprocessor(abc.ABC):
         Returns:
             A list of processed image data objects with normalized image data.
         """
-        
+
         scaling_method = self.config.data_config.data_info[info_key].scaling
         if scaling_method == "NONE":
             scaling_method = self.config.scaling

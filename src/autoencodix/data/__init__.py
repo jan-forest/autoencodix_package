@@ -14,6 +14,7 @@ from ._xmodal_preprocessor import XModalPreprocessor
 from ._image_dataset import ImageDataset
 from ._multimodal_dataset import MultiModalDataset
 from ._image_processor import ImagePreprocessor
+from ._sampler import BalancedBatchSampler
 
 
 __all__ = [
@@ -33,5 +34,6 @@ __all__ = [
     "ImageDataset",
     "TensorAwareDataset",
     "MultiModalDataset",
-    "ImagePreprocessor"
+    "ImagePreprocessor",
+    "BalancedBatchSampler",
 ]

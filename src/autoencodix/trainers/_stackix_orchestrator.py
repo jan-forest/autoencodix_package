@@ -1,12 +1,11 @@
 import os
 import pickle
-from typing import Dict, List, Optional, Tuple, Type, Union, Any
+from typing import Dict, List, Optional, Tuple, Type, Any
 
 import lightning_fabric
 import numpy as np
 import pandas as pd
 import torch
-from torch.utils.data import DataLoader
 
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.base._base_dataset import BaseDataset
@@ -334,8 +333,10 @@ class StackixOrchestrator:
             raise ValueError(
                 "No common samples found across all modalities for concatenation."
             )
-
+        # common_ids = [cid for cid in list(common_ids_set) if cid]
         self.common_sample_ids = pd.Index(sorted(list(common_ids_set)))
+
+        # self.common_sample_ids = pd.Index(sorted(list(common_ids_set)))
         print(
             f"Found {len(self.common_sample_ids)} common samples for the stacked autoencoder."
         )
@@ -360,44 +361,6 @@ class StackixOrchestrator:
         # --- Step 5: Concatenate ---
         stackix_input = torch.cat(aligned_latents_list, dim=1)
         return stackix_input
-
-    # def _extract_latent_spaces(self, result_dict, split="train") -> torch.Tensor:
-    #     """
-    #     Used Result object from each trainer to extract latent spaces for each modality.
-    #     Then the indices for concatenation are stored in self._concat_idx and the latent spaces
-    #     are concatenated into a single tensor that serves as input for the stacked model.
-
-    #     Parameters
-    #     ----------
-    #     keys : List[str]
-    #         List of modality keys to process
-    #     split : str
-    #         Data split to extract latent spaces from (default is "train")
-
-    #     Returns
-    #     -------
-    #     torch.Tensor
-    #         Concatenated latent spaces for all modalities
-
-    #     """
-    #     self.concat_idx: Dict[str, Optional[Tuple[int]]] = {
-    #         k: None for k in result_dict.keys()
-    #     }
-    #     start_idx = 0
-    #     latent_spaces: List = []
-    #     for name, result in result_dict.items():
-    #         try:
-    #             latent_space = result.latentspaces.get(split=split, epoch=-1)
-    #             end_idx = start_idx + latent_space.shape[1]
-    #             self.concat_idx[name] = (start_idx, end_idx)
-    #             start_idx = end_idx
-    #             latent_spaces.append(latent_space)
-    #         except Exception as e:
-    #             raise ValueError(
-    #                 f"Failed to extract latent space for modality {name}: {e} and split {split} in last epoch"
-    #             )
-    #     stackix_input = np.concatenate(latent_spaces, axis=1)
-    #     return torch.from_numpy(stackix_input)
 
     def train_modalities(self) -> Tuple[Dict[str, BaseAutoencoder], Dict[str, Result]]:
         """

@@ -79,7 +79,7 @@ class XModalPreprocessor(GeneralPreprocessor):
                 if metadata is None:
                     if not len(dp.annotation.keys()) == 1:
                         raise ValueError(
-                            f"annotation key needs to be either 'paired' match a key of the numeric data or only one key exists that holds all unpaired data, please adjust config, got: {datapackage.annotation.keys()}"
+                            f"annotation key needs to be either 'paired' match a key of the numeric data or only one key exists that holds all unpaired data, please adjust config, got: {dp.annotation.keys()}"
                         )
                     metadata_key = next(iter(dp.annotation.keys()))
                     metadata = dp.annotation.get(metadata_key)

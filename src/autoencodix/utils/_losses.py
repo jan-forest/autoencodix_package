@@ -5,7 +5,7 @@ from typing import Dict, Tuple, Optional, Any, List
 from collections import defaultdict
 from autoencodix.base._base_loss import BaseLoss
 from autoencodix.utils._model_output import ModelOutput
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._utils import flip_labels
 
 
@@ -425,11 +425,6 @@ class DisentanglixLoss(BaseLoss):
         """Forward pass with annealing - calculates annealing factor from epoch."""
         recon_loss, mut_info_loss, tot_corr_loss, dimwise_kl_loss = self._compute_losses(model_output, targets, n_samples)
 
-        # annealing_epoch = self.annealing_scheduler.get_annealing_epoch(
-        #     anneal_pretraining=self.config.anneal_pretraining,
-        #     n_epochs_pretrain=self.config.pretrain_epochs,
-        #     current_epoch=epoch,
-        # )
 
         # Get annealing weight
         anneal_factor = self.annealing_scheduler.get_weight(

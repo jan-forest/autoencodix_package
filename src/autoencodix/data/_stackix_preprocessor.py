@@ -12,7 +12,7 @@ from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data._stackix_dataset import StackixDataset
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._datasetcontainer import DatasetContainer
-from autoencodix.utils.default_config import DefaultConfig, DataCase
+from autoencodix.configs.default_config import DefaultConfig, DataCase
 from autoencodix.utils._result import Result
 
 

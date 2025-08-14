@@ -10,7 +10,7 @@ from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._model_output import ModelOutput
 
 

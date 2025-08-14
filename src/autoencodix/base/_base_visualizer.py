@@ -5,7 +5,7 @@ import pandas as pd
 
 from autoencodix.utils._result import Result 
 from autoencodix.utils._utils import nested_dict
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class BaseVisualizer(abc.ABC):

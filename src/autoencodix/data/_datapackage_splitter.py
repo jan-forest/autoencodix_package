@@ -8,7 +8,7 @@ from anndata import AnnData  # type: ignore
 from mudata import MuData  # type: ignore
 
 from autoencodix.data.datapackage import DataPackage
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class DataPackageSplitter:

@@ -14,7 +14,7 @@ from sklearn.preprocessing import (  # type: ignore
     MaxAbsScaler,
 )  # type: ignore
 from enum import Enum
-from autoencodix.utils.default_config import DataInfo, DefaultConfig
+from autoencodix.configs.default_config import DataInfo, DefaultConfig
 from sklearn.cluster import AgglomerativeClustering  # type: ignore
 from scipy.spatial.distance import pdist, squareform  # type: ignore
 

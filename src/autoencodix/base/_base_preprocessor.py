@@ -19,7 +19,7 @@ from autoencodix.data.datapackage import DataPackage
 from autoencodix.utils._bulkreader import BulkDataReader
 from autoencodix.utils._imgreader import ImageDataReader, ImageNormalizer
 from autoencodix.utils._screader import SingleCellDataReader
-from autoencodix.utils.default_config import DataCase, DefaultConfig
+from autoencodix.configs.default_config import DataCase, DefaultConfig
 from autoencodix.utils._result import Result
 
 if TYPE_CHECKING:

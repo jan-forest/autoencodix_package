@@ -1,7 +1,7 @@
 import pytest
 import torch
 from autoencodix.data._numeric_dataset import NumericDataset
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class TestNumericDataset:

@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, Dict, Literal, Optional, List, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
 
 class SchemaPrinterMixin:
@@ -170,7 +170,8 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         Print a human-readable schema of all config parameters.
 
     """
-
+    # Input validation
+    model_config = ConfigDict(extra='forbid') 
     # Datasets configuration --------------------------------------------------
     data_config: DataConfig = DataConfig(data_info={})
     requires_paired: Union[bool, None] = Field(
@@ -194,7 +195,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=False, description="If set don't scale, filter or clean the input data."
     )
 
-    class_param: str = Field(default=None)
+    class_param: Optional[str] = Field(default=None)
 
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(
@@ -272,9 +273,6 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     min_samples_per_split: int = Field(
         default=1, ge=1, description="Minimum number of samples per split"
     )
-    anneal_pretraining: bool = Field(
-        default=False, description="Whether to apply annealing during pretraining phase"
-    )
     anneal_function: Literal[
         "5phase-constant",
         "3phase-linear",
@@ -300,7 +298,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     # 0 uses cpu and not gpu
     n_gpus: int = Field(default=1, ge=1, description="Number of GPUs to use")
     n_workers: int = Field(
-        default=2, ge=0, description="Number of data loading workers"
+        default=0, ge=0, description="Number of data loading workers"
     )
     checkpoint_interval: int = Field(
         default=10, ge=1, description="Interval for saving checkpoints"

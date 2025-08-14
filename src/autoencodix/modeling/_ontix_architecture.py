@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.utils._model_output import ModelOutput
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 from ._layer_factory import LayerFactory
 

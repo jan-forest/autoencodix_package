@@ -2,7 +2,7 @@ import pytest
 import torch
 import torch.nn as nn
 from autoencodix.base._base_autoencoder import BaseAutoencoder
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._model_output import ModelOutput
 
 

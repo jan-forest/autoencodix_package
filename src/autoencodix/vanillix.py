@@ -18,7 +18,8 @@ from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
 from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
+from autoencodix.configs.vanillix_config import VanillixConfig
 from autoencodix.utils._losses import VanillixLoss
 from autoencodix.visualize.visualize import Visualizer
 
@@ -97,7 +98,7 @@ class Vanillix(BasePipeline):
         config : Optional[DefaultConfig]
             Configuration for all pipeline components
         """
-
+        self._default_config = VanillixConfig()
         super().__init__(
             data=data,
             dataset_type=dataset_type,

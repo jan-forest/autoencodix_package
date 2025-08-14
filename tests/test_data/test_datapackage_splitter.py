@@ -6,7 +6,7 @@ import pandas as pd
 
 from autoencodix.data._datapackage_splitter import DataPackageSplitter
 from autoencodix.data.datapackage import DataPackage
-from autoencodix.utils.default_config import (
+from autoencodix.configs.default_config import (
     DefaultConfig,
     DataInfo,
     DataConfig,

@@ -9,7 +9,7 @@ from scipy.sparse import issparse  # type: ignore
 from scipy import sparse  # type: ignore
 
 from autoencodix.data.datapackage import DataPackage
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class NaNRemover:

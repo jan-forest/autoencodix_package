@@ -1,6 +1,6 @@
 from abc import abstractmethod, ABC
 import itertools
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 import torch
 from torch import nn
 from autoencodix.utils._model_output import ModelOutput

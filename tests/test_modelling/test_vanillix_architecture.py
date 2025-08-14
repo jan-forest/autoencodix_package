@@ -3,7 +3,7 @@ import torch
 
 from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
 from autoencodix.utils._model_output import ModelOutput
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.modeling._layer_factory import LayerFactory
 
 

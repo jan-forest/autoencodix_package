@@ -1,4 +1,5 @@
 import torch
+import warnings
 import pandas as pd
 from typing import List, Dict, Any, Union, Tuple
 from autoencodix.base._base_dataset import BaseDataset
@@ -100,14 +101,29 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):
             ].sample_ids
 
     def __iter__(self):
-        # Phase 1: Coverage phase - ensure all samples are seen at least once
         coverage_batches = self._generate_coverage_batches()
-
-        # Phase 2: Random phase - fill remaining batches randomly
         random_batches = self._generate_random_batches(coverage_batches)
+        all_batches = coverage_batches + random_batches
+        for batch in all_batches:
+            if len(batch) > 1:
+                yield batch
+            elif len(batch) == 1:
+                current_sample = batch[0]
+                candidate_pool = set(self.paired_ids) | set(self.unpaired_ids)
+                candidate_pool.discard(current_sample)
 
-        for batch in coverage_batches + random_batches:
-            yield batch
+                if not candidate_pool:
+                    raise ValueError(
+                        "Cannot form a batch of size > 1 because the dataset contains "
+                        "only a single unique sample. To proceed, use a larger sample "
+                        "Not this case should not happen, probably something is very odd with your data size "
+                    )
+                sample_to_add = np.random.choice(list(candidate_pool))
+                batch.append(sample_to_add)
+                warnings.warn(
+                    "Your combination of batch_size and number of samples whil create a batch of len 1, this will fail all model with a BatchNorm Layer,chose another batch_size to avoid this. We handled this by adding random samples from your data to this 'problem' batch to the current batch. This is an extremely rare case, for our Custom Sampler for unpaired XModalix we don't support this."
+                )
+                yield batch
 
     def _generate_coverage_batches(self):
         """Generate batches that ensure all samples are covered"""
@@ -195,6 +211,7 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):
 
     def __len__(self):
         total_samples = len(self.paired_ids) + len(self.unpaired_ids)
+        # return total_samples // self.batch_size
         return max(total_samples // self.batch_size, len(self.modality_samples))
 
 

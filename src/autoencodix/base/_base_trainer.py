@@ -92,12 +92,38 @@ class BaseTrainer(abc.ABC):
         self._fabric.launch()
 
     def _init_loaders(self):
+        last_batch_is_one_sample = (
+            len(self._trainset.data) % self._config.batch_size == 1
+        )
+        corrected_bs = (
+            self._config.batch_size + 1
+            if last_batch_is_one_sample
+            else self._config.batch_size
+        )
+        if last_batch_is_one_sample:
+            warnings.warn(
+                f"increased batch_size to {corrected_bs} for trainset, to avoid dropping samples and having batches (makes trainingdynamics messy with missing samples per epoch) of size one (fails for Models with BachNorm)"
+            )
+
         self._trainloader = DataLoader(
             cast(BaseDataset, self._trainset),
-            batch_size=self._config.batch_size,
-            shuffle=True,  # best practice to shuffle in training
+            shuffle=True,
+            batch_size=corrected_bs,
         )
         if self._validset:
+            last_batch_is_one_sample = (
+                len(self._validset.data) % self._config.batch_size == 1
+            )
+            corrected_bs = (
+                self._config.batch_size + 1
+                if last_batch_is_one_sample
+                else self._config.batch_size
+            )
+            if last_batch_is_one_sample:
+                warnings.warn(
+                    f"increased batch_size to {corrected_bs} for validset, to avoid dropping samples and having batches (makes trainingdynamics messy with missing samples per epoch) of size one (fails for Models with BachNorm)"
+                )
+
             self._validloader = DataLoader(
                 dataset=self._validset,
                 batch_size=self._config.batch_size,

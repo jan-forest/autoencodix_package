@@ -95,6 +95,7 @@ class XModalTrainer(BaseTrainer):
         valid_collate_fn = create_multimodal_collate_fn(
             multimodal_dataset=self._validset
         )
+        # drop_last handled in custom sampler
         self._trainloader = DataLoader(
             self._trainset,
             batch_sampler=trainsampler,
@@ -444,6 +445,7 @@ class XModalTrainer(BaseTrainer):
         from_model = from_modality["model"]
         to_model = to_modality["model"]
         from_model.eval(), to_model.eval()
+        # drop_last handled in custom sampler
         inference_loader = DataLoader(
             data,
             batch_sampler=CoverageEnsuringSampler(multimodal_dataset=data),
@@ -578,6 +580,7 @@ class XModalTrainer(BaseTrainer):
         sub_losses: Dict[str, float],
         n_samples: int,
     ):
+        n_samples = max(n_samples, 1)
         print(f"split: {split}, n_samples: {n_samples}")
         avg_total_loss = total_loss / n_samples
         self._result.losses.add(epoch=self._cur_epoch, split=split, data=avg_total_loss)

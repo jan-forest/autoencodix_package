@@ -7,7 +7,7 @@ import torch
 from scipy.sparse import issparse  # type: ignore
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_preprocessor import BasePreprocessor
-import anndata as ad # type: ignore
+import anndata as ad  # type: ignore
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data._stackix_dataset import StackixDataset
 from autoencodix.data._multimodal_dataset import MultiModalDataset
@@ -167,24 +167,26 @@ class StackixPreprocessor(BasePreprocessor):
 
         """
         dataset_dict: Dict[str, NumericDataset] = {}
-        layer_id_dict: Dict[str,Dict[str, List]] = {}
+        layer_id_dict: Dict[str, Dict[str, List]] = {}
         for k, _ in datapackage:
             attr_name, dict_key = k.split(
                 "."
             )  # see DataPackage __iter__ method for why this makes sense
-            # case where each numeric data has it's own annotation/metadata
-            metadata = datapackage.annotation.get(dict_key)
-            if metadata is None:
-                # case where there is one "paired" metadata for all numeric data
-                metadata = datapackage.annotation.get("paired")
-            # case where we have the unpaired case, but we have one metadata that included all samples across all numeric data
-            if metadata is None:
-                if not len(datapackage.annotation.keys()) == 1:
-                    raise ValueError(
-                        f"annotation key needs to be either 'paired' match a key of the numeric data or only one key exists that holds all unpaired data, please adjust config, got: {datapackage.annotation.keys()}"
-                    )
-                metadata_key = next(iter(datapackage.annotation.keys()))
-                metadata = datapackage.annotation.get(metadata_key)
+            metadata = None
+            if datapackage.annotation is not None:  # prevents error in Single Cell case
+                # case where each numeric data has it's own annotation/metadata
+                metadata = datapackage.annotation.get(dict_key)
+                if metadata is None:
+                    # case where there is one "paired" metadata for all numeric data
+                    metadata = datapackage.annotation.get("paired")
+                # case where we have the unpaired case, but we have one metadata that included all samples across all numeric data
+                if metadata is None:
+                    if not len(datapackage.annotation.keys()) == 1:
+                        raise ValueError(
+                            f"annotation key needs to be either 'paired' match a key of the numeric data or only one key exists that holds all unpaired data, please adjust config, got: {datapackage.annotation.keys()}"
+                        )
+                    metadata_key = next(iter(datapackage.annotation.keys()))
+                    metadata = datapackage.annotation.get(metadata_key)
 
             if attr_name == "multi_bulk":
                 df = datapackage[attr_name][dict_key]

@@ -70,24 +70,28 @@ class XModalPreprocessor(GeneralPreprocessor):
         for k, v in dp:
             dp_key, sub_key = k.split(".")
             data = v
-            metadata = dp.annotation.get(sub_key)
-            if metadata is None:
-                metadata = dp.annotation.get("paired")
-            # case where we have the unpaired case, but we have one metadata that included all samples across all numeric data
-            if metadata is None:
-                if not len(dp.annotation.keys()) == 1:
-                    raise ValueError(
-                        f"annotation key needs to be either 'paired' match a key of the numeric data or only one key exists that holds all unpaired data, please adjust config, got: {datapackage.annotation.keys()}"
-                    )
-                metadata_key = next(iter(dp.annotation.keys()))
-                metadata = dp.annotation.get(metadata_key)
+            metadata = None
+            if dp.annotation is not None:  # prevents error in SingleCell case
+                metadata = dp.annotation.get(sub_key)
+                if metadata is None:
+                    metadata = dp.annotation.get("paired")
+                # case where we have the unpaired case, but we have one metadata that included all samples across all numeric data
+                if metadata is None:
+                    if not len(dp.annotation.keys()) == 1:
+                        raise ValueError(
+                            f"annotation key needs to be either 'paired' match a key of the numeric data or only one key exists that holds all unpaired data, please adjust config, got: {datapackage.annotation.keys()}"
+                        )
+                    metadata_key = next(iter(dp.annotation.keys()))
+                    metadata = dp.annotation.get(metadata_key)
 
             if dp_key == "multi_bulk":
                 if not isinstance(data, pd.DataFrame):
                     raise ValueError(
                         f"Expected data for multi_bulk: {k}, {v} to be pd.DataFrame, got {type(data)}"
                     )
-                metadata_num = metadata.loc[data.index] # needed when we have only one annotation df containing metadata for all modalities
+                metadata_num = metadata.loc[
+                    data.index
+                ]  # needed when we have only one annotation df containing metadata for all modalities
                 dataset_dict[k] = NumericDataset(
                     data=torch.from_numpy(data.values),
                     config=self.config,

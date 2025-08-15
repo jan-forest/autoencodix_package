@@ -61,7 +61,7 @@ def generate_example_data(
             ),  # Random category
         }
     )
-    
+
     # Add some noise features to metadata that don't correlate with clusters
     metadata_df["random_feature"] = np.random.normal(0, 1, n_samples)
 
@@ -384,7 +384,7 @@ def generate_multi_sc_example(
     mdata = mudata.MuData({"rna": rna_adata, "protein": protein_adata})
 
     data_package = DataPackage()
-    data_package.multi_sc = {"multi_sc":mdata}
+    data_package.multi_sc = {"multi_sc": mdata}
 
     return data_package
 

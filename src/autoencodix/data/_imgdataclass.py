@@ -26,5 +26,3 @@ class ImgData:
             f" .  img: actual image data is not shown for brevity, use img attribute to access it"
             f")"
         )
-    
-    

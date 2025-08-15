@@ -65,39 +65,55 @@ class GeneralTrainer(BaseTrainer):
 
         self._latentspace_buffer = {
             "train": make_tensor_buffer(self.n_train, self.latent_dim),
-            "valid": make_tensor_buffer(self.n_valid, self.latent_dim)
-            if self.n_valid
-            else None,
-            "test": make_tensor_buffer(self.n_test, self.latent_dim)
-            if self.n_test
-            else None,
+            "valid": (
+                make_tensor_buffer(self.n_valid, self.latent_dim)
+                if self.n_valid
+                else None
+            ),
+            "test": (
+                make_tensor_buffer(self.n_test, self.latent_dim)
+                if self.n_test
+                else None
+            ),
         }
         self._reconstruction_buffer = {
             "train": make_tensor_buffer(self.n_train, self.n_features),
-            "valid": make_tensor_buffer(self.n_valid, self.n_features)
-            if self.n_valid
-            else None,
-            "test": make_tensor_buffer(self.n_test, self.n_features)
-            if self.n_test
-            else None,
+            "valid": (
+                make_tensor_buffer(self.n_valid, self.n_features)
+                if self.n_valid
+                else None
+            ),
+            "test": (
+                make_tensor_buffer(self.n_test, self.n_features)
+                if self.n_test
+                else None
+            ),
         }
         self._mu_buffer = {
             "train": make_tensor_buffer(self.n_train, self.latent_dim),
-            "valid": make_tensor_buffer(self.n_valid, self.latent_dim)
-            if self.n_valid
-            else None,
-            "test": make_tensor_buffer(self.n_test, self.latent_dim)
-            if self.n_test
-            else None,
+            "valid": (
+                make_tensor_buffer(self.n_valid, self.latent_dim)
+                if self.n_valid
+                else None
+            ),
+            "test": (
+                make_tensor_buffer(self.n_test, self.latent_dim)
+                if self.n_test
+                else None
+            ),
         }
         self._sigma_buffer = {
             "train": make_tensor_buffer(self.n_train, self.latent_dim),
-            "valid": make_tensor_buffer(self.n_valid, self.latent_dim)
-            if self.n_valid
-            else None,
-            "test": make_tensor_buffer(self.n_test, self.latent_dim)
-            if self.n_test
-            else None,
+            "valid": (
+                make_tensor_buffer(self.n_valid, self.latent_dim)
+                if self.n_valid
+                else None
+            ),
+            "test": (
+                make_tensor_buffer(self.n_test, self.latent_dim)
+                if self.n_test
+                else None
+            ),
         }
         self._sample_ids_buffer = {
             "train": make_numpy_buffer(self.n_train),
@@ -247,9 +263,9 @@ class GeneralTrainer(BaseTrainer):
         self._sample_ids_buffer[split][indices_np] = np.array(sample_ids)
 
         self._latentspace_buffer[split][indices_np] = model_output.latentspace.detach()
-        self._reconstruction_buffer[split][indices_np] = (
-            model_output.reconstruction.detach()
-        )
+        self._reconstruction_buffer[split][
+            indices_np
+        ] = model_output.reconstruction.detach()
 
         if model_output.latent_logvar is not None:
             self._sigma_buffer[split][indices_np] = model_output.latent_logvar.detach()

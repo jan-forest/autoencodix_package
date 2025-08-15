@@ -98,9 +98,9 @@ class StackixOrchestrator:
         self._fabric = lightning_fabric.Fabric(
             accelerator=config.device if hasattr(config, "device") else None,
             devices=config.n_gpus if hasattr(config, "n_gpus") else 1,
-            precision=config.float_precision
-            if hasattr(config, "float_precision")
-            else "32",
+            precision=(
+                config.float_precision if hasattr(config, "float_precision") else "32"
+            ),
             strategy=strategy,
         )
 
@@ -201,9 +201,11 @@ class StackixOrchestrator:
         fabric = lightning_fabric.Fabric(
             accelerator=device,
             devices=min(n_gpus, len(keys)),  # No more devices than modalities
-            precision=self._config.float_precision
-            if hasattr(self._config, "float_precision")
-            else "32",
+            precision=(
+                self._config.float_precision
+                if hasattr(self._config, "float_precision")
+                else "32"
+            ),
             strategy=strategy,
         )
 

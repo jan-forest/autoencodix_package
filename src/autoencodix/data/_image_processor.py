@@ -1,18 +1,11 @@
 from typing import Any, Dict, Optional, Tuple, Union
 
-import mudata as md
-import pandas as pd
-import torch
 
-from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._image_dataset import ImageDataset
-from autoencodix.data._imgdataclass import ImgData
-from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data.general_preprocessor import GeneralPreprocessor
 from autoencodix.configs.default_config import DefaultConfig
-from autoencodix.data._multimodal_dataset import MultiModalDataset
 
 
 class ImagePreprocessor(GeneralPreprocessor):
@@ -61,6 +54,10 @@ class ImagePreprocessor(GeneralPreprocessor):
 
     def _process_dp(self, dp: DataPackage, indices: Dict[str, Any]) -> ImageDataset:
         first_key = next(iter(list(dp.img.keys())))
+        if not isinstance(dp.img, dict):
+            raise TypeError(
+                f"Expected `img` attribute of DataPackage to be `dict`, got {type(dp.img)}"
+            )
         if len(dp.img.keys()) > 1:
             import warnings
 

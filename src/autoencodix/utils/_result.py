@@ -338,10 +338,12 @@ class Result:
         """
         return self.__str__()
 
-    def get_latent_df(self, epoch: int, split: str, modality: str = None) -> pd.DataFrame:
+    def get_latent_df(
+        self, epoch: int, split: str, modality: str = None
+    ) -> pd.DataFrame:
         latents = self.latentspaces.get(epoch=epoch, split=split)
         ids = self.sample_ids.get(epoch=epoch, split=split)
-        if modality is not None: # for x-modalix and other multi-modal models
+        if modality is not None:  # for x-modalix and other multi-modal models
             latents = latents[modality]
             ids = ids[modality]
         if hasattr(self.model, "ontologies") and self.model.ontologies is not None:
@@ -349,8 +351,10 @@ class Result:
         else:
             cols = ["LatDim_" + str(i) for i in range(latents.shape[1])]
         return pd.DataFrame(latents, index=ids, columns=cols)
-    
-    def get_reconstructions_df(self, epoch: int, split: str, modality: str = None) -> pd.DataFrame:
+
+    def get_reconstructions_df(
+        self, epoch: int, split: str, modality: str = None
+    ) -> pd.DataFrame:
         reconstructions = self.reconstructions.get(epoch=epoch, split=split)
         ids = self.sample_ids.get(epoch=epoch, split=split)
         if modality is not None:

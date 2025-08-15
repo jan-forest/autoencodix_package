@@ -14,7 +14,7 @@ class DisentanglixArchitecture(BaseAutoencoder):
     """
     Variational Autoencoder implementation with disentanglement control via additional loss terms for mutual information, total correlation and dimension-wise KL divergence.
     As described in "Isolating Sources of Disentanglement in VAEs" https://doi.org/10.48550/arXiv.1802.04942
-    
+
 
     Attributes
     ----------
@@ -126,7 +126,7 @@ class DisentanglixArchitecture(BaseAutoencoder):
 
     def encode(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Encode the input tensor x. 
+        Encode the input tensor x.
         Similar to Varix.
 
         Parameters

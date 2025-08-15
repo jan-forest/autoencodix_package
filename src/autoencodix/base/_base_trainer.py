@@ -187,8 +187,9 @@ class BaseTrainer(abc.ABC):
 
     def _should_checkpoint(self, epoch: int):
         return (
-            epoch + 1
-        ) % self._config.checkpoint_interval == 0 or epoch == self._config.epochs - 1
+            (epoch + 1) % self._config.checkpoint_interval == 0
+            or epoch == self._config.epochs - 1
+        )
 
     @abc.abstractmethod
     def train(self, epochs_overwrite: Optional[int]) -> Result:

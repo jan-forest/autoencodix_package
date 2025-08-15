@@ -177,30 +177,49 @@ class Visualizer(BaseVisualizer):
         plt.ioff()
         if plot_type == "Coverage-Correlation":
             if "Coverage-Correlation" in self.plots:
-                fig = self.plots["Coverage-Correlation"] 
+                fig = self.plots["Coverage-Correlation"]
                 show_figure(fig)
                 plt.show()
             else:
                 results = []
-                for epoch in range(result.model.config.checkpoint_interval, result.model.config.epochs + 1, result.model.config.checkpoint_interval):
+                for epoch in range(
+                    result.model.config.checkpoint_interval,
+                    result.model.config.epochs + 1,
+                    result.model.config.checkpoint_interval,
+                ):
                     for split in ["train", "valid"]:
-                        latent_df = result.get_latent_df(epoch=epoch-1, split=split)
+                        latent_df = result.get_latent_df(epoch=epoch - 1, split=split)
                         tc = self._total_correlation(latent_df)
                         cov = self._coverage_calc(latent_df)
-                        results.append({"epoch": epoch, "split": split, "total_correlation": tc, "coverage": cov})
+                        results.append(
+                            {
+                                "epoch": epoch,
+                                "split": split,
+                                "total_correlation": tc,
+                                "coverage": cov,
+                            }
+                        )
 
                 df_metrics = pd.DataFrame(results)
 
                 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
                 # Total Correlation plot
-                ax1 = sns.lineplot(data=df_metrics, x="epoch", y="total_correlation", hue="split", ax=axes[0])
+                ax1 = sns.lineplot(
+                    data=df_metrics,
+                    x="epoch",
+                    y="total_correlation",
+                    hue="split",
+                    ax=axes[0],
+                )
                 axes[0].set_title("Total Correlation")
                 axes[0].set_xlabel("Epoch")
                 axes[0].set_ylabel("Total Correlation")
 
                 # Coverage plot
-                ax2 = sns.lineplot(data=df_metrics, x="epoch", y="coverage", hue="split", ax=axes[1])
+                ax2 = sns.lineplot(
+                    data=df_metrics, x="epoch", y="coverage", hue="split", ax=axes[1]
+                )
                 axes[1].set_title("Coverage")
                 axes[1].set_xlabel("Epoch")
                 axes[1].set_ylabel("Coverage")
@@ -215,20 +234,20 @@ class Visualizer(BaseVisualizer):
             if epoch is None:
                 epoch = result.model.config.epochs - 1
 
-          ## Getting clin_data
+            ## Getting clin_data
             if hasattr(result.datasets.train, "metadata"):
                 # Check if metadata is a dictionary and contains 'paired'
                 if isinstance(result.datasets.train.metadata, dict):
                     if "paired" in result.datasets.train.metadata:
-                        clin_data = result.datasets.train.metadata['paired']
+                        clin_data = result.datasets.train.metadata["paired"]
                         if hasattr(result.datasets, "test"):
                             clin_data = pd.concat(
-                                [clin_data, result.datasets.test.metadata['paired']],
+                                [clin_data, result.datasets.test.metadata["paired"]],
                                 axis=0,
                             )
                         if hasattr(result.datasets, "valid"):
                             clin_data = pd.concat(
-                                [clin_data, result.datasets.valid.metadata['paired']],
+                                [clin_data, result.datasets.valid.metadata["paired"]],
                                 axis=0,
                             )
                     else:
@@ -275,7 +294,7 @@ class Visualizer(BaseVisualizer):
 
             if labels is None and param is None:
                 labels = ["all"] * df_latent.shape[0]
-            
+
             if labels is None and isinstance(param, str):
                 if param == "all":
                     param = list(clin_data.columns)
@@ -283,18 +302,20 @@ class Visualizer(BaseVisualizer):
                     raise ValueError(
                         "Please provide parameter to plot as a list not as string. If you want to plot all parameters, set param to 'all' and labels to None."
                     )
-            
+
             if labels is not None and param is not None:
                 raise ValueError(
                     "Please provide either labels or param, not both. If you want to plot all parameters, set param to 'all' and labels to None."
                 )
 
             if labels is not None and param is None:
-                if isinstance(labels, pd.Series):                                
+                if isinstance(labels, pd.Series):
                     param = [labels.name]
                     # Order by index of df_latent first, fill missing with "unknown"
-                    labels = labels.reindex(df_latent.index, fill_value="unknown").tolist()
-                else:                    
+                    labels = labels.reindex(
+                        df_latent.index, fill_value="unknown"
+                    ).tolist()
+                else:
                     param = ["user_label"]  # Default label if none provided
 
             for p in param:
@@ -350,7 +371,6 @@ class Visualizer(BaseVisualizer):
             fig = self.plots["ModelWeights"]
             show_figure(fig)
             plt.show()
-
 
     # def plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:
     #     """
@@ -435,7 +455,7 @@ class Visualizer(BaseVisualizer):
     #     fig.suptitle("Model Weights", size=20)
     #     plt.close()
     #     return fig
-    
+
     ## NEW VERSION
     @staticmethod
     # def plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:
@@ -561,7 +581,11 @@ class Visualizer(BaseVisualizer):
                 elif "decoder" in name and "var" not in name:
                     decoder_weights.append(param.detach().cpu().numpy())
                     decoder_names.append(name[:-7])
-                elif "encoder" not in name and "decoder" not in name and "var" not in name:
+                elif (
+                    "encoder" not in name
+                    and "decoder" not in name
+                    and "var" not in name
+                ):
                     # fallback for models without explicit encoder/decoder in name
                     all_weights.append(param.detach().cpu().numpy())
                     names.append(name[:-7])
@@ -585,7 +609,7 @@ class Visualizer(BaseVisualizer):
                 ax.set_ylabel("Out Node", size=12)
             # Hide unused encoder subplots
             for i in range(n_enc, n_cols):
-                axes[0, i].axis('off')
+                axes[0, i].axis("off")
             # Plot decoder weights
             for i in range(n_dec):
                 ax = axes[1, i]
@@ -596,7 +620,7 @@ class Visualizer(BaseVisualizer):
                     cmap=sns.color_palette("Spectral", as_cmap=True),
                     center=0,
                     ax=ax,
-                    **heatmap_kwargs
+                    **heatmap_kwargs,
                 ).set(title=decoder_names[i])
                 if model.ontologies is not None:
                     axes[1, i].set_xticks(
@@ -615,11 +639,13 @@ class Visualizer(BaseVisualizer):
                 ax.set_ylabel("Out Node", size=12)
             # Hide unused decoder subplots
             for i in range(n_dec, n_cols):
-                axes[1, i].axis('off')
+                axes[1, i].axis("off")
         else:
             # fallback: plot all weights in order, split in half for encoder/decoder
             n_layers = len(all_weights) // 2
-            fig, axes = plt.subplots(2, n_layers, sharex=False, figsize=(5 * n_layers, 10))
+            fig, axes = plt.subplots(
+                2, n_layers, sharex=False, figsize=(5 * n_layers, 10)
+            )
             for layer in range(n_layers):
                 sns.heatmap(
                     all_weights[layer],
@@ -682,11 +708,15 @@ class Visualizer(BaseVisualizer):
                     print(
                         "The provided label column is numeric and converted to categories."
                     )
-                    labels = pd.qcut(
-                        x=pd.Series(labels),
-                        q=4,
-                        labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
-                    ).astype(str).to_list()
+                    labels = (
+                        pd.qcut(
+                            x=pd.Series(labels),
+                            q=4,
+                            labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
+                        )
+                        .astype(str)
+                        .to_list()
+                    )
                 else:
                     center = False  ## Disable centering for numeric params
                     numeric = True
@@ -913,11 +943,14 @@ class Visualizer(BaseVisualizer):
         matplotlib.figure.Figure
             The generated matplotlib figure containing the loss plots.
         """
-        fig_width_abs = 5*len(df_plot["Loss Term"].unique())
-        fig_width_rel = 5*len(df_plot["Split"].unique())
+        fig_width_abs = 5 * len(df_plot["Loss Term"].unique())
+        fig_width_rel = 5 * len(df_plot["Split"].unique())
         if plot_type == "absolute":
             fig, axes = plt.subplots(
-                1, len(df_plot["Loss Term"].unique()), figsize=(fig_width_abs, 5), sharey=False
+                1,
+                len(df_plot["Loss Term"].unique()),
+                figsize=(fig_width_abs, 5),
+                sharey=False,
             )
             ax = 0
             for term in df_plot["Loss Term"].unique():
@@ -1043,10 +1076,10 @@ class Visualizer(BaseVisualizer):
 
         loss_df_melt["Loss Value"] = loss_df_melt["Loss Value"].astype(float)
         return loss_df_melt
-    
+
     def plot_evaluation(
-            self,
-            result: Result,
+        self,
+        result: Result,
     ) -> dict:
         """
         Plots the evaluation results from the Result object.
@@ -1064,16 +1097,23 @@ class Visualizer(BaseVisualizer):
 
         for c in pd.unique(result.embedding_evaluation.CLINIC_PARAM):
             ml_plots[c] = dict()
-            for m in pd.unique(result.embedding_evaluation.loc[result.embedding_evaluation.CLINIC_PARAM == c, "metric"]):
+            for m in pd.unique(
+                result.embedding_evaluation.loc[
+                    result.embedding_evaluation.CLINIC_PARAM == c, "metric"
+                ]
+            ):
                 ml_plots[c][m] = dict()
-                for alg in pd.unique(result.embedding_evaluation.loc[
-                        (result.embedding_evaluation.CLINIC_PARAM == c) &
-                        (result.embedding_evaluation.metric == m), "ML_ALG"
-                    ]):
+                for alg in pd.unique(
+                    result.embedding_evaluation.loc[
+                        (result.embedding_evaluation.CLINIC_PARAM == c)
+                        & (result.embedding_evaluation.metric == m),
+                        "ML_ALG",
+                    ]
+                ):
                     data = result.embedding_evaluation[
-                        (result.embedding_evaluation.metric == m) &
-                        (result.embedding_evaluation.CLINIC_PARAM == c) &
-                        (result.embedding_evaluation.ML_ALG == alg)
+                        (result.embedding_evaluation.metric == m)
+                        & (result.embedding_evaluation.CLINIC_PARAM == c)
+                        & (result.embedding_evaluation.ML_ALG == alg)
                     ]
 
                     sns_plot = sns.catplot(
@@ -1094,7 +1134,7 @@ class Visualizer(BaseVisualizer):
         self.plots["ML_Evaluation"] = ml_plots
 
         return ml_plots
-    
+
     def show_evaluation(
         self,
         param: str,
@@ -1141,11 +1181,11 @@ class Visualizer(BaseVisualizer):
                 fig = self.plots["ML_Evaluation"][param][metric][alg].figure
                 show_figure(fig)
                 plt.show()
-    
+
     @staticmethod
     def _total_correlation(latent_space: pd.DataFrame) -> float:
-        """ Function to compute the total correlation as described here (Equation2): https://doi.org/10.3390/e21100921
-            
+        """Function to compute the total correlation as described here (Equation2): https://doi.org/10.3390/e21100921
+
         Args:
             latent_space - (pd.DataFrame): latent space with dimension sample vs. latent dimensions
         Returns:
@@ -1154,11 +1194,11 @@ class Visualizer(BaseVisualizer):
         lat_cov = np.cov(latent_space.T)
         tc = 0.5 * (np.sum(np.log(np.diag(lat_cov))) - np.linalg.slogdet(lat_cov)[1])
         return tc
-    
+
     @staticmethod
     def _coverage_calc(latent_space: pd.DataFrame) -> float:
-        """ Function to compute the coverage as described here (Equation3): https://doi.org/10.3390/e21100921
-            
+        """Function to compute the coverage as described here (Equation3): https://doi.org/10.3390/e21100921
+
         Args:
             latent_space - (pd.DataFrame): latent space with dimension sample vs. latent dimensions
         Returns:
@@ -1178,5 +1218,5 @@ class Visualizer(BaseVisualizer):
             cov = len(latent_bins.unique()) / np.power(
                 bins_per_dim, len(latent_space.columns)
             )
-            
+
         return cov

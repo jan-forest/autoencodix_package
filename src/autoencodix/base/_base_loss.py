@@ -234,7 +234,7 @@ class BaseLoss(nn.Module, ABC):
         if not loss_helper:
             return torch.tensor(0.0)
         return torch.stack(loss_helper).mean()
-      
+
     @staticmethod
     def _compute_log_gauss_dense(
         z: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor
@@ -254,9 +254,9 @@ class BaseLoss(nn.Module, ABC):
             + logvar
             + (z - mu) ** 2 * torch.exp(-logvar)
         )
-    
+
     @staticmethod
-    def _compute_log_import_weight_mat(batch_size:int, n_samples:int) -> torch.Tensor:
+    def _compute_log_import_weight_mat(batch_size: int, n_samples: int) -> torch.Tensor:
         """Computes the log import weight matrix for disentangled loss.
            Similar to: https://github.com/rtqichen/beta-tcvae
         Args:
@@ -266,7 +266,7 @@ class BaseLoss(nn.Module, ABC):
         Returns:
             Log import weight matrix of shape (batch_size, n_samples).
         """
-        
+
         N = n_samples
         M = batch_size - 1
         strat_weight = (N - M) / (N * M)
@@ -275,16 +275,13 @@ class BaseLoss(nn.Module, ABC):
         W.view(-1)[1 :: M + 1] = strat_weight
         W[M - 1, 0] = strat_weight
         return W.log()
-      
-      
+
     @abstractmethod
     def forward(
-
         self,
         *args,
         **kwargs,
     ) -> Any:
-
         """Calculates the loss for the autoencoder.
 
         This method must be implemented by subclasses to define the specific
@@ -309,4 +306,3 @@ class BaseLoss(nn.Module, ABC):
             computation logic for their use case.
         """
         pass
-

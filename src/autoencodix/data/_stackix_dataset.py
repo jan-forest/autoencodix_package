@@ -58,7 +58,9 @@ class StackixDataset(NumericDataset):
                 [v.data for _, v in dataset_dict.items() if hasattr(v, "data")], dim=1
             )
         except Exception:
-            raise NotImplementedError("Data modalities have different shapes, set requires_paired=True in config")
+            raise NotImplementedError(
+                "Data modalities have different shapes, set requires_paired=True in config"
+            )
         super().__init__(
             data=data,
             sample_ids=first_modality.sample_ids,
@@ -115,8 +117,7 @@ class StackixDataset(NumericDataset):
 
         """
         return {
-            k: self.dataset_dict[k].__getitem__(index)
-            for k in self.dataset_dict.keys()
+            k: self.dataset_dict[k].__getitem__(index) for k in self.dataset_dict.keys()
         }
 
     def get_modality_item(self, modality: str, index: int) -> Tuple[torch.Tensor, Any]:

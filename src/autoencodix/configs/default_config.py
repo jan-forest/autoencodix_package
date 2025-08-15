@@ -435,48 +435,47 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
             None,
         )
 
-        try:
-            if from_dataset and to_dataset:
-                from_info, to_info = from_dataset[1], to_dataset[1]
-                if from_info.data_type == "NUMERIC" and to_info.data_type == "NUMERIC":
+        if from_dataset and to_dataset:
+            from_info, to_info = from_dataset[1], to_dataset[1]
+            if from_info.data_type == "NUMERIC" and to_info.data_type == "NUMERIC":
+                self.data_case = (
+                    DataCase.SINGLE_CELL_TO_SINGLE_CELL
+                    if from_info.is_single_cell
+                    else DataCase.BULK_TO_BULK
+                )
+            elif "IMG" in {from_info.data_type, to_info.data_type}:
+                numeric_dataset = (
+                    from_info if from_info.data_type == "NUMERIC" else to_info
+                )
+                # check for IMG_IMG
+                if from_info.data_type == "IMG" and to_info.data_type == "IMG":
+                    self.data_case = DataCase.IMG_TO_IMG
+                else:
                     self.data_case = (
-                        DataCase.SINGLE_CELL_TO_SINGLE_CELL
-                        if from_info.is_single_cell
-                        else DataCase.BULK_TO_BULK
+                        DataCase.SINGLE_CELL_TO_IMG
+                        if numeric_dataset.is_single_cell
+                        else DataCase.IMG_TO_BULK
                     )
-                elif "IMG" in {from_info.data_type, to_info.data_type}:
-                    numeric_dataset = (
-                        from_info if from_info.data_type == "NUMERIC" else to_info
-                    )
-                    # check for IMG_IMG
-                    if from_info.data_type == "IMG" and to_info.data_type == "IMG":
-                        self.data_case = DataCase.IMG_TO_IMG
-                    else:
-                        self.data_case = (
-                            DataCase.SINGLE_CELL_TO_IMG
-                            if numeric_dataset.is_single_cell
-                            else DataCase.IMG_TO_BULK
-                        )
-            else:
-                # Find any numeric dataset
-                numeric_datasets = [
-                    info for info in data_info.values() if info.data_type == "NUMERIC"
-                ]
+        else:
+            img_ds = [info for info in data_info.values() if info.data_type == "IMG"]
+            if img_ds:
+                self.data_case = DataCase.IMG_TO_IMG
 
-                if not numeric_datasets:
-                    raise ValueError("No numeric datasets found in data_info")
+            numeric_datasets = [
+                info for info in data_info.values() if info.data_type == "NUMERIC"
+            ]
 
+            if numeric_datasets:
                 numeric_dataset = numeric_datasets[0]
                 self.data_case = (
                     DataCase.MULTI_SINGLE_CELL
                     if numeric_dataset.is_single_cell
                     else DataCase.MULTI_BULK
                 )
-        except Exception as e:
-            # Log the error but don't fail validation
-            import warnings
+            if self.data_case is None:
+                import warnings
 
-            warnings.warn(f"Could not determine data_case: {str(e)}")
+                warnings.warn(f"Could not determine data_case: {e}")
 
         return self
 

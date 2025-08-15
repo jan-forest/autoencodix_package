@@ -7,7 +7,6 @@ class StackixConfig(DefaultConfig):
     A specialized configuration inheriting from DefaultConfig.
     """
 
-
     beta: float = Field(
         default=0.1,  # Overridden default (was 1.0)
         ge=0,

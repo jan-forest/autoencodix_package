@@ -3,17 +3,18 @@ from typing import Optional, Union
 import pandas as pd
 
 
-from autoencodix.utils._result import Result 
+from autoencodix.utils._result import Result
 from autoencodix.utils._utils import nested_dict
 from autoencodix.configs.default_config import DefaultConfig
 
 
 class BaseVisualizer(abc.ABC):
-    """ Defines the interface for visualizing training results.
-    
+    """Defines the interface for visualizing training results.
+
     Attributes:
         plots: A nested dictionary to store various plots.
     """
+
     def __init__(self):
         self.plots = nested_dict()
 

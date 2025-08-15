@@ -42,7 +42,7 @@ class BaseDataset(abc.ABC, Dataset):
         self.config = config
         self.sample_ids = sample_ids
         self.feature_ids = feature_ids
-        self.mytype: Enum # set in subclasses
+        self.mytype: Enum  # set in subclasses
 
     def __len__(self) -> int:
         """Returns the number of samples in the dataset.

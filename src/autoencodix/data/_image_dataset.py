@@ -30,7 +30,7 @@ class ImageDataset(TensorAwareDataset):
         config : DefaultConfig
             Configuration object
         """
-        self.raw_data = data # image data before conversion to keep original infos
+        self.raw_data = data  # image data before conversion to keep original infos
         self.config = config
         self.mytype = DataSetTypes.IMG
 

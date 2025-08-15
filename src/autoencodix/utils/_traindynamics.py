@@ -95,9 +95,7 @@ class TrainingDynamics:
             self._data[epoch] = {}
         self._data[epoch][split] = data
 
-    def get(
-        self, epoch: Optional[int] = None, split: Optional[str] = None
-    ) -> Union[
+    def get(self, epoch: Optional[int] = None, split: Optional[str] = None) -> Union[
         np.ndarray,
         Dict[str, np.ndarray],
         Dict[int, Dict[str, np.ndarray]],

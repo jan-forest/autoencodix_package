@@ -787,6 +787,8 @@ class BasePreprocessor(abc.ABC):
         Raises:
             TypeError: If from_key or to_key is None, indicating that translation keys must be specified.
         """
+        print("--------------")
+        print("img to img CASE =============")
         if raw_user_data is None:
             imgreader = self.data_readers[DataCase.IMG_TO_IMG]
             images, annotation = imgreader.read_data(config=self.config)
@@ -813,6 +815,7 @@ class BasePreprocessor(abc.ABC):
 
         def presplit_processor(modality_data: Dict[str, List]) -> Dict[str, List]:
             """Processes img-to-img modality data with normalization for images."""
+            print("calling normalize image in _process_ing_to_img_case")
             return {
                 k: self._normalize_image_data(v, k) for k, v in modality_data.items()
             }
@@ -826,13 +829,7 @@ class BasePreprocessor(abc.ABC):
         return self._process_data_case(
             data_package,
             modality_processors={
-                "from_modality": (
-                    lambda data: presplit_processor(
-                        data,
-                    ),
-                    postsplit_processor,
-                ),
-                "to_modality": (
+                "img": (
                     lambda data: presplit_processor(
                         data,
                     ),

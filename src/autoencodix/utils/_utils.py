@@ -15,6 +15,7 @@ from matplotlib import pyplot as plt
 
 from ..configs.default_config import DefaultConfig
 
+
 # only for type hints, to avoid circual import
 class BasePipeline:
     pass

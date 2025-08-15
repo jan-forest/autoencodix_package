@@ -11,5 +11,5 @@ model_trainer_map: Dict[Type, Type] = {
     VarixArchitecture: GeneralTrainer,
     ImageVAEArchitecture: GeneralTrainer,
     VanillixArchitecture: GeneralTrainer,
-    OntixArchitecture: OntixTrainer
+    OntixArchitecture: OntixTrainer,
 }

@@ -73,15 +73,16 @@ class Evaluator:
 
         df_results = pd.DataFrame()
 
-        ## TODO when x-modalix is ready, check how to adjust evaluation of both latent spaces
-        # if cfg["MODEL_TYPE"] == "x-modalix":
-        #     if "Latent" in cfg["ML_TASKS"]:
-        #         cfg["ML_TASKS"].remove("Latent")
-        #         cfg["ML_TASKS"].append("Latent_FROM")
-        #         cfg["ML_TASKS"].append("Latent_TO")
-        #         cfg["ML_TASKS"].append("Latent_BOTH")
-
         reference_methods.append("Latent")
+
+        ## TODO when x-modalix is ready, check how to adjust evaluation of both latent spaces
+        is_modalix = False # TODO Remove and implement individual Evaluators later
+
+        if type(result.latentspaces.get(epoch=-1,split="train")) == dict:
+            # For X-Modalix and others with multiple VAE Latentspaces
+            reference_methods = [f"{method}_$_{key}" for method in reference_methods for key in result.latentspaces.get(epoch=-1,split="train").keys()]
+            is_modalix = True
+            
 
         for task in reference_methods:
             print(f"Perform ML task with feature df: {task}")
@@ -124,6 +125,24 @@ class Evaluator:
                     raise ValueError(
                         "Metadata is not a dictionary or DataFrame. Please provide a valid annotation data type."
                     )
+            elif hasattr(datasets.train, "datasets"):
+                # XModalix-Case
+                clin_data = pd.DataFrame()
+                splits = [
+                    datasets.train, datasets.valid, datasets.test
+                ]
+
+                for s in splits:
+                    for k in s.datasets.keys():
+                        print(f"Processing dataset: {k}")
+                        # Merge metadata by overlapping columns
+                        overlap = clin_data.columns.intersection(s.datasets[k].metadata.columns)
+                        if overlap.empty:
+                            overlap = s.datasets[k].metadata.columns
+                        clin_data = pd.concat([clin_data, s.datasets[k].metadata[overlap]], axis=0)
+
+                # Remove duplicate rows
+                clin_data = clin_data[~clin_data.index.duplicated(keep='first')]
             else:
                 # Raise error no annotation given
                 raise ValueError(
@@ -183,12 +202,19 @@ class Evaluator:
 
             ## df -> task
             subtask = [task]
-            if task == "RandomFeature":
+            if "RandomFeature" in task:
                 subtask = [
-                    task + str(x) for x in range(1, 6)
+                    task + "_R" +str(x) for x in range(1, 6)
                 ]  
             for sub in subtask:
-                df = self._load_input_for_ml(task, datasets, result)
+                print(sub)
+                if is_modalix:
+                    modality = task.split("_$_")[1]
+                    task_xmodal = task.split("_$_")[0]
+
+                    df = self._load_input_for_ml_xmodal(task_xmodal, datasets, result, modality=modality)
+                else:
+                    df = self._load_input_for_ml(task, datasets, result)
 
                 if params == "all":
                     params = clin_data.columns.tolist()
@@ -271,7 +297,11 @@ class Evaluator:
 
                     results["ML_ALG"] = res_ml_alg
                     results["ML_TYPE"] = res_ml_type
-                    results["ML_TASK"] = res_ml_task
+                    if is_modalix:
+                        results["MODALITY"] = [modality for x in range(0, results.shape[0])]
+                        results["ML_TASK"] = [task_xmodal for x in range(0, results.shape[0])]
+                    else:
+                        results["ML_TASK"] = res_ml_task
                     results["ML_SUBTASK"] = res_ml_subtask
 
                     df_results = pd.concat([df_results, results])
@@ -517,3 +547,60 @@ class Evaluator:
    
         return df
 
+    ## New for x-modalix
+    @staticmethod
+    def _load_input_for_ml_xmodal(task: str, dataset: DatasetContainer, result: Result, modality: str = None) -> pd.DataFrame:
+            """
+            Loads and processes input data for various machine learning tasks based on the specified task type.
+            Parameters:
+                task (str): The type of ML task. Supported values are "Latent", "UMAP", "PCA", "TSNE", and "RandomFeature".
+                dataset (DatasetContainer): The dataset container object holding train, validation, and test splits.
+                result (Result): The result object containing model configuration and methods to retrieve latent representations.
+            Returns:
+                pd.DataFrame: A DataFrame containing the processed input data suitable for the specified ML task.
+            Raises:
+                ValueError: If the provided task is not supported.
+            Task Details:
+                - "Latent": Concatenates latent representations from train, validation, and test splits at the final epoch.
+                - "UMAP": Applies UMAP dimensionality reduction to the concatenated dataset splits.
+                - "PCA": Applies PCA dimensionality reduction to the concatenated dataset splits.
+                - "TSNE": Applies t-SNE dimensionality reduction to the concatenated dataset splits.
+                - "RandomFeature": Randomly samples columns (features) from the concatenated dataset splits.
+            """
+
+            # final_epoch = result.model.config.epochs - 1
+
+            if task == "Latent":
+                df = pd.concat(
+                    [
+                        result.get_latent_df(epoch=-1, split="train", modality=modality),
+                        result.get_latent_df(epoch=-1, split="valid", modality=modality),
+                        result.get_latent_df(epoch=-1, split="test", modality=modality),
+                    ]
+                )
+            elif task in ["UMAP", "PCA","TSNE", "RandomFeature"]:
+                latent_dim = result.get_latent_df(epoch=-1, split="train", modality=modality).shape[1]
+                df_processed = pd.concat([
+                    dataset.train._to_df(modality=modality),
+                    dataset.test._to_df(modality=modality),
+                    dataset.valid._to_df(modality=modality),
+                ])
+                if task == "UMAP":
+                    reducer = UMAP(n_components=latent_dim)
+                    df = pd.DataFrame(reducer.fit_transform(df_processed), index=df_processed.index)
+                elif task == "PCA":
+                    reducer = PCA(n_components=latent_dim)
+                    df = pd.DataFrame(reducer.fit_transform(df_processed), index=df_processed.index)
+                elif task == "TSNE":
+                    reducer = TSNE(n_components=latent_dim)
+                    df = pd.DataFrame(reducer.fit_transform(df_processed), index=df_processed.index)
+                elif task == "RandomFeature":
+                    df = df_processed.sample(
+                        n=latent_dim, axis=1
+                    )
+            else:
+                raise ValueError(
+                    f"Your ML task {task} is not supported. Please use Latent, UMAP, PCA or RandomFeature."
+                )
+    
+            return df

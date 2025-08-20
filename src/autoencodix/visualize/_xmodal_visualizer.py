@@ -5,6 +5,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from umap import UMAP  
 import warnings
+import torch
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
 
 from typing import Any, Dict, Optional, Union
 from autoencodix.base._base_visualizer import BaseVisualizer
@@ -398,10 +401,64 @@ class XModalVisualizer(BaseVisualizer):
                             transform=ax.transAxes,
                         )
 
-            self.plots["Ridgeline"][to_key][split][param] = fig
+            self.plots["Image-translation"][to_key][split][param] = fig
             # show_figure(fig)
             plt.show()
 
+    def show_2D_translation(self, result: Result, translated_modality: str, split: str="test", param: str=None, reducer: str="UMAP") -> None:
+
+        ## TODO add similar labels/param logic from other visualizations
+        dataset = result.datasets
+
+        if split not in ["train", "valid", "test"]:
+            raise ValueError(f"Unknown split: {split}")
+        
+        if split in ["train", "valid"]:
+            raise NotImplementedError(
+                "2D translation visualization is currently only implemented for the 'test' split since reconstruction is only performed on test-split."
+            )
+
+        # Get input data
+        if split == "train":
+            df_processed = dataset.train._to_df(modality=translated_modality)
+        if split == "valid":
+            df_processed = dataset.valid._to_df(modality=translated_modality)
+        if split == "test":
+            df_processed = dataset.test._to_df(modality=translated_modality)
+        
+        # Get translated reconstruction
+        tensor_list = result.reconstructions.get(epoch=-1, split="test")["translation"]
+
+        # Flatten each tensor and collect as rows (for image case)
+        rows = [t.flatten().cpu().numpy() if isinstance(t, torch.Tensor) else t.flatten() for t in tensor_list]
+
+        # Create DataFrame
+        df_translate_flat = pd.DataFrame(rows, columns=["Pixel_" + str(i) for i in range(len(rows[0]))])   
+
+        if reducer == "UMAP":
+            reducer_model = UMAP(n_components=2)
+        elif reducer == "PCA":
+            reducer_model = PCA(n_components=2)
+        elif reducer == "TSNE":
+            reducer_model = TSNE(n_components=2)
+
+        df_red_comb = pd.DataFrame(reducer_model.fit_transform(
+            pd.concat([df_processed, df_translate_flat], axis=0)
+            ))
+
+        df_red_comb["origin"]  = ["input"] * df_processed.shape[0] + ["translated"] * df_translate_flat.shape[0]
+
+        labels = list(result.datasets.test.datasets["img.IMG"].metadata[param]) * 2 
+        df_red_comb[param] = labels + labels[0:df_red_comb.shape[0]-len(labels)]  ## TODO fix for not matching lengths
+
+        g = sns.FacetGrid(df_red_comb, col="origin", hue=param, sharex=True, sharey=True)
+        g.map_dataframe(sns.scatterplot, x=0, y=1, alpha=0.7 )
+        g.add_legend()
+        g.set_axis_labels(reducer+" DIM 1", reducer +" DIM 2")
+        g.set_titles(col_template="{col_name}")
+
+        self.plots["2D-translation"][translated_modality][split][param] = g
+        plt.show()
 
     ## Utilities specific for X-Modalix
     @staticmethod
@@ -588,3 +645,55 @@ class XModalVisualizer(BaseVisualizer):
 
         plt.close()
         return g
+
+    def _plot_evaluation(
+            self,
+            result: Result,
+    ) -> dict:
+        """
+        Plots the evaluation results from the Result object.
+
+        Parameters:
+        result (Result): The Result object containing evaluation data.
+
+        Returns:
+        dict: The generated dictionary containing the evaluation plots.
+        """
+        ## Plot all results
+
+        ml_plots = dict()
+        plt.ioff()
+
+        for c in pd.unique(result.embedding_evaluation.CLINIC_PARAM):
+            ml_plots[c] = dict()
+            for m in pd.unique(result.embedding_evaluation.loc[result.embedding_evaluation.CLINIC_PARAM == c, "metric"]):
+                ml_plots[c][m] = dict()
+                for alg in pd.unique(result.embedding_evaluation.loc[
+                        (result.embedding_evaluation.CLINIC_PARAM == c) &
+                        (result.embedding_evaluation.metric == m), "ML_ALG"
+                    ]):
+                    data = result.embedding_evaluation[
+                        (result.embedding_evaluation.metric == m) &
+                        (result.embedding_evaluation.CLINIC_PARAM == c) &
+                        (result.embedding_evaluation.ML_ALG == alg)
+                    ]
+
+                    sns_plot = sns.catplot(
+                        data=data,
+                        x="score_split",
+                        y="value",
+                        col="ML_TASK",
+                        row="MODALITY", 
+                        hue="score_split",
+                        kind="bar",
+                    )
+
+                    min_y = data.value.min()
+                    if min_y > 0:
+                        min_y = 0
+
+                    ml_plots[c][m][alg] = sns_plot.set(ylim=(min_y, None))
+
+        self.plots["ML_Evaluation"] = ml_plots
+
+        return ml_plots

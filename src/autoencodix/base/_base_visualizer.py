@@ -81,6 +81,53 @@ class BaseVisualizer(abc.ABC):
                 "Type of loss plot not recognized. Please use 'absolute' or 'relative'"
             )
 
+    def show_evaluation(
+        self,
+        param: str,
+        metric: str,
+        ml_alg: Optional[str] = None,
+    ) -> None:
+        """
+        Displays the evaluation plot for a specific clinical parameter, metric, and optionally ML algorithm.
+        Parameters:
+        param (str): The clinical parameter to visualize.
+        metric (str): The metric to visualize.
+        ml_alg (str, optional): The ML algorithm to visualize. If None, plots all available algorithms.
+        Returns:
+        None
+        """
+        plt.ioff()
+        if "ML_Evaluation" not in self.plots.keys():
+            print("ML Evaluation plots not found in the plots dictionary")
+            print("You need to run evaluate() method first")
+            return None
+        if param not in self.plots["ML_Evaluation"].keys():
+            print(f"Parameter {param} not found in the ML Evaluation plots")
+            print(f"Available parameters: {list(self.plots['ML_Evaluation'].keys())}")
+            return None
+        if metric not in self.plots["ML_Evaluation"][param].keys():
+            print(f"Metric {metric} not found in the ML Evaluation plots for {param}")
+            print(
+                f"Available metrics: {list(self.plots['ML_Evaluation'][param].keys())}"
+            )
+            return None
+
+        algs = list(self.plots["ML_Evaluation"][param][metric].keys())
+        if ml_alg is not None:
+            if ml_alg not in algs:
+                print(f"ML algorithm {ml_alg} not found for {param} and {metric}")
+                print(f"Available ML algorithms: {algs}")
+                return None
+            fig = self.plots["ML_Evaluation"][param][metric][ml_alg].figure
+            show_figure(fig)
+            plt.show()
+        else:
+            for alg in algs:
+                print(f"Showing plot for ML algorithm: {alg}")
+                fig = self.plots["ML_Evaluation"][param][metric][alg].figure
+                show_figure(fig)
+                plt.show()
+
 	## TODO move to BaseVisualizer?
     def save_plots(
         self, path: str, which: Union[str, list] = "all", format: str = "png"

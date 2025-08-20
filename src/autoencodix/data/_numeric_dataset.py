@@ -79,6 +79,17 @@ class TensorAwareDataset(BaseDataset):
         """
         if isinstance(self.data, torch.Tensor):
             return pd.DataFrame(self.data.numpy(), columns=self.feature_ids, index=self.sample_ids)
+        elif isinstance(self.data[0], torch.Tensor):
+            # Handle image modality
+            # Get the list of tensors
+            tensor_list = self.data
+
+            # Flatten each tensor and collect as rows
+            rows = [t.flatten().cpu().numpy() if isinstance(t, torch.Tensor) else t.flatten() for t in tensor_list]
+
+            # Create DataFrame
+            df_flat = pd.DataFrame(rows, index=self.sample_ids, columns=["Pixel_" + str(i) for i in range(len(rows[0]))])
+            return df_flat
         else:
             raise TypeError("Data is not a torch.Tensor and cannot be converted to DataFrame.")
 
@@ -140,6 +151,21 @@ class NumericDataset(TensorAwareDataset):
         self.metadata = metadata
         self.split_indices = split_indices
         self.mytype = DataSetTypes.NUM
+
+    def _to_df(self) -> pd.DataFrame:
+
+        """
+        Convert the dataset to a pandas DataFrame.
+
+        Returns:
+        --------
+        pd.DataFrame
+            DataFrame representation of the dataset
+        """
+        if isinstance(self.data, torch.Tensor):
+            return pd.DataFrame(self.data.numpy(), columns=self.feature_ids, index=self.sample_ids)
+        else:
+            raise TypeError("Data is not a torch.Tensor and cannot be converted to DataFrame.")
 
     def __len__(self) -> int:
         """Returns the number of samples (rows) in the dataset"""

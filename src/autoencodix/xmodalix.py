@@ -15,7 +15,7 @@ from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.data._xmodal_preprocessor import XModalPreprocessor
-from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.evaluate._xmodalix_evaluator import XModalixEvaluator
 from autoencodix.trainers._xmodal_trainer import XModalTrainer
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
@@ -42,7 +42,7 @@ class XModalix(BasePipeline):
         Visualizer object to visualize the model output - custom for XModalix
     _trainer : XModalixTrainer
         Trainer object that trains the model - custom for XModalix
-    _evaluator : Evaluator
+    _evaluator : XModalixEvaluator
         Evaluator object that evaluates the model performance or downstream tasks
     result : Result
         Result object to store the pipeline results
@@ -71,7 +71,7 @@ class XModalix(BasePipeline):
         loss_type: Type[BaseLoss] = XModalLoss,  # TODO make custom for XModalix
         preprocessor_type: Type[BasePreprocessor] = XModalPreprocessor,
         visualizer: Optional[BaseVisualizer] = XModalVisualizer,
-        evaluator: Optional[Evaluator] = None,
+        evaluator: Optional[XModalixEvaluator] = XModalixEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,

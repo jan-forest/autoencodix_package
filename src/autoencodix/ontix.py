@@ -14,7 +14,7 @@ from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.general_preprocessor import GeneralPreprocessor
-from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.evaluate._general_evaluator import GeneralEvaluator
 
 # from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.modeling._ontix_architecture import OntixArchitecture
@@ -45,7 +45,7 @@ class Ontix(BasePipeline):
         Visualizer object to visualize the model output (maybe custom for Ontix)
     _trainer : GeneralTrainer
         Trainer object that trains the model (maybe custom for Ontix)
-    _evaluator : Evaluator
+    _evaluator : GeneralEvaluator
         Evaluator object that evaluates the model performance or downstream tasks (maybe custom for Ontix)
     result : Result
         Result object to store the pipeline results
@@ -74,7 +74,7 @@ class Ontix(BasePipeline):
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = GeneralPreprocessor,
         visualizer: Type[BaseVisualizer] = GeneralVisualizer,
-        evaluator: Optional[Evaluator] = None,
+        evaluator: Optional[GeneralEvaluator] = GeneralEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,

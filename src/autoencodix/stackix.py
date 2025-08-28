@@ -14,7 +14,7 @@ from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._numeric_dataset import NumericDataset
-from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.evaluate._general_evaluator import GeneralEvaluator
 from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.utils._result import Result
 from autoencodix.utils.default_config import DefaultConfig
@@ -53,7 +53,7 @@ class Stackix(BasePipeline):
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = StackixPreprocessor,
         visualizer: Type[BaseVisualizer] = GeneralVisualizer,
-        evaluator: Optional[Evaluator] = None,
+        evaluator: Optional[GeneralEvaluator] = GeneralEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,

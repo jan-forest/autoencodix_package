@@ -15,7 +15,7 @@ from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._image_dataset import ImageDataset
 from autoencodix.data._image_processor import ImagePreprocessor
-from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.evaluate._general_evaluator import GeneralEvaluator
 from autoencodix.modeling._imagevae_architecture import ImageVAEArchitecture
 from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
@@ -42,7 +42,7 @@ class Imagix(BasePipeline):
         Visualizer object to visualize the model output
     _trainer : GeneralTrainer
         Trainer object that trains the model
-    _evaluator : Evaluator
+    _evaluator : GeneralEvaluator
         Evaluator object that evaluates the model performance or downstream tasks
     result : Result
         Result object to store the pipeline results
@@ -69,7 +69,7 @@ class Imagix(BasePipeline):
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = ImagePreprocessor,
         visualizer: Optional[BaseVisualizer] = ImagixVisualizer,
-        evaluator: Optional[Evaluator] = None,
+        evaluator: Optional[GeneralEvaluator] = GeneralEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,

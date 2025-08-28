@@ -14,7 +14,7 @@ from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.general_preprocessor import GeneralPreprocessor
-from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.evaluate._general_evaluator import GeneralEvaluator
 from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
 from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
@@ -39,7 +39,7 @@ class Vanillix(BasePipeline):
         Visualizer object to visualize the model output (custom for Vanillix)
     _trainer : GeneralTrainer
         Trainer object that trains the model (custom for Vanillix)
-    _evaluator : Evaluator
+    _evaluator : GeneralEvaluator
         Evaluator object that evaluates the model performance or downstream tasks (custom for Vanillix)
     result : Result
         Result object to store the pipeline results
@@ -58,7 +58,7 @@ class Vanillix(BasePipeline):
         loss_type: Type[BaseLoss] = VanillixLoss,
         preprocessor_type: Type[BasePreprocessor] = GeneralPreprocessor,
         visualizer: Type[BaseVisualizer] = GeneralVisualizer,
-        evaluator: Optional[Evaluator] = None,
+        evaluator: Optional[GeneralEvaluator] = GeneralEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,

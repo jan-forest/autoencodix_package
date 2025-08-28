@@ -18,7 +18,8 @@ from sklearn.base import ClassifierMixin, RegressorMixin, is_classifier, is_regr
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
-from autoencodix.evaluate.evaluate import Evaluator
+# from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.base._base_evaluator import BaseEvaluator
 from autoencodix.utils._result import Result
 from autoencodix.utils._utils import Loader, Saver, config_method
 from autoencodix.utils.default_config import DataCase, DataInfo, DefaultConfig
@@ -73,7 +74,7 @@ class BasePipeline(abc.ABC):
             Union[DataPackage, DatasetContainer, ad.AnnData, MuData, pd.DataFrame, dict]
         ],
         visualizer: Optional[BaseVisualizer] = None,
-        evaluator: Optional[Evaluator] = None,
+        evaluator: Optional[BaseEvaluator] = None,
         result: Optional[Result] = None,
         config: Optional[DefaultConfig] = None,
         custom_split: Optional[Dict[str, np.ndarray]] = None,
@@ -137,7 +138,7 @@ class BasePipeline(abc.ABC):
         )
 
         self._visualizer = visualizer() if visualizer is not None else BaseVisualizer()
-        self._evaluator = evaluator if evaluator is not None else Evaluator()
+        self._evaluator = evaluator() if evaluator is not None else BaseEvaluator()
         self.result = result if result is not None else Result()
         self._dataset_type = dataset_type
         self._data_splitter = datasplitter_type(

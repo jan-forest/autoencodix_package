@@ -15,14 +15,14 @@ from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.general_preprocessor import GeneralPreprocessor
-from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.evaluate._general_evaluator import GeneralEvaluator
 from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.configs.varix_config import VarixConfig
 from autoencodix.utils._losses import VarixLoss
-from autoencodix.visualize.visualize import Visualizer
+from autoencodix.visualize._general_visualizer import GeneralVisualizer
 
 
 class Varix(BasePipeline):
@@ -45,7 +45,7 @@ class Varix(BasePipeline):
         Visualizer object to visualize the model output (maybe custom for Varix)
     _trainer : GeneralTrainer
         Trainer object that trains the model (maybe custom for Varix)
-    _evaluator : Evaluator
+    _evaluator : GeneralEvaluator
         Evaluator object that evaluates the model performance or downstream tasks (maybe custom for Varix)
     result : Result
         Result object to store the pipeline results
@@ -71,8 +71,8 @@ class Varix(BasePipeline):
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = GeneralPreprocessor,
-        visualizer: Optional[BaseVisualizer] = None,
-        evaluator: Optional[Evaluator] = None,
+        visualizer: Type[BaseVisualizer] = GeneralVisualizer,
+        evaluator: Optional[GeneralEvaluator] = GeneralEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,

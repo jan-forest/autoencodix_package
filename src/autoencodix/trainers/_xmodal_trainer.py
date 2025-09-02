@@ -459,7 +459,7 @@ class XModalTrainer(BaseTrainer):
             self._fabric.autocast(),
             torch.inference_mode(),
         ):
-            for batch in inference_loader:
+            for batch in inference_loader: ## TODO missing sample ids. reconstructions are shuffled
                 # needed for visualize later
                 self._get_vis_dynamics(batch=batch)
                 from_z = self._modality_dynamics[from_key]["mp"].latentspace

@@ -26,6 +26,7 @@ from autoencodix.configs.ontix_config import OntixConfig
 from autoencodix.utils._losses import VarixLoss
 from autoencodix.visualize._general_visualizer import GeneralVisualizer
 
+
 ## Copy from Varix with ontology addition
 class Ontix(BasePipeline):
     """

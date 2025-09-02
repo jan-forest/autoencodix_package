@@ -26,7 +26,7 @@ class BaseVisualizer(abc.ABC):
     def __setitem__(self, key, elem):
         self.plots[key] = elem
 
-### Abstract Methods ###
+    ### Abstract Methods ###
     @abc.abstractmethod
     def visualize(self, result: Result, config: DefaultConfig) -> Result:
         pass
@@ -47,7 +47,7 @@ class BaseVisualizer(abc.ABC):
     def show_weights(self) -> None:
         pass
 
-### General Functions used by all Visualizers in similar way ###
+    ### General Functions used by all Visualizers in similar way ###
 
     def show_loss(self, plot_type: str = "absolute") -> None:
         """
@@ -129,7 +129,7 @@ class BaseVisualizer(abc.ABC):
                 show_figure(fig)
                 plt.show()
 
-	## TODO move to BaseVisualizer?
+    ## TODO move to BaseVisualizer?
     def save_plots(
         self, path: str, which: Union[str, list] = "all", format: str = "png"
     ) -> None:
@@ -191,9 +191,7 @@ class BaseVisualizer(abc.ABC):
                         fullpath = os.path.join(path, filename)
                         fig.savefig(f"{fullpath}.{format}")
 
-
-
-### Utilities ###
+    ### Utilities ###
 
     @staticmethod
     def _make_loss_format(result: Result, config: DefaultConfig) -> pd.DataFrame:
@@ -289,11 +287,14 @@ class BaseVisualizer(abc.ABC):
         matplotlib.figure.Figure
             The generated matplotlib figure containing the loss plots.
         """
-        fig_width_abs = 5*len(df_plot["Loss Term"].unique())
-        fig_width_rel = 5*len(df_plot["Split"].unique())
+        fig_width_abs = 5 * len(df_plot["Loss Term"].unique())
+        fig_width_rel = 5 * len(df_plot["Split"].unique())
         if plot_type == "absolute":
             fig, axes = plt.subplots(
-                1, len(df_plot["Loss Term"].unique()), figsize=(fig_width_abs, 5), sharey=False
+                1,
+                len(df_plot["Loss Term"].unique()),
+                figsize=(fig_width_abs, 5),
+                sharey=False,
             )
             ax = 0
             for term in df_plot["Loss Term"].unique():
@@ -391,7 +392,11 @@ class BaseVisualizer(abc.ABC):
                 elif "decoder" in name and "var" not in name:
                     decoder_weights.append(param.detach().cpu().numpy())
                     decoder_names.append(name[:-7])
-                elif "encoder" not in name and "decoder" not in name and "var" not in name:
+                elif (
+                    "encoder" not in name
+                    and "decoder" not in name
+                    and "var" not in name
+                ):
                     # fallback for models without explicit encoder/decoder in name
                     all_weights.append(param.detach().cpu().numpy())
                     names.append(name[:-7])
@@ -415,7 +420,7 @@ class BaseVisualizer(abc.ABC):
                 ax.set_ylabel("Out Node", size=12)
             # Hide unused encoder subplots
             for i in range(n_enc, n_cols):
-                axes[0, i].axis('off')
+                axes[0, i].axis("off")
             # Plot decoder weights
             for i in range(n_dec):
                 ax = axes[1, i]
@@ -426,7 +431,7 @@ class BaseVisualizer(abc.ABC):
                     cmap=sns.color_palette("Spectral", as_cmap=True),
                     center=0,
                     ax=ax,
-                    **heatmap_kwargs
+                    **heatmap_kwargs,
                 ).set(title=decoder_names[i])
                 if model.ontologies is not None:
                     axes[1, i].set_xticks(
@@ -445,11 +450,13 @@ class BaseVisualizer(abc.ABC):
                 ax.set_ylabel("Out Node", size=12)
             # Hide unused decoder subplots
             for i in range(n_dec, n_cols):
-                axes[1, i].axis('off')
+                axes[1, i].axis("off")
         else:
             # fallback: plot all weights in order, split in half for encoder/decoder
             n_layers = len(all_weights) // 2
-            fig, axes = plt.subplots(2, n_layers, sharex=False, figsize=(5 * n_layers, 10))
+            fig, axes = plt.subplots(
+                2, n_layers, sharex=False, figsize=(5 * n_layers, 10)
+            )
             for layer in range(n_layers):
                 sns.heatmap(
                     all_weights[layer],

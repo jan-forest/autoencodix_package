@@ -130,9 +130,17 @@ class XModalix(BasePipeline):
 
         self._visualizer.show_latent_space(result=self.result, plot_type="2D-scatter")
 
-        dm_keys = find_translation_keys(config=self.config, trained_modalities=self._trainer._modality_dynamics.keys())
+        dm_keys = find_translation_keys(
+            config=self.config,
+            trained_modalities=self._trainer._modality_dynamics.keys(),
+        )
         if "IMG" in dm_keys["to"]:
-            self._visualizer.show_image_translation(result=self.result, from_key=dm_keys["from"], to_key=dm_keys["to"], split="test")
+            self._visualizer.show_image_translation(
+                result=self.result,
+                from_key=dm_keys["from"],
+                to_key=dm_keys["to"],
+                split="test",
+            )
 
     # def _process_latent_results(
     #     self, predictor_results, predict_data: DatasetContainer

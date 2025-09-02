@@ -89,9 +89,11 @@ class TensorAwareDataset(BaseDataset):
 
             # Flatten each tensor and collect as rows
             rows = [
-                t.flatten().cpu().numpy()
-                if isinstance(t, torch.Tensor)
-                else t.flatten()
+                (
+                    t.flatten().cpu().numpy()
+                    if isinstance(t, torch.Tensor)
+                    else t.flatten()
+                )
                 for t in tensor_list
             ]
 

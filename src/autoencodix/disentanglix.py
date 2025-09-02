@@ -20,8 +20,10 @@ from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
 from autoencodix.configs.default_config import DefaultConfig
+from autoencodix.configs.disentanglix_config import DisentanglixConfig
 from autoencodix.utils._losses import DisentanglixLoss
 from autoencodix.visualize._general_visualizer import GeneralVisualizer
+
 
 class Disentanglix(BasePipeline):
     """
@@ -105,7 +107,7 @@ class Disentanglix(BasePipeline):
         config : Optional[DefaultConfig]
             Configuration for all pipeline components
         """
-
+        self._default_config = DisentanglixConfig()
         super().__init__(
             data=data,
             dataset_type=dataset_type,

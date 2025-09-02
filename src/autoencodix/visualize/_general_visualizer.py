@@ -6,14 +6,13 @@ import matplotlib.figure
 import numpy as np
 import pandas as pd
 import seaborn as sns  # type: ignore
-import torch
 from matplotlib import pyplot as plt
 from umap import UMAP  # type: ignore
 
 from autoencodix.base._base_visualizer import BaseVisualizer
 from autoencodix.utils._result import Result
 from autoencodix.utils._utils import nested_dict, show_figure
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class GeneralVisualizer(BaseVisualizer):
@@ -82,30 +81,49 @@ class GeneralVisualizer(BaseVisualizer):
         plt.ioff()
         if plot_type == "Coverage-Correlation":
             if "Coverage-Correlation" in self.plots:
-                fig = self.plots["Coverage-Correlation"] 
+                fig = self.plots["Coverage-Correlation"]
                 show_figure(fig)
                 plt.show()
             else:
                 results = []
-                for epoch in range(result.model.config.checkpoint_interval, result.model.config.epochs + 1, result.model.config.checkpoint_interval):
+                for epoch in range(
+                    result.model.config.checkpoint_interval,
+                    result.model.config.epochs + 1,
+                    result.model.config.checkpoint_interval,
+                ):
                     for split in ["train", "valid"]:
-                        latent_df = result.get_latent_df(epoch=epoch-1, split=split)
+                        latent_df = result.get_latent_df(epoch=epoch - 1, split=split)
                         tc = self._total_correlation(latent_df)
                         cov = self._coverage_calc(latent_df)
-                        results.append({"epoch": epoch, "split": split, "total_correlation": tc, "coverage": cov})
+                        results.append(
+                            {
+                                "epoch": epoch,
+                                "split": split,
+                                "total_correlation": tc,
+                                "coverage": cov,
+                            }
+                        )
 
                 df_metrics = pd.DataFrame(results)
 
                 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
                 # Total Correlation plot
-                ax1 = sns.lineplot(data=df_metrics, x="epoch", y="total_correlation", hue="split", ax=axes[0])
+                ax1 = sns.lineplot(
+                    data=df_metrics,
+                    x="epoch",
+                    y="total_correlation",
+                    hue="split",
+                    ax=axes[0],
+                )
                 axes[0].set_title("Total Correlation")
                 axes[0].set_xlabel("Epoch")
                 axes[0].set_ylabel("Total Correlation")
 
                 # Coverage plot
-                ax2 = sns.lineplot(data=df_metrics, x="epoch", y="coverage", hue="split", ax=axes[1])
+                ax2 = sns.lineplot(
+                    data=df_metrics, x="epoch", y="coverage", hue="split", ax=axes[1]
+                )
                 axes[1].set_title("Coverage")
                 axes[1].set_xlabel("Epoch")
                 axes[1].set_ylabel("Coverage")
@@ -120,20 +138,20 @@ class GeneralVisualizer(BaseVisualizer):
             if epoch is None:
                 epoch = result.model.config.epochs - 1
 
-          ## Getting clin_data
+            ## Getting clin_data
             if hasattr(result.datasets.train, "metadata"):
                 # Check if metadata is a dictionary and contains 'paired'
                 if isinstance(result.datasets.train.metadata, dict):
                     if "paired" in result.datasets.train.metadata:
-                        clin_data = result.datasets.train.metadata['paired']
+                        clin_data = result.datasets.train.metadata["paired"]
                         if hasattr(result.datasets, "test"):
                             clin_data = pd.concat(
-                                [clin_data, result.datasets.test.metadata['paired']],
+                                [clin_data, result.datasets.test.metadata["paired"]],
                                 axis=0,
                             )
                         if hasattr(result.datasets, "valid"):
                             clin_data = pd.concat(
-                                [clin_data, result.datasets.valid.metadata['paired']],
+                                [clin_data, result.datasets.valid.metadata["paired"]],
                                 axis=0,
                             )
                     else:
@@ -181,7 +199,7 @@ class GeneralVisualizer(BaseVisualizer):
             ## Label options
             if labels is None and param is None:
                 labels = ["all"] * df_latent.shape[0]
-            
+
             if labels is None and isinstance(param, str):
                 if param == "all":
                     param = list(clin_data.columns)
@@ -189,18 +207,20 @@ class GeneralVisualizer(BaseVisualizer):
                     raise ValueError(
                         "Please provide parameter to plot as a list not as string. If you want to plot all parameters, set param to 'all' and labels to None."
                     )
-            
+
             if labels is not None and param is not None:
                 raise ValueError(
                     "Please provide either labels or param, not both. If you want to plot all parameters, set param to 'all' and labels to None."
                 )
 
             if labels is not None and param is None:
-                if isinstance(labels, pd.Series):                                
+                if isinstance(labels, pd.Series):
                     param = [labels.name]
                     # Order by index of df_latent first, fill missing with "unknown"
-                    labels = labels.reindex(df_latent.index, fill_value="unknown").tolist()
-                else:                    
+                    labels = labels.reindex(
+                        df_latent.index, fill_value="unknown"
+                    ).tolist()
+                else:
                     param = ["user_label"]  # Default label if none provided
 
             for p in param:
@@ -257,7 +277,7 @@ class GeneralVisualizer(BaseVisualizer):
             show_figure(fig)
             plt.show()
 
-### Moved to Base
+    ### Moved to Base
     # def show_evaluation(
     #     self,
     #     param: str,
@@ -265,8 +285,7 @@ class GeneralVisualizer(BaseVisualizer):
     #     ml_alg: Optional[str] = None,
     # ) -> None:
 
-
-### Utilities ###
+    ### Utilities ###
     @staticmethod
     def _plot_2D(
         embedding: pd.DataFrame,
@@ -308,11 +327,15 @@ class GeneralVisualizer(BaseVisualizer):
                     print(
                         "The provided label column is numeric and converted to categories."
                     )
-                    labels = pd.qcut(
-                        x=pd.Series(labels),
-                        q=4,
-                        labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
-                    ).astype(str).to_list()
+                    labels = (
+                        pd.qcut(
+                            x=pd.Series(labels),
+                            q=4,
+                            labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
+                        )
+                        .astype(str)
+                        .to_list()
+                    )
                 else:
                     center = False  ## Disable centering for numeric params
                     numeric = True
@@ -515,8 +538,8 @@ class GeneralVisualizer(BaseVisualizer):
         return g
 
     def _plot_evaluation(
-            self,
-            result: Result,
+        self,
+        result: Result,
     ) -> dict:
         """
         Plots the evaluation results from the Result object.
@@ -534,16 +557,23 @@ class GeneralVisualizer(BaseVisualizer):
 
         for c in pd.unique(result.embedding_evaluation.CLINIC_PARAM):
             ml_plots[c] = dict()
-            for m in pd.unique(result.embedding_evaluation.loc[result.embedding_evaluation.CLINIC_PARAM == c, "metric"]):
+            for m in pd.unique(
+                result.embedding_evaluation.loc[
+                    result.embedding_evaluation.CLINIC_PARAM == c, "metric"
+                ]
+            ):
                 ml_plots[c][m] = dict()
-                for alg in pd.unique(result.embedding_evaluation.loc[
-                        (result.embedding_evaluation.CLINIC_PARAM == c) &
-                        (result.embedding_evaluation.metric == m), "ML_ALG"
-                    ]):
+                for alg in pd.unique(
+                    result.embedding_evaluation.loc[
+                        (result.embedding_evaluation.CLINIC_PARAM == c)
+                        & (result.embedding_evaluation.metric == m),
+                        "ML_ALG",
+                    ]
+                ):
                     data = result.embedding_evaluation[
-                        (result.embedding_evaluation.metric == m) &
-                        (result.embedding_evaluation.CLINIC_PARAM == c) &
-                        (result.embedding_evaluation.ML_ALG == alg)
+                        (result.embedding_evaluation.metric == m)
+                        & (result.embedding_evaluation.CLINIC_PARAM == c)
+                        & (result.embedding_evaluation.ML_ALG == alg)
                     ]
 
                     sns_plot = sns.catplot(
@@ -564,12 +594,11 @@ class GeneralVisualizer(BaseVisualizer):
         self.plots["ML_Evaluation"] = ml_plots
 
         return ml_plots
-    
- 
+
     @staticmethod
     def _total_correlation(latent_space: pd.DataFrame) -> float:
-        """ Function to compute the total correlation as described here (Equation2): https://doi.org/10.3390/e21100921
-            
+        """Function to compute the total correlation as described here (Equation2): https://doi.org/10.3390/e21100921
+
         Args:
             latent_space - (pd.DataFrame): latent space with dimension sample vs. latent dimensions
         Returns:
@@ -578,11 +607,11 @@ class GeneralVisualizer(BaseVisualizer):
         lat_cov = np.cov(latent_space.T)
         tc = 0.5 * (np.sum(np.log(np.diag(lat_cov))) - np.linalg.slogdet(lat_cov)[1])
         return tc
-    
+
     @staticmethod
     def _coverage_calc(latent_space: pd.DataFrame) -> float:
-        """ Function to compute the coverage as described here (Equation3): https://doi.org/10.3390/e21100921
-            
+        """Function to compute the coverage as described here (Equation3): https://doi.org/10.3390/e21100921
+
         Args:
             latent_space - (pd.DataFrame): latent space with dimension sample vs. latent dimensions
         Returns:
@@ -602,5 +631,5 @@ class GeneralVisualizer(BaseVisualizer):
             cov = len(latent_bins.unique()) / np.power(
                 bins_per_dim, len(latent_space.columns)
             )
-            
+
         return cov

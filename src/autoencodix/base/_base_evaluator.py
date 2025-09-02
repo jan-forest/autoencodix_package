@@ -2,6 +2,7 @@ import abc
 
 from autoencodix.utils._result import Result
 
+
 class BaseEvaluator(abc.ABC):
     def __init__(self):
         pass

@@ -27,6 +27,7 @@ from autoencodix.data._stackix_dataset import StackixDataset
 from autoencodix.trainers._stackix_trainer import StackixTrainer
 from autoencodix.visualize._general_visualizer import GeneralVisualizer
 
+
 class Stackix(BasePipeline):
     """
     Stackix pipeline for training multiple VAEs on different modalities and stacking their latent spaces.

@@ -23,6 +23,7 @@ from autoencodix.configs.vanillix_config import VanillixConfig
 from autoencodix.utils._losses import VanillixLoss
 from autoencodix.visualize._general_visualizer import GeneralVisualizer
 
+
 class Vanillix(BasePipeline):
     """
     Vanillix specific version of the BasePipeline class.

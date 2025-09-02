@@ -18,6 +18,7 @@ from sklearn.base import ClassifierMixin, RegressorMixin, is_classifier, is_regr
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
+
 # from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.base._base_evaluator import BaseEvaluator
 from autoencodix.utils._result import Result
@@ -855,7 +856,6 @@ class BasePipeline(abc.ABC):
         ml_plots = self._visualizer._plot_evaluation(result=self.result)
 
         return self.result
-
 
     def visualize(self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs):
         """Creates visualizations of model results and performance.

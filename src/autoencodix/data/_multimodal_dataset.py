@@ -35,7 +35,6 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):
         self.collate_fn = create_multimodal_collate_fn(self)
 
     def _to_df(self, modality: str) -> pd.DataFrame:
-
         """
         Convert the dataset to a pandas DataFrame.
 
@@ -49,20 +48,35 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):
 
         ds = self.datasets[modality]
         if isinstance(ds.data, torch.Tensor):
-            return pd.DataFrame(ds.data.numpy(), columns=ds.feature_ids, index=ds.sample_ids)
+            return pd.DataFrame(
+                ds.data.numpy(), columns=ds.feature_ids, index=ds.sample_ids
+            )
         elif "IMG" in modality:
             # Handle image modality
             # Get the list of tensors
             tensor_list = self.datasets[modality].data
 
             # Flatten each tensor and collect as rows
-            rows = [t.flatten().cpu().numpy() if isinstance(t, torch.Tensor) else t.flatten() for t in tensor_list]
+            rows = [
+                (
+                    t.flatten().cpu().numpy()
+                    if isinstance(t, torch.Tensor)
+                    else t.flatten()
+                )
+                for t in tensor_list
+            ]
 
             # Create DataFrame
-            df_flat = pd.DataFrame(rows, index=ds.sample_ids, columns=["Pixel_" + str(i) for i in range(len(rows[0]))])
+            df_flat = pd.DataFrame(
+                rows,
+                index=ds.sample_ids,
+                columns=["Pixel_" + str(i) for i in range(len(rows[0]))],
+            )
             return df_flat
         else:
-            raise TypeError("Data is not a torch.Tensor and cannot be converted to DataFrame.")
+            raise TypeError(
+                "Data is not a torch.Tensor and cannot be converted to DataFrame."
+            )
 
     def _build_sample_map(self):
         sample_to_mods = {}

@@ -1,4 +1,3 @@
-
 from typing import Any, Union, Tuple
 import warnings
 
@@ -23,17 +22,20 @@ class GeneralEvaluator(BaseEvaluator):
         # super().__init__()
         pass
 
-    def evaluate(self,
-                datasets: DatasetContainer,
-                result: Result,
-                ml_model_class: ClassifierMixin = linear_model.LogisticRegression(), # Default is sklearn LogisticRegression
-                ml_model_regression: RegressorMixin = linear_model.LinearRegression(), # Default is sklearn LinearRegression
-                params: Union[list, str]= "all",	# No default? ... or all params in annotation?
-                metric_class: str = "roc_auc_ovr", # Default is 'roc_auc_ovr' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
-                metric_regression: str = "r2", # Default is 'r2'
-                reference_methods: list = [], # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
-                split_type:str = "use-split", # Default is "use-split", other options: "CV-5", ... "LOOCV"?
-                ) -> Result:
+    def evaluate(
+        self,
+        datasets: DatasetContainer,
+        result: Result,
+        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(),  # Default is sklearn LogisticRegression
+        ml_model_regression: RegressorMixin = linear_model.LinearRegression(),  # Default is sklearn LinearRegression
+        params: Union[
+            list, str
+        ] = "all",  # No default? ... or all params in annotation?
+        metric_class: str = "roc_auc_ovr",  # Default is 'roc_auc_ovr' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
+        metric_regression: str = "r2",  # Default is 'r2'
+        reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
+        split_type: str = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
+    ) -> Result:
         """
         Evaluate the performance of machine learning models on various feature representations and clinical parameters.
         This method performs classification or regression tasks using specified machine learning models on different feature sets (e.g., latent space, PCA, UMAP, TSNE, RandomFeature) and clinical annotation parameters. It supports multiple evaluation strategies, including pre-defined train/valid/test splits, k-fold cross-validation, and leave-one-out cross-validation. The results are aggregated and stored in the provided `result` object.
@@ -85,11 +87,12 @@ class GeneralEvaluator(BaseEvaluator):
         #     # For X-Modalix and others with multiple VAE Latentspaces
         #     reference_methods = [f"{method}_$_{key}" for method in reference_methods for key in result.latentspaces.get(epoch=-1,split="train").keys()]
         #     is_modalix = True
-        reference_methods = self._expand_reference_methods(reference_methods=reference_methods, result=result)
+        reference_methods = self._expand_reference_methods(
+            reference_methods=reference_methods, result=result
+        )
 
         for task in reference_methods:
             print(f"Perform ML task with feature df: {task}")
-
 
             clin_data = self._get_clin_data(datasets)
 
@@ -146,9 +149,7 @@ class GeneralEvaluator(BaseEvaluator):
             ## df -> task
             subtask = [task]
             if "RandomFeature" in task:
-                subtask = [
-                    task + "_R" +str(x) for x in range(1, 6)
-                ]  
+                subtask = [task + "_R" + str(x) for x in range(1, 6)]
             for sub in subtask:
                 print(sub)
                 # if is_modalix:
@@ -161,7 +162,7 @@ class GeneralEvaluator(BaseEvaluator):
 
                 if params == "all":
                     params = clin_data.columns.tolist()
-                
+
                 for task_param in params:
                     if "Latent" in task:
                         print(f"Perform ML task for target parameter: {task_param}")
@@ -169,7 +170,6 @@ class GeneralEvaluator(BaseEvaluator):
                     ml_type = self._get_ml_type(clin_data, task_param)
 
                     if pd.isna(clin_data[task_param]).sum() > 0:
-                        
                         if not already_warned:
                             print(
                                 "There are NA values in the annotation file. Samples with missing data will be removed for ML task evaluation."
@@ -198,51 +198,54 @@ class GeneralEvaluator(BaseEvaluator):
 
                     if split_type == "use-split":
                         results = self._single_ml_presplit(
-                                sample_split=sample_split,
-                                df=df,
-                                clin_data=clin_data,
-                                task_param=task_param,
-                                sklearn_ml=sklearn_ml,
-                                metric=metric,
-                                ml_type=ml_type
-                            )
+                            sample_split=sample_split,
+                            df=df,
+                            clin_data=clin_data,
+                            task_param=task_param,
+                            sklearn_ml=sklearn_ml,
+                            metric=metric,
+                            ml_type=ml_type,
+                        )
                     elif split_type.startswith("CV-"):
                         cv_folds = int(split_type.split("-")[1])
 
                         results = self._single_ml(
-                                df=df,
-                                clin_data=clin_data,
-                                task_param=task_param,
-                                sklearn_ml=sklearn_ml,
-                                metric=metric,
-                                cv_folds=cv_folds
-                            )
+                            df=df,
+                            clin_data=clin_data,
+                            task_param=task_param,
+                            sklearn_ml=sklearn_ml,
+                            metric=metric,
+                            cv_folds=cv_folds,
+                        )
                     elif split_type == "LOOCV":
                         # Leave One Out Cross Validation
                         results = self._single_ml(
-                                df=df,
-                                clin_data=clin_data,
-                                task_param=task_param,
-                                sklearn_ml=sklearn_ml,
-                                metric=metric,
-                                cv_folds=len(df)
-                            )
+                            df=df,
+                            clin_data=clin_data,
+                            task_param=task_param,
+                            sklearn_ml=sklearn_ml,
+                            metric=metric,
+                            cv_folds=len(df),
+                        )
                     else:
                         raise ValueError(
                             f"Your split type {split_type} is not supported. Please use 'use-split', 'CV-5', 'LOOCV' or 'CV-N'."
                         )
                     results = self._enrich_results(
-                        results=results, 
-                        sklearn_ml=sklearn_ml, 
-                        ml_type=ml_type, 
-                        task=task, 
-                        sub=sub
+                        results=results,
+                        sklearn_ml=sklearn_ml,
+                        ml_type=ml_type,
+                        task=task,
+                        sub=sub,
                     )
 
                     df_results = pd.concat([df_results, results])
 
         ## Check if embedding_evaluation is empty
-        if hasattr(result, "embedding_evaluation") and len(result.embedding_evaluation) == 0:
+        if (
+            hasattr(result, "embedding_evaluation")
+            and len(result.embedding_evaluation) == 0
+        ):
             result.embedding_evaluation = df_results
         else:
             # merge with existing results
@@ -254,13 +257,13 @@ class GeneralEvaluator(BaseEvaluator):
 
     @staticmethod
     def _single_ml(
-            df: pd.DataFrame,
-            clin_data: pd.DataFrame,
-            task_param: str,
-            sklearn_ml: Union[ClassifierMixin, RegressorMixin],
-            metric: str,
-            cv_folds: int =5,
-                   ):
+        df: pd.DataFrame,
+        clin_data: pd.DataFrame,
+        task_param: str,
+        sklearn_ml: Union[ClassifierMixin, RegressorMixin],
+        metric: str,
+        cv_folds: int = 5,
+    ):
         """
         Function learns on the given data frame df and label data the provided sklearn model.
         Cross validation is performed according to the config and scores are returned as output as specified by metrics
@@ -303,9 +306,7 @@ class GeneralEvaluator(BaseEvaluator):
             for m in scores:
                 if m.split("_")[0] == "test" or m.split("_")[0] == "train":
                     split_cv = [m.split("_")[0] for x in range(1, cv_folds + 1)]
-                    metric_cv = [
-                        metric for x in range(1, cv_folds + 1)
-                    ]
+                    metric_cv = [metric for x in range(1, cv_folds + 1)]
 
                     score_df["cv_run"].extend(cv_runs)
                     score_df["score_split"].extend(split_cv)
@@ -325,15 +326,15 @@ class GeneralEvaluator(BaseEvaluator):
             # Check if metadata is a dictionary and contains 'paired'
             if isinstance(datasets.train.metadata, dict):
                 if "paired" in datasets.train.metadata:
-                    clin_data = datasets.train.metadata['paired']
+                    clin_data = datasets.train.metadata["paired"]
                     if hasattr(datasets, "test"):
                         clin_data = pd.concat(
-                            [clin_data, datasets.test.metadata['paired']],
+                            [clin_data, datasets.test.metadata["paired"]],
                             axis=0,
                         )
                     if hasattr(datasets, "valid"):
                         clin_data = pd.concat(
-                            [clin_data, datasets.valid.metadata['paired']],
+                            [clin_data, datasets.valid.metadata["paired"]],
                             axis=0,
                         )
                 else:
@@ -383,8 +384,14 @@ class GeneralEvaluator(BaseEvaluator):
             )
         return clin_data
 
-    def _enrich_results(self, results: pd.DataFrame, sklearn_ml: Union[ClassifierMixin, RegressorMixin], ml_type: str, task: str, sub: str) -> pd.DataFrame:
-
+    def _enrich_results(
+        self,
+        results: pd.DataFrame,
+        sklearn_ml: Union[ClassifierMixin, RegressorMixin],
+        ml_type: str,
+        task: str,
+        sub: str,
+    ) -> pd.DataFrame:
         res_ml_alg = [str(sklearn_ml) for x in range(0, results.shape[0])]
         res_ml_type = [ml_type for x in range(0, results.shape[0])]
         res_ml_task = [task for x in range(0, results.shape[0])]
@@ -398,8 +405,8 @@ class GeneralEvaluator(BaseEvaluator):
         # else:
         results["ML_TASK"] = res_ml_task
         results["ML_SUBTASK"] = res_ml_subtask
-        
-        return results	
+
+        return results
 
     @staticmethod
     def _single_ml_presplit(
@@ -409,7 +416,7 @@ class GeneralEvaluator(BaseEvaluator):
         task_param: str,
         sklearn_ml: Union[ClassifierMixin, RegressorMixin],
         metric: str,
-        ml_type: str
+        ml_type: str,
     ):
         """
         Trains the provided sklearn model on the training split and evaluates it on train, valid, and test splits using the specified metric.
@@ -449,16 +456,20 @@ class GeneralEvaluator(BaseEvaluator):
         score_df["metric"] = list()
         score_df["value"] = list()
 
-        X_train = df.loc[sample_split.loc[sample_split.SPLIT == "train", "SAMPLE_ID"], :]
+        X_train = df.loc[
+            sample_split.loc[sample_split.SPLIT == "train", "SAMPLE_ID"], :
+        ]
         train_samples = [s for s in X_train.index]
         Y_train = clin_data.loc[train_samples, task_param]
         # train model once on training data
         if len(Y_train.unique()) > 1:
             sklearn_ml.fit(X_train, Y_train)
 
-                # eval on all splits
+            # eval on all splits
             for split in split_list:
-                X = df.loc[sample_split.loc[sample_split.SPLIT == split, "SAMPLE_ID"], :]
+                X = df.loc[
+                    sample_split.loc[sample_split.SPLIT == split, "SAMPLE_ID"], :
+                ]
                 samples = [s for s in X.index]
                 Y = clin_data.loc[samples, task_param]
 
@@ -473,25 +484,28 @@ class GeneralEvaluator(BaseEvaluator):
                     raise ValueError(
                         f"Your metric {metric} is not supported by sklearn. Please use a valid metric."
                     )
-                
+
                 if ml_type == "classification":
                     # Check that Y has only classes which are present in Y_train
                     if len(set(Y.unique()).difference(set(Y_train.unique()))) > 0:
-                        print(f"Classes in split {split} are not present in training data")
+                        print(
+                            f"Classes in split {split} are not present in training data"
+                        )
                         # Adjust Y to only contain classes present in Y_train
                         Y = Y[Y.isin(Y_train.unique())]
                         # Adjust X as well
                         X = X.loc[Y.index, :]
 
-
                 score_temp = sklearn_scorer(sklearn_ml, X, Y)
                 score_df["value"].append(score_temp)
         else:
             ## Warning that there is only one class in the training data
-            warnings.warn(f"Warning: There is only one class in the training data for task parameter {task_param}. Skipping evaluation for this task.")
+            warnings.warn(
+                f"Warning: There is only one class in the training data for task parameter {task_param}. Skipping evaluation for this task."
+            )
 
         return pd.DataFrame(score_df)
-    
+
     @staticmethod
     def _get_ml_type(clin_data: pd.DataFrame, task_param: str) -> str:
         """
@@ -511,9 +525,11 @@ class GeneralEvaluator(BaseEvaluator):
             ml_type = "regression"
 
         return ml_type
-    
+
     @staticmethod
-    def _load_input_for_ml(task: str, dataset: DatasetContainer, result: Result) -> pd.DataFrame:
+    def _load_input_for_ml(
+        task: str, dataset: DatasetContainer, result: Result
+    ) -> pd.DataFrame:
         """
         Loads and processes input data for various machine learning tasks based on the specified task type.
         Parameters:
@@ -542,29 +558,34 @@ class GeneralEvaluator(BaseEvaluator):
                     result.get_latent_df(epoch=-1, split="test"),
                 ]
             )
-        elif task in ["UMAP", "PCA","TSNE", "RandomFeature"]:
-            df_processed = pd.concat([
-                dataset.train._to_df(),
-                dataset.test._to_df(),
-                dataset.valid._to_df(),
-            ])
-            if task == "UMAP":                
+        elif task in ["UMAP", "PCA", "TSNE", "RandomFeature"]:
+            df_processed = pd.concat(
+                [
+                    dataset.train._to_df(),
+                    dataset.test._to_df(),
+                    dataset.valid._to_df(),
+                ]
+            )
+            if task == "UMAP":
                 reducer = UMAP(n_components=result.model.config.latent_dim)
-                df = pd.DataFrame(reducer.fit_transform(df_processed), index=df_processed.index)
+                df = pd.DataFrame(
+                    reducer.fit_transform(df_processed), index=df_processed.index
+                )
             elif task == "PCA":
                 reducer = PCA(n_components=result.model.config.latent_dim)
-                df = pd.DataFrame(reducer.fit_transform(df_processed), index=df_processed.index)
-            elif task == "TSNE":                
-                reducer = TSNE(n_components=result.model.config.latent_dim)
-                df = pd.DataFrame(reducer.fit_transform(df_processed), index=df_processed.index)
-            elif task == "RandomFeature":
-                df = df_processed.sample(
-                    n=result.model.config.latent_dim, axis=1
+                df = pd.DataFrame(
+                    reducer.fit_transform(df_processed), index=df_processed.index
                 )
+            elif task == "TSNE":
+                reducer = TSNE(n_components=result.model.config.latent_dim)
+                df = pd.DataFrame(
+                    reducer.fit_transform(df_processed), index=df_processed.index
+                )
+            elif task == "RandomFeature":
+                df = df_processed.sample(n=result.model.config.latent_dim, axis=1)
         else:
             raise ValueError(
                 f"Your ML task {task} is not supported. Please use Latent, UMAP, PCA or RandomFeature."
             )
-   
-        return df
 
+        return df

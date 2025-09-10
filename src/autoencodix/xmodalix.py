@@ -15,13 +15,14 @@ from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.data._xmodal_preprocessor import XModalPreprocessor
-from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.evaluate._xmodalix_evaluator import XModalixEvaluator
 from autoencodix.trainers._xmodal_trainer import XModalTrainer
 from autoencodix.utils._result import Result
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.configs.xmodalix_config import XModalixConfig
 from autoencodix.utils._losses import XModalLoss
 from autoencodix.utils._utils import find_translation_keys
+from autoencodix.visualize._xmodal_visualizer import XModalVisualizer
 
 
 class XModalix(BasePipeline):
@@ -42,7 +43,7 @@ class XModalix(BasePipeline):
         Visualizer object to visualize the model output - custom for XModalix
     _trainer : XModalixTrainer
         Trainer object that trains the model - custom for XModalix
-    _evaluator : Evaluator
+    _evaluator : XModalixEvaluator
         Evaluator object that evaluates the model performance or downstream tasks
     result : Result
         Result object to store the pipeline results
@@ -70,8 +71,8 @@ class XModalix(BasePipeline):
         ] = VarixArchitecture,  # TODO make custom for XModalix
         loss_type: Type[BaseLoss] = XModalLoss,  # TODO make custom for XModalix
         preprocessor_type: Type[BasePreprocessor] = XModalPreprocessor,
-        visualizer: Optional[BaseVisualizer] = None,
-        evaluator: Optional[Evaluator] = None,
+        visualizer: Optional[BaseVisualizer] = XModalVisualizer,
+        evaluator: Optional[XModalixEvaluator] = XModalixEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
@@ -105,6 +106,41 @@ class XModalix(BasePipeline):
         )
         trainer_result = self._trainer.train()
         self.result.update(other=trainer_result)
+
+    def show_result(self):
+        """Displays key visualizations of model results.
+
+        This method generates the following visualizations:
+        1. Loss Curves: Displays the absolute loss curves to provide insights into
+           the model's training and validation performance over epochs.
+        2. Latent Space Ridgeline Plot: Visualizes the distribution of the latent
+           space representations across different dimensions, offering a high-level
+           overview of the learned embeddings.
+        3. Latent Space 2D Scatter Plot: Projects the latent space into two dimensions
+           for a detailed view of the clustering or separation of data points.
+
+        These visualizations help in understanding the model's performance and
+        the structure of the latent space representations.
+        """
+        print("Creating plots ...")
+
+        self._visualizer.show_loss(plot_type="absolute")
+
+        self._visualizer.show_latent_space(result=self.result, plot_type="Ridgeline")
+
+        self._visualizer.show_latent_space(result=self.result, plot_type="2D-scatter")
+
+        dm_keys = find_translation_keys(
+            config=self.config,
+            trained_modalities=self._trainer._modality_dynamics.keys(),
+        )
+        if "IMG" in dm_keys["to"]:
+            self._visualizer.show_image_translation(
+                result=self.result,
+                from_key=dm_keys["from"],
+                to_key=dm_keys["to"],
+                split="test",
+            )
 
     # def _process_latent_results(
     #     self, predictor_results, predict_data: DatasetContainer

@@ -25,7 +25,7 @@
 ```python
 import numpy as np
 import autoencodix as acx
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 sample_data = np.random.rand(100, 10)
 sample_data.shape
 van = acx.Vanillix(data=sample_data)

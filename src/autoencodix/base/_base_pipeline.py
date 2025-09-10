@@ -18,11 +18,12 @@ from sklearn.base import ClassifierMixin, RegressorMixin, is_classifier, is_regr
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
-from autoencodix.evaluate.evaluate import Evaluator
+
+# from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.base._base_evaluator import BaseEvaluator
 from autoencodix.utils._result import Result
 from autoencodix.utils._utils import Loader, Saver
 from autoencodix.configs.default_config import DataCase, DataInfo, DefaultConfig
-from autoencodix.visualize.visualize import Visualizer
 
 from ._base_autoencoder import BaseAutoencoder
 from ._base_dataset import BaseDataset
@@ -74,7 +75,7 @@ class BasePipeline(abc.ABC):
             Union[DataPackage, DatasetContainer, ad.AnnData, MuData, pd.DataFrame, dict]
         ],
         visualizer: Optional[BaseVisualizer] = None,
-        evaluator: Optional[Evaluator] = None,
+        evaluator: Optional[BaseEvaluator] = None,
         result: Optional[Result] = None,
         config: Optional[DefaultConfig] = None,
         custom_split: Optional[Dict[str, np.ndarray]] = None,
@@ -151,8 +152,8 @@ class BasePipeline(abc.ABC):
             config=self.config, ontologies=self._ontologies
         )
 
-        self._visualizer = visualizer if visualizer is not None else Visualizer()
-        self._evaluator = evaluator if evaluator is not None else Evaluator()
+        self._visualizer = visualizer() if visualizer is not None else BaseVisualizer()
+        self._evaluator = evaluator() if evaluator is not None else BaseEvaluator()
         self.result = result if result is not None else Result()
         self._dataset_type = dataset_type
         self._data_splitter = datasplitter_type(
@@ -852,15 +853,9 @@ class BasePipeline(abc.ABC):
             split_type=split_type,
         )
 
-        ml_plots = self._visualizer.plot_evaluation(result=self.result)
+        ml_plots = self._visualizer._plot_evaluation(result=self.result)
 
         return self.result
-
-    #     self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
-    # ) -> None:
-    #     """Not Implemented yet"""
-    #     if config is None:
-    #         config = self.config
 
     def visualize(self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs):
         """Creates visualizations of model results and performance.

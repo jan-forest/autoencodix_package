@@ -1,6 +1,6 @@
 from collections import defaultdict
 import os
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, Literal
 
 import numpy as np
 import torch
@@ -271,9 +271,7 @@ class XModalTrainer(BaseTrainer):
         self._epoch_loss = 0
         epoch_dynamics: List[Dict] = []
         sub_losses: Dict[str, float] = defaultdict(float)
-        n_samples_total: int = (
-            0  # because of unpaired training we need to sum the samples instead of using len(dataset)
-        )
+        n_samples_total: int = 0  # because of unpaired training we need to sum the samples instead of using len(dataset)
 
         for batch in self._trainloader:
             with self._fabric.autocast():
@@ -414,6 +412,7 @@ class XModalTrainer(BaseTrainer):
     def predict(
         self,
         data: BaseDataset,
+        # split: Literal["train", "valid", "test"] = "test",
         model: Optional[Any] = None,
         **kwargs,
     ) -> Result:
@@ -429,6 +428,11 @@ class XModalTrainer(BaseTrainer):
         Returns:
             The Result object populated with prediction results.
         """
+        split: str = kwargs.pop("split", "test")
+        if split not in ["train", "valid", "test"]:
+            raise ValueError(
+                f"split must be one of 'train', 'valid', or 'test', got {split}"
+            )
         if not isinstance(data, MultiModalDataset):
             raise TypeError(
                 f"type of data has to be MultiModalDataset, got: {type(data)}"
@@ -459,9 +463,7 @@ class XModalTrainer(BaseTrainer):
             self._fabric.autocast(),
             torch.inference_mode(),
         ):
-            for (
-                batch
-            ) in (
+            for batch in (
                 inference_loader
             ):  ## TODO missing sample ids. reconstructions are shuffled
                 # needed for visualize later
@@ -477,13 +479,13 @@ class XModalTrainer(BaseTrainer):
                 translation_key = "translation"
 
                 reference_key = f"reference_{to_key}_to_{to_key}"
-                batch_capture["reconstructions"][
-                    translation_key
-                ] = translated.cpu().numpy()
+                batch_capture["reconstructions"][translation_key] = (
+                    translated.cpu().numpy()
+                )
 
-                batch_capture["reconstructions"][
-                    reference_key
-                ] = to_to_reference.cpu().numpy()
+                batch_capture["reconstructions"][reference_key] = (
+                    to_to_reference.cpu().numpy()
+                )
 
                 if "sample_ids" in batch[from_key]:
                     batch_capture["sample_ids"][translation_key] = np.array(
@@ -496,7 +498,7 @@ class XModalTrainer(BaseTrainer):
 
                 epoch_dynamics.append(batch_capture)
 
-        self._dynamics_to_result(split="test", epoch_dynamics=epoch_dynamics)
+        self._dynamics_to_result(split=split, epoch_dynamics=epoch_dynamics)
 
         print("Prediction complete.")
         return self._result

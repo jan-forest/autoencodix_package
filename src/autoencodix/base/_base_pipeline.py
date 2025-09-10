@@ -497,7 +497,7 @@ class BasePipeline(abc.ABC):
         predict_data = self._prepare_prediction_data(data=data)
 
         predictor_results = self._generate_predictions(
-            predict_data=predict_data, from_key=from_key, to_key=to_key
+            predict_data=predict_data,
         )
 
         self._process_latent_results(
@@ -599,16 +599,12 @@ class BasePipeline(abc.ABC):
     def _generate_predictions(
         self,
         predict_data: DatasetContainer,
-        from_key: Optional[str] = None,
-        to_key: Optional[str] = None,
     ):
         """Generate predictions using the trained model."""
         self._validate_prediction_data(predict_data=predict_data)
         return self._trainer.predict(
             data=predict_data.test,
             model=self.result.model,
-            from_key=from_key,
-            to_key=to_key,
         )  # type: ignore
 
     def _process_latent_results(

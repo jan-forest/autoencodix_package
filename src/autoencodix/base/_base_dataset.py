@@ -54,14 +54,17 @@ class BaseDataset(abc.ABC, Dataset):
 
     def __getitem__(
         self, index: int
-    ) -> Union[Tuple[torch.Tensor, Any], Dict[str, Tuple[Any, torch.Tensor, Any]]]:
+    ) -> Union[
+        Tuple[Union[torch.Tensor, int], Union[torch.Tensor, ImgData], Any],
+        Dict[str, Tuple[Any, torch.Tensor, Any]],
+    ]:
         """Retrieves a single sample and its corresponding label.
 
         Args:
             index: Index of the sample to retrieve.
 
         Returns:
-            A tuple containing the data sample and its label, or a dictionary
+            A tuple containing the index, the data sample and its label, or a dictionary
             mapping keys to such tuples.
         """
         if self.sample_ids is not None:

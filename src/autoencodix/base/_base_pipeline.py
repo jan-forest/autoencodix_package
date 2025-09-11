@@ -11,8 +11,8 @@ from mudata import MuData  # type: ignore
 from torch.utils.data import Dataset
 
 # ML evaluation
-from sklearn import linear_model
-from sklearn.base import ClassifierMixin, RegressorMixin, is_classifier, is_regressor
+from sklearn import linear_model  # type: ignore
+from sklearn.base import ClassifierMixin, RegressorMixin, is_classifier, is_regressor  # type: ignore
 
 
 from autoencodix.data._datasetcontainer import DatasetContainer
@@ -60,7 +60,6 @@ class BasePipeline(abc.ABC):
             If a list is provided, it is assumed to be a list of file paths to ontology files.
             First item in list or tuple will be treated as first layer (after latent space) and so on.
 
-        _
     """
 
     def __init__(

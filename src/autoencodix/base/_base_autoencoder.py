@@ -21,6 +21,8 @@ class BaseAutoencoder(ABC, nn.Module):
         config: Configuration object containing model architecture parameters.
         _encoder: Encoder network.
         _decoder: Decoder network.
+        ontologies: Ontology information, if provided for Ontix
+        feature_order: For Ontix
     """
 
     def __init__(

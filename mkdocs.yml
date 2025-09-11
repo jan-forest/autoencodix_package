@@ -1,0 +1,35 @@
+site_name: Autoencodix
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - Tutorials: tutorials.md
+  - API Reference:
+      - Base: api/base.md
+      - Configs: api/configs.md
+      - Data: api/data.md
+      - Disentanglix: api/disentanglix.md
+      - Evaluate: api/evaluate.md
+      - Imagix: api/imagix.md
+      - Modeling: api/modeling.md
+      - Notebooks: api/notebooks.md
+      - Ontix: api/ontix.md
+      - Stackix: api/stackix.md
+      - Trainers: api/trainers.md
+      - Utils: api/utils.md
+      - Vanillix: api/vanillix.md
+      - Varix: api/varix.md
+      - Visualize: api/visualize.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          docstring_style: google
+          show_signature_annotations: true
+          options:
+            extra:
+              members_order: alphabetic
+

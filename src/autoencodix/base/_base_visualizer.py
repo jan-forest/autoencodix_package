@@ -4,7 +4,7 @@ from typing import Optional, Union
 import pandas as pd
 import matplotlib
 from matplotlib import pyplot as plt
-import seaborn as sns
+import seaborn as sns # type: ignore
 import torch
 import warnings
 

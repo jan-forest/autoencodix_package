@@ -18,20 +18,23 @@ else:
 
 
 class SingleCellFilter:
-    """Filter and scale single-cell data, returning a MuData object with synchronized metadata."""
+    """Filter and scale single-cell data, returning a MuData object with synchronized metadata.AnnData
+
+    Attributes:
+        data_info: Configuration for filtering and scaling (can be a single DataInfo or a dict of DataInfo per modality).
+        total_features: Total number of features to keep across all modalities.
+        config: Configuration object containing settings for data processing.
+        _is_data_info_dict: Internal flag indicating if data_info is a dictionary.
+    """
 
     def __init__(
         self, data_info: Union[Dict[str, DataInfo], DataInfo], config: DefaultConfig
     ):
         """
         Initialize single-cell filter.
-        Parameters
-        ----------
-        mudata : MuData
-            Multi-modal data to be filtered
-        data_info : Union[SCDataInfo, Dict[str, SCDataInfo]]
-            Either a single data_info object for all modalities or a dictionary of data_info objects
-            for each modality.
+        Args:
+            data_info: Either a single data_info object for all modalities or a dictionary of data_info objects for each modality.
+            config: Configuration object containing settings for data processing.
         """
         self.data_info = data_info
         self.total_features = config.k_filter
@@ -41,13 +44,9 @@ class SingleCellFilter:
     def _get_data_info_for_modality(self, mod_key: str) -> DataInfo:
         """
         Get the data_info configuration for a specific modality.
-        Parameters
-        ----------
-        mod_key : str
-            The modality key (e.g., "RNA", "METH")
+        Args:
+            mod_key: The modality key (e.g., "RNA", "METH")
         Returns
-        -------
-        SCDataInfo
             The data_info configuration for the modality
         """
         if self._is_data_info_dict:
@@ -60,15 +59,10 @@ class SingleCellFilter:
     def _get_layers_for_modality(self, mod_key: str, mod_data) -> List[str]:
         """
         Get the layers to process for a specific modality.
-        Parameters
-        ----------
-        mod_key : str
-            The modality key (e.g., "RNA", "METH")
-        mod_data : AnnData
-            The AnnData object for the modality
+        Args
+            mod_key: The modality key (e.g., "RNA", "METH")
+            mod_data: The AnnData object for the modality
         Returns
-        -------
-        List[str]
             List of layer names to process. If None or empty, returns ['X'] for default layer.
         """
         data_info = self._get_data_info_for_modality(mod_key)
@@ -92,12 +86,13 @@ class SingleCellFilter:
 
         return valid_layers
 
-    def _presplit_processing(self, mudata: MuData) -> MuData:
+    def _presplit_processing(
+        self,
+        mudata: MuData,  # type: ignore[invalid-type-form]
+    ) -> MuData:  # type: ignore[invalid-type-form]
         """
         Preprocess the data using modality-specific configurations.
-        Returns
-        -------
-        MuData
+        Returns:
             Preprocessed data
         """
         print(f"mudata: {mudata}")
@@ -123,8 +118,17 @@ class SingleCellFilter:
         return mudata
 
     def presplit_processing(
-        self, multi_sc: Union[MuData, Dict[str, MuData]]
-    ) -> Dict[str, MuData]:
+        self,
+        multi_sc: Union[MuData, Dict[str, MuData]],  # ty: ignore[invalid-type-form]
+    ) -> Dict[str, MuData]:  # ty: ignore[invalid-type-form]
+        """
+        Process each modality independently to filter cells based on min_genes.
+
+        Args:
+            multi_sc: Either a single MuData object or a dictionary of MuData objects.
+        Returns:
+            A dictionary mapping modality keys to processed MuData objects.
+        """
         from mudata import MuData
 
         if isinstance(multi_sc, MuData):
@@ -138,15 +142,10 @@ class SingleCellFilter:
     def _to_dataframe(self, mod_data, layer=None) -> pd.DataFrame:
         """
         Transform a modality's AnnData object to a pandas DataFrame.
-        Parameters
-        ----------
-        mod_data : AnnData
-            Modality data to be transformed
-        layer : str or None
-            Layer to convert to DataFrame. If None, uses X.
-        Returns
-        -------
-        pd.DataFrame
+        Args:
+            mod_data: Modality data to be transformed
+            layer: Layer to convert to DataFrame. If None, uses X.
+        Returns:
             Transformed DataFrame
         """
         if layer is None or layer == "X":
@@ -168,17 +167,11 @@ class SingleCellFilter:
         """
         Update a modality's AnnData object with the values from a DataFrame.
         This also synchronizes the `obs` and `var` metadata to match the filtered data.
-        Parameters
-        ----------
-        df : pd.DataFrame
-            DataFrame containing the updated values
-        mod_data : AnnData
-            Modality data to be updated
-        layer : str or None
-            Layer to update with DataFrame values. If None, updates X.
-        Returns
-        -------
-        AnnData
+        Args:
+            df: DataFrame containing the updated values
+            mod_data: Modality data to be updated
+            layer: Layer to update with DataFrame values. If None, updates X.
+        Returns:
             Updated AnnData object
         """
         # Filter the AnnData object to match the rows and columns of the DataFrame
@@ -196,22 +189,21 @@ class SingleCellFilter:
         return filtered_mod_data
 
     def sc_postsplit_processing(
-        self, mudata: MuData, gene_map: Optional[Dict[str, List[str]]] = None
-    ) -> Tuple[MuData, Dict[str, List[str]]]:
+        self,
+        mudata: MuData,  # ty: ignore[invalid-type-form]
+        gene_map: Optional[
+            Dict[str, List[str]]
+        ] = None,  # ty: ignore[invalid-type-form]
+    ) -> Tuple[MuData, Dict[str, List[str]]]:  # ty: ignore[invalid-type-form]
         """
         Process each modality independently to filter genes based on X layer, then
         consistently apply the same filtering to all layers.
 
-        Parameters
-        ----------
-        mudata : MuData
-            Input multi-modal data container
-        gene_map : Optional[Dict[str, List[str]]]
-            Optional override of genes to keep per modality
+        Args:
+        mudata : Input multi-modal data container
+        gene_map : Optional override of genes to keep per modality
 
-        Returns
-        -------
-        Tuple[MuData, Dict[str, List[str]]]
+        Returns:
             - Processed MuData with filtered modalities
             - Mapping of modality to kept gene names
         """
@@ -270,13 +262,13 @@ class SingleCellFilter:
 
     def _apply_general_filtering(
         self, df: pd.DataFrame, data_info: DataInfo, gene_list: Optional[List]
-    ) -> Tuple[pd.DataFrame, List]:
+    ) -> Tuple[Union[pd.Series, pd.DataFrame], List]:
         data_processor = DataFilter(data_info=data_info, config=self.config)
         return data_processor.filter(df=df, genes_to_keep=gene_list)
 
     def _apply_scaling(
         self, df: pd.DataFrame, data_info: DataInfo, scaler: Any
-    ) -> Tuple[pd.DataFrame, Any]:
+    ) -> Tuple[Union[pd.Series, pd.DataFrame], Any]:
         data_processor = DataFilter(data_info=data_info, config=self.config)
         if scaler is None:
             scaler = data_processor.fit_scaler(df=df)
@@ -285,13 +277,21 @@ class SingleCellFilter:
 
     def general_postsplit_processing(
         self,
-        mudata: MuData,
+        mudata: MuData,  # ty: ignore[invalid-type-form]
         gene_map: Optional[Dict[str, List]],
         scaler_map: Optional[Dict[str, Dict[str, Any]]] = None,
-    ) -> Tuple[MuData, Dict[str, List], Dict[str, Dict[str, Any]]]:
-        """
-        Process single-cell data with proper MuData handling
-        Returns new MuData instance to avoid var_names conflicts
+    ) -> Tuple[
+        MuData,  # ty: ignore[invalid-type-form]
+        Dict[str, List],
+        Dict[str, Dict[str, Any]],  # ty: ignore[invalid-type-form]
+    ]:  # ty: ignore[invalid-type-form]
+        """Process single-cell data with proper MuData handling
+        Args:
+            mudata: Input multi-modal data container
+            gene_map: Optional override of genes to keep per modality
+            scaler_map: Optional pre-fitted scalers per modality and layer
+        Returns:
+            Processed MuData with filtered and scaled modalities,
         """
         feature_distribution = self.distribute_features_across_modalities(
             mudata, self.total_features
@@ -379,21 +379,18 @@ class SingleCellFilter:
         )
 
     def distribute_features_across_modalities(
-        self, mudata: MuData, total_features: Optional[int]
+        self,
+        mudata: MuData,  # ty: ignore[invalid-type-form]
+        total_features: Optional[int],  # ty: ignore[invalid-type-form]
     ) -> Dict[str, int]:
         """
         Distributes a total number of features across modalities evenly.
 
-        Parameters
-        ----------
-        mudata : MuData
-            Multi-modal data object
-        total_features : int
-            Total number of features to distribute across all modalities
+        Args:
+            mudata: Multi-modal data object
+            total_features: Total number of features to distribute across all modalities
 
-        Returns
-        -------
-        Dict[str, int]
+        Returns:
             Dictionary mapping modality keys to number of features to keep
         """
 

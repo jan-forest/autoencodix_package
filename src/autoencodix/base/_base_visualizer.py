@@ -4,7 +4,7 @@ from typing import Optional, Union
 import pandas as pd
 import matplotlib
 from matplotlib import pyplot as plt
-import seaborn as sns # type: ignore
+import seaborn as sns  # type: ignore
 import torch
 import warnings
 
@@ -52,13 +52,13 @@ class BaseVisualizer(abc.ABC):
     def show_loss(self, plot_type: str = "absolute") -> None:
         """
         Display the loss plot.
-        Parameters:
-        plot_type (str): The type of loss plot to display.
-                    Options are "absolute" for the absolute loss plot and
-                    "relative" for the relative loss plot.
-                    Defaults to "absolute".
+        Args:
+            plot_type: Type of loss plot to display. Options are "absolute" or "relative". Options are
+                "absolute" for the absolute loss plot and
+                "relative" for the relative loss plot.
+                Defaults to "absolute".
         Returns:
-        None
+            None
         """
         if plot_type == "absolute":
             if "loss_absolute" not in self.plots.keys():
@@ -90,12 +90,12 @@ class BaseVisualizer(abc.ABC):
     ) -> None:
         """
         Displays the evaluation plot for a specific clinical parameter, metric, and optionally ML algorithm.
-        Parameters:
-        param (str): The clinical parameter to visualize.
-        metric (str): The metric to visualize.
-        ml_alg (str, optional): The ML algorithm to visualize. If None, plots all available algorithms.
+        Args:
+            param: clinical parameter to visualize.
+            metric: metric to visualize.
+            ml_alg: ML algorithm to visualize. If None, plots all available algorithms.
         Returns:
-        None
+            None
         """
         plt.ioff()
         if "ML_Evaluation" not in self.plots.keys():
@@ -136,18 +136,18 @@ class BaseVisualizer(abc.ABC):
         """
         Save specified plots to the given path in the specified format.
 
-        Parameters:
-        path (str): The directory path where the plots will be saved.
-        which (list or str): A list of plot names to save or a string specifying which plots to save.
-                             If 'all', all plots in the plots dictionary will be saved.
-                             If a single plot name is provided as a string, only that plot will be saved.
-        format (str): The file format in which to save the plots (e.g., 'png', 'jpg').
+        Args:
+            path: The directory path where the plots will be saved.
+            which: A list of plot names to save or a string specifying which plots to save.
+                   If 'all', all plots in the plots dictionary will be saved.
+                   If a single plot name is provided as a string, only that plot will be saved.
+            format: The file format in which to save the plots (e.g., 'png', 'jpg').
 
         Returns:
-        None
+            None
 
         Raises:
-        ValueError: If the 'which' parameter is not a list or a string.
+            ValueError: If the 'which' parameter is not a list or a string.
         """
         if not isinstance(which, list):
             ## Case when which is a string
@@ -172,7 +172,7 @@ class BaseVisualizer(abc.ABC):
                         self.plots[which]
                     ):  # Plot all epochs and splits of type which
                         fig = item[-1]  ## Figure is in last element of the tuple
-                        filename = which + "_" + "_".join(str(x) for x in item[0:-1])
+                        filename = which + "_" + "_".join(str(x) for x in item[0:-1]) # type: ignore
                         fullpath = os.path.join(path, filename)
                         fig.savefig(f"{fullpath}.{format}")
         else:
@@ -204,7 +204,7 @@ class BaseVisualizer(abc.ABC):
             if not isinstance(loss_values, dict):
                 # If it's not a dict, try to convert it or handle appropriately
                 if hasattr(loss_values, "to_dict"):
-                    loss_values = loss_values.to_dict()
+                    loss_values = loss_values.to_dict() # type: ignore
                 else:
                     # For non-convertible types, you might need a custom solution
                     # For numpy arrays, you could do something like:
@@ -237,7 +237,7 @@ class BaseVisualizer(abc.ABC):
         loss_values = result.losses.get()
         if not isinstance(loss_values, dict):
             if hasattr(loss_values, "to_dict"):
-                loss_values = loss_values.to_dict()
+                loss_values = loss_values.to_dict() # type: ignore
             else:
                 if hasattr(loss_values, "shape"):
                     loss_values = {i: val for i, val in enumerate(loss_values)}
@@ -264,27 +264,22 @@ class BaseVisualizer(abc.ABC):
     @staticmethod
     def _make_loss_plot(
         df_plot: pd.DataFrame, plot_type: str
-    ) -> matplotlib.figure.Figure:
+    ) -> matplotlib.figure.Figure: # type: ignore
         """
         Generates a plot for visualizing loss values from a DataFrame.
 
-        Parameters:
-        -----------
-        df_plot : pd.DataFrame
-            DataFrame containing the loss values to be plotted. It should have the columns:
-            - "Loss Term": The type of loss term (e.g., "total_loss", "reconstruction_loss").
-            - "Epoch": The epoch number.
-            - "Loss Value": The value of the loss.
-            - "Split": The data split (e.g., "train", "validation").
+        Args:
+            df_plot : DataFrame containing the loss values to be plotted. It should have the columns:
+                - "Loss Term": The type of loss term (e.g., "total_loss", "reconstruction_loss").
+                - "Epoch": The epoch number.
+                - "Loss Value": The value of the loss.
+                - "Split": The data split (e.g., "train", "validation").
 
-        plot_type : str
-            The type of plot to generate. It can be either "absolute" or "relative".
-            - "absolute": Generates a line plot for each unique loss term.
-            - "relative": Generates a density plot for each data split, excluding the "total_loss" term.
+            plot_type: The type of plot to generate. It can be either "absolute" or "relative".
+                - "absolute": Generates a line plot for each unique loss term.
+                - "relative": Generates a density plot for each data split, excluding the "total_loss" term.
 
         Returns:
-        --------
-        matplotlib.figure.Figure
             The generated matplotlib figure containing the loss plots.
         """
         fig_width_abs = 5 * len(df_plot["Loss Term"].unique())
@@ -354,7 +349,7 @@ class BaseVisualizer(abc.ABC):
         return fig
 
     @staticmethod
-    def _plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:
+    def _plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure: # type: ignore
         """
         Visualization of model weights in encoder and decoder layers as heatmap for each layer as subplot.
         Handles non-symmetrical autoencoder architectures.
@@ -435,14 +430,14 @@ class BaseVisualizer(abc.ABC):
                 ).set(title=decoder_names[i])
                 if model.ontologies is not None:
                     axes[1, i].set_xticks(
-                        ticks=range(len(node_names[i])),
-                        labels=node_names[i],
+                        ticks=range(len(node_names[i])), # type: ignore
+                        labels=node_names[i], # type: ignore
                         rotation=90,
                         fontsize=8,
                     )
                     axes[1, i].set_yticks(
-                        ticks=range(len(node_names[i + 1])),
-                        labels=node_names[i + 1],
+                        ticks=range(len(node_names[i + 1])), # type: ignore
+                        labels=node_names[i + 1], # type: ignore
                         rotation=0,
                         fontsize=8,
                     )

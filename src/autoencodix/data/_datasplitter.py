@@ -16,6 +16,7 @@ from autoencodix.data.datapackage import DataPackage
 class DataSplitter:
     """
     Splits data into train, validation, and test sets. And validates the splits.
+
     Also allows for custom splits to be provided.
     Here we allow empty splits (e.g. test_ratio=0), this might raise an error later
     in the pipeline, when this split is expected to be non-empty. However, this allows
@@ -28,25 +29,11 @@ class DataSplitter:
     4. Custom splits must contain 'train', 'valid', and 'test' keys and non-overlapping indices
 
     Attributes:
-    -----------
-    _config : DefaultConfig
-        Configuration object containing split ratios
+        _config: Configuration object containing split ratios
 
-    _custom_splits : Optional[Dict[str, np.ndarray]]
-    _test_ratio : float
-    _valid_ratio : float
-
-    Methods:
-    --------
-    _validate_ratios(test_ratio: float, valid_ratio: float) -> None
-        Validate that the splitting ratios meet required constraints.
-    _validate_split_sizes(n_samples: int) -> None
-        Validate that each non-empty split will have sufficient samples.
-    _validate_custom_splits(splits: Dict[str, np.ndarray]) -> None
-        Validate custom splits for correctness.
-    split(X: Union[torch.Tensor, np.ndarray]) -> Dict[str, np.ndarray]
-        Split data into train, validation, and test sets. Returns indices for each split.
-        and None for empty splits.
+        _custom_splits: Optional pre-defined split indices
+        _test_ratio
+        _valid_ratio
 
     """
 
@@ -58,12 +45,9 @@ class DataSplitter:
         """
         Initialize DataSplitter with configuration and optional custom splits.
 
-        Parameters:
+        Args:
             config (DefaultConfig): Configuration object containing split ratios
             custom_splits (Optional[Dict[str, np.ndarray]]): Pre-defined split indices
-
-        Raises:
-            ValueError: If ratios violate constraints or custom splits are malformed
         """
         self._config = config
         self._test_ratio = self._config.test_ratio
@@ -105,8 +89,8 @@ class DataSplitter:
         """
         Validate that each non-empty split will have sufficient samples.
 
-        Parameters:
-            n_samples (int): Total number of samples in dataset
+        Args:
+            n_samples: Total number of samples in dataset
         Returns:
             None
         Raises:
@@ -141,8 +125,8 @@ class DataSplitter:
         """
         Validate custom splits for correctness.
 
-        Parameters:
-            splits (Dict[str, np.ndarray]): Custom split indices
+        Args:
+            splits: Custom split indices
         Returns:
             None
         Raises:
@@ -190,12 +174,11 @@ class DataSplitter:
         """
         Split data into train, validation, and test sets.
 
-        Parameters:
+        Args:
             n_samples: Total number of samples in the dataset
 
         Returns:
-            Dict[str, np.ndarray]: Dictionary containing indices for each split,
-                                 with empty arrays for splits with ratio=0
+            Dictionary containing indices for each split, with empty arrays for splits with ratio=0
 
         Raises:
             ValueError: If resulting splits would violate size constraints
@@ -291,6 +274,13 @@ class PairedUnpairedSplitter:
     """
     Performs a pairing-aware split of a DataPackage dynamically, handling any
     data type that provides sample IDs.
+
+    Attributes:
+        data_package: The DataPackage to be split.
+        config: Configuration object containing split ratios.
+        all_modalities: Discovered modalities in the DataPackage.
+        paired_ids: Sample IDs present in all modalities.
+        unpaired_ids: Sample IDs present in at least one, but not all, modalities.
     """
 
     def __init__(self, data_package: DataPackage, config: DefaultConfig):
@@ -307,7 +297,10 @@ class PairedUnpairedSplitter:
         self.paired_ids, self.unpaired_ids = self._identify_sample_groups()
 
     def _get_all_modalities(self) -> Dict[str, Any]:
-        """Dynamically discovers all data-containing attributes from the DataPackage."""
+        """Dynamically discovers all data-containing attributes from the DataPackage.
+        Returns:
+            A dictionary mapping modality names to their corresponding data objects.
+        """
         modalities = {}
         for key, value in self.data_package:
             # The iterator yields keys like "multi_bulk.RNA".
@@ -319,7 +312,13 @@ class PairedUnpairedSplitter:
         return modalities
 
     def _identify_sample_groups(self) -> Tuple[pd.Index, pd.Index]:
-        """Identifies fully-paired and unpaired sample IDs across all modalities."""
+        """Identifies fully-paired and unpaired sample IDs across all modalities.
+        Returns:
+            A tuple containing:
+            - paired_ids: Sample IDs present in all modalities.
+            - unpaired_ids: Sample IDs present in at least one, but not all, modalities.
+
+        """
         if not self.all_modalities:
             return pd.Index([]), pd.Index([])
 
@@ -357,6 +356,8 @@ class PairedUnpairedSplitter:
         """
         Executes the two-stage split and returns the final integer indices
         in the format expected by DataPackageSplitter.
+        Returns:
+            A dictionary mapping each modality to its train/valid/test integer indices.
         """
         splitter = DataSplitter(config=self.config)
         empty_split = {

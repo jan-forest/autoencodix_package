@@ -19,13 +19,18 @@ class BalancedBatchSampler(Sampler[List[int]]):
     drop data (`drop_last=True`).
 
     Args:
-        data_source (Sized): The dataset to sample from.
-        batch_size (int): The target number of samples in each batch.
-        shuffle (bool): If True, the sampler will shuffle the indices at the
-                        start of each epoch.
+        data_source: The dataset to sample from.
+        batch_size: The target number of samples in each batch.
+        shuffle: If True, the sampler will shuffle the indices at start of each epoch.
     """
 
     def __init__(self, data_source: Sized, batch_size: int, shuffle: bool = True):
+        """Initializes the BalancedBatchSampler.
+        Args:
+            data_source: The dataset to sample from.
+            batch_size: The target number of samples in each batch.
+            shuffle: If True, the sampler will shuffle the indices at start of each epoch.
+        """
         if not isinstance(batch_size, int) or batch_size <= 0:
             raise ValueError(
                 f"batch_size should be a positive integer, but got {batch_size}"

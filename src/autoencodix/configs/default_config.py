@@ -31,10 +31,8 @@ class SchemaPrinterMixin:
         """
         Print a human-readable schema of all config parameters.
 
-        Parameters
-        ----------
-        filter_params : Optional[List[str]]
-            If provided, only print information for these parameters
+        Args:
+            filter_params: If provided, only print information for these parameters
         """
         if filter_params:
             print("Valid Keyword Arguments:")
@@ -153,23 +151,7 @@ class DataConfig(BaseModel, SchemaPrinterMixin):
 
 # write tests: done
 class DefaultConfig(BaseModel, SchemaPrinterMixin):
-    """
-    Complete configuration for model, training, hardware, and data handling.
-
-    Attributes
-    ----------
-    all configuration parameters (change over time of development)
-
-    Methods
-    -------
-    update(**kwargs)
-        Update configuration with support for nested attributes.
-    get_params()
-        Get detailed information about all config fields including types and default values.
-    print_schema()
-        Print a human-readable schema of all config parameters.
-
-    """
+    """Complete configuration for model, training, hardware, and data handling."""
 
     # Input validation
     model_config = ConfigDict(extra="forbid")
@@ -475,7 +457,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
             if self.data_case is None:
                 import warnings
 
-                warnings.warn(f"Could not determine data_case: {e}")
+                warnings.warn(message="Could not determine data_case")
 
         return self
 
@@ -531,9 +513,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         """
         Get detailed information about all config fields including types and default values.
 
-        Returns
-        -------
-        Dict[str, Dict[str, Any]]
+        Returns:
             Dictionary containing field name, type, default value, and description if available
         """
         fields_info = {}

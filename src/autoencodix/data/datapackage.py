@@ -13,42 +13,52 @@ T = TypeVar("T")  # For generic type hints
 
 @dataclass
 class DataPackage:
-    """
-    A class to represent a data package containing multiple types of data.
-    """
+    """Represents a data package containing multiple types of data."""
 
-    multi_sc: Optional[Dict[str, MuData]] = None
+    multi_sc: Optional[Dict[str, MuData]] = None  # # ty: ignore[invalid-type-form]
     multi_bulk: Optional[Dict[str, pd.DataFrame]] = None
     annotation: Optional[Dict[str, Union[pd.DataFrame, None]]] = None
     img: Optional[Dict[str, List[ImgData]]] = None
 
     from_modality: Optional[
-        Dict[str, Union[pd.DataFrame, List[ImgData], MuData, AnnData]]
+        Dict[
+            str,
+            Union[
+                pd.DataFrame,
+                List[ImgData],
+                MuData,  # ty: ignore[invalid-type-form]
+                AnnData,  # ty: ignore[invalid-type-form]
+            ],
+        ]  # ty: ignore[invalid-type-form]
     ] = field(default_factory=dict, repr=False)
     to_modality: Optional[
-        Dict[str, Union[pd.DataFrame, List[ImgData], MuData, AnnData]]
+        Dict[
+            str,
+            Union[
+                pd.DataFrame,
+                List[ImgData],
+                MuData,  # ty: ignore[invalid-type-form]
+                AnnData,  # ty: ignore[invalid-type-form]
+            ],  # ty: ignore[invalid-type-form]
+        ]  # ty: ignore[invalid-type-form]
     ] = field(default_factory=dict, repr=False)
 
     def __getitem__(self, key: str) -> Any:
-        """
-        Allow dictionary-like access to top-level attributes.
-        """
+        """Allow dictionary-like access to top-level attributes."""
         if hasattr(self, key):
             return getattr(self, key)
         raise KeyError(f"{key} not found in DataPackage.")
 
     def __setitem__(self, key: str, value: Any) -> None:
-        """
-        Allow dictionary-like item assignment to top-level attributes.
-        """
+        """Allow dictionary-like item assignment to top-level attributes."""
         if hasattr(self, key):
             setattr(self, key, value)
         else:
             raise KeyError(f"{key} not found in DataPackage.")
 
     def __iter__(self) -> Iterator[Tuple[str, Any]]:
-        """
-        Make DataPackage iterable, yielding (key, value) pairs.
+        """Make DataPackage iterable, yielding (key, value) pairs.
+
         For dictionary attributes, yields nested items as (parent_key.child_key, value).
         """
         for attr_name in self.__annotations__.keys():
@@ -171,8 +181,7 @@ class DataPackage:
         return min(all_counts) if all_counts else 0
 
     def get_common_ids(self) -> List[str]:
-        """
-        Get the common sample IDs across modalities that have data.
+        """Get the common sample IDs across modalities that have data.
 
         Returns:
             List of sample IDs that are present in all modalities with data
@@ -208,12 +217,18 @@ class DataPackage:
         return sorted(list(common))
 
     def _get_sample_ids(
-        self, dataobj: Union[MuData, pd.DataFrame, List[ImgData], AnnData]
+        self,
+        dataobj: Union[
+            MuData,  # ty: ignore[invalid-type-form]
+            pd.DataFrame,
+            List[ImgData],
+            AnnData,
+        ],  # ty: ignore[invalid-type-form]
     ) -> List[str]:
         """
         Extract sample IDs from a data object.
 
-        Parameters:
+        Args:
             dataobj: Data object to extract IDs from
 
         Returns:
@@ -240,7 +255,11 @@ class DataPackage:
             return []
 
     def _get_n_samples(
-        self, dataobj: Union[MuData, pd.DataFrame, List[ImgData], AnnData, Dict]
+        self, dataobj: Union[MuData, # ty: ignore[invalid-type-form]
+                             pd.DataFrame, 
+                             List[ImgData],
+                             AnnData, 
+                             Dict]
     ) -> int:
         """Get the number of samples for a specific attribute."""
         if dataobj is None:

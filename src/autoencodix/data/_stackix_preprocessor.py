@@ -18,32 +18,23 @@ from autoencodix.utils._result import Result
 
 
 class StackixPreprocessor(BasePreprocessor):
-    """
-    Preprocessor for Stackix architecture, which handles multiple modalities separately.
+    """Preprocessor for Stackix architecture, which handles multiple modalities separately.
 
     Unlike GeneralPreprocessor which combines all modalities, StackixPreprocessor
     keeps modalities separate for individual VAE training in the Stackix architecture.
 
-    Attributes
-    ----------
-    config : DefaultConfig
-        Configuration parameters for preprocessing and model architecture
-    _datapackage : Optional[Dict[str, Any]]
-        Dictionary storing processed data splits
-    _dataset_container : DatasetContainer
-        Container for processed datasets by split
+    Attributes:
+    config: Configuration parameters for preprocessing and model architecture
+    _datapackage: Dictionary storing processed data splits
+    _dataset_container:Container for processed datasets by split
     """
 
     def __init__(
         self, config: DefaultConfig, ontologies: Optional[Union[Tuple, Dict]] = None
     ) -> None:
-        """
-        Initialize the StackixPreprocessor with the given configuration.
-
-        Parameters
-        ----------
-        config : DefaultConfig
-            Configuration parameters for preprocessing
+        """Initialize the StackixPreprocessor with the given configuration.
+        Args:
+            config: Configuration parameters for preprocessing
         """
         super().__init__(config=config)
         self._datapackage: Optional[Dict[str, Any]] = None
@@ -52,25 +43,16 @@ class StackixPreprocessor(BasePreprocessor):
     def preprocess(
         self, raw_user_data: Optional[DataPackage] = None
     ) -> DatasetContainer:
-        """
-        Execute preprocessing steps for Stackix architecture.
+        """Execute preprocessing steps for Stackix architecture.
 
-        Unlike GeneralPreprocessor, this keeps modalities separate for individual VAE training.
+        Args
+        raw_user_data: Raw user data to preprocess, or None to use self._datapackage
 
-        Parameters
-        ----------
-        raw_user_data : Optional[DataPackage]
-            Raw user data to preprocess, or None to use self._datapackage
-
-        Returns
-        -------
-        DatasetContainer
+        Returns:
             Container with StackixDataset for each split
 
-        Raises
-        ------
-        TypeError
-            If datapackage is None after preprocessing
+        Raises:
+            TypeError: If datapackage is None after preprocessing
         """
         self._datapackage = self._general_preprocess(raw_user_data)
         self._dataset_container = DatasetContainer()
@@ -101,20 +83,14 @@ class StackixPreprocessor(BasePreprocessor):
 
     def _combine_layers(
         self, modality_name: str, modality_data: Any
-    ) -> Tuple[np.ndarray, List[Tuple[str, int, int]]]:
-        """
-        Combine layers from a modality and return the combined data and indices.
+    ) -> Tuple[np.ndarray, Dict[str, tuple[int]]]:
+        """Combine layers from a modality and return the combined data and indices.
 
-        Parameters
-        ----------
-        modality_name : str
-            Name of the modality
-        modality_data : Any
-            Data for the modality
+        Args:
+            modality_name: Name of the modality
+            modality_data: Data for the modality
 
-        Returns
-        -------
-        Tuple[np.ndarray, List[Tuple[str, int, int]]]
+        Returns:
             Combined data and list of (layer_name, start_idx, end_idx) tuples
         """
         layer_list: List[np.ndarray] = []
@@ -144,25 +120,21 @@ class StackixPreprocessor(BasePreprocessor):
                 layer_indices[layer_name] = [start_idx, end_idx]
                 start_idx += layer_data.shape[1]
 
-        combined_data = (
+        combined_data: np.ndarray = (
             np.concatenate(layer_list, axis=1) if layer_list else np.array([])
         )
         return combined_data, layer_indices
 
     def _build_dataset_dict(
-        self, datapackage: DataPackage, split_indices: List[Any]
+        self, datapackage: DataPackage, split_indices: np.ndarray
     ) -> Dict[str, NumericDataset]:
-        """
-        For each seperate entry in our datapackge we build a NumericDataset
+        """For each seperate entry in our datapackge we build a NumericDataset
         and store it in a dictionary with the modality as key.
 
-        Parameters
-        ----------
-        datapackage : DataPackage
-            DataPackage containing the data to be processed
-        Returns
-        -------
-        Dict[str, NumericDataset]
+        Args:
+            datapackage:DataPackage containing the data to be processed
+            split_indices: List of indices for splitting the data
+        Returns:
             Dictionary mapping modality names to NumericDataset objects
 
         """
@@ -233,23 +205,20 @@ class StackixPreprocessor(BasePreprocessor):
     def format_reconstruction(
         self, reconstruction: Any, result: Optional[Result] = None
     ) -> DataPackage:
-        """
-        Takes the reconstructed tensor and from which modality it comes and uses the dataset_dict
+        """Takes the reconstructed tensor and from which modality it comes and uses the dataset_dict
         to obtain the format of the original datapackage, but instead of the .data attribute
         we populate this attribute with the reconstructed tensor (as pd.DataFrame or MuData object)
 
-        Parameters
-        ----------
-        reconstruction : torch.Tensor
-            The reconstructed tensor
-        result : Optional[Result]
-            The result object containing the reconstructed tensor and other information
-        Returns
-        -------
-        DataPackage
-            The reconstructed data package with the reconstructed tensor
+        Args:
+            reconstruction: The reconstructed tensor
+            result: Optional[Result] containing additional information
+        Returns:
+            DataPackage with reconstructed data in original format
+        Raises:
+            ValueError: If result is None or if dataset container is not initialized
 
         """
+
         if result is None:
             raise ValueError(
                 "Result object is not provided. This is needed for the StackixPreprocessor."
@@ -265,6 +234,10 @@ class StackixPreprocessor(BasePreprocessor):
 
         elif self.config.data_case == DataCase.MULTI_SINGLE_CELL:
             return self._format_multi_sc(reconstruction=reconstruction)
+        else:
+            raise ValueError(
+                f"Unsupported data_case {self.config.data_case} for StackixPreprocessor."
+            )
 
     def _format_multi_bulk(
         self, reconstruction: Dict[str, torch.Tensor]

@@ -20,7 +20,7 @@ class BaseLoss(nn.Module, ABC):
         recon_loss: Module for computing reconstruction loss (MSE or BCE).
         reduction_fn: Function to apply reduction (mean or sum).
         compute_kernel: Function to compute kernel for MMD loss.
-        annealing_scheduler: Helper class for loss calculation with annealing.
+        annealing_scheduler: Helper for loss calculation with annealing.
     """
 
     def __init__(self, config: DefaultConfig, annealing_scheduler=None):
@@ -299,10 +299,11 @@ class BaseLoss(nn.Module, ABC):
             - A dictionary of individual loss components, where the keys are
                 descriptive strings (e.g., "reconstruction_loss", "kl_loss") and
                 the values are the corresponding loss tensors.
-            - Implementation in subclasses is flexibel, so for new loss classes this can differ.
+            - Implementation in subclasses is flexible, so for new loss classes this can differ.
 
         Note:
             Subclasses must implement this method to define the specific loss
             computation logic for their use case.
         """
+        # TODO maybe standardize the return types more i.e. request a scalar and a dict
         pass

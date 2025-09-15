@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from typing import Optional, List, Union, Any
+from typing import Optional, List, Union, Any, Dict
 import pandas as pd
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.base._base_dataset import BaseDataset, DataSetTypes
@@ -8,7 +8,7 @@ from autoencodix.base._base_dataset import BaseDataset, DataSetTypes
 
 class TensorAwareDataset(BaseDataset):
     """
-    Base class that handles dtype mapping and tensor conversion logic.
+    Handles dtype mapping and tensor conversion logic.
     """
 
     @staticmethod
@@ -18,16 +18,11 @@ class TensorAwareDataset(BaseDataset):
         """
         Convert data to tensor with specified dtype.
 
-        Parameters:
-        -----------
-        data : Union[torch.Tensor, np.ndarray, Any]
-            Input data to convert
-        dtype : torch.dtype
-            Desired data type
+        Args:
+            data: Input data to convert
+            dtype: Desired data type
 
         Returns:
-        --------
-        torch.Tensor
             Tensor with the specified dtype
         """
         if isinstance(data, torch.Tensor):
@@ -40,14 +35,10 @@ class TensorAwareDataset(BaseDataset):
         """
         Map fabric precision types to torch tensor dtypes.
 
-        Parameters:
-        -----------
-        float_precision : str
-            Precision type (e.g., 'bf16-mixed', '16-mixed')
+        Args:
+            float_precision: Precision type (e.g., 'bf16-mixed', '16-mixed')
 
         Returns:
-        --------
-        torch.dtype
             Corresponding torch dtype
         """
         precision_mapping = {
@@ -72,8 +63,6 @@ class TensorAwareDataset(BaseDataset):
         Convert the dataset to a pandas DataFrame.
 
         Returns:
-        --------
-        pd.DataFrame
             DataFrame representation of the dataset
         """
         if isinstance(self.data, torch.Tensor):
@@ -124,6 +113,16 @@ class TensorAwareDataset(BaseDataset):
 class NumericDataset(TensorAwareDataset):
     """
     A custom PyTorch dataset that handles tensors.
+
+
+    Attributes:
+        data: The input features as a torch.Tensor.
+        config: Configuration object containing settings for data processing.
+        sample_ids: Optional list of sample identifiers.
+        feature_ids: Optional list of feature identifiers.
+        metadata: Optional pandas DataFrame containing metadata.
+        split_indices: Optional numpy array for data splitting.
+        mytype: Enum indicating the dataset type (set to DataSetTypes.NUM).
     """
 
     def __init__(
@@ -132,25 +131,19 @@ class NumericDataset(TensorAwareDataset):
         config: DefaultConfig,
         sample_ids: Union[None, List[Any]] = None,
         feature_ids: Union[None, List[Any]] = None,
-        metadata: Optional[pd.DataFrame] = None,
-        split_indices: Optional[np.ndarray] = None,
+        metadata: Optional[Union[pd.Series, pd.DataFrame]] = None,
+        split_indices: Optional[Union[Dict[str, Any], List[Any], np.ndarray]] = None,
     ):
         """
         Initialize the dataset
 
-        Parameters:
-        -----------
-        data : torch.Tensor
-            Input features
-        config : DefaultConfig
-            Configuration object
-        sample_ids : Union[None, List[Any]]
-            Optional sample identifiers
-        feature_ids : Union[None, List[Any]]
-            Optional feature identifiers
-        metadata : Optional[pd.DataFrame]
-            Optional metadata
-        split_indices : Optional[np.ndarray]
+        Args:
+            data: Input features
+            config: Configuration object
+            sample_ids: Optional sample identifiers
+            feature_ids: Optional feature identifiers
+            metadata: Optional metadata
+            split_indices: Optional split indices
             Optional split indices
         """
         super().__init__(
@@ -173,8 +166,6 @@ class NumericDataset(TensorAwareDataset):
         Convert the dataset to a pandas DataFrame.
 
         Returns:
-        --------
-        pd.DataFrame
             DataFrame representation of the dataset
         """
         if isinstance(self.data, torch.Tensor):

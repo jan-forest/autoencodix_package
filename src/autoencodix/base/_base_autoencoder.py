@@ -9,7 +9,7 @@ from autoencodix.configs.default_config import DefaultConfig
 
 
 class BaseAutoencoder(ABC, nn.Module):
-    """Interface for building autoencoder models with standard interfaces.
+    """Interface for building autoencoder models.
 
     Defines standard methods for encoding data to a latent space and decoding
     back to the original space. Includes a weight initialization method for
@@ -38,6 +38,8 @@ class BaseAutoencoder(ABC, nn.Module):
             config: Configuration object containing model parameters.
                 If None, a default configuration will be used.
             input_dim: Number of input features.
+            ontologies: Ontology information, if provided for Ontix
+            feature_order: For Ontix
         """
         super().__init__()
         if config is None:
@@ -69,7 +71,7 @@ class BaseAutoencoder(ABC, nn.Module):
             x: The input tensor to be encoded.
 
         Returns:
-            The encoded latent space representation, or mu and logvar for VAE.
+            The encoded latent space representation, or mu and logvar for VAEs.
         """
         pass
 

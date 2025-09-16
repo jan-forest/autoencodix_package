@@ -1,46 +1,22 @@
 import torch.nn as nn
-import numpy as np
 from typing import List
 
-
-# internal check done
-# write tests unit: done
-# write tests integration (do together with architectures)
-# -  Vanilix: done
 class LayerFactory:
-    """
-    Factory for creating configurable neural network layers.
-
-    Methods
-    -------
-    get_layer_dimensions(feature_dim, latent_dim, n_layers, enc_factor)
-        Calculate progressive layer dimensions.
-    create_layer(in_features, out_features, dropout_p, last_layer)
-        Create a configurable layer with optional components.
-
-    """
+    """Factory for creating configurable neural network layers."""
 
     @staticmethod
     def get_layer_dimensions(
         feature_dim: int, latent_dim: int, n_layers: int, enc_factor: float
     ) -> List[int]:
-        """
-        Calculate progressive layer dimensions.
+        """Calculate progressive layer dimensions.
 
-        Parameters
-        ----------
-        feature_dim : int
-            Input feature dimension
-        latent_dim : int
-            Target latent dimension
-        n_layers : int
-            Number of layers
-        enc_factor : float
-            Reduction factor for layer sizes
+        Args:
+        feature_dim: Input feature dimension
+        latent_dim: Target latent dimension
+        n_layers: Number of layers
+        enc_factor: Reduction factor for layer sizes
 
-        Returns
-        -------
-        List[int]
+        Returns:
             Calculated layer dimensions
         """
         if n_layers == 0:
@@ -62,23 +38,15 @@ class LayerFactory:
         dropout_p: float = 0.1,
         last_layer: bool = False,
     ) -> List[nn.Module]:
-        """
-        Create a configurable layer with optional components.
+        """Create a configurable layer with optional components.
 
-        Parameters
-        ----------
-        in_features : int
-            Input feature dimension
-        out_features : int
-            Output feature dimension
-        dropout_p : float, optional
-            Dropout probability, by default 0.1
-        last_layer : bool, optional
-            Flag to skip activation/dropout for final layer, by default False
+        Args:
+            in_features: Input feature dimension
+            out_features: Output feature dimension
+            dropout_p: Dropout probability, by default 0.1
+            last_layer: Flag to skip activation/dropout for final layer, by default False
 
-        Returns
-        -------
-        List[nn.Module]
+        Returns:
             List of layer components
         """
         if last_layer:

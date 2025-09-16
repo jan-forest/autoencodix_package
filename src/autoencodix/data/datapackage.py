@@ -255,11 +255,14 @@ class DataPackage:
             return []
 
     def _get_n_samples(
-        self, dataobj: Union[MuData, # ty: ignore[invalid-type-form]
-                             pd.DataFrame, 
-                             List[ImgData],
-                             AnnData, 
-                             Dict]
+        self,
+        dataobj: Union[
+            MuData,  # ty: ignore[invalid-type-form]
+            pd.DataFrame,
+            List[ImgData],
+            AnnData,
+            Dict,
+        ],
     ) -> int:
         """Get the number of samples for a specific attribute."""
         if dataobj is None:
@@ -328,10 +331,9 @@ class DataPackage:
             return None
 
     def _get_shape_from_dict(self, data_dict: Dict) -> Dict[str, Any]:
-        """
-        Recursively process dictionary to extract shapes of contained data objects.
+        """Recursively process dictionary to extract shapes of contained data objects.
 
-        Parameters:
+        Args::
             data_dict: Dictionary containing data objects
 
         Returns:
@@ -362,10 +364,9 @@ class DataPackage:
         return result
 
     def get_modality_key(self, direction: str) -> Optional[str]:
-        """
-        Get the first key for a specific direction's modality.
+        """Get the first key for a specific direction's modality.
 
-        Parameters:
+        Args:
             direction: Either 'from' or 'to'
 
         Returns:

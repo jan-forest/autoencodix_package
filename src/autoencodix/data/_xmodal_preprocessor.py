@@ -16,14 +16,22 @@ from autoencodix.data._multimodal_dataset import MultiModalDataset
 
 
 class XModalPreprocessor(GeneralPreprocessor):
-    """
-    Preprocessor for cross-modal data, handling multiple data types and their transformations.
-    Inherits from BasePreprocessor.
+    """Preprocessor for cross-modal data, handling multiple data types and their transformations.
+
+
+    Attributes:
+        data_config: Configuration specific to data handling.
+        dataset_dicts: Dictionary holding datasets for different splits (train, test, valid).
     """
 
     def __init__(
         self, config: DefaultConfig, ontologies: Optional[Union[Tuple, Dict]] = None
     ):
+        """Initializes the XModalPreprocessor
+        Args:
+            config: Configuration object for the preprocessor.
+            ontologies: Optional ontologies for data processing.
+        """
         super().__init__(config=config, ontologies=ontologies)
         self.data_config = config.data_config
 
@@ -32,8 +40,10 @@ class XModalPreprocessor(GeneralPreprocessor):
         raw_user_data: Optional[DataPackage] = None,
         predict_new_data: bool = False,
     ) -> DatasetContainer:
-        """
-        Preprocess the data according to the configuration.
+        """Preprocess the data according to the configuration.
+        Args:
+            raw_user_data: Optional raw data provided by the user.
+            predict_new_data: Flag indicating if new data is being predicted.
         """
         self.dataset_dicts = self._general_preprocess(
             raw_user_data=raw_user_data, predict_new_data=predict_new_data
@@ -66,6 +76,15 @@ class XModalPreprocessor(GeneralPreprocessor):
         pass
 
     def _process_dp(self, dp: DataPackage, indices: Dict[str, Any]):
+        """Processes a DataPackage into a dictionary of BaseDataset objects.
+
+        Args:
+            dp: The DataPackage to process.
+            indices: The indices for splitting the data.
+        Returns:
+            A dictionary mapping modality names to BaseDataset objects.
+        """
+
         dataset_dict: Dict[str, BaseDataset] = {}
         for k, v in dp:
             dp_key, sub_key = k.split(".")

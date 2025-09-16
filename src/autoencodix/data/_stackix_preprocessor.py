@@ -214,8 +214,6 @@ class StackixPreprocessor(BasePreprocessor):
             result: Optional[Result] containing additional information
         Returns:
             DataPackage with reconstructed data in original format
-        Raises:
-            ValueError: If result is None or if dataset container is not initialized
 
         """
 
@@ -240,12 +238,12 @@ class StackixPreprocessor(BasePreprocessor):
             )
 
     def _format_multi_bulk(
-        self, reconstruction: Dict[str, torch.Tensor]
+        self, reconstructions: Dict[str, torch.Tensor]
     ) -> DataPackage:
         multi_bulk_dict = {}
         annotation_dict = {}
         dp = DataPackage()
-        for name, reconstruction in reconstruction.items():
+        for name, reconstruction in reconstructions.items():
             if not isinstance(reconstruction, torch.Tensor):
                 raise TypeError(
                     f"Expected value to be of type torch.Tensor, got {type(reconstruction)}."
@@ -269,20 +267,15 @@ class StackixPreprocessor(BasePreprocessor):
         return dp
 
     def _format_multi_sc(self, reconstruction: Dict[str, torch.Tensor]) -> DataPackage:
-        """
-        Formats reconstructed tensors back into a MuData object for single-cell data.
+        """Formats reconstructed tensors back into a MuData object for single-cell data.
 
         This uses the stored layer indices to accurately split the reconstructed tensor
         back into the original layers.
 
-        Parameters
-        ----------
-        reconstruction : Dict[str, torch.Tensor]
-            Dictionary of reconstructed tensors for each modality
+        Args:
+        reconstruction: Dictionary of reconstructed tensors for each modality
 
-        Returns
-        -------
-        DataPackage
+        Returns:
             DataPackage containing the reconstructed MuData object
         """
         import mudata as md

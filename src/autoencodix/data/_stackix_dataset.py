@@ -13,18 +13,9 @@ class StackixDataset(NumericDataset):
     and provides a consistent interface for accessing them during training.
     It's designed to work specifically with StackixTrainer.
 
-    Attributes
-    ----------
-    dataset_dict : Dict[str, BaseDataset]
-        Dictionary mapping modality names to dataset objects
-    modality_keys : List[str]
-        List of modality names
-    data : torch.Tensor
-        First modality's tensor (needed for BaseDataset compatibility)
-    sample_ids : List[Any]
-        First modality's sample IDs (needed for BaseDataset compatibility)
-    feature_ids : List[Any]
-        First modality's feature IDs (needed for BaseDataset compatibility)
+    Attributes:
+        dataset_dict: Dictionary mapping modality names to dataset objects
+        modality_keys: List of modality names
     """
 
     def __init__(
@@ -35,17 +26,13 @@ class StackixDataset(NumericDataset):
         """
         Initialize a StackixDataset instance.
 
-        Parameters
-        ----------
-        dataset_dict : Dict[str, BaseDataset]
-            Dictionary mapping modality names to dataset objects
-        config : DefaultConfig
-            Configuration object
+        Args:
+            dataset_dict: Dictionary mapping modality names to dataset objects
+            config: Configuration object
 
-        Raises
-        ------
-        ValueError
-            If the datasets dictionary is empty or if modality datasets have different numbers of samples
+        Raises:
+            ValueError: If the datasets dictionary is empty or if modality datasets have different numbers of samples
+            NotImplementedError: If the datasets have incompatible shapes for concatenation
         """
         if not dataset_dict:
             raise ValueError("dataset_dict cannot be empty")
@@ -85,14 +72,7 @@ class StackixDataset(NumericDataset):
             )
 
     def __len__(self) -> int:
-        """
-        Return the number of samples in the dataset.
-
-        Returns
-        -------
-        int
-            Number of samples in the dataset
-        """
+        """Return the number of samples in the dataset."""
         return len(next(iter(self.dataset_dict.values())))
 
     def __getitem__(
@@ -104,15 +84,10 @@ class StackixDataset(NumericDataset):
         Returns the data from the first modality to maintain compatibility
         with the BaseDataset interface, while still supporting multi-modality
         access through dataset_dict.
+        Args:
+            index: Index of the sample to retrieve
 
-        Parameters
-        ----------
-        index : int
-            Index of the sample to retrieve
-
-        Returns
-        -------
-        Dict[str, Tuple[torch.Tensor, Any]]
+        Returns:
             Dictionary of (data tensor, label) pairs for each modality
 
         """
@@ -123,23 +98,15 @@ class StackixDataset(NumericDataset):
     def get_modality_item(self, modality: str, index: int) -> Tuple[torch.Tensor, Any]:
         """
         Get a sample for a specific modality.
+        Args:
+            modality: The modality name to retrieve data from
+            index: Index of the sample to retrieve
 
-        Parameters
-        ----------
-        modality : str
-            The modality name to retrieve data from
-        index : int
-            Index of the sample to retrieve
-
-        Returns
-        -------
-        Tuple[torch.Tensor, Any]
+        Returns:
             Tuple of (data tensor, label) for the specified modality and sample index
 
-        Raises
-        ------
-        KeyError
-            If the requested modality doesn't exist in the dataset
+        Raises:
+            KeyError: If the requested modality doesn't exist in the dataset
         """
         if modality not in self.dataset_dict:
             raise KeyError(f"Modality '{modality}' not found in dataset")

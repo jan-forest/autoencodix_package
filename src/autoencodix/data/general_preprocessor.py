@@ -227,7 +227,7 @@ class GeneralPreprocessor(BasePreprocessor):
             split_data = self._datapackage_dict.get(split)
             self._split = split
             if not split_data or split_data["data"] is None:
-                ds_container[split] = None # type: ignore
+                ds_container[split] = None  # type: ignore
                 continue
             ds = self._process_data_package(split_data)
             ds_container[split] = ds

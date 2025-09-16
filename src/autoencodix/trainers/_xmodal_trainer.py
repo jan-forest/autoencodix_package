@@ -1,6 +1,6 @@
 from collections import defaultdict
 import os
-from typing import Any, Dict, List, Optional, Tuple, Type, Union, Literal
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
@@ -27,6 +27,38 @@ from autoencodix.utils._utils import find_translation_keys
 
 
 class XModalTrainer(BaseTrainer):
+    """Trainer for cross-modal autoencoders, implements multimodal training with adversarial component.
+
+    Attributes:
+        _trainset: The dataset used for training, must be a MultiModalDataset.
+        _n_train_modalities: Number of modalities in the training dataset.
+        model_map: Mapping from DataSetTypes to specific autoencoder architectures.
+        model_trainer_map: Mapping from autoencoder architectures to their corresponding trainer classes.
+        _n_cpus: Number of CPU cores available for data loading.
+        latent_dim: Dimensionality of the shared latent space.
+        n_test: Number of samples in the test set, if provided.
+        n_train: Number of samples in the training set.
+        n_valid: Number of samples in the validation set, if provided.
+        n_features: Total number of features across all modalities.
+        _cur_epoch: Current epoch number during training.
+        _is_checkpoint_epoch: Flag indicating if the current epoch is a checkpoint epoch.
+        _sub_loss_type: Loss function type for individual modality autoencoders.
+        sub_loss: Instantiated loss function for individual modality autoencoders.
+        _clf_epoch_loss: Cumulative classifier loss for the current epoch.
+        _epoch_loss: Cumulative total loss for the current epoch.
+        _epoch_loss_valid: Cumulative total validation loss for the current epoch.
+        _modality_dynamics: Dictionary holding model, optimizer, and training state for each modality.
+        _latent_clf: Classifier model for adversarial training on latent spaces.
+        _clf_optim: Optimizer for the classifier model.
+        _clf_loss_fn: Loss function for the classifier.
+        _trainloader: DataLoader for the training dataset.
+        _validloader: DataLoader for the validation dataset, if provided.
+        _model: The instantiated stacked model architecture.
+        _validset: The dataset used for validation, if provided, must be a MultiModalDataset.
+        _fabric: Lightning Fabric wrapper for device and precision management.
+
+    """
+
     def __init__(
         self,
         trainset: MultiModalDataset,
@@ -42,6 +74,19 @@ class XModalTrainer(BaseTrainer):
         },
         ontologies: Optional[Union[Tuple, List]] = None,
     ):
+        """Initializes the XModalTrainer with datasets and configuration.
+
+        Args:
+            trainset: Training dataset containing multiple modalities
+            validset: Validation dataset containing multiple modalities
+            result: Result object to store training outcomes
+            config: Configuration parameters for training and model architecture
+            model_type: Type of autoencoder model to use for each modality (not used directly)
+            loss_type: Type of loss function to use for training the stacked model
+            sub_loss_type: Type of loss function to use for individual modality autoencoders
+            model_map: Mapping from DataSetTypes to specific autoencoder architectures
+            ontologies: Ontology information, for compatibility with Ontix
+        """
         self._trainset = trainset
         self._n_train_modalities = self._trainset.n_modalities  # type: ignore
         self.model_map = model_map
@@ -68,10 +113,11 @@ class XModalTrainer(BaseTrainer):
         self._epoch_loss_valid: float = 0.0
 
     def _init_model_architecture(self, ontologies: Optional[Tuple] = None):
-        """Override parent's model init - we don't use a single model"""
+        """Override parent's model init - we don't use a single model, needs to be there because is abstract in parent."""
         pass
 
     def _setup_fabric(self):
+        """Sets up the models, optimizers, and data loaders with Lightning Fabric."""
         self._init_adversarial_training()
         self._init_modality_training()
         for dynamics in self._modality_dynamics.values():
@@ -89,6 +135,7 @@ class XModalTrainer(BaseTrainer):
         self._fabric.launch()
 
     def _init_loaders(self):
+        """Initializes DataLoaders for training and validation datasets."""
         trainsampler = CoverageEnsuringSampler(multimodal_dataset=self._trainset)
         validsampler = CoverageEnsuringSampler(multimodal_dataset=self._validset)
         collate_fn = create_multimodal_collate_fn(multimodal_dataset=self._trainset)
@@ -108,6 +155,7 @@ class XModalTrainer(BaseTrainer):
         )
 
     def _init_modality_training(self):
+        """Initializes models, optimizers, and training state for each modality."""
         self._modality_dynamics = {
             mod_name: None for mod_name in self._trainset.datasets.keys()
         }
@@ -147,6 +195,7 @@ class XModalTrainer(BaseTrainer):
             }
 
     def _init_adversarial_training(self):
+        """Initializes the classifier and its optimizer for adversarial training."""
         self._latent_clf = Classifier(
             input_dim=self._config.latent_dim, n_modalities=self._n_train_modalities
         )
@@ -160,6 +209,7 @@ class XModalTrainer(BaseTrainer):
         )
 
     def _modalities_forward(self, batch: Dict[str, Dict[str, Any]]):
+        """Performs forward pass for each modality in the batch and computes losses."""
         for k, v in batch.items():
             model = self._modality_dynamics[k]["model"]
             data = v["data"]
@@ -175,6 +225,13 @@ class XModalTrainer(BaseTrainer):
             self._modality_dynamics[k]["mp"] = mp
 
     def _prep_adver_training(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Prepares concatenated latent spaces and corresponding labels for adversarial training.
+
+        Returns:
+            A tuple containing:
+            - latents: Concatenated latent space tensor of shape (total_samples, latent_dim)
+            - labels: Tensor of modality labels of shape (total_samples,)
+        """
         all_latents: List[torch.Tensor] = []
         all_labels: List[torch.Tensor] = []
         mod2idx = {
@@ -197,8 +254,13 @@ class XModalTrainer(BaseTrainer):
 
         return torch.cat(all_latents, dim=0), torch.cat(all_labels, dim=0)
 
-    def _train_clf(self, latents: torch.Tensor, labels: torch.Tensor):
-        """Performs a single optimization step for the classifier."""
+    def _train_clf(self, latents: torch.Tensor, labels: torch.Tensor) -> None:
+        """Performs a single optimization step for the classifier.
+        Args:
+            latents: Concatenated latent space tensor of shape (total_samples, latent_dim)
+            labels: Tensor of modality labels of shape (total_samples,)
+
+        """
         self._clf_optim.zero_grad()
         # We must detach the latents from the computation graph. This serves two purposes:
         # 1. It isolates the classifier, ensuring that gradients only update its weights.
@@ -212,9 +274,13 @@ class XModalTrainer(BaseTrainer):
         self._clf_epoch_loss += clf_loss.item()
 
     def _validate_one_epoch(self) -> Tuple[List[Dict], Dict[str, float], int]:
-        """
-        Runs a single, combined validation pass for the entire model,
-        including dedicated metrics for the classifier.
+        """Runs a single, combined validation pass for the entire model, including dedicated metrics for the classifier.
+
+        Returns:
+            A tuple containing:
+            - epoch_dynamics: List of dictionaries capturing dynamics for each batch
+            - sub_losses: Dictionary of accumulated sub-losses for the epoch
+            - n_samples_total: Total number of samples processed in validation
         """
         for dynamics in self._modality_dynamics.values():
             dynamics["model"].eval()
@@ -262,7 +328,14 @@ class XModalTrainer(BaseTrainer):
         return epoch_dynamics, sub_losses, n_samples_total
 
     def _train_one_epoch(self) -> Tuple[List[Dict], Dict[str, float], int]:
-        """Runs the training loop with corrected adversarial logic."""
+        """Runs the training loop with corrected adversarial logic.
+        Returns:
+            A tuple containing:
+            - epoch_dynamics: List of dictionaries capturing dynamics for each batch
+            - sub_losses: Dictionary of accumulated sub-losses for the epoch
+            - n_samples_total: Total number of samples processed in training
+
+        """
         for dynamics in self._modality_dynamics.values():
             dynamics["model"].train()
         self._latent_clf.train()
@@ -321,6 +394,7 @@ class XModalTrainer(BaseTrainer):
         return epoch_dynamics, sub_losses, n_samples_total
 
     def _pretraining(self):
+        """Pretrain each modality's model if needed."""
         for mod_name, dynamic in self._modality_dynamics.items():
             mytype = dynamic.get("mytype")
             pretrain_epochs = dynamic.get("pretrain_epochs")
@@ -349,6 +423,7 @@ class XModalTrainer(BaseTrainer):
             self._modality_dynamics[mod_name]["model"] = pretrain_result.model
 
     def train(self):
+        """Orchestrates the full training process for the cross-modal autoencoder."""
         self._pretraining()
         for epoch in range(self._config.epochs):
             self._cur_epoch = epoch
@@ -401,6 +476,10 @@ class XModalTrainer(BaseTrainer):
         return self._result
 
     def decode(self, x: torch.Tensor):
+        """Decodes input latent representations
+        Args:
+            x: Latent representations to decode, shape (n_samples, latent_dim)
+        """
         with self._fabric.autocast(), torch.no_grad():
             x = self._fabric.to_device(obj=x)
             if not isinstance(x, torch.Tensor):
@@ -416,8 +495,7 @@ class XModalTrainer(BaseTrainer):
         model: Optional[Any] = None,
         **kwargs,
     ) -> Result:
-        """
-        Performs cross-modal prediction from a specified 'from' modality to a 'to' modality.
+        """Performs cross-modal prediction from a specified 'from' modality to a 'to' modality.
 
         The direction is determined by the 'translate_direction' attribute in the config.
         Results are stored in the Result object under split='test' and epoch=-1.
@@ -504,6 +582,12 @@ class XModalTrainer(BaseTrainer):
         return self._result
 
     def _get_vis_dynamics(self, batch: Dict[str, Dict[str, Any]]):
+        """Runs a forward pass for each modality in the batch and stores the model outputs.
+
+        This is used to capture dynamics for visualization or analysis not for actual translation as specified in predict.
+        Args:
+            batch: A dictionary where keys are modality names and values are dictionaries containing 'data' tensors.
+        """
         for mod_name, mod_data in batch.items():
             model = self._modality_dynamics[mod_name]["model"]
             # Store model output (containing latents, recons, etc.)
@@ -513,6 +597,15 @@ class XModalTrainer(BaseTrainer):
         self,
         batch_data: Union[Dict[str, Dict[str, Any]], Any],
     ) -> Union[Dict[str, Dict[str, np.ndarray]], Any]:
+        """Captures and returns the dynamics (latents, reconstructions, etc.) for each modality in the batch.
+
+        Args:
+            batch_data: A dictionary where keys are modality names and values are dictionaries containing 'data' tensors
+                         and optionally 'sample_ids'.
+        Returns:
+            A dictionary with keys 'latentspaces', 'reconstructions', 'mus', 'sigmas', and 'sample_ids',
+            each mapping to another dictionary where keys are modality names and values are numpy arrays.
+        """
         captured_data: Dict[str, Dict[str, Any]] = {
             "latentspaces": {},
             "reconstructions": {},
@@ -541,7 +634,13 @@ class XModalTrainer(BaseTrainer):
                 captured_data["sample_ids"][mod_name] = np.array(sample_ids)
         return captured_data
 
-    def _dynamics_to_result(self, split: str, epoch_dynamics: List[Dict]):
+    def _dynamics_to_result(self, split: str, epoch_dynamics: List[Dict]) -> None:
+        """Aggregates and stores epoch dynamics into the Result object.
+        Args:
+            split: The data split name (e.g., 'train', 'valid', 'test').
+            epoch_dynamics: List of dictionaries capturing dynamics for each batch in the epoch.
+
+        """
         final_data: Dict[str, Any] = defaultdict(lambda: defaultdict(list))
         for batch_data in epoch_dynamics:
             for dynamic_type, mod_data in batch_data.items():
@@ -587,7 +686,16 @@ class XModalTrainer(BaseTrainer):
         total_loss: float,
         sub_losses: Dict[str, float],
         n_samples: int,
-    ):
+    ) -> None:
+        """Logs and stores average losses for the epoch.
+        Args:
+            split: The data split name (e.g., 'train', 'valid').
+            total_loss: The cumulative total loss for the epoch.
+            sub_losses: Dictionary of accumulated sub-losses for the epoch.
+            n_samples: Total number of samples processed in the epoch.
+
+        """
+
         n_samples = max(n_samples, 1)
         print(f"split: {split}, n_samples: {n_samples}")
         avg_total_loss = total_loss / n_samples
@@ -605,7 +713,15 @@ class XModalTrainer(BaseTrainer):
             f"Epoch {self._cur_epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {avg_total_loss:.4f}"
         )
 
-    def _store_checkpoint(self, split: str, epoch_dynamics: List[Dict]):
+    def _store_checkpoint(self, split: str, epoch_dynamics: List[Dict]) -> None:
+        """Stores model checkpoints and epoch dynamics into the Result object.
+
+        Args:
+            split: The data split name (e.g., 'train', 'valid').
+            epoch_dynamics: List of dictionaries capturing dynamics for each batch in the epoch.
+
+        """
+
         state_to_save = {
             mod_name: dynamics["model"].state_dict()
             for mod_name, dynamics in self._modality_dynamics.items()

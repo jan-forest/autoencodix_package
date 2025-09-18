@@ -178,6 +178,7 @@ class GeneralTrainer(BaseTrainer):
             epochs = epochs_overwrite
         with self._fabric.autocast():
             for epoch in range(epochs):
+                self._init_buffers()
                 should_checkpoint: bool = self._should_checkpoint(epoch)
                 self._model.train()
 

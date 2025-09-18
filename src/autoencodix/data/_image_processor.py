@@ -1,24 +1,21 @@
 from typing import Any, Dict, Optional, Tuple, Union
 
-import mudata as md
-import pandas as pd
-import torch
 
-from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._image_dataset import ImageDataset
-from autoencodix.data._imgdataclass import ImgData
-from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data.general_preprocessor import GeneralPreprocessor
-from autoencodix.utils.default_config import DefaultConfig
-from autoencodix.data._multimodal_dataset import MultiModalDataset
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class ImagePreprocessor(GeneralPreprocessor):
     """
     Preprocessor for cross-modal data, handling multiple data types and their transformations.
-    Inherits from BasePreprocessor.
+
+
+    Attributes:
+        data_config: Configuration specific to data handling and preprocessing.
+        dataset_dicts: Dictionary holding datasets for different splits (train/test/valid).
     """
 
     def __init__(
@@ -34,6 +31,12 @@ class ImagePreprocessor(GeneralPreprocessor):
     ) -> DatasetContainer:
         """
         Preprocess the data according to the configuration.
+
+        Args:
+            raw_user_data: The raw data package provided by the user.
+            predict_new_data: Flag indicating if new data is being predicted.
+        Returns:
+            A DatasetContainer with processed training, validation, and test datasets.
         """
         self.dataset_dicts = self._general_preprocess(
             raw_user_data=raw_user_data, predict_new_data=predict_new_data
@@ -56,11 +59,12 @@ class ImagePreprocessor(GeneralPreprocessor):
             train=datasets["train"], test=datasets["test"], valid=datasets["valid"]
         )
 
-    def format_reconstruction(self, reconstruction, result=None):
-        pass
-
     def _process_dp(self, dp: DataPackage, indices: Dict[str, Any]) -> ImageDataset:
         first_key = next(iter(list(dp.img.keys())))
+        if not isinstance(dp.img, dict):
+            raise TypeError(
+                f"Expected `img` attribute of DataPackage to be `dict`, got {type(dp.img)}"
+            )
         if len(dp.img.keys()) > 1:
             import warnings
 

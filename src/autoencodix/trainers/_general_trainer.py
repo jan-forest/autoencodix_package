@@ -10,11 +10,40 @@ from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._model_output import ModelOutput
 
 
 class GeneralTrainer(BaseTrainer):
+    """Handles general training logic for autoencoder models.
+
+    Attributes:
+         _trainset: The dataset used for training.
+         _validset: The dataset used for validation, if provided.
+         _result: An object to store and manage training results.
+         _config: Configuration object containing training hyperparameters and settings.
+         _model_type: The autoencoder model class to be trained.
+         _loss_fn: Instantiated loss function specific to the model.
+         _trainloader: DataLoader for the training dataset.
+         _validloader: DataLoader for the validation dataset, if provided.
+         _model: The instantiated model architecture.
+         _optimizer: The optimizer used for training.
+         _fabric: Lightning Fabric wrapper for device and precision management.
+         n_train: Number of training samples.
+         n_valid: Number of validation samples.
+         n_test: Number of test samples (set during prediction).
+         n_features: Number of input features.
+         latent_dim: Dimensionality of the latent space.
+         device: Device on which the model is located.
+         _n_cpus: Number of CPU cores available.
+         _reconstruction_buffer: Buffer to store reconstructions during training/validation/testing.
+         _latentspace_buffer: Buffer to store latent representations during training/validation/testing.
+         _mu_buffer: Buffer to store latent means (for VAE) during training/validation
+         _sigma_buffer: Buffer to store latent log-variances (for VAE) during training/validation/testing.
+         _sample_ids_buffer: Buffer to store sample IDs during training/validation/testing.
+
+    """
+
     def __init__(
         self,
         trainset: Optional[BaseDataset],
@@ -25,6 +54,17 @@ class GeneralTrainer(BaseTrainer):
         loss_type: Type[BaseLoss],
         ontologies: Optional[Union[Tuple, List]] = None,
     ):
+        """Initializes the GeneralTrainer.
+
+        Args:
+                trainset: The dataset used for training.
+                validset: The dataset used for validation, if provided.
+                result: An object to store and manage training results.
+                config: Configuration object containing training hyperparameters and settings.
+                model_type: The autoencoder model class to be trained.
+                loss_type: The loss function class to be used for training.
+                ontologies: Ontology information, if provided for Ontix
+        """
         self._n_cpus = os.cpu_count()
         if self._n_cpus is None:
             self._n_cpus = 0
@@ -65,39 +105,55 @@ class GeneralTrainer(BaseTrainer):
 
         self._latentspace_buffer = {
             "train": make_tensor_buffer(self.n_train, self.latent_dim),
-            "valid": make_tensor_buffer(self.n_valid, self.latent_dim)
-            if self.n_valid
-            else None,
-            "test": make_tensor_buffer(self.n_test, self.latent_dim)
-            if self.n_test
-            else None,
+            "valid": (
+                make_tensor_buffer(self.n_valid, self.latent_dim)
+                if self.n_valid
+                else None
+            ),
+            "test": (
+                make_tensor_buffer(self.n_test, self.latent_dim)
+                if self.n_test
+                else None
+            ),
         }
         self._reconstruction_buffer = {
             "train": make_tensor_buffer(self.n_train, self.n_features),
-            "valid": make_tensor_buffer(self.n_valid, self.n_features)
-            if self.n_valid
-            else None,
-            "test": make_tensor_buffer(self.n_test, self.n_features)
-            if self.n_test
-            else None,
+            "valid": (
+                make_tensor_buffer(self.n_valid, self.n_features)
+                if self.n_valid
+                else None
+            ),
+            "test": (
+                make_tensor_buffer(self.n_test, self.n_features)
+                if self.n_test
+                else None
+            ),
         }
         self._mu_buffer = {
             "train": make_tensor_buffer(self.n_train, self.latent_dim),
-            "valid": make_tensor_buffer(self.n_valid, self.latent_dim)
-            if self.n_valid
-            else None,
-            "test": make_tensor_buffer(self.n_test, self.latent_dim)
-            if self.n_test
-            else None,
+            "valid": (
+                make_tensor_buffer(self.n_valid, self.latent_dim)
+                if self.n_valid
+                else None
+            ),
+            "test": (
+                make_tensor_buffer(self.n_test, self.latent_dim)
+                if self.n_test
+                else None
+            ),
         }
         self._sigma_buffer = {
             "train": make_tensor_buffer(self.n_train, self.latent_dim),
-            "valid": make_tensor_buffer(self.n_valid, self.latent_dim)
-            if self.n_valid
-            else None,
-            "test": make_tensor_buffer(self.n_test, self.latent_dim)
-            if self.n_test
-            else None,
+            "valid": (
+                make_tensor_buffer(self.n_valid, self.latent_dim)
+                if self.n_valid
+                else None
+            ),
+            "test": (
+                make_tensor_buffer(self.n_test, self.latent_dim)
+                if self.n_test
+                else None
+            ),
         }
         self._sample_ids_buffer = {
             "train": make_numpy_buffer(self.n_train),
@@ -109,11 +165,20 @@ class GeneralTrainer(BaseTrainer):
         pass
 
     def train(self, epochs_overwrite=None) -> Result:
+        """Orchestrates training over multiple epochs, including training and validation phases.
+
+        Args:
+            epochs_overwrite: If provided, overrides the number of epochs specified in the config.
+                This is only there so we can use the train method for pretraining.Any
+        Returns:
+            Result object containing training results and dynamics like latent spaces and reconstructions.
+        """
         epochs = self._config.epochs
         if epochs_overwrite:
             epochs = epochs_overwrite
         with self._fabric.autocast():
             for epoch in range(epochs):
+                self._init_buffers()
                 should_checkpoint: bool = self._should_checkpoint(epoch)
                 self._model.train()
 
@@ -134,7 +199,18 @@ class GeneralTrainer(BaseTrainer):
         self._result.model = next(self._model.children())
         return self._result
 
-    def _train_epoch(self, should_checkpoint: bool, epoch: int):
+    def _train_epoch(
+        self, should_checkpoint: bool, epoch: int
+    ) -> Tuple[float, Dict[str, float]]:
+        """Handles loss computation, backwards pass and checkpointing for one epoch.
+
+        Args:
+            should_checkpoint: Whether to checkpoint this epoch.
+            epoch: The current epoch number.
+        Returns:
+            total_loss: The total loss for the epoch.
+            sub_losses: A dictionary of sub-losses accumulated over the epoch.
+        """
         total_loss = 0.0
         sub_losses: Dict[str, float] = defaultdict(float)
 
@@ -152,6 +228,7 @@ class GeneralTrainer(BaseTrainer):
             )
 
             self._fabric.backward(loss)
+            self._apply_post_backward_processing()
             self._optimizer.step()
 
             total_loss += loss.item()
@@ -166,7 +243,18 @@ class GeneralTrainer(BaseTrainer):
 
         return total_loss, sub_losses
 
-    def _validate_epoch(self, should_checkpoint: bool, epoch: int):
+    def _validate_epoch(
+        self, should_checkpoint: bool, epoch: int
+    ) -> Tuple[float, Dict[str, float]]:
+        """Handles validation for one epoch.
+
+        Args:
+            should_checkpoint: Whether to checkpoint this epoch.
+            epoch: The current epoch number.
+        Returns:
+            total_loss: The total loss for the epoch.
+            sub_losses: A dictionary of sub-losses accumulated over the epoch.
+        """
         total_loss = 0.0
         sub_losses: Dict[str, float] = defaultdict(float)
         self._model.eval()
@@ -194,7 +282,17 @@ class GeneralTrainer(BaseTrainer):
 
         return total_loss, sub_losses
 
-    def _log_losses(self, epoch, split, total_loss, sub_losses):
+    def _log_losses(
+        self, epoch: int, split: str, total_loss: float, sub_losses: Dict[str, float]
+    ) -> None:
+        """Logs the total and sub-losses for an epoch and stores them in the Result object.
+
+        Args:
+            epoch: The current epoch number.
+            split: The data split ("train" or "valid").
+            total_loss: The total loss for the epoch.
+            sub_losses: A dictionary of sub-losses for the epoch.
+        """
         dataset_len = len(
             self._trainloader.dataset if split == "train" else self._validloader.dataset
         )
@@ -215,7 +313,12 @@ class GeneralTrainer(BaseTrainer):
             f"Sub-losses: {', '.join([f'{k}: {v:.4f}' for k, v in sub_losses.items()])}"
         )
 
-    def _store_checkpoint(self, epoch):
+    def _store_checkpoint(self, epoch: int) -> None:
+        """Stores model checkpoints and training dynamics to result object.
+
+        Args:
+            epoch: The current epoch number.
+        """
         self._result.model_checkpoints.add(epoch=epoch, data=self._model.state_dict())
         self._dynamics_to_result(epoch, "train")
         if self._validset:
@@ -226,22 +329,24 @@ class GeneralTrainer(BaseTrainer):
         model_output: Union[ModelOutput, Any],
         split: str,
         indices: torch.Tensor,
-        sample_ids,
+        sample_ids: Any,
         **kwargs,
-    ):
+    ) -> None:
+        """Writes model dynamics (latent space, reconstructions, etc.) to buffers.
+
+        Args:
+            model_output: The output from the model containing dynamics information.
+            split: The data split ("train", "valid", or "test").
+            indices: The indices of the samples in the current batch.
+            sample_ids: The sample IDs corresponding to the current batch.
+            **kwargs: Additional arguments (not used here).
+
+        """
         indices_np = (
             indices.cpu().numpy()
             if isinstance(indices, torch.Tensor)
             else np.array(indices)
         )
-        # sample_ids_list = (
-        #     sample_ids.tolist()
-        #     if isinstance(sample_ids, torch.Tensor)
-        #     else list(sample_ids)
-        # )
-
-        # for i, idx in enumerate(indices_np):
-        #     self._sample_ids_buffer[split][idx] = sample_ids_list[i]
 
         self._sample_ids_buffer[split][indices_np] = np.array(sample_ids)
 
@@ -256,7 +361,14 @@ class GeneralTrainer(BaseTrainer):
         if model_output.latent_mean is not None:
             self._mu_buffer[split][indices_np] = model_output.latent_mean.detach()
 
-    def _dynamics_to_result(self, epoch: int, split: str):
+    def _dynamics_to_result(self, epoch: int, split: str) -> None:
+        """Transfers buffered dynamics to the Result object.
+
+        Args:
+            epoch: The current epoch number.
+            split: The data split ("train", "valid", or "test").
+        """
+
         def maybe_add(buffer, target):
             if buffer[split] is not None and buffer[split].sum() != 0:
                 target.add(
@@ -282,19 +394,27 @@ class GeneralTrainer(BaseTrainer):
     def predict(
         self, data: BaseDataset, model: Optional[torch.nn.Module] = None, **kwargs
     ) -> Result:
-        """
-        Decided to add predict method to the trainer class.
+        """Decided to add predict method to the trainer class.
+
         This violates SRP, but the trainer class has a lot of attributes and methods
         that are needed for prediction. So this way we don't need to write so much duplicate code
 
-        Parameters:
+        Args:
             data: BaseDataset unseen data to run inference on
             model: torch.nn.Module model to run inference with
+            **kwargs: Additional arguments (not used here).
 
         Returns:
             self._result: Result object containing the inference results
 
         """
+        if model is None:
+            model: torch.nn.Module = self._model
+            import warnings
+
+            warnings.warn(
+                "No model provided for prediction, using the trained model from the trainer."
+            )
         model.eval()
         inference_loader = DataLoader(
             data,
@@ -318,6 +438,13 @@ class GeneralTrainer(BaseTrainer):
         return self._result
 
     def decode(self, x: torch.Tensor):
+        """Decodes the input tensor x using the trained model.
+
+        Args:
+            x: Input tensor to be decoded.
+        Returns:
+            Decoded tensor.
+        """
         with self._fabric.autocast(), torch.no_grad():
             x = self._fabric.to_device(obj=x)
             if not isinstance(x, torch.Tensor):
@@ -325,3 +452,12 @@ class GeneralTrainer(BaseTrainer):
                     f"Expected input to be a torch.Tensor, got {type(x)} instead."
                 )
             return self._model.decode(x=x)
+
+    def get_model(self) -> torch.nn.Module:
+        """Getter method for the trained model.
+
+        Returns:
+
+            The trained model as a torch.nn.Module.
+        """
+        return self._model

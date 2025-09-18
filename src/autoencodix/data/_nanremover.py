@@ -9,23 +9,32 @@ from scipy.sparse import issparse  # type: ignore
 from scipy import sparse  # type: ignore
 
 from autoencodix.data.datapackage import DataPackage
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class NaNRemover:
-    """Removes NaN (Not a Number) values from multi-modal datasets.
+    """Removes NaN values from multi-modal datasets.
 
     This object identifies and removes NaN values from various data structures
     commonly used in single-cell and multi-modal omics, including AnnData, MuData,
     and Pandas DataFrames. It supports processing of X matrices, layers, and
     observation annotations within AnnData objects, as well as handling bulk and
     annotation data within a DataPackage.
+
+    Attributes:
+        config: Configuration object containing settings for data processing.
+        relevant_cols: List of columns in metadata to check for NaNs.
     """
 
     def __init__(
         self,
         config: DefaultConfig,
     ):
+        """Initialize the NaNRemover with configuration settings.
+            Args:
+                config: Configuration object containing settings for data processing.
+
+        """
         self.config = config
         self.relevant_cols = self.config.data_config.annotation_columns
 
@@ -79,7 +88,7 @@ class NaNRemover:
         # Handle X matrix
         if sparse.issparse(adata.X):
             if hasattr(adata.X, "data"):
-                adata.X.data = np.nan_to_num(adata.X.data, nan=0.0)
+                adata.X.data = np.nan_to_num(adata.X.data, nan=0.0) # ty: ignore[invalid-assignment]
                 adata.X.eliminate_zeros()
         else:
             adata.X = np.nan_to_num(adata.X, nan=0.0)

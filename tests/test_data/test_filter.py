@@ -9,7 +9,7 @@ from sklearn.preprocessing import (
     RobustScaler,
     MaxAbsScaler,
 )
-from autoencodix.utils.default_config import DataInfo
+from autoencodix.configs.default_config import DataInfo, DefaultConfig
 from autoencodix.data._filter import DataFilter, FilterMethod
 
 
@@ -43,14 +43,17 @@ def test_filter_methods(
 ):
     df = df_with_zero_variance if method == "NONZEROVAR" else sample_df
     data_info = DataInfo(filtering=method, k_filter=k_filter, scaling="NONE")
-    dfilt = DataFilter(data_info)
+    config = DefaultConfig()
+    dfilt = DataFilter(data_info, config=config)
     filtered_df, _ = dfilt.filter(df)
     assert filtered_df.shape[1] == expected_cols
 
 
 def test_filter_with_genes_to_keep(sample_df):
     data_info = DataInfo(filtering="VAR", k_filter=5, scaling="NONE")
-    dfilt = DataFilter(data_info)
+    config = DefaultConfig()
+    dfilt = DataFilter(data_info, config=config)
+
     genes = sample_df.columns[:3].tolist()
     filtered_df, kept = dfilt.filter(sample_df, genes_to_keep=genes)
     assert kept == genes
@@ -58,7 +61,9 @@ def test_filter_with_genes_to_keep(sample_df):
 
 def test_filter_with_missing_genes_raises_keyerror(sample_df):
     data_info = DataInfo(filtering="VAR", k_filter=5, scaling="NONE")
-    dfilt = DataFilter(data_info)
+    config = DefaultConfig()
+    dfilt = DataFilter(data_info, config=config)
+
     with pytest.raises(KeyError):
         dfilt.filter(sample_df, genes_to_keep=["not_a_gene"])
 
@@ -75,7 +80,9 @@ def test_filter_with_missing_genes_raises_keyerror(sample_df):
 )
 def test_scaler_initialization(sample_df, scaling_method, expected_type):
     data_info = DataInfo(filtering="NOFILT", k_filter=None, scaling=scaling_method)
-    dfilt = DataFilter(data_info)
+    config = DefaultConfig()
+    dfilt = DataFilter(data_info, config=config)
+
     scaler = dfilt.fit_scaler(sample_df)
     print(f"Scaler type: {type(scaler)}")
     assert isinstance(scaler, expected_type)
@@ -83,7 +90,9 @@ def test_scaler_initialization(sample_df, scaling_method, expected_type):
 
 def test_scale_applies_scaler(sample_df):
     data_info = DataInfo(filtering="NOFILT", k_filter=None, scaling="MINMAX")
-    dfilt = DataFilter(data_info)
+    config = DefaultConfig()
+    dfilt = DataFilter(data_info, config=config)
+
     scaler = dfilt.fit_scaler(sample_df)
     scaled = dfilt.scale(sample_df, scaler)
     assert np.allclose(scaled.min().min(), 0.0, atol=1e-6)
@@ -91,7 +100,8 @@ def test_scale_applies_scaler(sample_df):
 
 def test_available_methods_matches_enum():
     methods = DataFilter(
-        DataInfo(filtering="NOFILT", k_filter=None, scaling="NONE")
+        DataInfo(filtering="NOFILT", k_filter=None, scaling="NONE"),
+        config=DefaultConfig(),
     ).available_methods
     enum_values = [e.value for e in FilterMethod]
     assert set(methods) == set(enum_values)

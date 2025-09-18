@@ -1,14 +1,14 @@
 import torch
 import torch.nn as nn
 from typing import Tuple, Optional
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._model_output import ModelOutput
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 
 
 class ImageVAEArchitecture(BaseAutoencoder):
-    """
-    This class defines a VAE, based on a CNN for images
+    """This class defines a VAE, based on a CNN for images
+
     It takes as input an image and of shape (C,W,H) and reconstructs it.
     We ensure to have a latent space of shape <batchsize,1,LatentDim> and img_in.shape = img_out.shape
     We have a fixed kernel_size=4, padding=1 and stride=2 (given from https://github.com/uhlerlab/cross-modal-auto_encoders/tree/master)
@@ -24,6 +24,18 @@ class ImageVAEArchitecture(BaseAutoencoder):
         W_out = 0.5W
     So in this configuration the output shape halfs after every convolutional step (assuming W=H)
 
+
+    Attributes:
+        input_dim: (C,W,H) the input image shape
+        config: Configuration object containing model architecture parameters
+        _encoder: Encoder network of the autoencoder
+        _decoder: Decoder network of the autoencoder
+        latent_dim: Dimension of the latent space
+        nc: number of channels in the input image
+        h: height of the input image
+        w: width of the input image
+        img_shape: (C,W,H) the input image shape
+        hidden_dim: number of filters in the first convolutional layer
     """
 
     def __init__(
@@ -33,6 +45,13 @@ class ImageVAEArchitecture(BaseAutoencoder):
         # the input_dim is the number of channels in the image, e.g. 3
         hidden_dim: int = 16,
     ):
+        """Initialize the ImageVAEArchitecture with the given configuration.
+
+        Args:
+            input_dim: (C,W,H) the input image shape
+            config: Configuration object containing model parameters.
+            hidden_dim: number of filters in the first convolutional layer
+        """
         if config is None:
             config = DefaultConfig()
         self._config: DefaultConfig = config
@@ -46,6 +65,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
         self.apply(self._init_weights)
 
     def _build_network(self):
+        """Construct the encoder and decoder networks."""
         self._encoder = nn.Sequential(
             nn.Conv2d(
                 in_channels=self.nc,
@@ -185,6 +205,14 @@ class ImageVAEArchitecture(BaseAutoencoder):
         return self.spatial_dim
 
     def encode(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Encodes the input tensor x.
+
+        Args:
+            x: Input tensor
+        Returns:
+            The encoded latent space representation, or mu and logvar for VAEs.
+
+        """
         h = self._encoder(x)
         # this makes sure we get the <batchsize, 1, latent_dim> shape for our latent space in the next step
         # because we put all dimensionaltiy in the second dimension of the output shape.
@@ -200,15 +228,37 @@ class ImageVAEArchitecture(BaseAutoencoder):
         return mu, logvar
 
     def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+        """Reparameterization trick for VAE.
+
+        Args:
+             mu: mean of the latent distribution
+             logvar: log-variance of the latent distribution
+        Returns:
+                z: sampled latent vector
+        """
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
         return mu + eps * std
 
     def get_latent_space(self, x: torch.Tensor) -> torch.Tensor:
+        """Returns the latent space representation of the input.
+
+        Args:
+            x: Input tensor
+        Returns:
+            Latent space representation
+
+        """
         mu, logvar = self.encode(x)
         return self.reparameterize(mu, logvar)
 
     def decode(self, x: torch.Tensor) -> torch.Tensor:
+        """Decode the latent tensor x
+        Args:
+            x: Latent tensor
+        Returns:
+            Decoded tensor, reconstructed from the latent space
+        """
         h = self.d1(x)
         # here we do a similar thing as in the _encoder,
         # but instead of ensuring the correct dimension for the latent space,
@@ -218,10 +268,23 @@ class ImageVAEArchitecture(BaseAutoencoder):
         return self._decoder(h)
 
     def translate(self, z: torch.Tensor) -> torch.Tensor:
+        """Reshapes the output to get actual images
+
+        Args:
+            z: Latent tensor
+        Returns:
+            Reconstructed image of shape (C,W,H)
+        """
         out = self.decode(z)
         return out.view(-1, *self.img_shape)
 
     def forward(self, x: torch.Tensor) -> ModelOutput:
+        """Forward pass of the model.
+        Args:
+            x: Input tensor
+        Returns:
+            ModelOutput object containing the reconstructed tensor and latent tensor
+        """
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
         return ModelOutput(

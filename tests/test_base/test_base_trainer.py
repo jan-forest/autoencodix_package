@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock
 from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.base._base_dataset import BaseDataset
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._result import Result
 
 

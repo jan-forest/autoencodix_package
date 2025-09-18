@@ -3,7 +3,7 @@ import torch
 from torch import nn
 
 from autoencodix.utils._model_output import ModelOutput
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._losses import VanillixLoss, VarixLoss
 
 

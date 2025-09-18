@@ -1,0 +1,796 @@
+from dataclasses import field
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from umap import UMAP
+import warnings
+import torch
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+
+from typing import Any, Dict, Optional, Union
+from autoencodix.base._base_visualizer import BaseVisualizer
+from autoencodix.utils._result import Result
+from autoencodix.utils._utils import nested_dict, show_figure
+from autoencodix.configs.default_config import DefaultConfig
+
+
+class XModalVisualizer(BaseVisualizer):
+    plots: Dict[str, Any] = field(
+        default_factory=nested_dict
+    )  ## Nested dictionary of plots as figure handles
+
+    def __init__(self):
+        self.plots = nested_dict()
+
+    def __setitem__(self, key, elem):
+        self.plots[key] = elem
+
+    def visualize(self, result: Result, config: DefaultConfig) -> Result:
+        ## Make Model Weights plot
+        ## TODO needs to be adjusted for X-Modalix ##
+        ## Plot Model weights for each sub-VAE ##
+        # self.plots["ModelWeights"] = self._plot_model_weights(model=result.model)
+
+        ## Make long format of losses
+        loss_df_melt = self._make_loss_format(result=result, config=config)
+
+        ## X-Modalix specific ##
+        # Filter loss terms which are specific for each modality VAE
+        # Plot only combined loss terms as in old autoencodix framework
+        loss_df_melt = loss_df_melt[
+            ~loss_df_melt["Loss Term"].str.startswith(
+                tuple(result.datasets.train.datasets.keys())
+            )
+        ]
+
+        ## Make plot loss absolute
+        self.plots["loss_absolute"] = self._make_loss_plot(
+            df_plot=loss_df_melt, plot_type="absolute"
+        )
+        ## Make plot loss relative
+        self.plots["loss_relative"] = self._make_loss_plot(
+            df_plot=loss_df_melt, plot_type="relative"
+        )
+
+        return result
+
+    def show_latent_space(
+        self,
+        result: Result,
+        plot_type: str = "2D-scatter",
+        labels: Optional[Union[list, pd.Series, None]] = None,
+        param: Optional[Union[list, str]] = None,
+        epoch: Optional[Union[int, None]] = None,
+        split: str = "all",
+    ) -> None:
+        plt.ioff()
+        if plot_type == "Coverage-Correlation":
+            print("TODO: Implement Coverage-Correlation plot for X-Modalix")
+            # if "Coverage-Correlation" in self.plots:
+            #     fig = self.plots["Coverage-Correlation"]
+            #     show_figure(fig)
+            #     plt.show()
+            # else:
+            #     results = []
+            #     for epoch in range(result.model.config.checkpoint_interval, result.model.config.epochs + 1, result.model.config.checkpoint_interval):
+            #         for split in ["train", "valid"]:
+            #             latent_df = result.get_latent_df(epoch=epoch-1, split=split)
+            #             tc = self._total_correlation(latent_df)
+            #             cov = self._coverage_calc(latent_df)
+            #             results.append({"epoch": epoch, "split": split, "total_correlation": tc, "coverage": cov})
+
+            #     df_metrics = pd.DataFrame(results)
+
+            #     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+            #     # Total Correlation plot
+            #     ax1 = sns.lineplot(data=df_metrics, x="epoch", y="total_correlation", hue="split", ax=axes[0])
+            #     axes[0].set_title("Total Correlation")
+            #     axes[0].set_xlabel("Epoch")
+            #     axes[0].set_ylabel("Total Correlation")
+
+            #     # Coverage plot
+            #     ax2 = sns.lineplot(data=df_metrics, x="epoch", y="coverage", hue="split", ax=axes[1])
+            #     axes[1].set_title("Coverage")
+            #     axes[1].set_xlabel("Epoch")
+            #     axes[1].set_ylabel("Coverage")
+
+            #     plt.tight_layout()
+            #     self.plots["Coverage-Correlation"] = fig
+            #     show_figure(fig)
+            #     plt.show()
+        else:
+            # Set Defaults
+            if epoch is None:
+                epoch = result.latentspaces.epochs()[-1]  # Last epoch
+
+            ## Collect all metadata and latent spaces from datasets
+            clin_data = []
+            latent_data = []
+
+            if split == "all":
+                split_list = ["train", "test", "valid"]
+            else:
+                split_list = [split]
+            for s in split_list:
+                split_ds = getattr(result.datasets, s, None)
+                if split_ds is not None:
+                    for key, ds in split_ds.datasets.items():
+                        if s == "test":
+                            df_latent = result.get_latent_df(
+                                epoch=-1, split=s, modality=key
+                            )
+                        else:
+                            df_latent = result.get_latent_df(
+                                epoch=epoch, split=s, modality=key
+                            )
+                        df_latent["modality"] = key
+                        df_latent["sample_ids"] = (
+                            df_latent.index
+                        )  # Each sample can occur multiple times in latent space
+                        latent_data.append(df_latent)
+                        if hasattr(ds, "metadata") and ds.metadata is not None:
+                            df = ds.metadata.copy()
+                            # Add sample_ids as a column if it's the index
+                            if (
+                                df.index.name == "sample_ids"
+                                and "sample_ids" not in df.columns
+                            ):
+                                df = df.reset_index()
+                            df["split"] = s
+                            df["modality"] = key
+                            clin_data.append(df)
+
+            if latent_data and clin_data:
+                latent_data = pd.concat(latent_data, axis=0, ignore_index=True)
+                clin_data = pd.concat(clin_data, axis=0, ignore_index=True)
+                if "sample_ids" in clin_data.columns:
+                    clin_data = clin_data.drop_duplicates(
+                        subset="sample_ids"
+                    ).set_index("sample_ids")
+            else:
+                latent_data = pd.DataFrame()
+                clin_data = pd.DataFrame()
+
+            ## Label options
+            if labels is None and param is None:
+                labels = ["all"] * latent_data["sample_ids"].unique().shape[0]
+
+            if labels is None and isinstance(param, str):
+                if param == "all":
+                    param = list(clin_data.columns)
+                else:
+                    raise ValueError(
+                        "Please provide parameter to plot as a list not as string. If you want to plot all parameters, set param to 'all' and labels to None."
+                    )
+
+            if labels is not None and param is not None:
+                raise ValueError(
+                    "Please provide either labels or param, not both. If you want to plot all parameters, set param to 'all' and labels to None."
+                )
+
+            if labels is not None and param is None:
+                if isinstance(labels, pd.Series):
+                    param = [labels.name]
+                    # Order by index of latent_data first, fill missing with "unknown"
+                    labels = labels.reindex(
+                        latent_data["sample_ids"], fill_value="unknown"
+                    ).tolist()
+                else:
+                    param = ["user_label"]  # Default label if none provided
+
+            for p in param:
+                if p in clin_data.columns:
+                    labels = clin_data.loc[latent_data["sample_ids"], p].tolist()
+                else:
+                    if clin_data.shape[0] == len(labels):
+                        clin_data[p] = labels
+                    else:                
+                        clin_data[p] = ["all"] * clin_data.shape[0]
+
+                if plot_type == "2D-scatter":
+                    ## Make 2D Embedding with UMAP
+                    if (
+                        latent_data.drop(columns=["sample_ids", "modality"]).shape[1]
+                        > 2
+                    ):
+                        reducer = UMAP(n_components=2)
+                        embedding = pd.DataFrame(
+                            reducer.fit_transform(
+                                latent_data.drop(columns=["sample_ids", "modality"])
+                            )
+                        )
+                        embedding.columns = ["DIM1", "DIM2"]
+                        embedding["sample_ids"] = latent_data["sample_ids"]
+                        embedding["modality"] = latent_data["modality"]
+                    else:
+                        embedding = latent_data
+
+                    # Merge with clinical data via sample_ids
+                    embedding = embedding.merge(
+                        clin_data.drop(columns=["modality"]),
+                        on="sample_ids",
+                        how="left",
+                    )
+
+                    self.plots["2D-scatter"][epoch][split][p] = (
+                        self._plot_translate_latent(
+                            embedding=embedding,
+                            color_param=p,
+                            style_param="modality",
+                        )
+                    )
+
+                    fig = self.plots["2D-scatter"][epoch][split][p].figure
+                    # show_figure(fig)
+                    plt.show()
+
+                if plot_type == "Ridgeline":
+                    ## Make ridgeline plot
+                    if len(labels) != latent_data.shape[0]:
+                        if labels[0] == "all":
+                            labels = ["all"] * latent_data.shape[0]
+                        else:
+                            raise ValueError(
+                                "Labels must match the number of samples in the latent space."
+                            )
+
+                    self.plots["Ridgeline"][epoch][split][p] = (
+                        self._plot_latent_ridge_multi(
+                            lat_space=latent_data.drop(columns=["sample_ids"]),
+                            labels=labels,
+                            modality="modality",
+                            param=p,
+                        )
+                    )
+
+                    fig = self.plots["Ridgeline"][epoch][split][p].figure
+                    show_figure(fig)
+                    plt.show()
+
+    def show_weights(self) -> None:
+        ## TODO
+        raise NotImplementedError(
+            "Weight visualization for X-Modalix is not implemented."
+        )
+
+    def show_image_translation(
+        self,
+        result: Result,
+        from_key: str,
+        to_key: str,
+        split: str = "test",
+        n_sample_per_class: int = 3,
+        param: str = None,
+    ) -> None:
+        """
+        Visualizes image translation results for a given dataset split by displaying a grid of original, translated, and reference images,
+        grouped by class values.
+        Parameters
+        ----------
+        result : Result
+            The result object containing datasets and reconstructions.
+        from_key : str
+            The source modality key (not directly used in visualization, but relevant for context).
+        to_key : str
+            The target modality key. Must correspond to an image dataset (must contain "IMG").
+        split : str, optional
+            The dataset split to visualize ("test", "train", or "valid"). Default is "test".
+        n_sample_per_class : int, optional
+            Number of samples to display per class value. Default is 3.
+        param : str, optional
+            The metadata column name used to group samples by class.
+        Raises
+        ------
+        ValueError
+            If `to_key` does not correspond to an image dataset.
+        Returns
+        -------
+        None
+            Displays a matplotlib figure with the image translation grid.
+        """
+
+        if "IMG" not in to_key:
+            raise ValueError(
+                f"You provided as 'to_key' {to_key} a non-image dataset. "
+                "Image translation grid visualization is only possible for translation to IMG data type."
+            )
+        else:
+            # if not split == "test":
+            #     # make warning ... change in future TODO
+            #     warnings.warn(
+            #         "Currently, only 'test' split is supported for image translation visualization."
+            #     )
+            #     split = "test"
+
+            ## Get n samples per class
+            if split == "test":
+                meta = result.datasets.test.datasets[to_key].metadata
+                # sample_ids_list = result.datasets.test.datasets[to_key].sample_ids
+                sample_ids_list = result.sample_ids.get(epoch=-1, split="test")[to_key]
+            if split == "train":
+                meta = result.datasets.train.datasets[to_key].metadata
+                # sample_ids_list = result.datasets.train.datasets[to_key].sample_ids
+                sample_ids_list = result.sample_ids.get(epoch=-1, split="train")[to_key]
+            if split == "valid":
+                meta = result.datasets.valid.datasets[to_key].metadata
+                sample_ids_list = result.sample_ids.get(epoch=-1, split="valid")[to_key]
+
+            if param is None:
+                param = "user-label"
+                meta[param] = (
+                    "all"  # Default to all samples if no parameter is provided
+                )
+
+            # Get possible class values
+            class_values = meta[param].unique()
+            if len(class_values) > 10:
+                # Make warning
+                warnings.warn(
+                    f"Found {len(class_values)} class values for parameter '{param}'. Only first 10 will be used to limit figure size"
+                )
+                class_values = class_values[:10]
+
+            # Build dictionary of sample_ids per class value (max n_sample_per_class per class)
+            sample_per_class = {
+                val: meta[meta[param] == val]
+                .sample(
+                    n=min(n_sample_per_class, (meta[param] == val).sum()),
+                    random_state=42,
+                )
+                .index.tolist()
+                for val in class_values
+            }
+
+            sample_idx_per_class = dict()
+            sample_idx_list = []
+
+            # Get indices
+            for class_value in sample_per_class:
+                # Get sample ids for the current class value
+                sids = sample_per_class[class_value]
+                # Get indices of these sample ids in the sample_ids_list
+                indices = [
+                    list(sample_ids_list).index(sid) for sid in sids if sid in sample_ids_list
+                ]
+                # Store the indices in the dictionary
+                sample_idx_per_class[class_value] = indices
+                # Store the indices in the list
+                sample_idx_list.extend(indices)
+
+            ## Generate Image Grid
+            # Number of test (or train or valid) samples from all values in sample_idx_per_class dictionary
+            n_test_samples = sum(
+                len(indices) for indices in sample_idx_per_class.values()
+            )
+
+            #
+            col_labels = []
+            for class_value in sample_per_class:
+                col_labels.extend(
+                    [
+                        class_value + " " + split + "-sample:" + s
+                        for s in sample_per_class[class_value]
+                    ]
+                )
+
+            row_labels = ["Original", "Translated", "Reference"]
+
+            fig, axes = plt.subplots(
+                ncols=n_test_samples,  # Number of classes
+                nrows=3,  # Original, translated, reference
+                figsize=(n_test_samples * 4, 3 * 4),
+            )
+
+            for i, ax in enumerate(axes.flat):
+                row = int(i / n_test_samples)
+                test_sample = sample_idx_list[i % n_test_samples]
+
+                if row == 0:
+                    if split == "test":
+                        img_temp = result.datasets.test.datasets[to_key][test_sample][
+                            1
+                        ].squeeze()  # Stored as Tuple (index, tensor, sample_id)
+                    if split == "train":
+                        img_temp = result.datasets.train.datasets[to_key][test_sample][
+                            1
+                        ].squeeze()  # Stored as Tuple (index, tensor, sample_id)
+                    if split == "valid":
+                        img_temp = result.datasets.valid.datasets[to_key][test_sample][
+                            1
+                        ].squeeze()  # Stored as Tuple (index, tensor, sample_id)
+                    # Original image
+                    ax.imshow(np.asarray(img_temp))
+                    ax.axis("off")
+                    # Sample label
+                    ax.text(
+                        0.5,
+                        1.1,
+                        col_labels[i],
+                        va="bottom",
+                        ha="center",
+                        # rotation='vertical',
+                        rotation=45,
+                        transform=ax.transAxes,
+                    )
+                    # Row label
+                    if i % n_test_samples == 0:
+                        ax.text(
+                            -0.1,
+                            0.5,
+                            row_labels[0],
+                            va="center",
+                            ha="right",
+                            transform=ax.transAxes,
+                        )
+
+                if row == 1:
+                    # Translated image
+                    ax.imshow(
+                        result.reconstructions.get(epoch=-1, split=split)[
+                            "translation"
+                        ][test_sample].squeeze()
+                    )
+                    ax.axis("off")
+                    # Row label
+                    if i % n_test_samples == 0:
+                        ax.text(
+                            -0.1,
+                            0.5,
+                            row_labels[1],
+                            va="center",
+                            ha="right",
+                            transform=ax.transAxes,
+                        )
+
+                if row == 2:
+                    # Reference image reconstruction
+                    ax.imshow(
+                        result.reconstructions.get(epoch=-1, split=split)[
+                            f"reference_{to_key}_to_{to_key}"
+                        ][test_sample].squeeze()
+                    )
+                    ax.axis("off")
+                    # Row label
+                    if i % n_test_samples == 0:
+                        ax.text(
+                            -0.1,
+                            0.5,
+                            row_labels[2],
+                            va="center",
+                            ha="right",
+                            transform=ax.transAxes,
+                        )
+
+            self.plots["Image-translation"][to_key][split][param] = fig
+            # show_figure(fig)
+            plt.show()
+
+    def show_2D_translation(
+        self,
+        result: Result,
+        translated_modality: str,
+        split: str = "test",
+        param: str = None,
+        reducer: str = "UMAP",
+    ) -> None:
+        ## TODO add similar labels/param logic from other visualizations
+        dataset = result.datasets
+
+        if split not in ["train", "valid", "test"]:
+            raise ValueError(f"Unknown split: {split}")
+
+        if split in ["train", "valid"]:
+            raise NotImplementedError(
+                "2D translation visualization is currently only implemented for the 'test' split since reconstruction is only performed on test-split."
+            )
+
+        # Get input data
+        if split == "train":
+            df_processed = dataset.train._to_df(modality=translated_modality)
+        if split == "valid":
+            df_processed = dataset.valid._to_df(modality=translated_modality)
+        if split == "test":
+            df_processed = dataset.test._to_df(modality=translated_modality)
+
+        # Get translated reconstruction
+        tensor_list = result.reconstructions.get(epoch=-1, split="test")["translation"]
+
+        # Flatten each tensor and collect as rows (for image case)
+        rows = [
+            t.flatten().cpu().numpy() if isinstance(t, torch.Tensor) else t.flatten()
+            for t in tensor_list
+        ]
+
+        # Create DataFrame
+        df_translate_flat = pd.DataFrame(
+            rows, columns=["Pixel_" + str(i) for i in range(len(rows[0]))]
+        )
+
+        if reducer == "UMAP":
+            reducer_model = UMAP(n_components=2)
+        elif reducer == "PCA":
+            reducer_model = PCA(n_components=2)
+        elif reducer == "TSNE":
+            reducer_model = TSNE(n_components=2)
+
+        df_red_comb = pd.DataFrame(
+            reducer_model.fit_transform(
+                pd.concat([df_processed, df_translate_flat], axis=0)
+            )
+        )
+
+        df_red_comb["origin"] = ["input"] * df_processed.shape[0] + [
+            "translated"
+        ] * df_translate_flat.shape[0]
+
+        labels = list(result.datasets.test.datasets["img.IMG"].metadata[param]) * 2
+        df_red_comb[param] = (
+            labels + labels[0 : df_red_comb.shape[0] - len(labels)]
+        )  ## TODO fix for not matching lengths
+
+        g = sns.FacetGrid(
+            df_red_comb, col="origin", hue=param, sharex=True, sharey=True
+        )
+        g.map_dataframe(sns.scatterplot, x=0, y=1, alpha=0.7)
+        g.add_legend()
+        g.set_axis_labels(reducer + " DIM 1", reducer + " DIM 2")
+        g.set_titles(col_template="{col_name}")
+
+        self.plots["2D-translation"][translated_modality][split][param] = g
+        plt.show()
+
+    ## Utilities specific for X-Modalix
+    @staticmethod
+    def _plot_translate_latent(
+        embedding,
+        color_param,
+        style_param=None,
+    ):
+        """
+        Creates a 2D visualization of the 2D embedding of the latent space.
+        ARGS:
+            embedding (pd.DataFrame): embedding on which is visualized. Assumes prior 2D dimension reduction.
+            color_param (str): Clinical parameter to color scatter plot
+            style_param (str): Parameter e.g. "Translate" to facet scatter plot
+        RETURNS:
+            fig (seaborn.FacetGrid): Figure handle
+
+        """
+        labels = list(embedding[color_param])
+        # logger = getlogger(cfg)
+        numeric = False
+        if not (type(labels[0]) is str):
+            if len(np.unique(labels)) > 3:
+                # TODO Decide if numeric to category should be optional in new Package
+                # print(
+                #     f"The provided label column is numeric and converted to categories."
+                # )
+                # labels = pd.qcut(
+                #     labels, q=4, labels=["1stQ", "2ndQ", "3rdQ", "4thQ"]
+                # ).astype(str)
+                # else:
+                numeric = True
+            else:
+                labels = [str(x) for x in labels]
+
+        # check if label or embedding is longerm and duplicate the shorter one
+        if len(labels) < embedding.shape[0]:
+            print(
+                "Given labels do not have the same length as given sample size. Labels will be duplicated."
+            )
+            labels = [
+                label
+                for label in labels
+                for _ in range(embedding.shape[0] // len(labels))
+            ]
+        elif len(labels) > embedding.shape[0]:
+            labels = list(set(labels))
+
+        if not style_param == None:
+            embedding[color_param] = labels
+            if numeric:
+                palette = "bwr"
+            else:
+                palette = None
+            plot = sns.relplot(
+                data=embedding,
+                x="DIM1",
+                y="DIM2",
+                hue=color_param,
+                palette=palette,
+                col=style_param,
+                style=style_param,
+                markers=True,
+                alpha=0.4,
+                ec="black",
+                height=10,
+                aspect=1,
+                s=150,
+            )
+
+        return plot
+
+    @staticmethod
+    def _plot_latent_ridge_multi(
+        lat_space: pd.DataFrame,
+        modality: Optional[str] = None,
+        labels: Optional[Union[list, pd.Series, None]] = None,
+        param: Optional[Union[str, None]] = None,
+    ) -> sns.FacetGrid:
+        """
+        Creates a ridge line plot of latent space dimension where each row shows the density of a latent dimension and groups (ridges).
+        ARGS:
+            lat_space (pd.DataFrame): DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
+            labels (list): List of labels for each sample. If None, all samples are considered as one group.
+            param (str): Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
+        RETURNS:
+            g (sns.FacetGrid): FacetGrid object containing the ridge line plot
+        """
+        sns.set_theme(
+            style="white", rc={"axes.facecolor": (0, 0, 0, 0)}
+        )  ## Necessary to enforce overplotting
+
+        df = pd.melt(
+            lat_space,
+            id_vars=modality,
+            var_name="latent dim",
+            value_name="latent intensity",
+        )
+        # print(df)
+        df["sample"] = len(lat_space.drop(columns=modality).columns) * list(
+            lat_space.index
+        )
+
+        if labels is None:
+            param = "all"
+            labels = ["all"] * len(df)
+
+        # print(labels[0])
+        if not isinstance(labels[0], str):
+            if len(np.unique(labels)) > 3:
+                labels = pd.qcut(
+                    x=pd.Series(labels),
+                    q=4,
+                    labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
+                ).astype(str)
+            else:
+                labels = [str(x) for x in labels]
+
+        df[param] = len(lat_space.drop(columns=modality).columns) * labels  # type: ignore
+
+        exclude_missing_info = (df[param] == "unknown") | (df[param] == "nan")
+
+        xmin = (
+            df.loc[~exclude_missing_info, ["latent intensity", "latent dim", param]]
+            .groupby([param, "latent dim"], observed=False)
+            .quantile(0.05)
+            .min()
+        )
+        xmax = (
+            df.loc[~exclude_missing_info, ["latent intensity", "latent dim", param]]
+            .groupby([param, "latent dim"], observed=False)
+            .quantile(0.9)
+            .max()
+        )
+
+        if len(np.unique(df[param])) > 8:
+            cat_pal = sns.husl_palette(len(np.unique(df[param])))
+        else:
+            cat_pal = sns.color_palette(n_colors=len(np.unique(df[param])))
+
+        g = sns.FacetGrid(
+            df[~exclude_missing_info],
+            row="latent dim",
+            col=modality,
+            hue=param,
+            aspect=12,
+            height=0.8,
+            xlim=(xmin.iloc[0], xmax.iloc[0]),
+            palette=cat_pal,
+        )
+
+        g.map_dataframe(
+            sns.kdeplot,
+            "latent intensity",
+            bw_adjust=0.5,
+            clip_on=True,
+            fill=True,
+            alpha=0.5,
+            warn_singular=False,
+            ec="k",
+            lw=1,
+        )
+
+        def label(data, color, label, text="latent dim"):
+            ax = plt.gca()
+            label_text = data[text].unique()[0]
+            ax.text(
+                0.0,
+                0.2,
+                label_text,
+                fontweight="bold",
+                ha="right",
+                va="center",
+                transform=ax.transAxes,
+            )
+
+        g.map_dataframe(label, text="latent dim")
+
+        g.set(xlim=(xmin.iloc[0], xmax.iloc[0]))
+        # Set the subplots to overlap
+        g.figure.subplots_adjust(hspace=-0.5)
+
+        # Remove axes details that don't play well with overlap
+        g.set_titles("")
+        g.set(yticks=[], ylabel="")
+        g.despine(bottom=True, left=True)
+
+        for i, m in enumerate(df[modality].unique()):
+            g.fig.get_axes()[i].set_title(m)
+
+        g.add_legend()
+
+        plt.close()
+        return g
+
+    def _plot_evaluation(
+        self,
+        result: Result,
+    ) -> dict:
+        """
+        Plots the evaluation results from the Result object.
+
+        Parameters:
+        result (Result): The Result object containing evaluation data.
+
+        Returns:
+        dict: The generated dictionary containing the evaluation plots.
+        """
+        ## Plot all results
+
+        ml_plots = dict()
+        plt.ioff()
+
+        for c in pd.unique(result.embedding_evaluation.CLINIC_PARAM):
+            ml_plots[c] = dict()
+            for m in pd.unique(
+                result.embedding_evaluation.loc[
+                    result.embedding_evaluation.CLINIC_PARAM == c, "metric"
+                ]
+            ):
+                ml_plots[c][m] = dict()
+                for alg in pd.unique(
+                    result.embedding_evaluation.loc[
+                        (result.embedding_evaluation.CLINIC_PARAM == c)
+                        & (result.embedding_evaluation.metric == m),
+                        "ML_ALG",
+                    ]
+                ):
+                    data = result.embedding_evaluation[
+                        (result.embedding_evaluation.metric == m)
+                        & (result.embedding_evaluation.CLINIC_PARAM == c)
+                        & (result.embedding_evaluation.ML_ALG == alg)
+                    ]
+
+                    sns_plot = sns.catplot(
+                        data=data,
+                        x="score_split",
+                        y="value",
+                        col="ML_TASK",
+                        row="MODALITY",
+                        hue="score_split",
+                        kind="bar",
+                    )
+
+                    min_y = data.value.min()
+                    if min_y > 0:
+                        min_y = 0
+
+                    ml_plots[c][m][alg] = sns_plot.set(ylim=(min_y, None))
+
+        self.plots["ML_Evaluation"] = ml_plots
+
+        return ml_plots

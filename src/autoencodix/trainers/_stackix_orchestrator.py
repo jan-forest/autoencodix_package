@@ -1,59 +1,62 @@
 import os
 import pickle
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Dict, List, Optional, Tuple, Type, Any
 
 import lightning_fabric
 import numpy as np
+import pandas as pd
 import torch
-from torch.utils.data import DataLoader
 
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_loss import BaseLoss
 from autoencodix.data._numeric_dataset import NumericDataset
-from autoencodix.data._stackix_dataset import StackixDataset
+from autoencodix.data._multimodal_dataset import MultiModalDataset
 from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class StackixOrchestrator:
-    """
-    StackixOrchestrator coordinates the training of multi-modality VAE stacking.
+    """StackixOrchestrator coordinates the training of multi-modality VAE stacking.
 
     This orchestrator manages both parallel and sequential training of modality-specific
     autoencoders, followed by creating a concatenated latent space for the final
     stacked model training. It leverages Lightning Fabric's distribution strategies
     for efficient training.
 
-    Attributes
-    ----------
-    _workdir : str
-        Directory for saving intermediate models and results
-    modality_models : Dict[str, BaseAutoencoder]
-        Dictionary of trained models for each modality
-    modality_results : Dict[str, Result]
-        Dictionary of training results for each modality
-    _modality_latent_dims : Dict[str, int]
-        Dictionary of latent dimensions for each modality
-    concatenated_latent_spaces : Dict[str, torch.Tensor]
-        Dictionary of concatenated latent spaces by split
-    _dataset_type : Type[BaseDataset]
-        Class to use for creating datasets
-    _fabric : lightning_fabric.Fabric
-        Lightning Fabric instance for distributed operations
-    _trainer_class : Type[GeneralTrainer]
-        Class to use for training (dependency injection)
+    Attributes:
+    _workdir: Directory for saving intermediate models and results
+    modality_models: Dictionary of trained models for each modality
+    modality_results: Dictionary of training results for each modality
+    _modality_latent_dims: Dictionary of latent dimensions for each modality
+    concatenated_latent_spaces: Dictionary of concatenated latent spaces by split
+    _dataset_type: Class to use for creating datasets
+    _fabric: Lightning Fabric instance for distributed operations
+    _trainer_class: Class to use for training (dependency injection)
+    trainset: Training dataset containing multiple modalities
+    validset: Validation dataset containing multiple modalities
+    testset: Test dataset containing multiple modalities
+    loss_type: Type of loss function to use for training
+    model_type: Type of autoencoder model to use for each modality
+    config: Configuration parameters for training and model architecture
+    stacked_model: The final stacked autoencoder model (initialized later)
+    stacked_trainer: Trainer for the stacked model (initialized later)
+    concat_idx: Dictionary tracking the start and end indices of each modality in the concatenated latent space
+    dropped_indices_map: Dictionary tracking dropped sample indices for each modality during alignment
+    reconstruction_shapes: Dictionary storing original shapes of latent spaces for reconstruction
+    common_sample_ids: Common sample IDs across all modalities for alignment
+
     """
 
     def __init__(
         self,
-        trainset: Optional[StackixDataset],
-        validset: Optional[StackixDataset],
+        trainset: Optional[MultiModalDataset],
+        validset: Optional[MultiModalDataset],
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
-        testset: Optional[StackixDataset] = None,
+        testset: Optional[MultiModalDataset] = None,
         trainer_type: Type[GeneralTrainer] = GeneralTrainer,
         dataset_type: Type[BaseDataset] = NumericDataset,
         workdir: str = "./stackix_work",
@@ -61,24 +64,16 @@ class StackixOrchestrator:
         """
         Initialize the StackixOrchestrator with datasets and configuration.
 
-        Parameters
-        ----------
-        trainset : Optional[StackixDataset]
-            Training dataset containing multiple modalities
-        validset : Optional[StackixDataset]
-            Validation dataset containing multiple modalities
-        config : DefaultConfig
-            Configuration parameters for training and model architecture
-        model_type : Type[BaseAutoencoder]
-            Type of autoencoder model to use for each modality
-        loss_type : Type[BaseLoss]
-            Type of loss function to use for training
-        trainer_class : Type[GeneralTrainer]
-            Class to use for training (default is GeneralTrainer)
-        dataset_class : Type[BaseDataset], optional
-            Class to use for creating datasets (default is NumericDataset)
-        workdir : str, optional
-            Directory to save intermediate models and results (default is "./stackix_work")
+        Args:
+            trainset: Training dataset containing multiple modalities
+            validset: Validation dataset containing multiple modalities
+            config: Configuration parameters for training and model architecture
+            model_type: Type of autoencoder model to use for each modality
+            loss_type: Type of loss function to use for training
+            testset: Dataset with test split
+            trainer_type: Type to use for training (default is GeneralTrainer)
+            dataset_type: Type to use for creating datasets (default is NumericDataset)
+            workdir: Directory to save intermediate models and results (default is "./stackix_work")
         """
         self._trainset = trainset
         self._validset = validset
@@ -96,11 +91,13 @@ class StackixOrchestrator:
             strategy = config.gpu_strategy
 
         self._fabric = lightning_fabric.Fabric(
-            accelerator=config.device if hasattr(config, "device") else None,
+            accelerator=str(config.device)
+            if hasattr(config, "device")
+            else None,  # ty: ignore[invalid-argument-type]
             devices=config.n_gpus if hasattr(config, "n_gpus") else 1,
-            precision=config.float_precision
-            if hasattr(config, "float_precision")
-            else "32",
+            precision=(
+                config.float_precision if hasattr(config, "float_precision") else "32"
+            ),
             strategy=strategy,
         )
 
@@ -113,18 +110,19 @@ class StackixOrchestrator:
         # Stacked model and trainer will be created during the process
         self.stacked_model: Optional[BaseAutoencoder] = None
         self.stacked_trainer: Optional[GeneralTrainer] = None
+        self.concat_idx: Dict[str, Optional[Tuple[int, int]]] = {}
+        self.dropped_indices_map: Dict[str, np.ndarray] = {}
+        self.reconstruction_shapes: Dict[str, torch.Size] = {}
+        self.common_sample_ids: Optional[pd.Index] = None
 
         # Create the directory if it doesn't exist
         os.makedirs(name=self._workdir, exist_ok=True)
 
-    def set_testset(self, testset: StackixDataset) -> None:
-        """
-        Set the test dataset for the orchestrator.
+    def set_testset(self, testset: MultiModalDataset) -> None:
+        """Set the test dataset for the orchestrator.
 
-        Parameters
-        ----------
-        testset : StackixDataset
-            Test dataset containing multiple modalities
+        Args:
+            testset: Test dataset containing multiple modalities
         """
         self._testset = testset
 
@@ -134,24 +132,17 @@ class StackixOrchestrator:
         modality_dataset: BaseDataset,
         valid_modality_dataset: Optional[BaseDataset] = None,
     ) -> None:
-        """
-        Trains a single modality and returns the trained model and result.
+        """Trains a single modality and returns the trained model and result.
 
         This function is designed to be executed within a Lightning Fabric context.
         It trains an individual modality model and saves the results to disk.
 
-        Parameters
-        ----------
-        modality : str
-            Modality name/identifier
-        modality_dataset : BaseDataset
-            Training dataset for this modality
-        valid_modality_dataset : Optional[BaseDataset]
-            Validation dataset for this modality (default is None)
+        Args:
+            modality: Modality name/identifier
+            modality_dataset: Training dataset for this modality
+            valid_modality_dataset: Validation dataset for this modality (default is None)
 
-        Returns
-        -------
-        Tuple[BaseAutoencoder, Result]
+        Returns:
             Trained model and result object
         """
         print(f"Training modality: {modality}")
@@ -169,18 +160,14 @@ class StackixOrchestrator:
         self.modality_results[modality] = result
         self.modality_trainers[modality] = trainer
 
-
     def _train_distributed(self, keys: List[str]) -> None:
-        """
-        Trains modality models in a distributed fashion using Lightning Fabric.
+        """Trains modality models in a distributed fashion using Lightning Fabric.
 
         Uses Lightning Fabric's built-in capabilities for distributing work across devices.
         Each process trains a subset of modalities, then loads results from other processes.
 
-        Parameters
-        ----------
-        keys : List[str]
-            List of modality keys to train
+        Args:
+            keys: List of modality keys to train
         """
         # For parallel training with multiple devices
         strategy = (
@@ -189,7 +176,7 @@ class StackixOrchestrator:
             else "auto"
         )
         n_gpus = self._config.n_gpus if hasattr(self._config, "n_gpus") else 1
-        device = self._config.device if hasattr(self._config, "device") else None
+        device: str = self._config.device
 
         if strategy == "auto" and device in ["cuda", "gpu"]:
             strategy = "ddp" if n_gpus > 1 else "dp"
@@ -198,9 +185,11 @@ class StackixOrchestrator:
         fabric = lightning_fabric.Fabric(
             accelerator=device,
             devices=min(n_gpus, len(keys)),  # No more devices than modalities
-            precision=self._config.float_precision
-            if hasattr(self._config, "float_precision")
-            else "32",
+            precision=(
+                self._config.float_precision
+                if hasattr(self._config, "float_precision")
+                else "32"
+            ),
             strategy=strategy,
         )
 
@@ -216,10 +205,10 @@ class StackixOrchestrator:
 
         # Train assigned modalities
         for modality in my_modalities:
-            train_dataset = self._trainset.dataset_dict[modality]
+            train_dataset = self._trainset.datasets[modality]
             valid_dataset = (
-                self._validset.dataset_dict.get(modality)
-                if self._validset and hasattr(self._validset, "dataset_dict")
+                self._validset.datasets.get(modality)
+                if self._validset and hasattr(self._validset, "datasets")
                 else None
             )
 
@@ -242,7 +231,7 @@ class StackixOrchestrator:
             model_path = os.path.join(self._workdir, f"{modality}_model.ckpt")
 
             # Get input dimension for this modality
-            input_dim = self._trainset.dataset_dict[modality].get_input_dim()
+            input_dim = self._trainset.datasets[modality].get_input_dim()
 
             # Initialize a new model
             model = self._model_type(config=self._config, input_dim=input_dim)
@@ -262,22 +251,19 @@ class StackixOrchestrator:
             self._modality_latent_dims[modality] = input_dim
 
     def _train_sequential(self, keys: List[str]) -> None:
-        """
-        Trains modality models sequentially on a single device.
+        """Trains modality models sequentially on a single device.
 
         Used when distributed training is not available or not necessary.
         Processes each modality one after another.
 
-        Parameters
-        ----------
-        keys : List[str]
-            List of modality keys to train
+        Args:
+            keys: List of modality keys to train
         """
         for modality in keys:
             print(f"Training modality: {modality}")
-            train_dataset = self._trainset.dataset_dict[modality]
+            train_dataset = self._trainset.datasets[modality]
             valid_dataset = (
-                self._validset.dataset_dict.get(modality) if self._validset else None
+                self._validset.datasets.get(modality) if self._validset else None
             )
 
             self._train_modality(
@@ -288,66 +274,96 @@ class StackixOrchestrator:
 
             self._modality_latent_dims[modality] = train_dataset.get_input_dim()
 
-    def _extract_latent_spaces(self, result_dict, split="train") -> torch.Tensor:
+    def _extract_latent_spaces(
+        self, result_dict: Dict[str, Any], split: str = "train"
+    ) -> torch.Tensor:
+        """Extracts, aligns, and concatenates latent spaces, populating instance attributes for later reconstruction.
+
+        Args:
+            result_dict: Dictionary of Result objects from modality training
+            split: Data split to extract latent spaces from ("train", "valid", "test"), default is "train"
         """
-        Used Result object from each trainer to extract latent spaces for each modality.
-        Then the indices for concatenation are stored in self._concat_idx and the latent spaces
-        are concatenated into a single tensor that serves as input for the stacked model.
-
-        Parameters
-        ----------
-        keys : List[str]
-            List of modality keys to process
-        split : str
-            Data split to extract latent spaces from (default is "train")
-
-        Returns
-        -------
-        torch.Tensor
-            Concatenated latent spaces for all modalities
-
-        """
-        self.concat_idx: Dict[str, Optional[Tuple[int]]] = {
-            k: None for k in result_dict.keys()
-        }
-        start_idx = 0
-        latent_spaces: List = []
+        # --- Step 1: Extract Latent Spaces and Sample IDs ---
+        all_latents = {}
+        all_sample_ids = {}
         for name, result in result_dict.items():
             try:
                 latent_space = result.latentspaces.get(split=split, epoch=-1)
-                end_idx = start_idx + latent_space.shape[1]
-                self.concat_idx[name] = (start_idx, end_idx)
-                start_idx = end_idx
-                latent_spaces.append(latent_space)
+                sample_ids = result.sample_ids.get(split=split, epoch=-1)
+                print(sample_ids)
+
+                if latent_space.shape[0] != len(sample_ids):
+                    raise ValueError(
+                        f"Mismatch between latent space rows ({latent_space.shape[0]}) and sample IDs ({len(sample_ids)}) for modality '{name}'."
+                    )
+
+                all_latents[name] = latent_space
+                all_sample_ids[name] = sample_ids
+                self.reconstruction_shapes[name] = latent_space.shape
             except Exception as e:
                 raise ValueError(
-                    f"Failed to extract latent space for modality {name}: {e} and split {split} in last epoch"
+                    f"Failed to extract data for modality {name} on split {split}: {e}"
                 )
-        stackix_input = np.concatenate(latent_spaces, axis=1)
-        return torch.from_numpy(stackix_input)
+
+        if not all_latents:
+            raise ValueError("No latent spaces were extracted.")
+
+        # --- Step 2: Find Common Sample IDs ---
+        initial_ids = set(next(iter(all_sample_ids.values())))
+        common_ids_set = initial_ids.intersection(
+            *[set(ids) for ids in all_sample_ids.values()]
+        )
+
+        if not common_ids_set:
+            raise ValueError(
+                "No common samples found across all modalities for concatenation."
+            )
+        # common_ids = [cid for cid in list(common_ids_set) if cid]
+        self.common_sample_ids = pd.Index(sorted(list(common_ids_set)))
+
+        # self.common_sample_ids = pd.Index(sorted(list(common_ids_set)))
+        print(
+            f"Found {len(self.common_sample_ids)} common samples for the stacked autoencoder."
+        )
+
+        # --- Step 3 & 4: Align Latent Spaces and Track Dropped Indices ---
+        aligned_latents_list = []
+        start_idx = 0
+        for name, latent_space in all_latents.items():
+            original_ids = pd.Index(all_sample_ids[name])
+            latent_df = pd.DataFrame(latent_space, index=original_ids)
+
+            aligned_df = latent_df.loc[self.common_sample_ids]
+            aligned_latents_list.append(torch.from_numpy(aligned_df.values))
+
+            end_idx = start_idx + aligned_df.shape[1]
+            self.concat_idx[name] = (start_idx, end_idx)
+            start_idx = end_idx
+
+            dropped_mask = ~original_ids.isin(self.common_sample_ids)
+            self.dropped_indices_map[name] = np.where(dropped_mask)[0]
+
+        # --- Step 5: Concatenate ---
+        stackix_input = torch.cat(aligned_latents_list, dim=1)
+        return stackix_input
 
     def train_modalities(self) -> Tuple[Dict[str, BaseAutoencoder], Dict[str, Result]]:
-        """
-        Trains all modality-specific models.
+        """Trains all modality-specific models.
 
         This is the first phase of Stackix training where each modality is
         trained independently before their latent spaces are combined.
 
-        Returns
-        -------
-        Tuple[Dict[str, BaseAutoencoder], Dict[str, Result]]
+        Returns:
             Dictionary of trained models for each modality and Dictionary of training results
             for each modality.
 
-        Raises
-        ------
-        ValueError
-            If trainset is not a StackixDataset or has no modalities
+        Raises:
+            ValueError: If trainset is not a MultiModalDataset or has no modalities
         """
-        if not isinstance(self._trainset, StackixDataset):
-            raise ValueError("Trainset must be a StackixDataset for Stackix training")
+        # if not isinstance(self._trainset, MulDataset):
+        #     raise ValueError("Trainset must be a MultiModalDataset for Stackix training")
 
-        keys = self._trainset.modality_keys
+        keys = self._trainset.datasets.keys()
         if not keys:
             raise ValueError("No modalities found in trainset")
 
@@ -364,24 +380,17 @@ class StackixOrchestrator:
 
         return self.modality_trainers, self.modality_results
 
-    def prepare_latent_datasets(
-        self, split: str
-    ) -> Tuple[BaseDataset, Optional[BaseDataset]]:
-        """
-        Prepares datasets with concatenated latent spaces for stacked model training.
+    def prepare_latent_datasets(self, split: str) -> NumericDataset:
+        """Prepares datasets with concatenated latent spaces for stacked model training.
 
         This is the second phase of Stackix training where latent spaces from
         all modalities are extracted and concatenated.
 
-        Returns
-        -------
-        Tuple[BaseDataset, Optional[BaseDataset]]
+        Returns:
             Training and validation datasets with concatenated latent spaces
 
-        Raises
-        ------
-        ValueError
-            If no modality models have been trained or no latent spaces could be extracted
+        Raises:
+            ValueError: If no modality models have been trained or no latent spaces could be extracted
         """
         if not self.modality_trainers:
             raise ValueError(
@@ -400,17 +409,14 @@ class StackixOrchestrator:
             ds = NumericDataset(
                 data=latent,
                 config=self._config,
-                sample_ids=self._testset.sample_ids,
+                sample_ids=self.common_sample_ids,
                 feature_ids=[
                     f"{k}_latent_{i}"
                     for k, (start, end) in self.concat_idx.items()
                     for i in range(start, end)
                 ],
-                split_indices=self._testset.split_indices,
-                metadata=self._testset.metadata,
             )
             return ds
-
 
         latent = self._extract_latent_spaces(
             result_dict=self.modality_results, split=split
@@ -424,32 +430,23 @@ class StackixOrchestrator:
         ds = NumericDataset(
             data=latent,
             config=self._config,
-            sample_ids=self._trainset.sample_ids,
+            sample_ids=self.common_sample_ids,
             feature_ids=feature_ids,
-            split_indices=self._trainset.split_indices,
-            metadata=self._trainset.metadata,
         )
 
         return ds
 
-    def predict_modalities(self, data: StackixDataset) -> Dict[str, torch.Tensor]:
-        """
-        Predicts using the trained models for each modality.
+    def predict_modalities(self, data: MultiModalDataset) -> Dict[str, torch.Tensor]:
+        """Predicts using the trained models for each modality.
 
-        Parameters
-        ----------
-        data : StackixDataset
-            Input data for prediction, uses test data if not provided
+        Args:
+            data: Input data for prediction, uses test data if not provided
 
-        Returns
-        -------
-        Dict[str, torch.Tensor]
+        Returns:
             Dictionary of reconstructed tensors by modality
 
-        Raises
-        ------
-        ValueError
-            If model has not been trained yet or no data is available
+        Raises:
+            ValueError: If model has not been trained yet or no data is available
         """
         if not self.modality_trainers:
             raise ValueError(
@@ -459,7 +456,68 @@ class StackixOrchestrator:
         predictions = {}
         for modality, trainer in self.modality_trainers.items():
             predictions[modality] = trainer.predict(
-                data=data.dataset_dict[modality],
+                data=data.datasets[modality],
                 model=trainer._model,
             )
         return predictions
+
+    def reconstruct_from_stack(
+        self, reconstructed_stack: torch.Tensor
+    ) -> Dict[str, torch.Tensor]:
+        """Reconstructs the full data for each modality from the stacked latent reconstruction.
+
+        Args:
+            reconstructed_stack: Tensor with the reconstructed concatenated latent space
+        Returns:
+            Dictionary of reconstructed tensors by modality
+        """
+        modality_reconstructions: Dict[str, torch.Tensor] = {}
+
+        for trainer in self.modality_trainers.values():
+            trainer._model.eval()
+
+        for name, (start_idx, end_idx) in self.concat_idx.items():
+            # =================================================================
+            # STEP 1: DE-CONCATENATE THE ALIGNED PART
+            # This is the small, dense reconstruction matching the common samples.
+            # =================================================================
+            aligned_latent_recon = reconstructed_stack[:, start_idx:end_idx]
+
+            # =================================================================
+            # STEP 2: RE-ASSEMBLE THE FULL-SIZE LATENT SPACE
+            # This is the logic from the old `reconstruct_full_latent` function,
+            # now integrated directly here.
+            # =================================================================
+            original_shape = self.reconstruction_shapes[name]
+            dropped_indices = self.dropped_indices_map[name]
+            n_original_samples = original_shape[0]
+
+            # Determine the original integer positions of the samples that were KEPT.
+            kept_indices = np.delete(np.arange(n_original_samples), dropped_indices)
+
+            # Create a full-size placeholder tensor matching the original latent space.
+            # We use zeros, as they are a neutral input for most decoders.
+            full_latent_recon = torch.zeros(
+                size=original_shape,
+                dtype=aligned_latent_recon.dtype,
+                device=self._fabric.device,
+            )
+
+            # Place the aligned reconstruction data into the correct rows of the full tensor.
+            full_latent_recon[kept_indices, :] = self._fabric.to_device(
+                aligned_latent_recon
+            )
+
+            # =================================================================
+            # STEP 3: DECODE THE FULL-SIZE LATENT TENSOR
+            # The decoder now receives a tensor with the correct number of samples,
+            # including the rows of zeros for the dropped samples.
+            # =================================================================
+            with torch.no_grad():
+                model = self.modality_trainers[name].get_model()
+                model = self._fabric.to_device(model)
+
+                final_recon = model.decode(full_latent_recon)
+                modality_reconstructions[name] = final_recon.cpu()
+
+        return modality_reconstructions

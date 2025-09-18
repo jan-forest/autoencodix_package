@@ -10,7 +10,7 @@ from torch.utils.data import Dataset
 from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data.datapackage import DataPackage
-from autoencodix.utils.default_config import DataCase, DataConfig, DefaultConfig
+from autoencodix.configs.default_config import DataCase, DataConfig, DefaultConfig
 
 class MockDefaultConfig(DefaultConfig):
     pass

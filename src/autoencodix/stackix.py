@@ -2,6 +2,7 @@ from typing import Dict, Optional, Type, Union
 import torch
 import numpy as np
 
+import anndata as ad  # type: ignore
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.utils._utils import config_method
 from autoencodix.base._base_loss import BaseLoss
@@ -14,15 +15,17 @@ from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._numeric_dataset import NumericDataset
-from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.evaluate._general_evaluator import GeneralEvaluator
 from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
+
+from autoencodix.configs.stackix_config import StackixConfig
 from autoencodix.utils._losses import VarixLoss
-from autoencodix.visualize.visualize import Visualizer
 from autoencodix.data._stackix_preprocessor import StackixPreprocessor
 from autoencodix.data._stackix_dataset import StackixDataset
 from autoencodix.trainers._stackix_trainer import StackixTrainer
+from autoencodix.visualize._general_visualizer import GeneralVisualizer
 
 
 class Stackix(BasePipeline):
@@ -53,8 +56,8 @@ class Stackix(BasePipeline):
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = StackixPreprocessor,
-        visualizer: Optional[BaseVisualizer] = None,
-        evaluator: Optional[Evaluator] = None,
+        visualizer: Type[BaseVisualizer] = GeneralVisualizer,
+        evaluator: Optional[GeneralEvaluator] = GeneralEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
@@ -92,6 +95,7 @@ class Stackix(BasePipeline):
         config : Optional[DefaultConfig]
             Configuration object
         """
+        self._default_config = StackixConfig()
         super().__init__(
             data=data,
             dataset_type=dataset_type
@@ -168,3 +172,34 @@ class Stackix(BasePipeline):
         with self._trainer._trainer._fabric.autocast(), torch.no_grad():
             z = stacked_model.reparameterize(mu_t, logvar_t)
             return z
+
+    def _process_latent_results(
+        self, predictor_results: Result, predict_data: DatasetContainer
+    ):
+        """
+        Processes the latent spaces from the StackixTrainer prediction results
+        and creates a correctly annotated AnnData object.
+
+        This method overrides the BasePipeline implementation to specifically handle
+        the aligned latent space from the unpaired/stacked workflow.
+        """
+        latent = predictor_results.latentspaces.get(epoch=-1, split="test")
+        sample_ids = predictor_results.sample_ids.get(epoch=-1, split="test")
+        if latent is None:
+            import warnings
+
+            warnings.warn(
+                "No latent space found in predictor results. Cannot create AnnData object."
+            )
+            return
+
+        self.result.adata_latent = ad.AnnData(X=latent)
+        self.result.adata_latent.obs_names = sample_ids
+        self.result.adata_latent.var_names = [
+            f"Latent_{i}" for i in range(latent.shape[1])
+        ]
+
+        # 4. Update the main result object with the rest of the prediction results.
+        self.result.update(predictor_results)
+
+        print("Successfully created annotated latent space object (adata_latent).")

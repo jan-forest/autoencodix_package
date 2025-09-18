@@ -6,11 +6,10 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 import torch
-from anndata import AnnData  # type: ignore
 
 from autoencodix.data._datapackage_splitter import DataPackageSplitter
 from autoencodix.data._datasetcontainer import DatasetContainer
-from autoencodix.data._datasplitter import DataSplitter
+from autoencodix.data._datasplitter import PairedUnpairedSplitter
 from autoencodix.data._filter import DataFilter
 from autoencodix.data._imgdataclass import ImgData
 from autoencodix.data._nanremover import NaNRemover
@@ -19,8 +18,9 @@ from autoencodix.data.datapackage import DataPackage
 from autoencodix.utils._bulkreader import BulkDataReader
 from autoencodix.utils._imgreader import ImageDataReader, ImageNormalizer
 from autoencodix.utils._screader import SingleCellDataReader
-from autoencodix.utils.default_config import DataCase, DefaultConfig
+from autoencodix.configs.default_config import DataCase, DefaultConfig
 from autoencodix.utils._result import Result
+
 
 if TYPE_CHECKING:
     import mudata as md  # type: ignore
@@ -59,6 +59,7 @@ class BasePreprocessor(abc.ABC):
 
         Args :
             config: A DefaultConfig object containing preprocessing configurations.
+            ontologies: Ontology information, if provided for Ontix.
         """
         self.config = config
         self._dataset_container: Optional[DatasetContainer] = None
@@ -247,12 +248,15 @@ class BasePreprocessor(abc.ABC):
 
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
+        Raises:
+            ValueError: If multi_sc in data_package is None.
+
         """
         if raw_user_data is None:
             screader = self.data_readers[DataCase.MULTI_SINGLE_CELL]  # type: ignore
 
             mudata = screader.read_data(config=self.config)
-            data_package = DataPackage()
+            data_package: DataPackage = DataPackage()
             data_package.multi_sc = mudata
         else:
             data_package = raw_user_data
@@ -261,6 +265,8 @@ class BasePreprocessor(abc.ABC):
                 f"datapackge in process_multi_single_cell {data_package} and multi_sc: {data_package.multi_sc}"
             )
             common_ids = data_package.get_common_ids()
+            if data_package.multi_sc is None:
+                raise ValueError("multi_sc in data_package is None")
             data_package.multi_sc = {
                 "multi_sc": data_package.multi_sc["multi_sc"][common_ids]
             }
@@ -557,6 +563,7 @@ class BasePreprocessor(abc.ABC):
 
                 data_processor = DataFilter(
                     data_info=self.config.data_config.data_info[k],
+                    config=self.config,
                     ontologies=self._ontologies,
                 )
                 filtered_df, genes_to_keep = data_processor.filter(df=v)
@@ -597,6 +604,7 @@ class BasePreprocessor(abc.ABC):
                     continue
                 data_processor = DataFilter(
                     data_info=self.config.data_config.data_info[k],
+                    config=self.config,
                     ontologies=self._ontologies,
                 )
                 filtered_df, _ = data_processor.filter(
@@ -638,8 +646,9 @@ class BasePreprocessor(abc.ABC):
             bulkreader = self.data_readers[DataCase.IMG_TO_BULK]["bulk"]
             imgreader = self.data_readers[DataCase.IMG_TO_BULK]["img"]
 
-            bulk_dfs, annotation = bulkreader.read_data()
-            images = imgreader.read_data(config=self.config)
+            bulk_dfs, annotation_bulk = bulkreader.read_data()
+            images, annotation_img = imgreader.read_data(config=self.config)
+            annotation = {**annotation_bulk, **annotation_img}
 
             data_package = DataPackage(
                 multi_bulk=bulk_dfs, img=images, annotation=annotation
@@ -702,8 +711,6 @@ class BasePreprocessor(abc.ABC):
 
         Returns:
             A dictionary containing processed DataPackage objects for each data split.
-        Raises:
-            TypeError: If from_key or to_key is None, indicating that translation keys must be specified.
         """
         if raw_user_data is None:
             screader = self.data_readers[DataCase.SINGLE_CELL_TO_IMG]["sc"]
@@ -711,11 +718,11 @@ class BasePreprocessor(abc.ABC):
 
             # only one mudata type in this case we know this
             mudata_dict = screader.read_data(config=self.config)
-            images = imgreader.read_data(config=self.config)
+            images, annotation = imgreader.read_data(config=self.config)
 
-            data_package = DataPackage()
-            data_package.multi_sc = mudata_dict
-            data_package.img = images
+            data_package = DataPackage(
+                multi_sc=mudata_dict, img=images, annotation=annotation
+            )
         else:
             data_package = raw_user_data
 
@@ -785,9 +792,9 @@ class BasePreprocessor(abc.ABC):
         """
         if raw_user_data is None:
             imgreader = self.data_readers[DataCase.IMG_TO_IMG]
-            images = imgreader.read_data(config=self.config)
+            images, annotation = imgreader.read_data(config=self.config)
 
-            data_package = DataPackage(img=images)
+            data_package = DataPackage(img=images, annotation=annotation)
         else:
             data_package = raw_user_data
 
@@ -809,6 +816,7 @@ class BasePreprocessor(abc.ABC):
 
         def presplit_processor(modality_data: Dict[str, List]) -> Dict[str, List]:
             """Processes img-to-img modality data with normalization for images."""
+            print("calling normalize image in _process_ing_to_img_case")
             return {
                 k: self._normalize_image_data(v, k) for k, v in modality_data.items()
             }
@@ -822,13 +830,7 @@ class BasePreprocessor(abc.ABC):
         return self._process_data_case(
             data_package,
             modality_processors={
-                "from_modality": (
-                    lambda data: presplit_processor(
-                        data,
-                    ),
-                    postsplit_processor,
-                ),
-                "to_modality": (
+                "img": (
                     lambda data: presplit_processor(
                         data,
                     ),
@@ -837,40 +839,51 @@ class BasePreprocessor(abc.ABC):
             },
         )
 
+    # This method would be inside your GeneralPreprocessor or a similar class
     def _split_data_package(
         self, data_package: DataPackage
     ) -> Tuple[Dict[str, Optional[Dict[str, Any]]], Dict[str, Any]]:
-        """Splits data package into train/validation/test sets.
+        """
+        Splits a data package into train/validation/test sets using a
+        pairing-aware strategy.
 
-        Uses DataSplitter and DataPackageSplitter to divide the DataPackage
-        into training, validation, and test sets based on the configuration.
+        This method first uses PairedUnpairedSplitter to generate a single,
+        synchronized set of indices for all modalities. It then uses
+        DataPackageSplitter to apply these indices to the data.
 
         Args:
             data_package: The DataPackage to be split.
 
         Returns:
-            A dictionary containing the split DataPackages, keyed by split names
-            ('train', 'validation', 'test').
-
-            split_indiced_config - (dict): the actual indicies used for splitting
+            A tuple containing:
+            1. A dictionary of the split DataPackages.
+            2. A dictionary of the synchronized integer indices used for the split.
         """
-        data_splitter = DataSplitter(config=self.config)
-        n_samples = data_package.get_n_samples()
-        split_indices_config = n_samples.copy()
+        print("--- Running Pairing-Aware Split ---")
 
-        print(f" n_samples: {n_samples}")
-        for k, v in n_samples.items():
-            for subkey, n in v.items():
-                if n == 0 or n is None:
-                    split_indices_config[k][subkey] = None
-                    continue
-                split_indices_config[k][subkey] = data_splitter.split(n_samples=n)
-        data_splitter_instance = DataPackageSplitter(
+        # 1. Instantiate our new pairing-aware splitter with the full data package.
+        pairing_splitter = PairedUnpairedSplitter(
+            data_package=data_package, config=self.config
+        )
+
+        # 2. Generate the single, synchronized dictionary of indices.
+        # This is the exact `split_indices_config` you want to return.
+        split_indices_config = pairing_splitter.split()
+        print("Successfully generated synchronized indices for all modalities.")
+
+        # 3. Instantiate your original DataPackageSplitter.
+        # It now receives indices that are guaranteed to be consistent.
+        data_package_splitter = DataPackageSplitter(
             data_package=data_package,
             config=self.config,
             indices=split_indices_config,
         )
-        return data_splitter_instance.split(), split_indices_config
+
+        # 4. Perform the actual split using the synchronized indices.
+        split_datasets = data_package_splitter.split()
+
+        # 5. Return both the split data and the indices used, just like your old method.
+        return split_datasets, split_indices_config
 
     def _is_image_data(self, data: Any) -> bool:
         """Check if data is image data.
@@ -920,7 +933,10 @@ class BasePreprocessor(abc.ABC):
         Returns:
             A list of processed image data objects with normalized image data.
         """
+
         scaling_method = self.config.data_config.data_info[info_key].scaling
+        if scaling_method == "NONE":
+            scaling_method = self.config.scaling
         processed_images = []
         normalizer = ImageNormalizer()  # Instance created once here
 

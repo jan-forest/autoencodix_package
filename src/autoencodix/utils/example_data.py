@@ -5,9 +5,9 @@ from sklearn.datasets import make_blobs  # type: ignore
 from sklearn.model_selection import train_test_split  # type: ignore
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._numeric_dataset import NumericDataset
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.data.datapackage import DataPackage
-from autoencodix.utils.default_config import DataCase
+from autoencodix.configs.default_config import DataCase
 import mudata
 import anndata
 
@@ -40,6 +40,8 @@ def generate_example_data(
         random_state=random_seed,
     )
 
+    # Convert integer cluster labels to string labels like "Cluster_1"
+    str_cluster_labels = np.array([f"Cluster_{i+1}" for i in cluster_labels])
     # Create additional metadata features that correlate with the clusters
     # Convert integer cluster labels to string labels like "Cluster_1"
     str_cluster_labels = np.array([f"Cluster_{i+1}" for i in cluster_labels])
@@ -59,13 +61,13 @@ def generate_example_data(
             ),  # Random category
         }
     )
-    
+
     # Add some noise features to metadata that don't correlate with clusters
     metadata_df["random_feature"] = np.random.normal(0, 1, n_samples)
 
     ids = [f"sample_{i}" for i in range(n_samples)]
     metadata_df["sample_id"] = ids
-    metadata_df.index = ids  # Set sample IDs as index
+    metadata_df.index = ids  # Set sample_id as index
     data_tensor = torch.tensor(X, dtype=torch.float32)
 
     # Get split ratios from DefaultConfig
@@ -382,7 +384,7 @@ def generate_multi_sc_example(
     mdata = mudata.MuData({"rna": rna_adata, "protein": protein_adata})
 
     data_package = DataPackage()
-    data_package.multi_sc = {"multi_sc":mdata}
+    data_package.multi_sc = {"multi_sc": mdata}
 
     return data_package
 

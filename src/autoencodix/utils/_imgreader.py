@@ -1,11 +1,11 @@
 import os
 from pathlib import Path
-from typing import List, Literal, Optional, Union, Dict
+from typing import List, Literal, Optional, Union, Dict, Tuple
 
 import cv2
 import numpy as np
 import pandas as pd
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.data._imgdataclass import ImgData
 
 
@@ -253,7 +253,9 @@ class ImageDataReader:
             raise ValueError(f"Unsupported file type for: {anno_file}")
         return annotation
 
-    def read_data(self, config: DefaultConfig) -> Dict[str, List[ImgData]]:
+    def read_data(
+        self, config: DefaultConfig
+    ) -> Tuple[Dict[str, List[ImgData]], Dict[str, pd.DataFrame]]:
         """
         Read image data from the specified directory based on configuration.
 
@@ -283,24 +285,21 @@ class ImageDataReader:
         if not image_sources:
             raise ValueError("No image data found in the configuration.")
 
-        # If only one image source, return the data directly
-        if len(image_sources.keys()) == 1:
-            key = next(iter(image_sources.keys()))
-            return {key: self._read_data(config=config, img_info=image_sources[key])}
-
-        # Otherwise, process each image source
         result = {}
+        annotation = {}
         for key, img_info in image_sources.items():
             try:
-                result[key] = self._read_data(config, img_info)
+                result[key], annotation[key] = self._read_data(config, img_info)
                 print(f"Successfully loaded {len(result[key])} images for {key}")
             except Exception as e:
                 print(f"Error loading images for {key}: {str(e)}")
                 # Decide whether to raise or continue based on your requirements
 
-        return result
+        return result, annotation
 
-    def _read_data(self, config: DefaultConfig, img_info) -> List[ImgData]:
+    def _read_data(
+        self, config: DefaultConfig, img_info
+    ) -> Tuple[List[ImgData], pd.DataFrame]:
         """
         Read data for a specific image source.
 
@@ -349,8 +348,11 @@ class ImageDataReader:
             annotation_df=annotation,
             is_paired=config.requires_paired,
         )
+        annotations = pd.concat([img.annotation for img in images])
+        annotations.index = annotations.sample_ids
 
-        return images
+        del annotations["sample_ids"]
+        return images, annotations
 
 
 class ImageNormalizer:

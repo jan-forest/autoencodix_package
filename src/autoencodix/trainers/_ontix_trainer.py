@@ -5,13 +5,18 @@ from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class OntixTrainer(GeneralTrainer):
-    """
-    Specialized trainer for Ontix (ontology-based) autoencoders.
-    Handles ontology-specific weight masking and positive weight constraints.
+    """Specialized trainer for Ontix (ontology-based) autoencoders.
+
+    Handles ontology-specific weight masking and positive weight constraints. Uses most of the
+    functionality from the GeneralTrainer class and ontology-specific functionality is added via a hook
+    after the backward pass.
+
+    Attributes:
+        Inherits all attributes from GeneralTrainer.
     """
 
     def __init__(
@@ -24,6 +29,18 @@ class OntixTrainer(GeneralTrainer):
         loss_type: Type[BaseLoss],
         ontologies: Optional[Union[Tuple, Dict[Any, Any]]],
     ):
+        """Initializes the OntixTrainer with the given datasets, model, and configuration.
+
+
+        Args:
+            trainset: The dataset used for training.
+            validset: The dataset used for validation, if provided.
+            result: An object to store and manage training results.
+            config: Configuration object containing training hyperparameters and settings.
+            model_type: The autoencoder model class to be trained.
+            loss_type: The loss function class specific to the model.
+            ontologies: Ontology information required for Ontix.
+        """
         super().__init__(
             trainset=trainset,
             validset=validset,
@@ -38,7 +55,6 @@ class OntixTrainer(GeneralTrainer):
         """Apply ontology-specific processing after backward pass."""
         # Apply positive weight constraint to decoder
         self._model._decoder.apply(self._model._positive_dec)
-        print("_apply_post_backward_processing is called")
 
         # Apply ontology-based weight masking
         with torch.no_grad():

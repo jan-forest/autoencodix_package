@@ -14,15 +14,17 @@ from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.general_preprocessor import GeneralPreprocessor
-from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.evaluate._general_evaluator import GeneralEvaluator
 
 # from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.modeling._ontix_architecture import OntixArchitecture
 from autoencodix.trainers._ontix_trainer import OntixTrainer
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
+
+from autoencodix.configs.ontix_config import OntixConfig
 from autoencodix.utils._losses import VarixLoss
-from autoencodix.visualize.visualize import Visualizer
+from autoencodix.visualize._general_visualizer import GeneralVisualizer
 
 
 ## Copy from Varix with ontology addition
@@ -46,7 +48,7 @@ class Ontix(BasePipeline):
         Visualizer object to visualize the model output (maybe custom for Ontix)
     _trainer : GeneralTrainer
         Trainer object that trains the model (maybe custom for Ontix)
-    _evaluator : Evaluator
+    _evaluator : GeneralEvaluator
         Evaluator object that evaluates the model performance or downstream tasks (maybe custom for Ontix)
     result : Result
         Result object to store the pipeline results
@@ -74,8 +76,8 @@ class Ontix(BasePipeline):
         model_type: Type[BaseAutoencoder] = OntixArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = GeneralPreprocessor,
-        visualizer: Optional[BaseVisualizer] = None,
-        evaluator: Optional[Evaluator] = None,
+        visualizer: Type[BaseVisualizer] = GeneralVisualizer,
+        evaluator: Optional[GeneralEvaluator] = GeneralEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
@@ -117,7 +119,7 @@ class Ontix(BasePipeline):
         config : Optional[DefaultConfig]
             Configuration for all pipeline components
         """
-
+        self._default_config = OntixConfig()
         if isinstance(ontologies, tuple):
             self.ontologies = ontologies
         elif isinstance(ontologies, list):
@@ -149,6 +151,10 @@ class Ontix(BasePipeline):
             custom_split=custom_splits,
             ontologies=self.ontologies,
         )
+        if not isinstance(self.config, OntixConfig):
+            raise TypeError(
+                f"For Ontix Pipeline, we only allow OntixConfig as type for config, got {type(self.config)}"
+            )
 
     def sample_latent_space(self, split: str = "test", epoch: int = -1) -> torch.Tensor:
         """

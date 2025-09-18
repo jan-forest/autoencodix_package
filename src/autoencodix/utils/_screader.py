@@ -2,7 +2,7 @@ import scanpy as sc  # type: ignore
 import mudata as md  # type: ignore
 from anndata import AnnData  # type: ignore
 from typing import Dict, Any, TYPE_CHECKING, Optional, List
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 if TYPE_CHECKING:
     import mudata as md  # type: ignore

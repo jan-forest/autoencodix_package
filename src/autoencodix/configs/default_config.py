@@ -1,7 +1,8 @@
 from enum import Enum
 from typing import Any, Dict, Literal, Optional, List, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
+
 
 class SchemaPrinterMixin:
     """Mixin class that adds schema printing functionality to Pydantic models."""
@@ -17,7 +18,7 @@ class SchemaPrinterMixin:
             Dictionary containing field name, type, default value, and description if available
         """
         fields_info = {}
-        for name, field in cls.model_fields.items(): # type: ignore
+        for name, field in cls.model_fields.items():  # type: ignore
             fields_info[name] = {
                 "type": str(field.annotation),
                 "default": field.default,
@@ -30,10 +31,8 @@ class SchemaPrinterMixin:
         """
         Print a human-readable schema of all config parameters.
 
-        Parameters
-        ----------
-        filter_params : Optional[List[str]]
-            If provided, only print information for these parameters
+        Args:
+            filter_params: If provided, only print information for these parameters
         """
         if filter_params:
             print("Valid Keyword Arguments:")
@@ -72,8 +71,10 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         default="NUMERIC"
     )
     scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE"] = Field(
-        default="STANDARD"
-    )
+        default="NONE",
+        description="Setting the scaling here in DataInfo overrides the globally set scaling method for the specific data modality",
+    )  # can also be set globally, for all data modalities.
+
     filtering: Literal["VAR", "MAD", "CORR", "VARCORR", "NOFILT", "NONZEROVAR"] = Field(
         default="VAR"
     )
@@ -150,24 +151,10 @@ class DataConfig(BaseModel, SchemaPrinterMixin):
 
 # write tests: done
 class DefaultConfig(BaseModel, SchemaPrinterMixin):
-    """
-    Complete configuration for model, training, hardware, and data handling.
+    """Complete configuration for model, training, hardware, and data handling."""
 
-    Attributes
-    ----------
-    all configuration parameters (change over time of development)
-
-    Methods
-    -------
-    update(**kwargs)
-        Update configuration with support for nested attributes.
-    get_params()
-        Get detailed information about all config fields including types and default values.
-    print_schema()
-        Print a human-readable schema of all config parameters.
-
-    """
-
+    # Input validation
+    model_config = ConfigDict(extra="forbid")
     # Datasets configuration --------------------------------------------------
     data_config: DataConfig = DataConfig(data_info={})
     requires_paired: Union[bool, None] = Field(
@@ -182,11 +169,16 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     k_filter: Union[int, None] = Field(
         default=20, description="Number of features to keep"
     )
+    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE"] = Field(
+        default="STANDARD",
+        description="Setting the scaling here for all data modalities, can per overruled by setting scaling at data modality level per data modality",
+    )
+
     skip_preprocessing: bool = Field(
         default=False, description="If set don't scale, filter or clean the input data."
     )
 
-    class_param: str = Field(default=None)
+    class_param: Optional[str] = Field(default=None)
 
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(
@@ -209,7 +201,11 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     learning_rate: float = Field(
         default=0.001, gt=0, description="Learning rate for optimization"
     )
-    batch_size: int = Field(default=32, ge=1, description="Number of samples per batch")
+    batch_size: int = Field(
+        default=32,
+        ge=2,
+        description="Number of samples per batch, has to be > 1, because we use BatchNorm() Layer",
+    )
     epochs: int = Field(default=3, ge=1, description="Number of training epochs")
     weight_decay: float = Field(
         default=0.01, ge=0, description="L2 regularization factor"
@@ -228,16 +224,23 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=1, ge=0, description="Beta weighting factor for VAE loss"
     )
     beta_mi: float = Field(
-        default=1, ge=0, description="Beta weighting factor for mutual information term in disentangled VAE loss"
+        default=1,
+        ge=0,
+        description="Beta weighting factor for mutual information term in disentangled VAE loss",
     )
     beta_tc: float = Field(
-        default=1, ge=0, description="Beta weighting factor for total correlation term in disentangled VAE loss"
+        default=1,
+        ge=0,
+        description="Beta weighting factor for total correlation term in disentangled VAE loss",
     )
     beta_dimKL: float = Field(
-        default=1, ge=0, description="Beta weighting factor for dimension-wise KL in disentangled VAE loss"
+        default=1,
+        ge=0,
+        description="Beta weighting factor for dimension-wise KL in disentangled VAE loss",
     )
     use_mss: bool = Field(
-        default=True, description="Using minibatch stratified sampling for disentangled VAE loss calculation (faster estimation)"
+        default=True,
+        description="Using minibatch stratified sampling for disentangled VAE loss calculation (faster estimation)",
     )
     gamma: float = Field(
         default=10.0,
@@ -256,9 +259,6 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     )
     min_samples_per_split: int = Field(
         default=1, ge=1, description="Minimum number of samples per split"
-    )
-    anneal_pretraining: bool = Field(
-        default=False, description="Whether to apply annealing during pretraining phase"
     )
     anneal_function: Literal[
         "5phase-constant",
@@ -285,7 +285,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     # 0 uses cpu and not gpu
     n_gpus: int = Field(default=1, ge=1, description="Number of GPUs to use")
     n_workers: int = Field(
-        default=2, ge=0, description="Number of data loading workers"
+        default=0, ge=0, description="Number of data loading workers"
     )
     checkpoint_interval: int = Field(
         default=10, ge=1, description="Interval for saving checkpoints"
@@ -331,6 +331,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=False, description="Whether to ensure reproducibility"
     )
     global_seed: int = Field(default=1, ge=0, description="Global random seed")
+
     ##### VALIDATION ##### -----------------------------------------------------
     ##### ----------------- -----------------------------------------------------
     @field_validator("data_config")
@@ -416,48 +417,47 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
             None,
         )
 
-        try:
-            if from_dataset and to_dataset:
-                from_info, to_info = from_dataset[1], to_dataset[1]
-                if from_info.data_type == "NUMERIC" and to_info.data_type == "NUMERIC":
+        if from_dataset and to_dataset:
+            from_info, to_info = from_dataset[1], to_dataset[1]
+            if from_info.data_type == "NUMERIC" and to_info.data_type == "NUMERIC":
+                self.data_case = (
+                    DataCase.SINGLE_CELL_TO_SINGLE_CELL
+                    if from_info.is_single_cell
+                    else DataCase.BULK_TO_BULK
+                )
+            elif "IMG" in {from_info.data_type, to_info.data_type}:
+                numeric_dataset = (
+                    from_info if from_info.data_type == "NUMERIC" else to_info
+                )
+                # check for IMG_IMG
+                if from_info.data_type == "IMG" and to_info.data_type == "IMG":
+                    self.data_case = DataCase.IMG_TO_IMG
+                else:
                     self.data_case = (
-                        DataCase.SINGLE_CELL_TO_SINGLE_CELL
-                        if from_info.is_single_cell
-                        else DataCase.BULK_TO_BULK
+                        DataCase.SINGLE_CELL_TO_IMG
+                        if numeric_dataset.is_single_cell
+                        else DataCase.IMG_TO_BULK
                     )
-                elif "IMG" in {from_info.data_type, to_info.data_type}:
-                    numeric_dataset = (
-                        from_info if from_info.data_type == "NUMERIC" else to_info
-                    )
-                    # check for IMG_IMG
-                    if from_info.data_type == "IMG" and to_info.data_type == "IMG":
-                        self.data_case = DataCase.IMG_TO_IMG
-                    else:
-                        self.data_case = (
-                            DataCase.SINGLE_CELL_TO_IMG
-                            if numeric_dataset.is_single_cell
-                            else DataCase.IMG_TO_BULK
-                        )
-            else:
-                # Find any numeric dataset
-                numeric_datasets = [
-                    info for info in data_info.values() if info.data_type == "NUMERIC"
-                ]
+        else:
+            img_ds = [info for info in data_info.values() if info.data_type == "IMG"]
+            if img_ds:
+                self.data_case = DataCase.IMG_TO_IMG
 
-                if not numeric_datasets:
-                    raise ValueError("No numeric datasets found in data_info")
+            numeric_datasets = [
+                info for info in data_info.values() if info.data_type == "NUMERIC"
+            ]
 
+            if numeric_datasets:
                 numeric_dataset = numeric_datasets[0]
                 self.data_case = (
                     DataCase.MULTI_SINGLE_CELL
                     if numeric_dataset.is_single_cell
                     else DataCase.MULTI_BULK
                 )
-        except Exception as e:
-            # Log the error but don't fail validation
-            import warnings
+            if self.data_case is None:
+                import warnings
 
-            warnings.warn(f"Could not determine data_case: {str(e)}")
+                warnings.warn(message="Could not determine data_case")
 
         return self
 
@@ -513,9 +513,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         """
         Get detailed information about all config fields including types and default values.
 
-        Returns
-        -------
-        Dict[str, Dict[str, Any]]
+        Returns:
             Dictionary containing field name, type, default value, and description if available
         """
         fields_info = {}
@@ -528,7 +526,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         return fields_info
 
     @classmethod
-    def print_schema(cls, filter_params: Optional[None] = None) -> None: # type: ignore
+    def print_schema(cls, filter_params: Optional[None] = None) -> None:  # type: ignore
         """
         Print a human-readable schema of all config parameters.
         """
@@ -545,5 +543,5 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
                 continue
             print(f"\n{name}:")
             print(f"  Type: {info['type']}")
-            print(f"  Default: {info['default']}") # type: ignore
+            print(f"  Default: {info['default']}")  # type: ignore
             print(f"  Description: {info['description']}")

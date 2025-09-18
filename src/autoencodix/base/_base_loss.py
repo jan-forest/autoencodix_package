@@ -1,12 +1,11 @@
 from abc import abstractmethod, ABC
 import itertools
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 import torch
 from torch import nn
-from autoencodix.utils._model_output import ModelOutput
 from autoencodix.utils._annealer import AnnealingScheduler
 
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Any
 
 
 class BaseLoss(nn.Module, ABC):
@@ -21,6 +20,7 @@ class BaseLoss(nn.Module, ABC):
         recon_loss: Module for computing reconstruction loss (MSE or BCE).
         reduction_fn: Function to apply reduction (mean or sum).
         compute_kernel: Function to compute kernel for MMD loss.
+        annealing_scheduler: Helper for loss calculation with annealing.
     """
 
     def __init__(self, config: DefaultConfig, annealing_scheduler=None):
@@ -28,6 +28,7 @@ class BaseLoss(nn.Module, ABC):
 
         Args:
             config: Configuration parameters for the loss function.
+            annealing_scheduler: Helper class for loss calculation with annealing.
 
         Raises:
             NotImplementedError: If unsupported loss reduction or reconstruction
@@ -193,7 +194,6 @@ class BaseLoss(nn.Module, ABC):
             latentspaces: A dictionary mapping modality names to their latent space tensors.
                         e.g., {'RNA': tensor_rna, 'ATAC': tensor_atac}
             sample_ids: A dictionary mapping modality names to their list of sample IDs.
-            reduction: The type of reduction to apply ('mean' or 'sum').
 
         Returns:
             A single scalar tensor representing the total paired loss.
@@ -234,7 +234,7 @@ class BaseLoss(nn.Module, ABC):
         if not loss_helper:
             return torch.tensor(0.0)
         return torch.stack(loss_helper).mean()
-      
+
     @staticmethod
     def _compute_log_gauss_dense(
         z: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor
@@ -254,9 +254,9 @@ class BaseLoss(nn.Module, ABC):
             + logvar
             + (z - mu) ** 2 * torch.exp(-logvar)
         )
-    
+
     @staticmethod
-    def _compute_log_import_weight_mat(batch_size:int, n_samples:int) -> torch.Tensor:
+    def _compute_log_import_weight_mat(batch_size: int, n_samples: int) -> torch.Tensor:
         """Computes the log import weight matrix for disentangled loss.
            Similar to: https://github.com/rtqichen/beta-tcvae
         Args:
@@ -266,7 +266,7 @@ class BaseLoss(nn.Module, ABC):
         Returns:
             Log import weight matrix of shape (batch_size, n_samples).
         """
-        
+
         N = n_samples
         M = batch_size - 1
         strat_weight = (N - M) / (N * M)
@@ -275,16 +275,13 @@ class BaseLoss(nn.Module, ABC):
         W.view(-1)[1 :: M + 1] = strat_weight
         W[M - 1, 0] = strat_weight
         return W.log()
-      
-      
+
     @abstractmethod
     def forward(
-
         self,
         *args,
         **kwargs,
     ) -> Any:
-
         """Calculates the loss for the autoencoder.
 
         This method must be implemented by subclasses to define the specific
@@ -298,15 +295,15 @@ class BaseLoss(nn.Module, ABC):
 
 
         Returns:
-            A tuple containing:
-              - The total loss value as a scalar tensor.
-              - A dictionary of individual loss components, where the keys are
+            - The total loss value as a scalar tensor.
+            - A dictionary of individual loss components, where the keys are
                 descriptive strings (e.g., "reconstruction_loss", "kl_loss") and
                 the values are the corresponding loss tensors.
+            - Implementation in subclasses is flexible, so for new loss classes this can differ.
 
         Note:
             Subclasses must implement this method to define the specific loss
             computation logic for their use case.
         """
+        # TODO maybe standardize the return types more i.e. request a scalar and a dict
         pass
-

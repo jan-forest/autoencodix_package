@@ -56,7 +56,7 @@ class XModalixEvaluator(GeneralEvaluator):
 
         ## Pure VAE MSE calculation
         meta_imagix = pure_vae_result.datasets.test.metadata
-        sample_ids = list(meta_imagix.sample_ids)
+        sample_ids = list(meta_imagix.index)
 
         all_sample_order = sample_ids  ## TODO check code, seems unnecessary
         indices = [
@@ -95,7 +95,7 @@ class XModalixEvaluator(GeneralEvaluator):
         df_imagix_mse = df_imagix_mse.join(meta_imagix, on="sample_id")
 
         meta_xmodalix = xmodalix_result.datasets.test.datasets[to_key].metadata
-        sample_ids = list(meta_xmodalix.sample_ids)
+        sample_ids = list(meta_xmodalix.index)
 
         all_sample_order = sample_ids
         indices = [

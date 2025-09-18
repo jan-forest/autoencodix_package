@@ -61,7 +61,7 @@ class ImagixVisualizer(GeneralVisualizer):
 
     def show_image_recon_grid(self, result: Result, n_samples: int = 3) -> None:
         meta = result.datasets.test.metadata
-        sample_ids = meta.sample(n=n_samples, random_state=42).sample_ids
+        sample_ids = meta.sample(n=n_samples, random_state=42).index
 
         all_sample_order = result.datasets.test.sample_ids
         indices = [
@@ -81,7 +81,7 @@ class ImagixVisualizer(GeneralVisualizer):
                     axes[r, c].imshow(
                         result.datasets.test.raw_data[indices[c]].img.squeeze()
                     )
-                    axes[r, c].set_title(f"Original: {sample_ids.iloc[c]}")
+                    axes[r, c].set_title(f"Original: {sample_ids[c]}")
                     axes[r, c].axis("off")
                 if r == 1:
                     ## Reconstructed image
@@ -90,7 +90,7 @@ class ImagixVisualizer(GeneralVisualizer):
                             indices[c]
                         ].squeeze()
                     )
-                    axes[r, c].set_title(f"Reconstructed: {sample_ids.iloc[c]}")
+                    axes[r, c].set_title(f"Reconstructed: {sample_ids[c]}")
                     axes[r, c].axis("off")
 
         self.plots["Image_recon_grid"] = fig

@@ -101,11 +101,16 @@ class GeneralEvaluator(BaseEvaluator):
                 sample_split = pd.DataFrame(columns=["SAMPLE_ID", "SPLIT"])
 
                 if hasattr(datasets, "train"):
+                    if hasattr(datasets.train, "paired_sample_ids"):
+                        if datasets.train.paired_sample_ids is not None:
+                            sample_ids = datasets.train.paired_sample_ids
+                        else:
+                            sample_ids = datasets.train.sample_ids
                     sample_split_temp = dict(
                         sample_split,
                         **{
-                            "SAMPLE_ID": datasets.train.sample_ids,
-                            "SPLIT": ["train"] * len(datasets.train.sample_ids),
+                            "SAMPLE_ID": sample_ids,
+                            "SPLIT": ["train"] * len(sample_ids),
                         },
                     )
                     sample_split = pd.concat(
@@ -118,11 +123,16 @@ class GeneralEvaluator(BaseEvaluator):
                         "No training data found. Please provide a valid training dataset."
                     )
                 if hasattr(datasets, "valid"):
+                    if hasattr(datasets.valid, "paired_sample_ids"):
+                        if datasets.valid.paired_sample_ids is not None:
+                            sample_ids = datasets.valid.paired_sample_ids
+                        else:
+                            sample_ids = datasets.valid.sample_ids
                     sample_split_temp = dict(
                         sample_split,
                         **{
-                            "SAMPLE_ID": datasets.valid.sample_ids,
-                            "SPLIT": ["valid"] * len(datasets.valid.sample_ids),
+                            "SAMPLE_ID": sample_ids,
+                            "SPLIT": ["valid"] * len(sample_ids),
                         },
                     )
                     sample_split = pd.concat(
@@ -131,11 +141,16 @@ class GeneralEvaluator(BaseEvaluator):
                         ignore_index=True,
                     )
                 if hasattr(datasets, "test"):
+                    if hasattr(datasets.test, "paired_sample_ids"):
+                        if datasets.test.paired_sample_ids is not None:
+                            sample_ids = datasets.test.paired_sample_ids
+                        else:
+                            sample_ids = datasets.test.sample_ids
                     sample_split_temp = dict(
                         sample_split,
                         **{
-                            "SAMPLE_ID": datasets.test.sample_ids,
-                            "SPLIT": ["test"] * len(datasets.test.sample_ids),
+                            "SAMPLE_ID": sample_ids,
+                            "SPLIT": ["test"] * len(sample_ids),
                         },
                     )
                     sample_split = pd.concat(
@@ -338,6 +353,22 @@ class GeneralEvaluator(BaseEvaluator):
                             axis=0,
                         )
                 else:
+                    # Iterate over all splits and keys, concatenate if DataFrame
+                    clin_data = pd.DataFrame()
+                    for split_name in ["train", "test", "valid"]:
+                        split_temp = getattr(datasets, split_name, None)
+                        if split_temp is not None and hasattr(split_temp, "metadata"):
+                            for key in split_temp.metadata.keys():
+                                if isinstance(split_temp.metadata[key], pd.DataFrame):
+                                    clin_data = pd.concat(
+                                        [
+                                            clin_data,
+                                            split_temp.metadata[key],
+                                        ],
+                                        axis=0,
+                                    )
+                    # remove duplicate rows
+                    clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
                     # Raise error no annotation given
                     raise ValueError(
                         "Please provide paired annotation data with key 'paired' in metadata dictionary."
@@ -378,10 +409,26 @@ class GeneralEvaluator(BaseEvaluator):
         #     # Remove duplicate rows
         #     clin_data = clin_data[~clin_data.index.duplicated(keep='first')]
         else:
+            # Iterate over all splits and keys, concatenate if DataFrame
+                clin_data = pd.DataFrame()
+                for split_name in ["train", "test", "valid"]:
+                    split_temp = getattr(datasets, split_name, None)
+                    if split_temp is not None:
+                        for key in split_temp.datasets.keys():
+                            if isinstance(split_temp.datasets[key].metadata, pd.DataFrame):
+                                clin_data = pd.concat(
+                                    [
+                                        clin_data,
+                                        split_temp.datasets[key].metadata,
+                                    ],
+                                    axis=0,
+                                )
+                # remove duplicate rows
+                clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
             # Raise error no annotation given
-            raise ValueError(
-                "No annotation data found. Please provide a valid annotation data type."
-            )
+            # raise ValueError(
+            #     "No annotation data found. Please provide a valid annotation data type."
+            # )
         return clin_data
 
     def _enrich_results(
@@ -520,6 +567,8 @@ class GeneralEvaluator(BaseEvaluator):
         """
         ## Auto-Detection
         if type(list(clin_data[task_param])[0]) is str:
+            ml_type = "classification"
+        elif clin_data[task_param].unique().shape[0] < 3:
             ml_type = "classification"
         else:
             ml_type = "regression"

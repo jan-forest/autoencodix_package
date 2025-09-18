@@ -58,47 +58,61 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
         self.sampler = CoverageEnsuringSampler(self, batch_size=self.config.batch_size)
         self.collate_fn = create_multimodal_collate_fn(self)
 
-    def _to_df(self, modality: str) -> pd.DataFrame:
+    def _to_df(self, modality: str = None) -> pd.DataFrame:
         """
         Convert the dataset to a pandas DataFrame.
 
         Returns:
             DataFrame representation of the dataset
         """
-        if modality not in self.datasets:
-            raise ValueError(f"Unknown modality: {modality}")
-
-        ds = self.datasets[modality]
-        if isinstance(ds.data, torch.Tensor):
-            return pd.DataFrame(
-                ds.data.numpy(), columns=ds.feature_ids, index=ds.sample_ids
-            )
-        elif "IMG" in modality:
-            # Handle image modality
-            # Get the list of tensors
-            tensor_list = self.datasets[modality].data
-
-            # Flatten each tensor and collect as rows
-            rows = [
-                (
-                    t.flatten().cpu().numpy()
-                    if isinstance(t, torch.Tensor)
-                    else t.flatten()
-                )
-                for t in tensor_list
-            ]
-
-            # Create DataFrame
-            df_flat = pd.DataFrame(
-                rows,
-                index=ds.sample_ids,
-                columns=["Pixel_" + str(i) for i in range(len(rows[0]))],
-            )
-            return df_flat
+        if modality is None:
+            all_modality = list(self.datasets.keys())
         else:
-            raise TypeError(
-                "Data is not a torch.Tensor and cannot be converted to DataFrame."
-            )
+            all_modality = [modality]
+
+        df_all = pd.DataFrame()
+        for modality in all_modality:
+            if modality not in self.datasets:
+                raise ValueError(f"Unknown modality: {modality}")
+
+            ds = self.datasets[modality]
+            if isinstance(ds.data, torch.Tensor):
+                df = pd.DataFrame(
+                    ds.data.numpy(), columns=ds.feature_ids, index=ds.sample_ids
+                )
+            elif "IMG" in modality:
+                # Handle image modality
+                # Get the list of tensors
+                tensor_list = self.datasets[modality].data
+
+                # Flatten each tensor and collect as rows
+                rows = [
+                    (
+                        t.flatten().cpu().numpy()
+                        if isinstance(t, torch.Tensor)
+                        else t.flatten()
+                    )
+                    for t in tensor_list
+                ]
+
+                # Create DataFrame
+                df = pd.DataFrame(
+                    rows,
+                    index=ds.sample_ids,
+                    columns=["Pixel_" + str(i) for i in range(len(rows[0]))],
+                )
+            else:
+                raise TypeError(
+                    "Data is not a torch.Tensor and cannot be converted to DataFrame."
+                )
+            
+            df = df.add_prefix(f"{modality}_")
+            if df_all.empty:
+                df_all = df
+            else:
+                df_all = pd.concat([df_all, df], axis=1, join="inner")
+        
+        return df_all
 
     def _build_sample_map(self):
         sample_to_mods = {}

@@ -155,10 +155,27 @@ class GeneralVisualizer(BaseVisualizer):
                                 axis=0,
                             )
                     else:
-                        # Raise error no annotation given
-                        raise ValueError(
-                            "Please provide paired annotation data with key 'paired' in metadata dictionary."
-                        )
+                        # Iterate over all splits and keys, concatenate if DataFrame
+                        clin_data = pd.DataFrame()
+                        for split_name in ["train", "test", "valid"]:
+                            split_temp = getattr(result.datasets, split_name, None)
+                            if split_temp is not None and hasattr(split_temp, "metadata"):
+                                for key in split_temp.metadata.keys():
+                                    if isinstance(split_temp.metadata[key], pd.DataFrame):
+                                        clin_data = pd.concat(
+                                            [
+                                                clin_data,
+                                                split_temp.metadata[key],
+                                            ],
+                                            axis=0,
+                                        )
+                        # remove duplicate rows
+                        clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
+                        # if clin_data.empty:
+                        #     # Raise error no annotation given
+                        #     raise ValueError(
+                        #         "Please provide paired annotation data with key 'paired' in metadata dictionary."
+                        #     )
                 elif isinstance(result.datasets.train.metadata, pd.DataFrame):
                     clin_data = result.datasets.train.metadata
                     if hasattr(result.datasets, "test"):
@@ -177,10 +194,27 @@ class GeneralVisualizer(BaseVisualizer):
                         "Metadata is not a dictionary or DataFrame. Please provide a valid annotation data type."
                     )
             else:
-                # Raise error no annotation given
-                raise ValueError(
-                    "No annotation data found. Please provide a valid annotation data type."
-                )
+                # Iterate over all splits and keys, concatenate if DataFrame
+                clin_data = pd.DataFrame()
+                for split_name in ["train", "test", "valid"]:
+                    split_temp = getattr(result.datasets, split_name, None)
+                    if split_temp is not None:
+                        for key in split_temp.datasets.keys():
+                            if isinstance(split_temp.datasets[key].metadata, pd.DataFrame):
+                                clin_data = pd.concat(
+                                    [
+                                        clin_data,
+                                        split_temp.datasets[key].metadata,
+                                    ],
+                                    axis=0,
+                                )
+                # remove duplicate rows
+                clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
+
+                # # Raise error no annotation given
+                # raise ValueError(
+                #     "No annotation data found. Please provide a valid annotation data type."
+                # )
 
             if split == "all":
                 df_latent = pd.concat(
@@ -575,6 +609,13 @@ class GeneralVisualizer(BaseVisualizer):
                         & (result.embedding_evaluation.CLINIC_PARAM == c)
                         & (result.embedding_evaluation.ML_ALG == alg)
                     ]
+
+                    # Check for missing values
+                    if data["value"].isnull().any():
+                        warnings.warn(
+                            f"Missing values found in evaluation data for parameter '{c}', metric '{m}', and algorithm '{alg}'. These will be ignored in the plot."
+                        )
+                        data = data.dropna()
 
                     sns_plot = sns.catplot(
                         data=data,

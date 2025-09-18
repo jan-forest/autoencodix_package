@@ -187,8 +187,8 @@ class XModalVisualizer(BaseVisualizer):
                 else:
                     if clin_data.shape[0] == len(labels):
                         clin_data[p] = labels
-                    else:
-                        clin_data[p] = labels[: len(clin_data[p])]
+                    else:                
+                        clin_data[p] = ["all"] * clin_data.shape[0]
 
                 if plot_type == "2D-scatter":
                     ## Make 2D Embedding with UMAP
@@ -298,23 +298,25 @@ class XModalVisualizer(BaseVisualizer):
                 "Image translation grid visualization is only possible for translation to IMG data type."
             )
         else:
-            if not split == "test":
-                # make warning ... change in future TODO
-                warnings.warn(
-                    "Currently, only 'test' split is supported for image translation visualization."
-                )
-                split = "test"
+            # if not split == "test":
+            #     # make warning ... change in future TODO
+            #     warnings.warn(
+            #         "Currently, only 'test' split is supported for image translation visualization."
+            #     )
+            #     split = "test"
 
             ## Get n samples per class
             if split == "test":
                 meta = result.datasets.test.datasets[to_key].metadata
-                sample_ids_list = result.datasets.test.datasets[to_key].sample_ids
+                # sample_ids_list = result.datasets.test.datasets[to_key].sample_ids
+                sample_ids_list = result.sample_ids.get(epoch=-1, split="test")[to_key]
             if split == "train":
                 meta = result.datasets.train.datasets[to_key].metadata
-                sample_ids_list = result.datasets.train.datasets[to_key].sample_ids
+                # sample_ids_list = result.datasets.train.datasets[to_key].sample_ids
+                sample_ids_list = result.sample_ids.get(epoch=-1, split="train")[to_key]
             if split == "valid":
                 meta = result.datasets.valid.datasets[to_key].metadata
-                sample_ids_list = result.datasets.valid.datasets[to_key].sample_ids
+                sample_ids_list = result.sample_ids.get(epoch=-1, split="valid")[to_key]
 
             if param is None:
                 param = "user-label"
@@ -351,7 +353,7 @@ class XModalVisualizer(BaseVisualizer):
                 sids = sample_per_class[class_value]
                 # Get indices of these sample ids in the sample_ids_list
                 indices = [
-                    sample_ids_list.index(sid) for sid in sids if sid in sample_ids_list
+                    list(sample_ids_list).index(sid) for sid in sids if sid in sample_ids_list
                 ]
                 # Store the indices in the dictionary
                 sample_idx_per_class[class_value] = indices

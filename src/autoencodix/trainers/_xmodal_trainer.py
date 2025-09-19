@@ -111,6 +111,11 @@ class XModalTrainer(BaseTrainer):
         self._clf_epoch_loss: float = 0.0
         self._epoch_loss: float = 0.0
         self._epoch_loss_valid: float = 0.0
+        self._all_dynamics: Dict[str, Dict[int, Dict]] = {
+            "test": defaultdict(dict),
+            "train": defaultdict(dict),
+            "valid": defaultdict(dict),
+        }
 
     def _init_model_architecture(self, ontologies: Optional[Tuple] = None):
         """Override parent's model init - we don't use a single model, needs to be there because is abstract in parent."""
@@ -136,8 +141,12 @@ class XModalTrainer(BaseTrainer):
 
     def _init_loaders(self):
         """Initializes DataLoaders for training and validation datasets."""
-        trainsampler = CoverageEnsuringSampler(multimodal_dataset=self._trainset)
-        validsampler = CoverageEnsuringSampler(multimodal_dataset=self._validset)
+        trainsampler = CoverageEnsuringSampler(
+            multimodal_dataset=self._trainset, batch_size=self._config.batch_size
+        )
+        validsampler = CoverageEnsuringSampler(
+            multimodal_dataset=self._validset, batch_size=self._config.batch_size
+        )
         collate_fn = create_multimodal_collate_fn(multimodal_dataset=self._trainset)
         valid_collate_fn = create_multimodal_collate_fn(
             multimodal_dataset=self._validset
@@ -532,7 +541,9 @@ class XModalTrainer(BaseTrainer):
         # drop_last handled in custom sampler
         inference_loader = DataLoader(
             data,
-            batch_sampler=CoverageEnsuringSampler(multimodal_dataset=data),
+            batch_sampler=CoverageEnsuringSampler(
+                multimodal_dataset=data, batch_size=self._config.batch_size
+            ),
             collate_fn=create_multimodal_collate_fn(multimodal_dataset=data),
         )
         inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
@@ -614,6 +625,11 @@ class XModalTrainer(BaseTrainer):
             "sample_ids": {},
         }
         for mod_name, dynamics in self._modality_dynamics.items():
+            sample_ids = batch_data[mod_name].get("sample_ids")
+            # get index of
+            if sample_ids is not None:
+                captured_data["sample_ids"][mod_name] = np.array(sample_ids)
+
             model_output = dynamics["mp"]
             captured_data["latentspaces"][mod_name] = (
                 model_output.latentspace.detach().cpu().numpy()
@@ -629,55 +645,81 @@ class XModalTrainer(BaseTrainer):
                 captured_data["sigmas"][mod_name] = (
                     model_output.latent_logvar.detach().cpu().numpy()
                 )
-            sample_ids = batch_data[mod_name].get("sample_ids")
-            if sample_ids is not None:
-                captured_data["sample_ids"][mod_name] = np.array(sample_ids)
+
         return captured_data
 
     def _dynamics_to_result(self, split: str, epoch_dynamics: List[Dict]) -> None:
         """Aggregates and stores epoch dynamics into the Result object.
+
+        Due to our multi modal Traning with unpaired data, we can see sample_ids more than once per epoch.
+        For more consistent downstream analysis, we only keep the first occurence of this sample in the epoch
+        and report the dynamics for this sample
+
         Args:
             split: The data split name (e.g., 'train', 'valid', 'test').
             epoch_dynamics: List of dictionaries capturing dynamics for each batch in the epoch.
 
         """
+        self._all_dynamics[split][self._cur_epoch] = epoch_dynamics
         final_data: Dict[str, Any] = defaultdict(lambda: defaultdict(list))
         for batch_data in epoch_dynamics:
             for dynamic_type, mod_data in batch_data.items():
                 for mod_name, data in mod_data.items():
                     final_data[dynamic_type][mod_name].append(data)
 
+        sample_ids: Optional[Dict[str, np.ndarray]] = final_data.get("sample_ids")
+        if sample_ids is None:
+            raise ValueError("No Sample Ids in TrainingDynamics")
+        sample_ids
+        concat_ids: Dict[str, np.ndarray] = {
+            k: np.concatenate(v) for k, v in sample_ids.items()
+        }
+        unique_idx: Dict[str, np.ndarray] = {
+            k: np.unique(v, return_index=True)[1] for k, v in concat_ids.items()
+        }
+
+        deduplicated_data: Dict[str, Dict[str, np.ndarray]] = defaultdict(dict)
+        for dynamic_type, dynamic_data in final_data.items():
+            print(dynamic_data.keys())
+            concat_dynamic: Dict[str, np.ndarray] = {
+                k: np.concatenate(v) for k, v in dynamic_data.items()
+            }
+            deduplicated_helper: Dict[str, np.ndarray] = {
+                k: v[unique_idx[k]] for k, v in concat_dynamic.items()
+            }
+            deduplicated_data[dynamic_type] = deduplicated_helper
+            # Store the deduplicated data
         self._result.latentspaces.add(
             epoch=self._cur_epoch,
             split=split,
-            data={k: np.concatenate(v) for k, v in final_data["latentspaces"].items()},
+            data=deduplicated_data.get("latentspaces", {}),
         )
+
         self._result.reconstructions.add(
             epoch=self._cur_epoch,
             split=split,
-            data={
-                k: np.concatenate(v) for k, v in final_data["reconstructions"].items()
-            },
+            data=deduplicated_data.get("reconstructions", {}),
         )
-        if final_data.get("sample_ids"):
+
+        if deduplicated_data.get("sample_ids"):
             self._result.sample_ids.add(
                 epoch=self._cur_epoch,
                 split=split,
-                data={
-                    k: np.concatenate(v) for k, v in final_data["sample_ids"].items()
-                },
+                data=deduplicated_data["sample_ids"],
             )
-        if final_data.get("mus"):
+
+        if deduplicated_data.get("mus"):
             self._result.mus.add(
                 epoch=self._cur_epoch,
                 split=split,
-                data={k: np.concatenate(v) for k, v in final_data["mus"].items()},
+                data=deduplicated_data["mus"],
             )
-        if final_data.get("sigmas"):
+
+        if deduplicated_data.get("sigmas"):
             self._result.sigmas.add(
                 epoch=self._cur_epoch,
                 split=split,
-                data={k: np.concatenate(v) for k, v in final_data["sigmas"].items()},
+                data=deduplicated_data["sigmas"],
             )
 
     def _log_losses(

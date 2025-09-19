@@ -104,8 +104,8 @@ class GeneralEvaluator(BaseEvaluator):
                     if hasattr(datasets.train, "paired_sample_ids"):
                         if datasets.train.paired_sample_ids is not None:
                             sample_ids = datasets.train.paired_sample_ids
-                        else:
-                            sample_ids = datasets.train.sample_ids
+                    else:
+                        sample_ids = datasets.train.sample_ids
                     sample_split_temp = dict(
                         sample_split,
                         **{
@@ -126,8 +126,8 @@ class GeneralEvaluator(BaseEvaluator):
                     if hasattr(datasets.valid, "paired_sample_ids"):
                         if datasets.valid.paired_sample_ids is not None:
                             sample_ids = datasets.valid.paired_sample_ids
-                        else:
-                            sample_ids = datasets.valid.sample_ids
+                    else:
+                        sample_ids = datasets.valid.sample_ids
                     sample_split_temp = dict(
                         sample_split,
                         **{
@@ -144,8 +144,8 @@ class GeneralEvaluator(BaseEvaluator):
                     if hasattr(datasets.test, "paired_sample_ids"):
                         if datasets.test.paired_sample_ids is not None:
                             sample_ids = datasets.test.paired_sample_ids
-                        else:
-                            sample_ids = datasets.test.sample_ids
+                    else:
+                        sample_ids = datasets.test.sample_ids
                     sample_split_temp = dict(
                         sample_split,
                         **{

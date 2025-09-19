@@ -28,7 +28,12 @@ class GeneralVisualizer(BaseVisualizer):
 
     def visualize(self, result: Result, config: DefaultConfig) -> Result:
         ## Make Model Weights plot
-        self.plots["ModelWeights"] = self._plot_model_weights(model=result.model)
+        if result.model.input_dim <= 3000:
+            self.plots["ModelWeights"] = self._plot_model_weights(model=result.model)
+        else:
+            warnings.warn(
+                f"Model weights plot is skipped since input dimension {result.model.input_dim} is larger than 3000 and heatmap would be too large."
+            )
 
         ## Make long format of losses
         loss_df_melt = self._make_loss_format(result=result, config=config)

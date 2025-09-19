@@ -200,7 +200,7 @@ class DataFilter:
                     f"Some genes in genes_to_keep are not present in the dataframe: {e}"
                 )
 
-        MIN_FILTER = 10
+        MIN_FILTER = 2
         filtering_method = FilterMethod(self.data_info.filtering)
 
         if df.shape[0] < MIN_FILTER or df.empty:

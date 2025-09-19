@@ -129,7 +129,6 @@ class BaseVisualizer(abc.ABC):
                 show_figure(fig)
                 plt.show()
 
-    ## TODO move to BaseVisualizer?
     def save_plots(
         self, path: str, which: Union[str, list] = "all", format: str = "png"
     ) -> None:
@@ -149,6 +148,9 @@ class BaseVisualizer(abc.ABC):
         Raises:
             ValueError: If the 'which' parameter is not a list or a string.
         """
+        if not os.path.exists(path):
+            os.makedirs(path)
+            
         if not isinstance(which, list):
             ## Case when which is a string
             if which == "all":

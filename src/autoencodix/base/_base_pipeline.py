@@ -859,7 +859,7 @@ class BasePipeline(abc.ABC):
         params: Union[
             list, str
         ] = [],  # Default empty list, to use all parameters use string "all"
-        metric_class: str = "roc_auc_ovr",  # Default is 'roc_auc_ovr' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
+        metric_class: str = "roc_auc_ovo",  # Default is 'roc_auc_ovo' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
         split_type: str = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?

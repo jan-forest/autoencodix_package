@@ -31,7 +31,7 @@ class GeneralEvaluator(BaseEvaluator):
         params: Union[
             list, str
         ] = "all",  # No default? ... or all params in annotation?
-        metric_class: str = "roc_auc_ovr",  # Default is 'roc_auc_ovr' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
+        metric_class: str = "roc_auc_ovo",  # Default is 'roc_auc_ovo' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
         split_type: str = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
@@ -52,7 +52,7 @@ class GeneralEvaluator(BaseEvaluator):
         params : list or str, optional
             List of clinical annotation columns to evaluate, or "all" to use all columns (default: "all").
         metric_class : str, optional
-            Scoring metric for classification tasks (default: "roc_auc_ovr").
+            Scoring metric for classification tasks (default: "roc_auc_ovo").
         metric_regression : str, optional
             Scoring metric for regression tasks (default: "r2").
         reference_methods : list, optional

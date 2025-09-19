@@ -226,7 +226,6 @@ class GeneralTrainer(BaseTrainer):
                     self._trainloader.dataset
                 ),  # Pass n_samples for disentangled loss calculations
             )
-
             self._fabric.backward(loss)
             self._apply_post_backward_processing()
             self._optimizer.step()
@@ -241,6 +240,10 @@ class GeneralTrainer(BaseTrainer):
             if should_checkpoint:
                 self._capture_dynamics(model_outputs, "train", indices, sample_ids)
 
+        for k, v in sub_losses.items():
+            if "_factor" not in k:
+                sub_losses[k] = v / len(self._trainloader.dataset) # Average over all samples
+        total_loss = total_loss / len(self._trainloader.dataset) # Average over all samples
         return total_loss, sub_losses
 
     def _validate_epoch(
@@ -280,6 +283,10 @@ class GeneralTrainer(BaseTrainer):
                 if should_checkpoint:
                     self._capture_dynamics(model_outputs, "valid", indices, sample_ids)
 
+        for k, v in sub_losses.items():
+            if "_factor" not in k:
+                sub_losses[k] = v / len(self._validloader.dataset) # Average over all samples
+        total_loss = total_loss / len(self._validloader.dataset) # Average over all samples
         return total_loss, sub_losses
 
     def _log_losses(
@@ -293,15 +300,15 @@ class GeneralTrainer(BaseTrainer):
             total_loss: The total loss for the epoch.
             sub_losses: A dictionary of sub-losses for the epoch.
         """
-        dataset_len = len(
-            self._trainloader.dataset if split == "train" else self._validloader.dataset
-        )
-        self._result.losses.add(epoch=epoch, split=split, data=total_loss / dataset_len)
+        # dataset_len = len(
+        #     self._trainloader.dataset if split == "train" else self._validloader.dataset
+        # )
+        self._result.losses.add(epoch=epoch, split=split, data=total_loss)
         self._result.sub_losses.add(
             epoch=epoch,
             split=split,
             data={
-                k: v / dataset_len if "_factor" not in k else v
+                k: v if "_factor" not in k else v
                 for k, v in sub_losses.items()
             },
         )

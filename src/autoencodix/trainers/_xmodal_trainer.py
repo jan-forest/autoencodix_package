@@ -325,6 +325,10 @@ class XModalTrainer(BaseTrainer):
                         epoch_dynamics.append(batch_capture)
 
         sub_losses["clf_loss"] = total_clf_loss
+        for k, v in sub_losses.items():
+            if "_factor" not in k:
+                sub_losses[k] = v / n_samples_total # Average over all samples
+        self._epoch_loss = self._epoch_loss / n_samples_total # Average over all samples
         return epoch_dynamics, sub_losses, n_samples_total
 
     def _train_one_epoch(self) -> Tuple[List[Dict], Dict[str, float], int]:
@@ -390,6 +394,10 @@ class XModalTrainer(BaseTrainer):
                 batch_capture = self._capture_dynamics(batch)
                 epoch_dynamics.append(batch_capture)
         sub_losses["clf_loss"] = self._clf_epoch_loss
+        for k, v in sub_losses.items():
+            if "_factor" not in k:
+                sub_losses[k] = v / n_samples_total # Average over all samples
+        self._epoch_loss = self._epoch_loss / n_samples_total # Average over all samples
 
         return epoch_dynamics, sub_losses, n_samples_total
 
@@ -698,20 +706,26 @@ class XModalTrainer(BaseTrainer):
 
         n_samples = max(n_samples, 1)
         print(f"split: {split}, n_samples: {n_samples}")
-        avg_total_loss = total_loss / n_samples
-        self._result.losses.add(epoch=self._cur_epoch, split=split, data=avg_total_loss)
+        # avg_total_loss = total_loss / n_samples ## Now already normalized
+        self._result.losses.add(epoch=self._cur_epoch, split=split, data=total_loss)
 
-        avg_sub_losses = {
-            k: v / n_samples if "_factor" not in k else v for k, v in sub_losses.items()
-        }
+        # avg_sub_losses = {
+        #     k: v / n_samples if "_factor" not in k else v for k, v in sub_losses.items()
+        # }
         self._result.sub_losses.add(
             epoch=self._cur_epoch,
             split=split,
-            data=avg_sub_losses,
+            data=sub_losses,
         )
         self._fabric.print(
-            f"Epoch {self._cur_epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {avg_total_loss:.4f}"
+            f"Epoch {self._cur_epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {total_loss:.4f}"
         )
+        # Detailed sub-loss logging in one line
+        sub_loss_str = ", ".join(
+            [f"{k}: {v:.4f}" for k, v in sub_losses.items() if "_factor" not in k]
+        )
+        self._fabric.print(f"Sub-losses - {sub_loss_str}")
+        
 
     def _store_checkpoint(self, split: str, epoch_dynamics: List[Dict]) -> None:
         """Stores model checkpoints and epoch dynamics into the Result object.

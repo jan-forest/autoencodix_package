@@ -260,7 +260,8 @@ class XModalLoss(BaseLoss):
     ) -> torch.Tensor:
         """Computes the average total loss for all modalities."""
         losses = [helper["loss"] for helper in modality_dynamics.values()]
-        return torch.stack(losses).mean()
+        # return torch.stack(losses).mean()
+        return torch.stack(losses).sum()
 
     def _store_sub_losses(
         self, modality_dynamics: Dict[str, Dict[str, Any]]

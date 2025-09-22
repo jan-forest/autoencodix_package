@@ -315,19 +315,13 @@ class DisentanglixLoss(BaseLoss):
 
     def _compute_losses(
         self, model_output: ModelOutput, targets: torch.Tensor, n_samples: int
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, ...]:
         """Compute reconstruction, mutual information, total correlation and dimension-wise KL loss terms."""
         # true_samples = torch.randn(
         #     self.config.batch_size, self.config.latent_dim, requires_grad=False
         # )
 
-        recon_loss = self.recon_loss(model_output.reconstruction, targets)
-        # var_loss = self.compute_variational_loss(
-        #     mu=model_output.latent_mean,
-        #     logvar=model_output.latent_logvar,
-        #     z=model_output.latentspace,
-        #     true_samples=true_samples,
-        # )
+        recon_loss: torch.Tensor = self.recon_loss(model_output.reconstruction, targets)
         mut_info_loss, tot_corr_loss, dimwise_kl_loss = (
             self._compute_decomposed_vae_loss(
                 z=model_output.latentspace,  # Latent space of batch samples (shape: [batch_size, latent_dim])
@@ -338,9 +332,9 @@ class DisentanglixLoss(BaseLoss):
             )
         )
         # Clip losses to avoid negative values
-        mut_info_loss = torch.clamp(mut_info_loss, min=0.0)
-        tot_corr_loss = torch.clamp(tot_corr_loss, min=0.0)
-        dimwise_kl_loss = torch.clamp(dimwise_kl_loss, min=0.0)
+        mut_info_loss: torch.Tensor = torch.clamp(mut_info_loss, min=0.0)
+        tot_corr_loss: torch.Tensor = torch.clamp(tot_corr_loss, min=0.0)
+        dimwise_kl_loss: torch.Tensor = torch.clamp(dimwise_kl_loss, min=0.0)
 
         return recon_loss, mut_info_loss, tot_corr_loss, dimwise_kl_loss
 
@@ -359,9 +353,7 @@ class DisentanglixLoss(BaseLoss):
         )  # Dim [batch_size]
         log_prior = self._compute_log_gauss_dense(
             z, torch.zeros_like(z), torch.zeros_like(z)
-        ).sum(
-            dim=1
-        )  # Dim [batch_size]
+        ).sum(dim=1)  # Dim [batch_size]
 
         log_q_batch_perm = self._compute_log_gauss_dense(
             z.reshape(z.shape[0], 1, -1),
@@ -380,18 +372,14 @@ class DisentanglixLoss(BaseLoss):
             log_product_q_z = torch.logsumexp(
                 logiw_mat.reshape(z.shape[0], z.shape[0], -1) + log_q_batch_perm,
                 dim=1,
-            ).sum(
-                dim=-1
-            )  # Dim [batch_size]
+            ).sum(dim=-1)  # Dim [batch_size]
         else:
             log_q_z = torch.logsumexp(log_q_batch_perm.sum(dim=-1), dim=-1) - torch.log(
                 torch.tensor([z.shape[0] * n_samples]).to(z.device)
             )  # Dim [batch_size]
             log_product_q_z = torch.logsumexp(log_q_batch_perm, dim=1) - torch.log(
                 torch.tensor([z.shape[0] * n_samples]).to(z.device)
-            ).sum(
-                dim=-1
-            )  # Dim [batch_size]
+            ).sum(dim=-1)  # Dim [batch_size]
 
         mut_info_loss = self.reduction_fn(
             log_q_z_given_x - log_q_z

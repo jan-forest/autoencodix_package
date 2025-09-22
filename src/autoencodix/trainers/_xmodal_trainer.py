@@ -660,7 +660,6 @@ class XModalTrainer(BaseTrainer):
             epoch_dynamics: List of dictionaries capturing dynamics for each batch in the epoch.
 
         """
-        self._all_dynamics[split][self._cur_epoch] = epoch_dynamics
         final_data: Dict[str, Any] = defaultdict(lambda: defaultdict(list))
         for batch_data in epoch_dynamics:
             for dynamic_type, mod_data in batch_data.items():
@@ -670,7 +669,6 @@ class XModalTrainer(BaseTrainer):
         sample_ids: Optional[Dict[str, np.ndarray]] = final_data.get("sample_ids")
         if sample_ids is None:
             raise ValueError("No Sample Ids in TrainingDynamics")
-        sample_ids
         concat_ids: Dict[str, np.ndarray] = {
             k: np.concatenate(v) for k, v in sample_ids.items()
         }
@@ -679,16 +677,18 @@ class XModalTrainer(BaseTrainer):
         }
 
         deduplicated_data: Dict[str, Dict[str, np.ndarray]] = defaultdict(dict)
+        # all_dynamics_inner: Dict[str, Any] = {}
         for dynamic_type, dynamic_data in final_data.items():
-            print(dynamic_data.keys())
             concat_dynamic: Dict[str, np.ndarray] = {
                 k: np.concatenate(v) for k, v in dynamic_data.items()
             }
+            # all_dynamics_inner[dynamic_type] = concat_dynamic
             deduplicated_helper: Dict[str, np.ndarray] = {
                 k: v[unique_idx[k]] for k, v in concat_dynamic.items()
             }
             deduplicated_data[dynamic_type] = deduplicated_helper
             # Store the deduplicated data
+        # self._all_dynamics[split][self._cur_epoch] = all_dynamics_inner
         self._result.latentspaces.add(
             epoch=self._cur_epoch,
             split=split,

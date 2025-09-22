@@ -20,11 +20,11 @@ def generate_example_data(
     """
     Generate synthetic data for autoencoder testing and examples.
 
-    Parameters:
-        n_samples (int): Number of samples to generate
-        n_features (int): Number of features for each sample
-        n_clusters (int): Number of clusters to generate
-        random_seed (int): Random seed for reproducibility
+    Args:
+        n_samples: Number of samples to generate, default=1000
+        n_features: Number of features for each sample, default=30
+        n_clusters: Number of clusters to generate, default=5
+        random_seed:: Random seed for reproducibility
 
     Returns:
         DatasetContainer: Container with train, validation and test datasets
@@ -41,10 +41,10 @@ def generate_example_data(
     )
 
     # Convert integer cluster labels to string labels like "Cluster_1"
-    str_cluster_labels = np.array([f"Cluster_{i+1}" for i in cluster_labels])
+    str_cluster_labels = np.array([f"Cluster_{i + 1}" for i in cluster_labels])
     # Create additional metadata features that correlate with the clusters
     # Convert integer cluster labels to string labels like "Cluster_1"
-    str_cluster_labels = np.array([f"Cluster_{i+1}" for i in cluster_labels])
+    str_cluster_labels = np.array([f"Cluster_{i + 1}" for i in cluster_labels])
 
     metadata_df = pd.DataFrame(
         {

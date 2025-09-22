@@ -8,9 +8,8 @@ from autoencodix.utils._model_output import ModelOutput
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._utils import flip_labels
 
-
 class VanillixLoss(BaseLoss):
-    """Loss function for vanilla autoencoder."""
+    """Implements loss for vanilla autoencoder."""
 
     def forward(
         self,
@@ -19,21 +18,46 @@ class VanillixLoss(BaseLoss):
         epoch: Optional[int] = None,
         **kwargs,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
-        """Forward pass for vanilla autoencoder - ignores epoch."""
+        """Calculates reconstruction loss as specified in config (BCE, MSE, etc.).
+
+        Args:
+            model_output: custom class that stores model output like latentspaces and reconstructions.
+            targets: original data to compare with reconstruction
+            epoch: not used for Vanillix loss.
+            **kwargs: addtional keyword args. 
+        
+        """
         total_loss = self.recon_loss(model_output.reconstruction, targets)
         return total_loss, {"recon_loss": total_loss}
 
 
 class VarixLoss(BaseLoss):
-    """Loss function for variational autoencoder with unified interface."""
+    """Implements loss for variational autoencoder with unified interface.
+    Attributes:
+        config: Configuration object
+    """
 
     def __init__(self, config: DefaultConfig, annealing_scheduler=None):
+        """Inits VarixLoss
+        Args:
+            config: Configuraion object.Any
+            annealing_scheduler: Enables passing a custom annealer class, defaults to our implementation of an annealer 
+        """
         super().__init__(config)
 
     def _compute_losses(
         self, model_output: ModelOutput, targets: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Compute reconstruction and variational losses."""
+        """Compute reconstruction and variational losses.
+        
+        Args:
+            model_output: custom class that stores model output like latentspaces and reconstructions.
+            targets: original data to compare with reconstruction
+        
+        Returns: 
+            Tuple of torch.Tensors: reconstruction loss and variational loss
+
+        """
         true_samples = torch.randn(
             self.config.batch_size, self.config.latent_dim, requires_grad=False
         )
@@ -56,7 +80,24 @@ class VarixLoss(BaseLoss):
         total_epochs: Optional[int] = None,
         **kwargs,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
-        """Forward pass with conditional annealing."""
+        """Forward pass with conditional annealing.
+        Args:
+            model_output: custom class that stores model output like latentspaces and reconstructions.
+            targets: original data to compare with reconstruction
+            epoch: current training epoch
+            total_epochs: number of total epochs
+            **kwargs
+        Returns:
+            Tuple consisting of:
+            - tensor of the total loss
+        Returns:
+            Tuple consisting of:
+            - tensor of the total loss
+            - Dict with loss_type as key and sub_loss value.
+            - Dict with loss_type as key and sub_loss value.
+
+        """
+
         recon_loss, var_loss = self._compute_losses(model_output, targets)
 
         # if are pretraining, we pass total_epochs, otherwise, we use 'epochs' from config

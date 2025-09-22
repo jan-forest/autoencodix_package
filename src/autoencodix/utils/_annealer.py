@@ -1,4 +1,4 @@
-from typing import Dict, Callable, Optional, Union, Any
+from typing import Dict, Callable, Optional
 from math import exp
 
 
@@ -28,6 +28,8 @@ class AnnealingScheduler:
             current_epoch: Current epoch number.
         Returns:
             int or None: Annealing epoch number, or None if no annealing.
+        Raises:
+            NotImplementedError: This is a deprecated method.
         """
         raise NotImplementedError(
             "Deprecated, for annealing the current epoch is passed, we split between training and \
@@ -49,7 +51,7 @@ class AnnealingScheduler:
             func: Specification of annealing function. Default is 'logistic-mid'.
 
         Returns:
-            float: Annealing weight between 0 (no VAE loss) and 1 (full VAE loss).
+            Annealing weight between 0 (no VAE loss) and 1 (full VAE loss).
 
         Raises:
             NotImplementedError: If the specified annealing function is not implemented.
@@ -70,7 +72,7 @@ class AnnealingScheduler:
             total_epoch: Total number of epochs.
 
         Returns:
-            float: Annealing weight.
+            Annealing weight.
         """
         intervals = 5
         current_phase = int((epoch_current / total_epoch) * intervals)
@@ -94,7 +96,7 @@ class AnnealingScheduler:
             total_epoch: Total number of epochs.
 
         Returns:
-            float: Annealing weight.
+           Annealing weight.
         """
         first_phase_end = total_epoch / 3
         second_phase_end = 2 * (total_epoch / 3)
@@ -114,7 +116,7 @@ class AnnealingScheduler:
             total_epoch: Total number of epochs.
 
         Returns:
-            float: Annealing weight.
+            Annealing weight.
         """
         first_phase_end = total_epoch / 3
         second_phase_end = 2 * (total_epoch / 3)
@@ -137,7 +139,7 @@ class AnnealingScheduler:
             midpoint: Midpoint ratio for the logistic function (0.0 to 1.0).
 
         Returns:
-            float: Annealing weight.
+            Annealing weight.
         """
         b_param = (1 / total_epoch) * 20
         return 1 / (1 + exp(-b_param * (epoch_current - total_epoch * midpoint)))
@@ -150,7 +152,7 @@ class AnnealingScheduler:
             total_epoch: Total number of epochs.
 
         Returns:
-            float: Annealing weight.
+            Annealing weight.
         """
         return self._compute_logistic_weight(epoch_current, total_epoch, 0.5)
 
@@ -162,7 +164,7 @@ class AnnealingScheduler:
             total_epoch: Total number of epochs.
 
         Returns:
-            float: Annealing weight.
+            Annealing weight.
         """
         return self._compute_logistic_weight(epoch_current, total_epoch, 0.25)
 
@@ -174,7 +176,7 @@ class AnnealingScheduler:
             total_epoch: Total number of epochs.
 
         Returns:
-            float: Annealing weight.
+            Annealing weight.
         """
         return self._compute_logistic_weight(epoch_current, total_epoch, 0.75)
 
@@ -186,6 +188,6 @@ class AnnealingScheduler:
             total_epoch: Total number of epochs.
 
         Returns:
-            float: Annealing weight (always 1.0).
+            Annealing weight (always 1.0).
         """
         return 1.0

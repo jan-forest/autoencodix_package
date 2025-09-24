@@ -894,7 +894,7 @@ class BasePipeline(abc.ABC):
             split_type=split_type,
         )
 
-        ml_plots: Any = self._visualizer._plot_evaluation(result=self.result)
+        _: Any = self._visualizer._plot_evaluation(result=self.result)
 
         return self.result
 
@@ -976,5 +976,3 @@ class BasePipeline(abc.ABC):
         """
         loader = Loader(file_path)
         return loader.load()
-
-

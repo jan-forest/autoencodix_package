@@ -284,7 +284,9 @@ class XModalixEvaluator(GeneralEvaluator):
         reference_methods = [
             f"{method}_$_{key}"
             for method in reference_methods
-            for key in result.latentspaces.get(epoch=-1, split="train").keys()
+            for key in result.latentspaces.get(
+                epoch=-1, split="train"
+            ).keys()  # ty: ignore[possibly-unbound-attribute]
         ]
 
         return reference_methods
@@ -330,6 +332,13 @@ class XModalixEvaluator(GeneralEvaluator):
             latent_dim = result.get_latent_df(
                 epoch=-1, split="train", modality=modality
             ).shape[1]
+            if dataset.train is None:
+                raise ValueError("train attribute of dataset cannot be None")
+            if dataset.valid is None:
+                raise ValueError("valid attribute of dataset cannot be None")
+            if dataset.test is None:
+                raise ValueError("test attribute of dataset cannot be None")
+
             df_processed = pd.concat(
                 [
                     dataset.train._to_df(modality=modality),

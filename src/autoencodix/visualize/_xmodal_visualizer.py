@@ -472,6 +472,7 @@ class XModalVisualizer(BaseVisualizer):
             self.plots["Image-translation"][to_key][split][param] = fig
             # show_figure(fig)
             plt.show()
+
     @no_type_check
     def show_2D_translation(
         self,
@@ -586,7 +587,7 @@ class XModalVisualizer(BaseVisualizer):
         labels = list(embedding[color_param])
         # logger = getlogger(cfg)
         numeric = False
-        if not (type(labels[0]) is str):
+        if not isinstance(labels[0], str):
             if len(np.unique(labels)) > 3:
                 # TODO Decide if numeric to category should be optional in new Package
                 # print(

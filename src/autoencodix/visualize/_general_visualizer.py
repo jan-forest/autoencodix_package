@@ -1,5 +1,5 @@
 from dataclasses import field
-from typing import Any, Dict, Optional, Union, Literal
+from typing import Any, Dict, Optional, Union, Literal, no_type_check
 import warnings
 
 import matplotlib.figure
@@ -50,7 +50,7 @@ class GeneralVisualizer(BaseVisualizer):
         return result
 
     ## Plotting methods ##
-
+    @no_type_check
     def show_latent_space(
         self,
         result: Result,
@@ -106,7 +106,7 @@ class GeneralVisualizer(BaseVisualizer):
                 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
                 # Total Correlation plot
-                ax1 = sns.lineplot(
+                _ = sns.lineplot(
                     data=df_metrics,
                     x="epoch",
                     y="total_correlation",
@@ -118,7 +118,7 @@ class GeneralVisualizer(BaseVisualizer):
                 axes[0].set_ylabel("Total Correlation")
 
                 # Coverage plot
-                ax2 = sns.lineplot(
+                _ = sns.lineplot(
                     data=df_metrics, x="epoch", y="coverage", hue="split", ax=axes[1]
                 )
                 axes[1].set_title("Coverage")

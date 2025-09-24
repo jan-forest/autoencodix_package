@@ -63,8 +63,8 @@ def show_figure(fig):
     """
     dummy = plt.figure()
     new_manager = dummy.canvas.manager
-    new_manager.canvas.figure = fig
-    fig.set_canvas(new_manager.canvas)
+    new_manager.canvas.figure = fig  # ty: ignore[possibly-unbound-attribute]
+    fig.set_canvas(new_manager.canvas)  # ty: ignore[possibly-unbound-attribute]
 
 
 def config_method(valid_params: Optional[set[str]] = None):

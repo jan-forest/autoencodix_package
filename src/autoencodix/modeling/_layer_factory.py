@@ -1,6 +1,7 @@
 import torch.nn as nn
 from typing import List
 
+
 class LayerFactory:
     """Factory for creating configurable neural network layers."""
 

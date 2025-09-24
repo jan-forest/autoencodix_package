@@ -593,6 +593,13 @@ class GeneralEvaluator(BaseEvaluator):
                 ]
             )
         elif task in ["UMAP", "PCA", "TSNE", "RandomFeature"]:
+            if dataset.train is None:
+                raise ValueError("train attribute of dataset cannot be None")
+            if dataset.valid is None:
+                raise ValueError("valid attribute of dataset cannot be None")
+            if dataset.test is None:
+                raise ValueError("test attribute of dataset cannot be None")
+
             df_processed = pd.concat(
                 [
                     dataset.train._to_df(),

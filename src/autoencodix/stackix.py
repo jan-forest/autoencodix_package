@@ -171,7 +171,7 @@ class Stackix(BasePipeline):
         self.result.adata_latent = ad.AnnData(X=latent)
         self.result.adata_latent.obs_names = sample_ids
         self.result.adata_latent.var_names = [
-            f"Latent_{i}" for i in range(latent.shape[1])
+            f"Latent_{i}" for i in range(latent.shape[1])  # ty: ignore
         ]
 
         # 4. Update the main result object with the rest of the prediction results.

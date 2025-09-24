@@ -161,7 +161,6 @@ class NumericDataset(TensorAwareDataset):
         self.split_indices = split_indices
         self.mytype = DataSetTypes.NUM
 
-
     def __len__(self) -> int:
         """Returns the number of samples (rows) in the dataset"""
         return self.data.shape[0]

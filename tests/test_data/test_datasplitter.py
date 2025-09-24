@@ -55,7 +55,9 @@ class TestDataSplitter:
         splits = default_splitter.split(sample_data_size)
         assert len(set(splits["train"]) & set(splits["valid"])) == 0
 
-    def test_train_and_test_splits_do_not_overlap(self, sample_data_size, default_splitter):
+    def test_train_and_test_splits_do_not_overlap(
+        self, sample_data_size, default_splitter
+    ):
         splits = default_splitter.split(sample_data_size)
         assert len(set(splits["train"]) & set(splits["test"])) == 0
 

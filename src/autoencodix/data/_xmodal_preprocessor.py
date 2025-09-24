@@ -108,6 +108,8 @@ class XModalPreprocessor(GeneralPreprocessor):
                     raise ValueError(
                         f"Expected data for multi_bulk: {k}, {v} to be pd.DataFrame, got {type(data)}"
                     )
+                if metadata is None:
+                    raise ValueError("metadata cannot be None")
                 metadata_num = metadata.loc[
                     data.index
                 ]  # needed when we have only one annotation df containing metadata for all modalities

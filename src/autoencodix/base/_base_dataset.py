@@ -59,9 +59,7 @@ class BaseDataset(abc.ABC, Dataset):
         """
         return len(self.data)
 
-    def __getitem__(
-        self, index: int
-    ) -> Union[
+    def __getitem__(self, index: int) -> Union[
         Tuple[Union[torch.Tensor, int], Union[torch.Tensor, ImgData], Any],
         Dict[str, Tuple[Any, torch.Tensor, Any]],
     ]:

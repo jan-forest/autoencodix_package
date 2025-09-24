@@ -60,6 +60,8 @@ class ImagePreprocessor(GeneralPreprocessor):
         )
 
     def _process_dp(self, dp: DataPackage, indices: Dict[str, Any]) -> ImageDataset:
+        if dp.img is None:
+            raise ValueError("no img attribute found in datapackage")
         first_key = next(iter(list(dp.img.keys())))
         if not isinstance(dp.img, dict):
             raise TypeError(

@@ -150,7 +150,7 @@ class BaseVisualizer(abc.ABC):
         """
         if not os.path.exists(path):
             os.makedirs(path)
-            
+
         if not isinstance(which, list):
             ## Case when which is a string
             if which == "all":
@@ -174,7 +174,7 @@ class BaseVisualizer(abc.ABC):
                         self.plots[which]
                     ):  # Plot all epochs and splits of type which
                         fig = item[-1]  ## Figure is in last element of the tuple
-                        filename = which + "_" + "_".join(str(x) for x in item[0:-1]) # type: ignore
+                        filename = which + "_" + "_".join(str(x) for x in item[0:-1])  # type: ignore
                         fullpath = os.path.join(path, filename)
                         fig.savefig(f"{fullpath}.{format}")
         else:
@@ -206,7 +206,7 @@ class BaseVisualizer(abc.ABC):
             if not isinstance(loss_values, dict):
                 # If it's not a dict, try to convert it or handle appropriately
                 if hasattr(loss_values, "to_dict"):
-                    loss_values = loss_values.to_dict() # type: ignore
+                    loss_values = loss_values.to_dict()  # type: ignore
                 else:
                     # For non-convertible types, you might need a custom solution
                     # For numpy arrays, you could do something like:
@@ -239,7 +239,7 @@ class BaseVisualizer(abc.ABC):
         loss_values = result.losses.get()
         if not isinstance(loss_values, dict):
             if hasattr(loss_values, "to_dict"):
-                loss_values = loss_values.to_dict() # type: ignore
+                loss_values = loss_values.to_dict()  # type: ignore
             else:
                 if hasattr(loss_values, "shape"):
                     loss_values = {i: val for i, val in enumerate(loss_values)}
@@ -266,7 +266,7 @@ class BaseVisualizer(abc.ABC):
     @staticmethod
     def _make_loss_plot(
         df_plot: pd.DataFrame, plot_type: str
-    ) -> matplotlib.figure.Figure: # type: ignore
+    ) -> matplotlib.figure.Figure:  # type: ignore
         """
         Generates a plot for visualizing loss values from a DataFrame.
 
@@ -351,7 +351,7 @@ class BaseVisualizer(abc.ABC):
         return fig
 
     @staticmethod
-    def _plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure: # type: ignore
+    def _plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:  # type: ignore
         """
         Visualization of model weights in encoder and decoder layers as heatmap for each layer as subplot.
         Handles non-symmetrical autoencoder architectures.
@@ -432,14 +432,14 @@ class BaseVisualizer(abc.ABC):
                 ).set(title=decoder_names[i])
                 if model.ontologies is not None:
                     axes[1, i].set_xticks(
-                        ticks=range(len(node_names[i])), # type: ignore
-                        labels=node_names[i], # type: ignore
+                        ticks=range(len(node_names[i])),  # type: ignore
+                        labels=node_names[i],  # type: ignore
                         rotation=90,
                         fontsize=8,
                     )
                     axes[1, i].set_yticks(
-                        ticks=range(len(node_names[i + 1])), # type: ignore
-                        labels=node_names[i + 1], # type: ignore
+                        ticks=range(len(node_names[i + 1])),  # type: ignore
+                        labels=node_names[i + 1],  # type: ignore
                         rotation=0,
                         fontsize=8,
                     )

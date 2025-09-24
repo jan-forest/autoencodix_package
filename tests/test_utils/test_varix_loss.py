@@ -168,7 +168,6 @@ class TestVarixLoss:
         _, loss_dict = varix_loss_module(model_output, sample_data["input"])
         assert isinstance(loss_dict, dict)
 
-
     @pytest.mark.parametrize("reduction", ["mean", "sum"])
     def test_reduction_methods(self, reduction, sample_data, model_output):
         """

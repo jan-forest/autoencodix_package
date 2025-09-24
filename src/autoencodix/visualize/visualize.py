@@ -192,7 +192,7 @@ class Visualizer(BaseVisualizer):
                 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
                 # Total Correlation plot
-                ax1 = sns.lineplot(
+                _ = sns.lineplot(
                     data=df_metrics,
                     x="epoch",
                     y="total_correlation",
@@ -204,7 +204,7 @@ class Visualizer(BaseVisualizer):
                 axes[0].set_ylabel("Total Correlation")
 
                 # Coverage plot
-                ax2 = sns.lineplot(
+                _ = sns.lineplot(
                     data=df_metrics, x="epoch", y="coverage", hue="split", ax=axes[1]
                 )
                 axes[1].set_title("Coverage")

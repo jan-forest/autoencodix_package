@@ -3,10 +3,10 @@ from dataclasses import field
 import matplotlib.pyplot as plt
 
 
-from typing import Any, Dict
+from typing import Any, Dict, no_type_check
 from autoencodix.visualize._general_visualizer import GeneralVisualizer
 from autoencodix.utils._result import Result
-from autoencodix.utils._utils import nested_dict, show_figure
+from autoencodix.utils._utils import nested_dict
 from autoencodix.configs.default_config import DefaultConfig
 
 
@@ -59,6 +59,7 @@ class ImagixVisualizer(GeneralVisualizer):
             "Weight visualization for X-Modalix is not implemented."
         )
 
+    @no_type_check
     def show_image_recon_grid(self, result: Result, n_samples: int = 3) -> None:
         if not hasattr(result.datasets, "test"):
             raise ValueError("No test set found in datasets, has no attribute test")

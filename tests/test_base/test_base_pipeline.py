@@ -7,11 +7,15 @@ import pytest
 from mudata import MuData  # type: ignore
 from torch.utils.data import Dataset
 
-from autoencodix.base._base_pipeline import BasePipeline
 from autoencodix.vanillix import Vanillix
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.configs.default_config import DataCase, DataConfig, DefaultConfig
+
+"""
+We use Vanillix, because we cannot use BasePipeline due to abstraction.
+We test only BasePipeline specifics, not Vanillix specifics here.
+"""
 
 
 class MockDefaultConfig(DefaultConfig):

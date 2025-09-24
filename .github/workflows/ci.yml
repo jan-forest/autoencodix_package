@@ -73,7 +73,7 @@ jobs:
         uv pip install pip
     - name: Type check
       run: |
-        uv run mypy --install-types --non-interactive --package autoencodix
+        uv run ty check src/
   fmt:
     name: Format
     runs-on: ubuntu-latest

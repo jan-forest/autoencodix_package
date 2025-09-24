@@ -266,8 +266,10 @@ class DataFilter:
     def _init_scaler(self) -> None:
         """Initializes the scaler based on the configured scaling method."""
         method = self.data_info.scaling
-        if method == "NONE":
-            self._scaler = None
+
+        if method == "NOTSET":
+            # if not set in data config, we use the global scaling config
+            method = self.config.scaling
         if method == "MINMAX":
             self._scaler = MinMaxScaler(clip=True)
         elif method == "STANDARD":

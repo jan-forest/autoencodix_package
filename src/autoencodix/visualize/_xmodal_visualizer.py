@@ -179,8 +179,9 @@ class XModalVisualizer(BaseVisualizer):
                 if isinstance(labels, pd.Series):
                     param = [labels.name]
                     # Order by index of latent_data first, fill missing with "unknown"
-                    labels = labels.reindex(
-                        latent_data["sample_ids"], fill_value="unknown"
+                    labels = labels.reindex(  # ty: ignore
+                        latent_data["sample_ids"],  # ty: ignore
+                        fill_value="unknown",  # ty: ignore
                     ).tolist()
                 else:
                     param = ["user_label"]  # Default label if none provided

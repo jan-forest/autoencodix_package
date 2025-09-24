@@ -976,3 +976,5 @@ class BasePipeline(abc.ABC):
         """
         loader = Loader(file_path)
         return loader.load()
+
+

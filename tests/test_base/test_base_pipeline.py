@@ -1,20 +1,21 @@
 from unittest.mock import MagicMock, Mock
 
-import anndata as ad # type: ignore
+import anndata as ad  # type: ignore
 import numpy as np
 import pandas as pd
 import pytest
-from mudata import MuData # type: ignore
+from mudata import MuData  # type: ignore
 from torch.utils.data import Dataset
 
 from autoencodix.base._base_pipeline import BasePipeline
+from autoencodix.vanillix import Vanillix
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.configs.default_config import DataCase, DataConfig, DefaultConfig
 
+
 class MockDefaultConfig(DefaultConfig):
     pass
-
 
 
 class TestBasePipeline:
@@ -36,7 +37,7 @@ class TestBasePipeline:
 
     @pytest.fixture
     def minimal_pipeline(self, valid_config):
-        return BasePipeline(
+        bp = Vanillix(
             dataset_type=Mock(),
             trainer_type=Mock(),
             model_type=Mock(),
@@ -49,8 +50,11 @@ class TestBasePipeline:
             result=Mock(),
             config=valid_config,
         )
+        return bp
 
-    def test_initialization_with_valid_data_infered_data_case(self, mock_dataset_container):
+    def test_initialization_with_valid_data_infered_data_case(
+        self, mock_dataset_container
+    ):
         valid_data_types = [
             mock_dataset_container,
             ad.AnnData(np.random.rand(10, 5)),
@@ -60,7 +64,7 @@ class TestBasePipeline:
         ]
 
         for data in valid_data_types:
-            pipeline = BasePipeline(
+            pipeline = Vanillix(
                 dataset_type=Mock(),
                 trainer_type=Mock(),
                 model_type=Mock(),
@@ -76,9 +80,9 @@ class TestBasePipeline:
                 pipeline.raw_user_data is not None
                 or pipeline.preprocessed_data is not None
             )
-    def test_initialization_with_valid_data_package(self, valid_config):
 
-        pipeline = BasePipeline(
+    def test_initialization_with_valid_data_package(self, valid_config):
+        pipeline = Vanillix(
             dataset_type=Mock(),
             config=valid_config,
             trainer_type=Mock(),
@@ -87,20 +91,20 @@ class TestBasePipeline:
             datasplitter_type=Mock,
             preprocessor_type=Mock(),
             visualizer=Mock(),
-            data=DataPackage(multi_bulk={"multi_bulk:": pd.DataFrame(np.random.rand(10, 5))}),
+            data=DataPackage(
+                multi_bulk={"multi_bulk:": pd.DataFrame(np.random.rand(10, 5))}
+            ),
             evaluator=Mock(),
             result=Mock(),
         )
         assert (
-            pipeline.raw_user_data is not None
-            or pipeline.preprocessed_data is not None
+            pipeline.raw_user_data is not None or pipeline.preprocessed_data is not None
         )
-
 
     @pytest.mark.parametrize("invalid_data", [[1, 2, 3], "string data", 123])
     def test_initialization_raises_error_for_invalid_data(self, invalid_data):
         with pytest.raises(TypeError):
-            BasePipeline(
+            Vanillix(
                 dataset_type=Mock(),
                 trainer_type=Mock(),
                 model_type=Mock(),
@@ -190,7 +194,7 @@ class TestBasePipeline:
             minimal_pipeline._validate_container()
 
     def test_handle_direct_user_data_with_anndata(self):
-        pipeline = BasePipeline(
+        pipeline = Vanillix(
             dataset_type=Mock(),
             trainer_type=Mock(),
             model_type=Mock(),
@@ -207,7 +211,7 @@ class TestBasePipeline:
         del pipeline
 
     def test_handle_direct_user_data_with_dataframe(self):
-        pipeline = BasePipeline(
+        pipeline = Vanillix(
             dataset_type=Mock(),
             trainer_type=Mock(),
             config=MockDefaultConfig(),

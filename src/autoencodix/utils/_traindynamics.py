@@ -149,7 +149,7 @@ class TrainingDynamics:
                 else max(self._data.keys()) + (epoch + 1)
             )
         # Case 2: Epoch specified
-        if epoch > 0 and epoch not in self._data:
+        if epoch >= 0 and epoch not in self._data:
             if split is not None:
                 return np.array([])
             return {}

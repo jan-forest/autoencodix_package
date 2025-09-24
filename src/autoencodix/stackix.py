@@ -60,7 +60,7 @@ class Stackix(BasePipeline):
     ) -> None:
         """Initialize the Stackix pipeline.
 
-        See parent class for full list of Args
+        See parent class for full list of Args.
         """
         self._default_config = StackixConfig()
         super().__init__(

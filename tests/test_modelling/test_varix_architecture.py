@@ -112,32 +112,32 @@ class TestVarixArchitecture:
         "config, input_dim, expected_mu_input",
         [
             (
-                DefaultConfig(n_layers=0, enc_factor=1, batch_size=1, latent_dim=16),
+                DefaultConfig(n_layers=0, enc_factor=1, batch_size=2, latent_dim=16),
                 100,
                 100,
             ),
             (
-                DefaultConfig(n_layers=1, enc_factor=1, batch_size=1, latent_dim=16),
+                DefaultConfig(n_layers=1, enc_factor=1, batch_size=2, latent_dim=16),
                 100,
                 100,
             ),
             (
-                DefaultConfig(n_layers=4, enc_factor=1, batch_size=1, latent_dim=16),
+                DefaultConfig(n_layers=4, enc_factor=1, batch_size=2, latent_dim=16),
                 100,
                 100,
             ),
             (
-                DefaultConfig(n_layers=2, enc_factor=2, batch_size=1, latent_dim=16),
+                DefaultConfig(n_layers=2, enc_factor=2, batch_size=2, latent_dim=16),
                 100,
                 25,
             ),
             (
-                DefaultConfig(n_layers=3, enc_factor=2, batch_size=1, latent_dim=16),
+                DefaultConfig(n_layers=3, enc_factor=2, batch_size=2, latent_dim=16),
                 100,
                 16,
             ),  # cant be smaller than latent_dim
             (
-                DefaultConfig(n_layers=3, enc_factor=2, batch_size=1, latent_dim=2),
+                DefaultConfig(n_layers=3, enc_factor=2, batch_size=2, latent_dim=2),
                 100,
                 12,
             ),
@@ -153,12 +153,12 @@ class TestVarixArchitecture:
     @pytest.mark.parametrize(
         "config",
         [
-            DefaultConfig(n_layers=0, enc_factor=1, batch_size=1, latent_dim=16),
-            DefaultConfig(n_layers=1, enc_factor=1, batch_size=1, latent_dim=16),
-            DefaultConfig(n_layers=4, enc_factor=1, batch_size=1, latent_dim=16),
-            DefaultConfig(n_layers=2, enc_factor=2, batch_size=1, latent_dim=16),
-            DefaultConfig(n_layers=3, enc_factor=2, batch_size=1, latent_dim=16),
-            DefaultConfig(n_layers=3, enc_factor=2, batch_size=1, latent_dim=2),
+            DefaultConfig(n_layers=0, enc_factor=1, batch_size=2, latent_dim=16),
+            DefaultConfig(n_layers=1, enc_factor=1, batch_size=2, latent_dim=16),
+            DefaultConfig(n_layers=4, enc_factor=1, batch_size=2, latent_dim=16),
+            DefaultConfig(n_layers=2, enc_factor=2, batch_size=2, latent_dim=16),
+            DefaultConfig(n_layers=3, enc_factor=2, batch_size=2, latent_dim=16),
+            DefaultConfig(n_layers=3, enc_factor=2, batch_size=2, latent_dim=2),
         ],
     )
     def test_symmetric(self, config: DefaultConfig):
@@ -172,9 +172,9 @@ class TestVarixArchitecture:
     @pytest.mark.parametrize(
         "config, input_dim",
         [
-            (DefaultConfig(n_layers=2, enc_factor=2, batch_size=1, latent_dim=8), 64),
-            (DefaultConfig(n_layers=3, enc_factor=3, batch_size=1, latent_dim=4), 81),
-            (DefaultConfig(n_layers=1, enc_factor=1, batch_size=1, latent_dim=16), 32),
+            (DefaultConfig(n_layers=2, enc_factor=2, batch_size=2, latent_dim=8), 64),
+            (DefaultConfig(n_layers=3, enc_factor=3, batch_size=2, latent_dim=4), 81),
+            (DefaultConfig(n_layers=1, enc_factor=1, batch_size=2, latent_dim=16), 32),
         ],
     )
     def test_latent_space_size(self, config: DefaultConfig, input_dim: int):

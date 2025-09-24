@@ -267,7 +267,7 @@ class DataFilter:
         """Initializes the scaler based on the configured scaling method."""
         method = self.data_info.scaling
         if method == "NONE":
-            method = self.config.scaling
+            self._scaler = None
         if method == "MINMAX":
             self._scaler = MinMaxScaler(clip=True)
         elif method == "STANDARD":
@@ -295,7 +295,9 @@ class DataFilter:
             warnings.warn("No scaling applied.")
         return self._scaler
 
-    def scale(self, df: Union[pd.Series, pd.DataFrame], scaler: Any) -> Union[pd.Series, pd.DataFrame]:
+    def scale(
+        self, df: Union[pd.Series, pd.DataFrame], scaler: Any
+    ) -> Union[pd.Series, pd.DataFrame]:
         """Applies the fitted scaler to the input dataframe.
 
         Args:

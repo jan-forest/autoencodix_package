@@ -54,8 +54,7 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
         )
 
     def _to_df(self, modality: Optional[str] = None) -> pd.DataFrame:
-        """
-        Convert the dataset to a pandas DataFrame.
+        """Convert the dataset to a pandas DataFrame.
 
         Returns:
             DataFrame representation of the dataset
@@ -263,7 +262,6 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):  # type: ignore
 
     #     return coverage_batches
 
-
     def _generate_coverage_batches(self):
         """Generate batches that ensure all samples are covered
 
@@ -290,10 +288,10 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):  # type: ignore
 
                 if uncovered:
                     take = min(
-                        len(uncovered), 
-                        (self.batch_size - len(batch)) // len(self.modality_samples)
+                        len(uncovered),
+                        (self.batch_size - len(batch)) // len(self.modality_samples),
                     )
-                    
+
                     # Select samples that aren't already in the batch
                     available = [s for s in uncovered if s not in batch_set]
                     if available:
@@ -306,21 +304,26 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):  # type: ignore
             # Fill remaining batch slots with random samples, avoiding duplicates
             while len(batch) < self.batch_size:
                 candidate_pool = []
-                
+
                 if len(batch) < self.batch_size * self.paired_ratio and self.paired_ids:
                     candidate_pool = [s for s in self.paired_ids if s not in batch_set]
                 elif self.unpaired_ids:
-                    candidate_pool = [s for s in self.unpaired_ids if s not in batch_set]
-                
+                    candidate_pool = [
+                        s for s in self.unpaired_ids if s not in batch_set
+                    ]
+
                 if not candidate_pool:
                     # If no unique candidates available, allow repeats
-                    if self.paired_ids and len(batch) < self.batch_size * self.paired_ratio:
+                    if (
+                        self.paired_ids
+                        and len(batch) < self.batch_size * self.paired_ratio
+                    ):
                         candidate_pool = self.paired_ids
                     elif self.unpaired_ids:
                         candidate_pool = self.unpaired_ids
                     else:
                         break
-                
+
                 if candidate_pool:
                     sample = np.random.choice(candidate_pool)
                     batch.append(sample)
@@ -330,14 +333,12 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):  # type: ignore
 
             # No need for deduplication since we track uniqueness during construction
             if len(batch) > self.batch_size:
-                batch = batch[:self.batch_size]
+                batch = batch[: self.batch_size]
 
             if batch:
                 coverage_batches.append(batch)
 
         return coverage_batches
-
-
 
     def _generate_random_batches(self, coverage_batches: List[Any]):
         """Generate additional random batches to fill the epoch

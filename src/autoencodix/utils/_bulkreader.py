@@ -8,29 +8,26 @@ from autoencodix.configs.default_config import DefaultConfig
 
 
 class BulkDataReader:
-    """
-    Class for reading bulk data from files based on configuration.
+    """Reads bulk data from files based on configuration.
+
     Supports both paired and unpaired data reading strategies.
+
+    Attributes:
+        config: Configuration object
     """
 
     def __init__(self, config: DefaultConfig):
-        """
-        Initialize the BulkDataReader with a configuration.
+        """Initialize the BulkDataReader with a configuration.
 
-        Parameters
-        ----------
-        config : DefaultConfig
-            Configuration object containing data paths and specifications.
+        Args:
+            config: Configuration object containing data paths and specifications.
         """
         self.config = config
 
     def read_data(self) -> Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]:
-        """
-        Read all data according to the configuration.
+        """Read all data according to the configuration.
 
-        Returns
-        -------
-        Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]
+        Returns:
             A tuple containing (bulk_dataframes, annotation_dataframes)
         """
         if self.config.requires_paired or self.config.requires_paired is None:
@@ -41,7 +38,13 @@ class BulkDataReader:
     def read_paired_data(
         self,
     ) -> Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]:
-        # ... (This method remains unchanged) ...
+        """Reads numeric paired data
+
+        Returns:
+            Tuple containing two Dicts:
+                 1. with name of the data as key and pandas DataFrame as value
+                 2. with  str 'paired' as key and a common annotaion/metadata as DataFrame
+        """
         common_samples: Optional[Set[str]] = None
         bulk_dfs: Dict[str, pd.DataFrame] = {}
         annotation_df = pd.DataFrame()
@@ -50,7 +53,7 @@ class BulkDataReader:
         # First pass: read all data files and track common samples
         for key, info in self.config.data_config.data_info.items():
             if info.data_type == "IMG":
-                continue  # Skip image data in this reader
+                continue
 
             file_path = os.path.join(info.file_path)
             df = self._read_tabular_data(file_path, info.sep or "\t")
@@ -95,12 +98,9 @@ class BulkDataReader:
     def read_unpaired_data(
         self,
     ) -> Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]:
-        """
-        Read data without enforcing sample alignment across modalities.
+        """Read data without enforcing sample alignment across modalities.
 
-        Returns
-        -------
-        Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]
+        Returns:
             A tuple containing (bulk_dataframes, annotation_dataframes)
         """
         bulk_dfs: Dict[str, pd.DataFrame] = {}
@@ -147,23 +147,18 @@ class BulkDataReader:
         bulk_dfs: Dict[str, pd.DataFrame],
         annotations: Dict[str, pd.DataFrame],
     ) -> Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]:
-        """
-        Validates that all samples in bulk data have a corresponding annotation.
+        """Validates that all samples in bulk data have a corresponding annotation.
+
         If a single global annotation file is provided, it creates a perfectly
         matched annotation dataframe for each bulk dataframe.
 
         Warns and drops samples that do not have a corresponding annotation.
 
-        Parameters
-        ----------
-        bulk_dfs : Dict[str, pd.DataFrame]
-            Dictionary of bulk data modalities and their dataframes.
-        annotations : Dict[str, pd.DataFrame]
-            Dictionary of annotation dataframes, possibly one global one.
+        Args:
+            bulk_dfs: Dictionary of bulk data modalities and their dataframes.
+            annotations: Dictionary of annotation dataframes, possibly one global one.
 
-        Returns
-        -------
-        Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]
+        Returns:
             A tuple of two dictionaries:
             1. The filtered bulk dataframes.
             2. The new, synchronized annotation dataframes, with keys matching the bulk dataframes.
@@ -219,19 +214,13 @@ class BulkDataReader:
     def _read_tabular_data(
         self, file_path: str, sep: Union[str, None] = None
     ) -> pd.DataFrame:
-        """
-        Read tabular data from a file with error handling.
+        """Read tabular data from a file with error handling.
 
-        Parameters
-        ----------
-        file_path : str
-            Path to the data file.
-        sep : str
-            Separator character for CSV/TSV files.
+        Args:
+        file_path: Path to the data file.
+        sep: Separator character for CSV/TSV files.
 
-        Returns
-        -------
-        pd.DataFrame
+        Returns:
             The loaded DataFrame.
         """
         try:

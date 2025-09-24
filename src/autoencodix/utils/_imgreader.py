@@ -5,7 +5,7 @@ from typing import List, Literal, Optional, Union, Dict, Tuple
 import cv2
 import numpy as np
 import pandas as pd
-from autoencodix.configs.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig, DataInfo
 from autoencodix.data._imgdataclass import ImgData
 
 
@@ -14,12 +14,23 @@ class ImageProcessingError(Exception):
 
 
 class ImageSizeFinder:
-    """Finds nearest quadratic image size that is dividable by 2^number_of_layers
-    to the given image size in the config file
+    """Finds nearest quadratic image size that is dividable by 2^number_of_layers.ArithmeticError
+
+    Nearest quadratic image size is based on the given image size in the config file.
+
+    Attributes:
+     config: Configuration object
+     width: request image width by user.
+     height: requested image height by user.
 
     """
 
-    def __init__(self, config):
+    def __init__(self, config: DefaultConfig):
+        """Inits the ImageSizeFinder
+
+        Args:
+            config: Configuration object.
+        """
         self.config = config
         found_image_type = False
         for data_type in config.data_config.data_info.keys():
@@ -36,18 +47,25 @@ class ImageSizeFinder:
 
         self.n_conv_layers = 5
 
-    def _image_size_is_legal(self):
-        """Checks if image size is dividable by 2^number_of_layers
-        to the given image size in the config file
+    def _image_size_is_legal(self) -> bool:
+        """Checks if image size is dividable by 2^number_of_layers to the givensize in the config.
 
+        Returns:
+            bool if image size is allowed.
         """
         return self.width % 2**self.n_conv_layers == 0
 
     def get_nearest_quadratic_image_size(self):
         """Finds nearest quadratic image size that is dividable by 2^number_of_layers
-        to the given image size in the config file
 
+        Nearest quadratic image size is based on the given image size in the config file.
+
+        Returns:
+            Tuple of ints width and height with widht=height.
+        Raies:
+            ValueError: if not allowed image size can be found.
         """
+
         if self._image_size_is_legal():
             print(
                 f"Given image size is possible, rescaling images to: {self.width}x{self.height}"
@@ -65,29 +83,34 @@ class ImageSizeFinder:
         print(
             f"Given image size{self.width}x{self.height} is not possible, rescaling to: {running_image_size}x{running_image_size}"
         )
+        if running_image_size is None:
+            raise ValueError(
+                f"Could not find a quadratic image size that is dividable by 2^{self.n_conv_layers}"
+            )
+
         return running_image_size, running_image_size
 
 
 class ImageDataReader:
+    """Reads and processes image data.
+
+    Reads all images from the specified directory, processes them,
+    and returns a list of ImgData objects.
     """
-    A utility class for reading and processing image data.
-
-    Methods
-    -------
-    validate_image_path(image_path: Union[str, Path]) -> bool
-        Validates if the given image path exists, is a file, and has a supported image extension.
-
-    parse_image_to_tensor(image_path: Union[str, Path], to_h: Optional[int] = None, to_w: Optional[int] = None) -> np.ndarray
-        Reads an image from the given path, optionally resizes it, and converts it to a tensor.
-
-    read_all_images_from_dir(img_dir: str, to_h: Optional[int], to_w: Optional[int], annotation_df: Optional[pd.DataFrame]) -> List[ImgData]
-        Reads all images from the specified directory, processes them, and returns a list of ImgData objects.
-    """
-
-    def __init__(self):
-        pass
 
     def validate_image_path(self, image_path: Union[str, Path]) -> bool:
+        """Checks if file extension is allowed:
+
+        Allowed are (independent of capitalization):
+            - jpg
+            - jpeg
+            - png
+            - tif
+            - tiff
+
+        Args:
+            image_path: path or str of image to read
+        """
         path = Path(image_path) if isinstance(image_path, str) else image_path
         return (
             path.exists()
@@ -101,29 +124,19 @@ class ImageDataReader:
         to_h: Optional[int] = None,
         to_w: Optional[int] = None,
     ) -> np.ndarray:
-        """
-        Reads an image from the given path, optionally resizes it, and converts it to a tensor.
+        """Reads an image from the given path, optionally resizes it, and converts it to a tensor.
 
-        Parameters
-        ----------
-        image_path : Union[str, Path]
-            The path to the image file.
-        to_h : Optional[int], optional
-            The desired height of the output tensor, by default None.
-        to_w : Optional[int], optional
-            The desired width of the output tensor, by default None.
+        Args:
+            image_path: The path to the image file.
+            to_h: The desired height of the output tensor, by default None.
+            to_w: The desired width of the output tensor, by default None.
 
-        Returns
-        -------
-        np.ndarray
+        Returns:
             The processed image as a tensor.
 
-        Raises
-        ------
-        FileNotFoundError
-            If the image path is invalid or the image cannot be read.
-        ImageProcessingError
-            If the image format is unsupported or an unexpected error occurs during processing.
+        Raises:
+            FileNotFoundError: If the image path is invalid or the image cannot be read.
+            ImageProcessingError: If the image format is unsupported or an unexpected error occurs during processing.
         """
 
         if not self.validate_image_path(image_path):
@@ -181,31 +194,20 @@ class ImageDataReader:
         annotation_df: pd.DataFrame,
         is_paired: Union[bool, None] = None,
     ) -> List[ImgData]:
-        """
-        Reads all images from the specified directory, processes them, and returns a list of ImgData objects.
+        """Reads all images from a specified directory, processes them, returns list of ImgData objects.
 
-        Parameters
-        ----------
-        img_dir : str
-            The directory containing the images.
-        to_h : Optional[int]
-            The desired height of the output tensors.
-        to_w : Optional[int]
-            The desired width of the output tensors.
-        annotation_df : pd.DataFrame
-            DataFrame containing image annotations.
-        is_paired : Union[bool, None]
-            Whether the images are paired with annotations.
+        Args:
+            img_dir: The directory containing the images.
+            to_h: The desired height of the output tensors.
+            to_w: The desired width of the output tensors.
+            annotation_df: DataFrame containing image annotations.
+            is_paired: Whether the images are paired with annotations.
 
-        Returns
-        -------
-        List[ImgData]
+        Returns:
             List of processed image data objects.
 
-        Raises
-        ------
-        ValueError
-            If the annotation DataFrame is missing required columns.
+        Raises:
+            ValueError: If the annotation DataFrame is missing required columns.
         """
         if "img_paths" not in annotation_df.columns:
             raise ValueError("img_paths column is missing in the annotation_df")
@@ -226,7 +228,9 @@ class ImageDataReader:
         for p in paths:
             img = self.parse_image_to_tensor(image_path=p, to_h=to_h, to_w=to_w)
             img_path = os.path.basename(p)
-            subset = annotation_df[annotation_df["img_paths"] == img_path]
+            subset: Union[pd.Series, pd.DataFrame] = annotation_df[
+                annotation_df["img_paths"] == img_path
+            ]
             if not subset.empty:
                 imgs.append(
                     ImgData(
@@ -237,7 +241,14 @@ class ImageDataReader:
                 )
         return imgs
 
-    def read_annotation_file(self, data_info) -> pd.DataFrame:
+    def read_annotation_file(self, data_info: DataInfo) -> pd.DataFrame:
+        """Reads annotation file and returns DataFrame with file contents
+        Args:
+            data_info: specific part of the Configuration object for input data
+        Returns:
+            DataFrame with annotation data.
+
+        """
         anno_file = (
             os.path.join(data_info.file_path)
             if data_info.extra_anno_file is None
@@ -256,24 +267,18 @@ class ImageDataReader:
     def read_data(
         self, config: DefaultConfig
     ) -> Tuple[Dict[str, List[ImgData]], Dict[str, pd.DataFrame]]:
-        """
-        Read image data from the specified directory based on configuration.
+        """Read image data from the specified directory based on configuration.
 
-        Parameters
-        ----------
-        config : DefaultConfig
-            The configuration object containing the data configuration.
+        Args:
+            config: The configuration object containing the data configuration.
 
-        Returns
-        -------
-        Dict[str, List[ImgData]]
-            A dictionary mapping data keys to lists of ImgData objects.
-            If only one image source is found, returns a list of ImgData objects directly.
+        Returns:
+            A Tuple of Dicts:
+            1. Dict with type of image data as key and actual List of ImgData as value.
+            2. Dict with type of image data as key and DataFrame of annotation data as value.
 
-        Raises
-        ------
-        ValueError
-            If no image data is found in the configuration or other validation errors occur.
+        Raises:
+            Exception: If no image data is found in the configuration or other validation errors occur.
         """
         # Find all image data sources in config
         image_sources = {
@@ -298,28 +303,24 @@ class ImageDataReader:
         return result, annotation
 
     def _read_data(
-        self, config: DefaultConfig, img_info
+        self, config: DefaultConfig, img_info: DataInfo
     ) -> Tuple[List[ImgData], pd.DataFrame]:
-        """
-        Read data for a specific image source.
+        """Read data for a specific image source.
 
-        Parameters
-        ----------
-        config : DefaultConfig
-            The configuration object containing the data configuration.
-        img_info :
-            The specific image info configuration.
+        Args:
+            config: The configuration object containing the data configuration.
+            img_info: The specific image info configuration.
 
-        Returns
-        -------
-        List[ImgData]
-            List of ImgData objects for this image source.
+        Returns:
+            A Tuple of Dicts:
+            1. Dict with type of image data as key and actual List of ImgData as value.
+            2. Dict with type of image data as key and DataFrame of annotation data as value.
+
         """
         img_dir = img_info.file_path
         img_size_finder: ImageSizeFinder = ImageSizeFinder(config)
         to_h, to_w = img_size_finder.get_nearest_quadratic_image_size()
 
-        # Get annotation data
         if img_info.extra_anno_file is not None:
             # Use image-specific annotation file if provided
             annotation = self.read_annotation_file(img_info)
@@ -340,7 +341,6 @@ class ImageDataReader:
             except StopIteration:
                 raise ValueError("No annotation data found in the configuration.")
 
-        # Read and process the images
         images = self.read_all_images_from_dir(
             img_dir=img_dir,
             to_h=to_h,
@@ -348,7 +348,7 @@ class ImageDataReader:
             annotation_df=annotation,
             is_paired=config.requires_paired,
         )
-        annotations = pd.concat([img.annotation for img in images])
+        annotations: pd.DataFrame = pd.concat([img.annotation for img in images])
         annotations.index = annotations.sample_ids
 
         del annotations["sample_ids"]
@@ -356,10 +356,28 @@ class ImageDataReader:
 
 
 class ImageNormalizer:
+    """Implements Normalization analog to other data modalites for ImageData"""
+
     @staticmethod
     def normalize_image(
         image: np.ndarray, method: Literal["STANDARD", "MINMAX", "ROBUST", "NONE"]
     ) -> np.ndarray:
+        """Performs Image Normalization.
+
+        Supported methods are:
+            - STANDARD: (analog to StandardScaler of sklearn).
+            - MINMAX: (analog to MinMaxSclaer of sklearn).
+            - ROBUST: (analog to RobustScaler of sklearn).
+            - NONE: no normalization.
+
+        Args:
+            image: input image as array.
+            method: indicator string of which method to use
+        Returns:
+            The normalized images as np.ndarray
+        Raises:
+            ValueError: if unsupported normalization method is provided or Normalization fails for any other reason.
+        """
         try:
             if method == "NONE":
                 return image

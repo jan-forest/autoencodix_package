@@ -9,7 +9,7 @@ class ConcreteDataset(BaseDataset):
 
 
 class TestBaseDataset:
-    
+
     @pytest.fixture
     def dummy_data(self):
         return torch.zeros(100, 10)
@@ -20,13 +20,13 @@ class TestBaseDataset:
 
     def test_getitem_with_ids(self, dummy_data, dummy_ids):
         dataset = ConcreteDataset(dummy_data, sample_ids=dummy_ids)
-        data, label = dataset[0]
+        _, data, label = dataset[0]
         assert torch.equal(data, dummy_data[0])
         assert label == dummy_ids[0]
 
     def test_getitem_without_ids(self, dummy_data):
         dataset = ConcreteDataset(dummy_data)
-        data, label = dataset[0]
+        _, data, label = dataset[0]
         assert torch.equal(data, dummy_data[0])
         assert label == 0
 

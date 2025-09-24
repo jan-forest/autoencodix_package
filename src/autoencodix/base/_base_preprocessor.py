@@ -318,11 +318,17 @@ class BasePreprocessor(abc.ABC):
             common_ids = data_package.get_common_ids()
             unpaired_data = data_package.multi_bulk
             unpaired_anno = data_package.annotation
+            if unpaired_anno is None:
+                raise ValueError("annotation attribute of datapackge cannot be None")
+            if unpaired_data is None:
+                raise ValueError("multi_bulk attribute of datapackge cannot be None")
             data_package.multi_bulk = {
                 k: v.loc[common_ids] for k, v in unpaired_data.items()
             }
+
             data_package.annotation = {
-                k: v.loc[common_ids] for k, v in unpaired_anno.items()
+                k: v.loc[common_ids]  # ty: ignore
+                for k, v in unpaired_anno.items()  # ty: ignore
             }
 
         def presplit_processor(
@@ -809,6 +815,8 @@ class BasePreprocessor(abc.ABC):
                 return filtered
 
             images = data_package.img
+            if images is None:
+                raise ValueError("Images cannot be None")
             data_package.img = {
                 k: filter_imgdata_list(img_list=v, ids=common_ids)
                 for k, v in images.items()

@@ -75,7 +75,7 @@ def test_filter_with_missing_genes_raises_keyerror(sample_df):
         ("STANDARD", StandardScaler),
         ("ROBUST", RobustScaler),
         ("MAXABS", MaxAbsScaler),
-        ("NONE", type(None)),
+        ("NONE", None),
     ],
 )
 def test_scaler_initialization(sample_df, scaling_method, expected_type):
@@ -85,7 +85,10 @@ def test_scaler_initialization(sample_df, scaling_method, expected_type):
 
     scaler = dfilt.fit_scaler(sample_df)
     print(f"Scaler type: {type(scaler)}")
-    assert isinstance(scaler, expected_type)
+    if expected_type is None:
+        assert scaler is None
+    else:
+        assert isinstance(scaler, expected_type)
 
 
 def test_scale_applies_scaler(sample_df):

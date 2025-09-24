@@ -1,5 +1,3 @@
-from typing import List, Union
-
 import anndata as ad  # type: ignore
 import warnings
 import pandas as pd
@@ -31,8 +29,8 @@ class NaNRemover:
         config: DefaultConfig,
     ):
         """Initialize the NaNRemover with configuration settings.
-            Args:
-                config: Configuration object containing settings for data processing.
+        Args:
+            config: Configuration object containing settings for data processing.
 
         """
         self.config = config
@@ -88,8 +86,10 @@ class NaNRemover:
         # Handle X matrix
         if sparse.issparse(adata.X):
             if hasattr(adata.X, "data"):
-                adata.X.data = np.nan_to_num(adata.X.data, nan=0.0) # ty: ignore[invalid-assignment]
-                adata.X.eliminate_zeros()
+                adata.X.data = np.nan_to_num(  # ty:  ignore
+                    adata.X.data, nan=0.0
+                )  # ty: ignore[invalid-assignment]
+                adata.X.eliminate_zeros()  # ty: ignore
         else:
             adata.X = np.nan_to_num(adata.X, nan=0.0)
 

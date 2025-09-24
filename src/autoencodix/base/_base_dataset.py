@@ -2,6 +2,7 @@ import abc
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
@@ -41,10 +42,14 @@ class BaseDataset(abc.ABC, Dataset):
             mytype: Enum indicating the dataset type (should be set in subclasses).
         """
         self.data = data
+        self.raw_data = data  # for child class ImageDataset
         self.config = config
         self.sample_ids = sample_ids
         self.feature_ids = feature_ids
         self.mytype: Enum  # Should be set in subclasses to indicate the dataset type (e.g., DataSetTypes.NUM or DataSetTypes.IMG)
+
+        self.metadata: Optional[Union[pd.Series, pd.DataFrame]] = (None,)
+        self.datasets: Dict[str, BaseDataset] = {}  # for xmodalix child
 
     def __len__(self) -> int:
         """Returns the number of samples in the dataset.
@@ -54,9 +59,7 @@ class BaseDataset(abc.ABC, Dataset):
         """
         return len(self.data)
 
-    def __getitem__(
-        self, index: int
-    ) -> Union[
+    def __getitem__(self, index: int) -> Union[
         Tuple[Union[torch.Tensor, int], Union[torch.Tensor, ImgData], Any],
         Dict[str, Tuple[Any, torch.Tensor, Any]],
     ]:
@@ -91,6 +94,24 @@ class BaseDataset(abc.ABC, Dataset):
             if isinstance(self.data[0], ImgData):
                 return self.data[0].img.shape[0]
             else:
-                raise ValueError("List data is not of type ImgData, cannot determine input dimension.")
+                raise ValueError(
+                    "List data is not of type ImgData, cannot determine input dimension."
+                )
         else:
             raise ValueError("Unsupported data type for input dimension retrieval.")
+
+    def _to_df(self, modality: Optional[str] = None) -> pd.DataFrame:
+        """
+        Convert the dataset to a pandas DataFrame.
+
+        Returns:
+            DataFrame representation of the dataset
+        """
+        if isinstance(self.data, torch.Tensor):
+            return pd.DataFrame(
+                self.data.numpy(), columns=self.feature_ids, index=self.sample_ids
+            )
+        else:
+            raise TypeError(
+                "Data is not a torch.Tensor and cannot be converted to DataFrame."
+            )

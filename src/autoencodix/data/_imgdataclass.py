@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
+from typing import Union
 
 
 @dataclass
@@ -15,7 +16,7 @@ class ImgData:
 
     img: np.ndarray
     sample_id: str
-    annotation: pd.DataFrame
+    annotation: Union[pd.Series, pd.DataFrame]
 
     def __repr__(self):
         return (

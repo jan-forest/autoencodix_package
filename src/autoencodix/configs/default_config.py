@@ -70,8 +70,8 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     data_type: Literal["NUMERIC", "CATEGORICAL", "IMG", "ANNOTATION"] = Field(
         default="NUMERIC"
     )
-    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE"] = Field(
-        default="NONE",
+    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE", "NOTSET"] = Field(
+        default="NOTSET",
         description="Setting the scaling here in DataInfo overrides the globally set scaling method for the specific data modality",
     )  # can also be set globally, for all data modalities.
 

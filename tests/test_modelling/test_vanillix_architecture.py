@@ -8,7 +8,6 @@ from autoencodix.modeling._layer_factory import LayerFactory
 
 
 class TestVanillixUnit:
-
     @pytest.fixture
     def defaults(self):
         latent_dim = 2
@@ -60,7 +59,7 @@ class TestVanillixIntegration:
         config = DefaultConfig()
         config.latent_dim = 4
         config.n_layers = 3
-        config.enc_factor = 2.0
+        config.enc_factor = 2
         return config
 
     def test_layer_dimensions_integration(self, config, feature_dim):
@@ -105,32 +104,32 @@ class TestVanillixIntegration:
         "config, input_dim, expected_latent_input",
         [
             (
-                DefaultConfig(n_layers=0, enc_factor=1, batch_size=1, latent_dim=16),
+                DefaultConfig(n_layers=0, enc_factor=1, batch_size=2, latent_dim=16),
                 100,
                 100,
             ),
             (
-                DefaultConfig(n_layers=1, enc_factor=1, batch_size=1, latent_dim=16),
+                DefaultConfig(n_layers=1, enc_factor=1, batch_size=2, latent_dim=16),
                 100,
                 100,
             ),
             (
-                DefaultConfig(n_layers=4, enc_factor=1, batch_size=1, latent_dim=16),
+                DefaultConfig(n_layers=4, enc_factor=1, batch_size=2, latent_dim=16),
                 100,
                 100,
             ),
             (
-                DefaultConfig(n_layers=2, enc_factor=2, batch_size=1, latent_dim=16),
+                DefaultConfig(n_layers=2, enc_factor=2, batch_size=2, latent_dim=16),
                 100,
                 25,
             ),
             (
-                DefaultConfig(n_layers=3, enc_factor=2, batch_size=1, latent_dim=16),
+                DefaultConfig(n_layers=3, enc_factor=2, batch_size=2, latent_dim=16),
                 100,
                 16,
             ),  # cant be smaller than latent_dim
             (
-                DefaultConfig(n_layers=3, enc_factor=2, batch_size=1, latent_dim=2),
+                DefaultConfig(n_layers=3, enc_factor=2, batch_size=2, latent_dim=2),
                 100,
                 12,
             ),

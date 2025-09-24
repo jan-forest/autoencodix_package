@@ -250,7 +250,7 @@ class DataPackage:
             return dataobj.obs.index.astype(str).tolist()
         elif isinstance(dataobj, MuData):
             # For MuData, we can use the obs.index directly
-            return dataobj.obs.index.astype(str).tolist()
+            return dataobj.obs.index.astype(str).tolist()  # ty: ignore
         else:
             return []
 
@@ -280,9 +280,9 @@ class DataPackage:
         elif isinstance(dataobj, AnnData):
             return dataobj.obs.shape[0]
         elif isinstance(dataobj, MuData):
-            if not dataobj.mod:  # Empty MuData
+            if not dataobj.mod:  # ty: ignore
                 return 0
-            return dataobj.n_obs
+            return dataobj.n_obs  # ty: ignore
         else:
             raise ValueError(
                 f"Unknown data type {type(dataobj)} for dataobj. Probably you've implemented a new attribute in the DataPackage class or changed the data type of an existing attribute."

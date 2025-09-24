@@ -20,11 +20,11 @@ def generate_example_data(
     """
     Generate synthetic data for autoencoder testing and examples.
 
-    Parameters:
-        n_samples (int): Number of samples to generate
-        n_features (int): Number of features for each sample
-        n_clusters (int): Number of clusters to generate
-        random_seed (int): Random seed for reproducibility
+    Args:
+        n_samples: Number of samples to generate, default=1000
+        n_features: Number of features for each sample, default=30
+        n_clusters: Number of clusters to generate, default=5
+        random_seed:: Random seed for reproducibility
 
     Returns:
         DatasetContainer: Container with train, validation and test datasets
@@ -41,10 +41,10 @@ def generate_example_data(
     )
 
     # Convert integer cluster labels to string labels like "Cluster_1"
-    str_cluster_labels = np.array([f"Cluster_{i+1}" for i in cluster_labels])
+    str_cluster_labels = np.array([f"Cluster_{i + 1}" for i in cluster_labels])
     # Create additional metadata features that correlate with the clusters
     # Convert integer cluster labels to string labels like "Cluster_1"
-    str_cluster_labels = np.array([f"Cluster_{i+1}" for i in cluster_labels])
+    str_cluster_labels = np.array([f"Cluster_{i + 1}" for i in cluster_labels])
 
     metadata_df = pd.DataFrame(
         {
@@ -141,17 +141,16 @@ def generate_multi_bulk_example(
     n_features_modality2=80,
     random_seed=config.global_seed,
 ):
-    """
-    Generate example data for MULTI_BULK case.
+    """Generate example data for MULTI_BULK case.
 
-    Parameters:
-        n_samples (int): Number of samples to generate
-        n_features_modality1 (int): Number of features for first modality
-        n_features_modality2 (int): Number of features for second modality
-        random_seed (int): Random seed for reproducibility
+    Args:
+        n_samples: Number of samples to generate
+        n_features_modality1: Number of features for first modality
+        n_features_modality2: Number of features for second modality
+        random_seed: Random seed for reproducibility
 
     Returns:
-        DataPackage: DataPackage with multi_bulk data
+        DataPackage with multi_bulk data
     """
     np.random.seed(random_seed)
 
@@ -206,16 +205,15 @@ def generate_multi_bulk_example(
 def generate_default_bulk_bulk_example(
     n_samples=500, n_features=200, random_seed=config.global_seed
 ):
-    """Generate example data for BULK_TO_BULK case."""
+    """NOT IMPLEMENTED YET"""
     np.random.seed(random_seed)
-
     raise NotImplementedError("BULK_TO_BULK example generation not yet implemented")
 
 
 def generate_default_sc_sc_example(
     n_cells=1000, n_features=500, random_seed=config.global_seed
 ):
-    """Generate example data for SINGLE_CELL_TO_SINGLE_CELL case."""
+    """NOT IMPLEMENTED YET"""
     np.random.seed(random_seed)
 
     raise NotImplementedError(
@@ -224,7 +222,7 @@ def generate_default_sc_sc_example(
 
 
 def generate_default_img_bulk_example(n_samples=100, random_seed=config.global_seed):
-    """Generate example data for IMG_TO_BULK case."""
+    """NOT IMPLEMENTED YET"""
     np.random.seed(random_seed)
 
     # Not implemented yet
@@ -232,7 +230,7 @@ def generate_default_img_bulk_example(n_samples=100, random_seed=config.global_s
 
 
 def generate_default_sc_img_example(n_samples=100, random_seed=config.global_seed):
-    """Generate example data for SINGLE_CELL_TO_IMG case."""
+    """NOT IMPLEMENTED YET"""
     np.random.seed(random_seed)
 
     raise NotImplementedError(
@@ -241,22 +239,21 @@ def generate_default_sc_img_example(n_samples=100, random_seed=config.global_see
 
 
 def generate_default_img_img_example(n_samples=100, random_seed=config.global_seed):
-    """Generate example data for IMG_TO_IMG case."""
+    """NOT IMPLEMENTED YET"""
     np.random.seed(random_seed)
 
     raise NotImplementedError("IMG_TO_IMG example generation not yet implemented")
 
 
 def generate_raw_datapackage(data_case: DataCase, **kwargs):
-    """
-    Generate a raw DataPackage for the specified data case.
+    """Generate a raw DataPackage for the specified data case.
 
-    Parameters:
-        data_case (DataCase): The type of data to generate
+    Args:
+        data_case: The type of data to generate
         **kwargs: Additional arguments to pass to the specific generator function
 
     Returns:
-        DataPackage: Raw data package ready for preprocessing
+        Raw data package ready for preprocessing
     """
     generator_map = {
         DataCase.MULTI_BULK: generate_multi_bulk_example,
@@ -278,17 +275,16 @@ def generate_raw_datapackage(data_case: DataCase, **kwargs):
 def generate_multi_sc_example(
     n_cells=1000, n_genes=500, n_proteins=200, random_seed=config.global_seed
 ):
-    """
-    Generate example data for MULTI_SINGLE_CELL case.
+    """Generate example data for MULTI_SINGLE_CELL case.
 
-    Parameters:
-        n_cells (int): Number of cells to generate
-        n_genes (int): Number of genes for RNA modality
-        n_proteins (int): Number of proteins for protein modality
-        random_seed (int): Random seed for reproducibility
+    Args:
+        n_cells: Number of cells to generate
+        n_genes: Number of genes for RNA modality
+        n_proteins: Number of proteins for protein modality
+        random_seed: Random seed for reproducibility
 
     Returns:
-        DataPackage: DataPackage with multi_sc data
+         DataPackage with multi_sc data
     """
     np.random.seed(random_seed)
 

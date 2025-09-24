@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 import pandas as pd
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.data._numeric_dataset import TensorAwareDataset

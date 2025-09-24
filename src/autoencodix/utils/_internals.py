@@ -1,3 +1,8 @@
+"""
+Utility to Map Architectures to Trainers.
+Only used for training sub datasets in XModalix as of now.
+"""
+
 from typing import Dict, Type
 
 from autoencodix.modeling._imagevae_architecture import ImageVAEArchitecture

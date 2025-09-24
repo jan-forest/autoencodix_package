@@ -9,7 +9,7 @@ import torch
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, List, no_type_check
 from autoencodix.base._base_visualizer import BaseVisualizer
 from autoencodix.utils._result import Result
 from autoencodix.utils._utils import nested_dict, show_figure
@@ -39,6 +39,10 @@ class XModalVisualizer(BaseVisualizer):
         ## X-Modalix specific ##
         # Filter loss terms which are specific for each modality VAE
         # Plot only combined loss terms as in old autoencodix framework
+        if not hasattr(result.datasets, "train"):
+            raise ValueError("result.datasets has no attribute train")
+        if result.datasets.train is None:
+            raise ValueError("Train attribute of datasets is None")
         loss_df_melt = loss_df_melt[
             ~loss_df_melt["Loss Term"].str.startswith(
                 tuple(result.datasets.train.datasets.keys())
@@ -180,26 +184,35 @@ class XModalVisualizer(BaseVisualizer):
                     ).tolist()
                 else:
                     param = ["user_label"]  # Default label if none provided
-
+            if not isinstance(param, list):
+                raise ValueError(f"param: should be converted to list, got: {param}")
             for p in param:
                 if p in clin_data.columns:
-                    labels = clin_data.loc[latent_data["sample_ids"], p].tolist()
+                    labels: List = clin_data.loc[
+                        latent_data["sample_ids"], p
+                    ].tolist()  # ty: ignore
                 else:
-                    if clin_data.shape[0] == len(labels):
+                    if clin_data.shape[0] == len(labels):  # ty: ignore
                         clin_data[p] = labels
-                    else:                
+                    else:
                         clin_data[p] = ["all"] * clin_data.shape[0]
 
                 if plot_type == "2D-scatter":
                     ## Make 2D Embedding with UMAP
                     if (
-                        latent_data.drop(columns=["sample_ids", "modality"]).shape[1]
+                        latent_data.drop(
+                            columns=["sample_ids", "modality"]
+                        ).shape[  # ty: ignore
+                            1
+                        ]  # ty: ignore
                         > 2
                     ):
                         reducer = UMAP(n_components=2)
                         embedding = pd.DataFrame(
                             reducer.fit_transform(
-                                latent_data.drop(columns=["sample_ids", "modality"])
+                                latent_data.drop(
+                                    columns=["sample_ids", "modality"]
+                                )  # ty: ignore
                             )
                         )
                         embedding.columns = ["DIM1", "DIM2"]
@@ -210,7 +223,7 @@ class XModalVisualizer(BaseVisualizer):
 
                     # Merge with clinical data via sample_ids
                     embedding = embedding.merge(
-                        clin_data.drop(columns=["modality"]),
+                        clin_data.drop(columns=["modality"]),  # ty: ignore
                         on="sample_ids",
                         how="left",
                     )
@@ -229,9 +242,9 @@ class XModalVisualizer(BaseVisualizer):
 
                 if plot_type == "Ridgeline":
                     ## Make ridgeline plot
-                    if len(labels) != latent_data.shape[0]:
-                        if labels[0] == "all":
-                            labels = ["all"] * latent_data.shape[0]
+                    if len(labels) != latent_data.shape[0]:  # ty: ignore
+                        if labels[0] == "all":  # ty: ignore
+                            labels = ["all"] * latent_data.shape[0]  # ty: ignore
                         else:
                             raise ValueError(
                                 "Labels must match the number of samples in the latent space."
@@ -239,7 +252,9 @@ class XModalVisualizer(BaseVisualizer):
 
                     self.plots["Ridgeline"][epoch][split][p] = (
                         self._plot_latent_ridge_multi(
-                            lat_space=latent_data.drop(columns=["sample_ids"]),
+                            lat_space=latent_data.drop(
+                                columns=["sample_ids"]
+                            ),  # ty: ignore
                             labels=labels,
                             modality="modality",
                             param=p,
@@ -256,40 +271,28 @@ class XModalVisualizer(BaseVisualizer):
             "Weight visualization for X-Modalix is not implemented."
         )
 
-    def show_image_translation(
+    @no_type_check
+    def show_image_translation(  # ty: ignore
         self,
         result: Result,
         from_key: str,
         to_key: str,
         split: str = "test",
         n_sample_per_class: int = 3,
-        param: str = None,
-    ) -> None:
-        """
-        Visualizes image translation results for a given dataset split by displaying a grid of original, translated, and reference images,
-        grouped by class values.
-        Parameters
-        ----------
-        result : Result
-            The result object containing datasets and reconstructions.
-        from_key : str
-            The source modality key (not directly used in visualization, but relevant for context).
-        to_key : str
-            The target modality key. Must correspond to an image dataset (must contain "IMG").
-        split : str, optional
-            The dataset split to visualize ("test", "train", or "valid"). Default is "test".
-        n_sample_per_class : int, optional
-            Number of samples to display per class value. Default is 3.
-        param : str, optional
-            The metadata column name used to group samples by class.
+        param: Optional[str] = None,
+    ) -> None:  # ty: ignore
+        """Visualizes image translation results for a given dataset.
+
+        Split by displaying a grid of original, translated, and reference images,grouped by class values.
+        Args:
+            result:The result object containing datasets and reconstructions.
+            from_key: The source modality key (not directly used in visualization, but relevant for context).
+            to_key: The target modality key. Must correspond to an image dataset (must contain "IMG").
+            split: The dataset split to visualize ("test", "train", or "valid"). Default is "test".
+            n_sample_per_class: Number of samples to display per class value. Default is 3.
+            param: The metadata column name used to group samples by class.
         Raises
-        ------
-        ValueError
-            If `to_key` does not correspond to an image dataset.
-        Returns
-        -------
-        None
-            Displays a matplotlib figure with the image translation grid.
+            ValueError: If `to_key` does not correspond to an image dataset.
         """
 
         if "IMG" not in to_key:
@@ -353,7 +356,9 @@ class XModalVisualizer(BaseVisualizer):
                 sids = sample_per_class[class_value]
                 # Get indices of these sample ids in the sample_ids_list
                 indices = [
-                    list(sample_ids_list).index(sid) for sid in sids if sid in sample_ids_list
+                    list(sample_ids_list).index(sid)
+                    for sid in sids
+                    if sid in sample_ids_list
                 ]
                 # Store the indices in the dictionary
                 sample_idx_per_class[class_value] = indices
@@ -468,12 +473,13 @@ class XModalVisualizer(BaseVisualizer):
             # show_figure(fig)
             plt.show()
 
+    @no_type_check
     def show_2D_translation(
         self,
         result: Result,
         translated_modality: str,
         split: str = "test",
-        param: str = None,
+        param: Optional[str] = None,
         reducer: str = "UMAP",
     ) -> None:
         ## TODO add similar labels/param logic from other visualizations
@@ -487,7 +493,22 @@ class XModalVisualizer(BaseVisualizer):
                 "2D translation visualization is currently only implemented for the 'test' split since reconstruction is only performed on test-split."
             )
 
-        # Get input data
+        if not hasattr(dataset, "train"):
+            raise ValueError("dataset has no attribute train")
+
+        if not hasattr(dataset, "valid"):
+            raise ValueError("dataset has no attribute train")
+
+        if not hasattr(dataset, "valid"):
+            raise ValueError("dataset has no attribute train")
+
+        if dataset.valid is None:
+            raise ValueError("valid of dataset is None")
+        if dataset.train is None:
+            raise ValueError("train of dataset is None")
+        if dataset.test is None:
+            raise ValueError("test of dataset is None")
+
         if split == "train":
             df_processed = dataset.train._to_df(modality=translated_modality)
         if split == "valid":
@@ -496,7 +517,9 @@ class XModalVisualizer(BaseVisualizer):
             df_processed = dataset.test._to_df(modality=translated_modality)
 
         # Get translated reconstruction
-        tensor_list = result.reconstructions.get(epoch=-1, split="test")["translation"]
+        tensor_list = result.reconstructions.get(epoch=-1, split="test")[  # ty: ignore
+            "translation"
+        ]  # ty: ignore
 
         # Flatten each tensor and collect as rows (for image case)
         rows = [
@@ -526,7 +549,10 @@ class XModalVisualizer(BaseVisualizer):
             "translated"
         ] * df_translate_flat.shape[0]
 
-        labels = list(result.datasets.test.datasets["img.IMG"].metadata[param]) * 2
+        labels = (
+            list(result.datasets.test.datasets["img.IMG"].metadata[param])  # ty: ignore
+            * 2
+        )
         df_red_comb[param] = (
             labels + labels[0 : df_red_comb.shape[0] - len(labels)]
         )  ## TODO fix for not matching lengths
@@ -549,20 +575,19 @@ class XModalVisualizer(BaseVisualizer):
         color_param,
         style_param=None,
     ):
-        """
-        Creates a 2D visualization of the 2D embedding of the latent space.
-        ARGS:
-            embedding (pd.DataFrame): embedding on which is visualized. Assumes prior 2D dimension reduction.
-            color_param (str): Clinical parameter to color scatter plot
-            style_param (str): Parameter e.g. "Translate" to facet scatter plot
-        RETURNS:
-            fig (seaborn.FacetGrid): Figure handle
+        """Creates a 2D visualization of the 2D embedding of the latent space.
+        Args:
+            embedding: embedding on which is visualized. Assumes prior 2D dimension reduction.
+            color_params: Clinical parameter to color scatter plot
+            style_param: Parameter e.g. "Translate" to facet scatter plot
+        Returns:
+            fig: Figure handle
 
         """
         labels = list(embedding[color_param])
         # logger = getlogger(cfg)
         numeric = False
-        if not (type(labels[0]) is str):
+        if not isinstance(labels[0], str):
             if len(np.unique(labels)) > 3:
                 # TODO Decide if numeric to category should be optional in new Package
                 # print(
@@ -589,7 +614,7 @@ class XModalVisualizer(BaseVisualizer):
         elif len(labels) > embedding.shape[0]:
             labels = list(set(labels))
 
-        if not style_param == None:
+        if style_param is not None:
             embedding[color_param] = labels
             if numeric:
                 palette = "bwr"
@@ -620,13 +645,12 @@ class XModalVisualizer(BaseVisualizer):
         labels: Optional[Union[list, pd.Series, None]] = None,
         param: Optional[Union[str, None]] = None,
     ) -> sns.FacetGrid:
-        """
-        Creates a ridge line plot of latent space dimension where each row shows the density of a latent dimension and groups (ridges).
-        ARGS:
-            lat_space (pd.DataFrame): DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
-            labels (list): List of labels for each sample. If None, all samples are considered as one group.
-            param (str): Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
-        RETURNS:
+        """Creates a ridge line plot of latent space dimension where each row shows the density of a latent dimension and groups (ridges).
+        Args:
+            lat_space: DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
+            labels: List of labels for each sample. If None, all samples are considered as one group.
+            param: Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
+        Returns:
             g (sns.FacetGrid): FacetGrid object containing the ridge line plot
         """
         sns.set_theme(
@@ -635,7 +659,7 @@ class XModalVisualizer(BaseVisualizer):
 
         df = pd.melt(
             lat_space,
-            id_vars=modality,
+            id_vars=modality,  # ty: ignore
             var_name="latent dim",
             value_name="latent intensity",
         )
@@ -740,14 +764,13 @@ class XModalVisualizer(BaseVisualizer):
         self,
         result: Result,
     ) -> dict:
-        """
-        Plots the evaluation results from the Result object.
+        """Plots the evaluation results from the Result object.
 
-        Parameters:
-        result (Result): The Result object containing evaluation data.
+        Args:
+            result: The Result object containing evaluation data.
 
         Returns:
-        dict: The generated dictionary containing the evaluation plots.
+            The generated dictionary containing the evaluation plots.
         """
         ## Plot all results
 
@@ -760,7 +783,7 @@ class XModalVisualizer(BaseVisualizer):
                 result.embedding_evaluation.loc[
                     result.embedding_evaluation.CLINIC_PARAM == c, "metric"
                 ]
-            ):
+            ):  # ty: ignore
                 ml_plots[c][m] = dict()
                 for alg in pd.unique(
                     result.embedding_evaluation.loc[
@@ -768,7 +791,7 @@ class XModalVisualizer(BaseVisualizer):
                         & (result.embedding_evaluation.metric == m),
                         "ML_ALG",
                     ]
-                ):
+                ):  # ty: ignore
                     data = result.embedding_evaluation[
                         (result.embedding_evaluation.metric == m)
                         & (result.embedding_evaluation.CLINIC_PARAM == c)

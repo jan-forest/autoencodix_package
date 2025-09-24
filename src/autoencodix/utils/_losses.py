@@ -10,7 +10,7 @@ from autoencodix.utils._utils import flip_labels
 
 
 class VanillixLoss(BaseLoss):
-    """Loss function for vanilla autoencoder."""
+    """Implements loss for vanilla autoencoder."""
 
     def forward(
         self,
@@ -19,21 +19,46 @@ class VanillixLoss(BaseLoss):
         epoch: Optional[int] = None,
         **kwargs,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
-        """Forward pass for vanilla autoencoder - ignores epoch."""
+        """Calculates reconstruction loss as specified in config (BCE, MSE, etc.).
+
+        Args:
+            model_output: custom class that stores model output like latentspaces and reconstructions.
+            targets: original data to compare with reconstruction
+            epoch: not used for Vanillix loss.
+            **kwargs: addtional keyword args.
+
+        """
         total_loss = self.recon_loss(model_output.reconstruction, targets)
         return total_loss, {"recon_loss": total_loss}
 
 
 class VarixLoss(BaseLoss):
-    """Loss function for variational autoencoder with unified interface."""
+    """Implements loss for variational autoencoder with unified interface.
+    Attributes:
+        config: Configuration object
+    """
 
     def __init__(self, config: DefaultConfig, annealing_scheduler=None):
+        """Inits VarixLoss
+        Args:
+            config: Configuraion object.Any
+            annealing_scheduler: Enables passing a custom annealer class, defaults to our implementation of an annealer
+        """
         super().__init__(config)
 
     def _compute_losses(
         self, model_output: ModelOutput, targets: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Compute reconstruction and variational losses."""
+        """Compute reconstruction and variational losses.
+
+        Args:
+            model_output: custom class that stores model output like latentspaces and reconstructions.
+            targets: original data to compare with reconstruction
+
+        Returns:
+            Tuple of torch.Tensors: reconstruction loss and variational loss
+
+        """
         true_samples = torch.randn(
             self.config.batch_size, self.config.latent_dim, requires_grad=False
         )
@@ -56,7 +81,24 @@ class VarixLoss(BaseLoss):
         total_epochs: Optional[int] = None,
         **kwargs,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
-        """Forward pass with conditional annealing."""
+        """Forward pass with conditional annealing.
+        Args:
+            model_output: custom class that stores model output like latentspaces and reconstructions.
+            targets: original data to compare with reconstruction
+            epoch: current training epoch
+            total_epochs: number of total epochs
+            **kwargs
+        Returns:
+            Tuple consisting of:
+            - tensor of the total loss
+        Returns:
+            Tuple consisting of:
+            - tensor of the total loss
+            - Dict with loss_type as key and sub_loss value.
+            - Dict with loss_type as key and sub_loss value.
+
+        """
+
         recon_loss, var_loss = self._compute_losses(model_output, targets)
 
         # if are pretraining, we pass total_epochs, otherwise, we use 'epochs' from config
@@ -87,6 +129,31 @@ class VarixLoss(BaseLoss):
 
 
 class XModalLoss(BaseLoss):
+    """Implements Loss for XModalix.
+
+    The loss of the XModalix consists of 4 parts:
+    - Combined (mean) Reconstruction loss over all sub modalities.
+    - Combined  Distribution loss over all sub modalities (KL or MMD)
+    - Class loss: When we have metadata information about a sample e.g.
+        cancer type, we calculate the mean of all samples in the latent
+        space of each class and then we calc the distance between the mean
+        individual sample.
+    - Paired loss: When samples of different modalities are paired, then
+        their latens space representation should be proximal.
+    - Advers loss: Forces the latentspaaces of different data modalities to
+        be similar.
+
+
+    The reconstruction and distribution loss are calculated, combined, and weighted
+    (with hyperparam beta) for each sub-modality first. In this class we grab this
+    loss from the modality_dynamics and combine them for all sub-modalities with the mean.
+
+    Attributes:
+        class_means_train:
+        class_means_valid:
+        sample_to_class_map:
+    """
+
     def __init__(self, config: DefaultConfig, annealing_scheduler=None):
         super().__init__(config)
 
@@ -104,10 +171,21 @@ class XModalLoss(BaseLoss):
         is_training: bool = True,
         **kwargs,
     ):
+        """Forward pass of XModal loss.
+
+        Args:
+            batch: data from custom dataset
+            modality_dynamics: trainingdynamics such as losses, reconstructions for each data modality.
+            clf_scores: output of latent classifier for advers loss.
+            labels: indicator to which datamodality which latentspace belongs (for adver. loss).
+            clf_loss_fn: loss for clf, passed in xmodal_trainer.py, defaults Crossentropy.
+            is_training: indicator if we're in training, false for valid and test loop. Used for class loss calc.
+            **kwargs: addtional keyword arguments.
+        """
         adver_loss = self._calc_adversial_loss(
             labels=labels, clf_loss_fn=clf_loss_fn, clf_scores=clf_scores
         )
-        aggregated_sub_losses = self._sum_sub_losses(
+        aggregated_sub_losses = self._combine_sub_losses(
             modality_dynamics=modality_dynamics
         )
         sub_losses = self._store_sub_losses(modality_dynamics=modality_dynamics)
@@ -141,6 +219,36 @@ class XModalLoss(BaseLoss):
         modality_dynamics: Dict[str, Dict[str, Any]],
         is_training: bool,
     ) -> torch.Tensor:
+        """Compute the class-based loss for the given batch of modalities.
+
+        This function calculates a loss term based on the distance between latent
+        representations of samples and their corresponding class means. It also
+        updates class mean dictionaries dynamically when new classes are discovered
+        in the incoming batch.
+
+        The process involves:
+            1. Updating the sample-to-class mapping and initializing new class means
+            if previously unseen labels appear in the batch.
+            2. Computing the per-sample distance between latent representations
+            and their associated class mean vectors.
+            3. Aggregating the distances across modalities to produce a final
+            class loss value.
+
+        Args:
+            batch: A dictionary mapping modality names to modality data.
+                Each modality data contains a "metadata" DataFrame that includes
+                class labels under the key defined in `self.config.class_param`.
+            modality_dynamics: A dictionary mapping modality names to their dynamics,
+                where each entry must contain a `"mp"` object with a `latentspace` tensor.
+            is_training: Whether the model is currently in training mode. Determines
+                whether `class_means_train` or `class_means_valid` is updated and
+                used for loss computation.
+
+        Returns:
+            A scalar tensor representing the average class loss over all modalities
+            in the batch. Returns zero if `class_param` is not configured or if the
+            batch is empty
+        """
         device = next(iter(modality_dynamics.values()))["mp"].latentspace.device
 
         if not self.config.class_param:
@@ -191,9 +299,26 @@ class XModalLoss(BaseLoss):
     def update_class_means(
         self, epoch_dynamics: List[Dict], device: str, is_training: bool
     ):
-        """
-        Method to be called by the Trainer at the end of an epoch to update the
-        target class mean vectors.
+        """Update target class mean vectors at the end of an epoch.
+
+        This method aggregates latent representations across the epoch, aligns
+        them with sample-to-class mappings, and computes updated class mean
+        vectors. The resulting means are stored in either the training or
+        validation dictionary depending on the mode.
+
+        Args:
+            epoch_dynamics: A list of dictionaries collected during the epoch.
+                Each dictionary contains for example:
+                    - "latentspaces": Modality-to-latent tensor mappings.
+                    - "sample_ids": Modality-to-sample ID mappings.
+            device: Device identifier where the updated class mean tensors
+                should be placed.
+            is_training: Whether the update is performed in training mode.
+                Determines if `class_means_train` or `class_means_valid`
+                is updated.
+
+        Returns:
+        None. Updates internal class mean dictionaries in place.
         """
         if not self.config.class_param or not epoch_dynamics:
             return
@@ -234,6 +359,25 @@ class XModalLoss(BaseLoss):
         batch: Dict[str, Dict[str, Any]],
         modality_dynamics: Dict[str, Dict[str, Any]],
     ) -> torch.Tensor:
+        """Compute the paired loss across modalities in the current batch.
+
+        This method prepares latent spaces and sample IDs for each modality and
+        computes a paired loss if at least two modalities are present. If fewer
+        than two modalities exist, it returns a zero tensor that still requires
+        gradients to preserve the computation graph.
+
+        Args:
+            batch: A dictionary mapping modality names to modality data.
+                Each entry contains sample identifiers under the key
+                `"sample_ids"`.
+            modality_dynamics: A dictionary mapping modality names to their
+                dynamics, where each entry contains a `"mp"` object with a
+                `latentspace` tensor.
+
+        Returns:
+            A scalar tensor representing the paired loss. Returns a zero tensor
+            requiring gradients if fewer than two modalities are available.
+        """
         latentspaces = {
             mod_name: dynamics["mp"].latentspace
             for mod_name, dynamics in modality_dynamics.items()
@@ -255,7 +399,7 @@ class XModalLoss(BaseLoss):
             latentspaces=latentspaces, sample_ids=sample_ids
         )
 
-    def _sum_sub_losses(
+    def _combine_sub_losses(
         self, modality_dynamics: Dict[str, Dict[str, Any]]
     ) -> torch.Tensor:
         """Computes the average total loss for all modalities."""
@@ -289,9 +433,22 @@ class XModalLoss(BaseLoss):
 
 
 class DisentanglixLoss(BaseLoss):
-    """Loss function for VAE with disentanglement, Disentanglix."""
+    """Implements loss for VAE with disentanglement, Disentanglix.
+
+    Attributes:
+        config: Configuraion object inherited from  Base.
+        forward_impl: Stores forward method: There exists
+            one method with and one without annealing.
+
+    """
 
     def __init__(self, config: DefaultConfig, annealing_scheduler=None):
+        """Inits Distentanglix loss.
+
+        Args:
+            config: Configuraion object inherited from  Base.
+            annealing_scheduler: Enables passing a custom annealer class, defaults to our implementation of an annealer
+        """
         super().__init__(config)
 
         # Determine the forward function strategy at initialization
@@ -307,7 +464,16 @@ class DisentanglixLoss(BaseLoss):
         epoch: int,
         n_samples: int,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
-        """Unified forward interface - delegates to appropriate implementation."""
+        """Calls forward_impl method.
+
+        Args:
+            model_output: instance that stores model outputs like reconstructions, mus, sigma, etc...
+            targets: groundtruth tensor.
+            n_samples: number of samples.
+        Returns:
+            Tuple containing the total loss and a Dict with loss type as key and corresponding subloss as value.
+        """
+
         return self._forward_impl(
             model_output=model_output, targets=targets, n_samples=n_samples, epoch=epoch
         )
@@ -315,10 +481,18 @@ class DisentanglixLoss(BaseLoss):
     def _compute_losses(
         self, model_output: ModelOutput, targets: torch.Tensor, n_samples: int
     ) -> Tuple[torch.Tensor, ...]:
-        """Compute reconstruction, mutual information, total correlation and dimension-wise KL loss terms."""
-        # true_samples = torch.randn(
-        #     self.config.batch_size, self.config.latent_dim, requires_grad=False
-        # )
+        """Compute reconstruction, mutual information, total correlation and dimension-wise KL loss terms.
+
+        Args:
+            model_output: instance that stores model outputs like reconstructions, mus, sigma, etc...
+            targets: groundtruth tensor.
+            n_samples: number of samples.
+
+        Returns:
+            Tuple of tensors of all sub losses.
+
+
+        """
 
         recon_loss: torch.Tensor = self.recon_loss(model_output.reconstruction, targets)
         mut_info_loss, tot_corr_loss, dimwise_kl_loss = (
@@ -345,14 +519,36 @@ class DisentanglixLoss(BaseLoss):
         n_samples: int,
         use_mss: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Compute mutual information, total correlation and dimension-wise KL loss terms."""
+        """Compute decomposed VAE loss terms.
 
+        This method estimates the variational autoencoder loss in a decomposed
+        form, separating mutual information, total correlation, and
+        dimension-wise KL divergence terms. The estimation can optionally use
+        minibatch stratified sampling (MSS) for improved stability.
+
+        Args:
+            z: Latent samples from the encoder.
+            mu: Mean of the approximate posterior distribution.
+            logvar: Log-variance of the approximate posterior distribution.
+            n_samples: Number of samples used for estimating the marginal
+                and joint densities.
+            use_mss: Whether to apply minibatch stratified sampling in the
+                computation.
+
+        Returns:
+            A tuple of three scalar tensors:
+                - Mutual information loss
+                - Total correlation loss
+                - Dimension-wise KL divergence loss
+        """
         log_q_z_given_x = self._compute_log_gauss_dense(z, mu, logvar).sum(
             dim=1
         )  # Dim [batch_size]
         log_prior = self._compute_log_gauss_dense(
             z, torch.zeros_like(z), torch.zeros_like(z)
-        ).sum(dim=1)  # Dim [batch_size]
+        ).sum(
+            dim=1
+        )  # Dim [batch_size]
 
         log_q_batch_perm = self._compute_log_gauss_dense(
             z.reshape(z.shape[0], 1, -1),
@@ -371,14 +567,18 @@ class DisentanglixLoss(BaseLoss):
             log_product_q_z = torch.logsumexp(
                 logiw_mat.reshape(z.shape[0], z.shape[0], -1) + log_q_batch_perm,
                 dim=1,
-            ).sum(dim=-1)  # Dim [batch_size]
+            ).sum(
+                dim=-1
+            )  # Dim [batch_size]
         else:
             log_q_z = torch.logsumexp(log_q_batch_perm.sum(dim=-1), dim=-1) - torch.log(
                 torch.tensor([z.shape[0] * n_samples]).to(z.device)
             )  # Dim [batch_size]
             log_product_q_z = torch.logsumexp(log_q_batch_perm, dim=1) - torch.log(
                 torch.tensor([z.shape[0] * n_samples]).to(z.device)
-            ).sum(dim=-1)  # Dim [batch_size]
+            ).sum(
+                dim=-1
+            )  # Dim [batch_size]
 
         mut_info_loss = self.reduction_fn(
             log_q_z_given_x - log_q_z

@@ -1,5 +1,3 @@
-from typing import List, Union
-
 import anndata as ad  # type: ignore
 import warnings
 import pandas as pd

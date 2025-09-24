@@ -2,10 +2,10 @@ name: CI
 on:
   push:
     branches:
-    - main
+    - dev
   pull_request:
     branches:
-    - main
+    - dev
   schedule:
   - cron: '0 12 * * 1' # Weekly Monday at 12 UTC
 env:

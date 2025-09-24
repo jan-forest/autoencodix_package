@@ -1,6 +1,6 @@
 import os
 from dataclasses import field
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, Literal, no_type_check
 import warnings
 
 import matplotlib.figure
@@ -51,21 +51,17 @@ class Visualizer(BaseVisualizer):
     def save_plots(
         self, path: str, which: Union[str, list] = "all", format: str = "png"
     ) -> None:
-        """
-        Save specified plots to the given path in the specified format.
+        """Save specified plots to the given path in the specified format.
 
-        Parameters:
-        path (str): The directory path where the plots will be saved.
-        which (list or str): A list of plot names to save or a string specifying which plots to save.
-                             If 'all', all plots in the plots dictionary will be saved.
-                             If a single plot name is provided as a string, only that plot will be saved.
-        format (str): The file format in which to save the plots (e.g., 'png', 'jpg').
-
-        Returns:
-        None
+        Args:
+            path: The directory path where the plots will be saved.
+            which: A list of plot names to save or a string specifying which plots to save.
+                                If 'all', all plots in the plots dictionary will be saved.
+                                If a single plot name is provided as a string, only that plot will be saved.
+            format: The file format in which to save the plots (e.g., 'png', 'jpg').
 
         Raises:
-        ValueError: If the 'which' parameter is not a list or a string.
+            ValueError: If the 'which' parameter is not a list or a string.
         """
         if not isinstance(which, list):
             ## Case when which is a string
@@ -90,7 +86,11 @@ class Visualizer(BaseVisualizer):
                         self.plots[which]
                     ):  # Plot all epochs and splits of type which
                         fig = item[-1]  ## Figure is in last element of the tuple
-                        filename = which + "_" + "_".join(str(x) for x in item[0:-1])
+                        filename = (
+                            which  # ty: ignore
+                            + "_"
+                            + "_".join(str(x) for x in item[0:-1])
+                        )
                         fullpath = os.path.join(path, filename)
                         fig.savefig(f"{fullpath}.{format}")
         else:
@@ -109,16 +109,13 @@ class Visualizer(BaseVisualizer):
                         fullpath = os.path.join(path, filename)
                         fig.savefig(f"{fullpath}.{format}")
 
-    def show_loss(self, plot_type: str = "absolute") -> None:
-        """
-        Display the loss plot.
-        Parameters:
-        plot_type (str): The type of loss plot to display.
-                    Options are "absolute" for the absolute loss plot and
-                    "relative" for the relative loss plot.
-                    Defaults to "absolute".
-        Returns:
-        None
+    def show_loss(
+        self, plot_type: Literal["absolute", "relative"] = "absolute"
+    ) -> None:
+        """Display the loss plot.
+
+        Args:
+            plot_type: The type of loss plot to display. Defaults to "absolute".
         """
         if plot_type == "absolute":
             if "loss_absolute" not in self.plots.keys():
@@ -142,6 +139,7 @@ class Visualizer(BaseVisualizer):
                 "Type of loss plot not recognized. Please use 'absolute' or 'relative'"
             )
 
+    @no_type_check
     def show_latent_space(
         self,
         result: Result,
@@ -152,27 +150,16 @@ class Visualizer(BaseVisualizer):
         split: str = "all",
         **kwargs,
     ) -> None:
-        """
-        Visualizes the latent space of the given result using different types of plots.
+        """Visualizes the latent space of the given result using different types of plots.
 
-        Parameters:
-        -----------
-        result : Result
-            The result object containing latent spaces and losses.
-        plot_type : str, optional
-            The type of plot to generate. Options are "2D-scatter", "Ridgeline", and "Coverage-Correlation". Default is "2D-scatter".
-        labels : list, optional
-            List of labels for the data points in the latent space. Default is None.
-        param : str, optional
-            List of parameters provided and stored as metadata. Strings must match column names. If not a list, string "all" is expected for convenient way to make plots for all parameters available. Default is None where no colored labels are plotted.
-        epoch : int, optional
-            The epoch number to visualize. If None, the last epoch is inferred from the losses. Default is None.
-        split : str, optional
-            The data split to visualize. Options are "train", "valid", "test", and "all". Default is "all".
+        Args:
+            result: The result object containing latent spaces and losses.
+            plot_type The type of plot to generate. Options are "2D-scatter", "Ridgeline", and "Coverage-Correlation". Default is "2D-scatter".
+            labels: List of labels for the data points in the latent space. Default is None.
+            param : List of parameters provided and stored as metadata. Strings must match column names. If not a list, string "all" is expected for convenient way to make plots for all parameters available. Default is None where no colored labels are plotted.
+            epoch: The epoch number to visualize. If None, the last epoch is inferred from the losses. Default is None.
+            split: The data split to visualize. Options are "train", "valid", "test", and "all". Default is "all".
 
-        Returns:
-        --------
-        None
         """
         plt.ioff()
         if plot_type == "Coverage-Correlation":
@@ -235,21 +222,37 @@ class Visualizer(BaseVisualizer):
                 epoch = result.model.config.epochs - 1
 
             ## Getting clin_data
-            if hasattr(result.datasets.train, "metadata"):
-                # Check if metadata is a dictionary and contains 'paired'
-                if isinstance(result.datasets.train.metadata, dict):
-                    if "paired" in result.datasets.train.metadata:
-                        clin_data = result.datasets.train.metadata["paired"]
-                        if hasattr(result.datasets, "test"):
-                            clin_data = pd.concat(
-                                [clin_data, result.datasets.test.metadata["paired"]],
-                                axis=0,
-                            )
-                        if hasattr(result.datasets, "valid"):
-                            clin_data = pd.concat(
-                                [clin_data, result.datasets.valid.metadata["paired"]],
-                                axis=0,
-                            )
+            if not hasattr(result.datasets, "train"):
+                raise ValueError("no train split in datasets")
+
+            if not hasattr(result.datasets, "valid"):
+                raise ValueError("no valid split in datasets")
+            if result.datasets.train is None:
+                raise ValueError("train is None")
+            if result.datasets.valid is None:
+                raise ValueError("train is None")
+            if result.datasets.test is None:
+                raise ValueError("train is None")
+
+            if not hasattr(result.datasets.train, "metadata"):
+                raise ValueError("train dataset has no metadata")
+            if not hasattr(result.datasets.valid, "metadata"):
+                raise ValueError("valid dataset has no metadata")
+
+            # Check if metadata is a dictionary and contains 'paired'
+            if isinstance(result.datasets.train.metadata, dict):
+                if "paired" in result.datasets.train.metadata:
+                    clin_data = result.datasets.train.metadata["paired"]
+                    if hasattr(result.datasets, "test"):
+                        clin_data = pd.concat(
+                            [clin_data, result.datasets.test.metadata["paired"]],
+                            axis=0,
+                        )
+                    if hasattr(result.datasets, "valid"):
+                        clin_data = pd.concat(
+                            [clin_data, result.datasets.valid.metadata["paired"]],
+                            axis=0,
+                        )
                     else:
                         # Raise error no annotation given
                         raise ValueError(
@@ -355,14 +358,7 @@ class Visualizer(BaseVisualizer):
                     plt.show()
 
     def show_weights(self) -> None:
-        """
-        Display the model weights plot if it exists in the plots dictionary.
-        Parameters:
-        None
-        Returns:
-        None
-
-        """
+        """Display the model weights plot if it exists in the plots dictionary."""
 
         if "ModelWeights" not in self.plots.keys():
             print("Model weights not found in the plots dictionary")
@@ -457,7 +453,7 @@ class Visualizer(BaseVisualizer):
     #     return fig
 
     ## NEW VERSION
-    @staticmethod
+    # @staticmethod
     # def plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:
     #     """
     #     Visualization of model weights in encoder and decoder layers as heatmap for each layer as subplot.
@@ -544,19 +540,20 @@ class Visualizer(BaseVisualizer):
 
     ## NEW VERSION
     def plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:
-        """
-        Visualization of model weights in encoder and decoder layers as heatmap for each layer as subplot.
+        """Visualization of model weights in encoder and decoder layers as heatmap for each layer as subplot.
+
         Handles non-symmetrical autoencoder architectures.
         Plots _mu layer for encoder as well.
         Uses node_names for decoder layers if model has ontologies.
-        ARGS:
-            model (torch.nn.Module): PyTorch model instance.
-        RETURNS:
-            fig (matplotlib.figure): Figure handle (of last plot)
+
+        Args:
+            model: PyTorch model instance.
+        Returns:
+            fig: Figure handle (of last plot)
         """
         all_weights = []
         names = []
-        node_names = None
+        node_names = []
         if hasattr(model, "ontologies"):
             if model.ontologies is not None:
                 node_names = []
@@ -681,24 +678,23 @@ class Visualizer(BaseVisualizer):
         scale: Optional[Union[str, None]] = None,
         no_leg: bool = False,
     ) -> matplotlib.figure.Figure:
-        """
-        Plots a 2D scatter plot of the given embedding with labels.
+        """Plots a 2D scatter plot of the given embedding with labels.
 
-        Parameters:
-        embedding (pd.DataFrame): DataFrame containing the 2D embedding coordinates.
-        labels (list): List of labels corresponding to each point in the embedding.
-        param (str, optional): Title for the legend. Defaults to None.
-        layer (str, optional): Title for the plot. Defaults to "latent space".
-        figsize (tuple, optional): Size of the figure. Defaults to (24, 15).
-        center (bool, optional): If True, centers the plot based on label means. Defaults to True.
-        plot_numeric (bool, optional): If True, treats labels as numeric. Defaults to False.
-        xlim (tuple, optional): Limits for the x-axis. Defaults to None.
-        ylim (tuple, optional): Limits for the y-axis. Defaults to None.
-        scale (str, optional): Scale for the axes (e.g., 'log'). Defaults to None.
-        no_leg (bool, optional): If True, no legend is displayed. Defaults to False.
+        Args:
+            embedding: DataFrame containing the 2D embedding coordinates.
+            labels: List of labels corresponding to each point in the embedding.
+            param: Title for the legend. Defaults to None.
+            layer: Title for the plot. Defaults to "latent space".
+            figsize: Size of the figure. Defaults to (24, 15).
+            center: If True, centers the plot based on label means. Defaults to True.
+            plot_numeric Defaults to False.
+            xlim: Defaults to None.
+            ylim: Defaults to None.
+            scale: Defaults to None.
+            no_leg: Defaults to False.
 
         Returns:
-        plt.Figure: The resulting matplotlib figure.
+            The resulting matplotlib figure.
         """
 
         numeric = False
@@ -813,14 +809,12 @@ class Visualizer(BaseVisualizer):
         labels: Optional[Union[list, pd.Series, None]] = None,
         param: Optional[Union[str, None]] = None,
     ) -> sns.FacetGrid:
-        """
-        Creates a ridge line plot of latent space dimension where each row shows the density of a latent dimension and groups (ridges).
-        ARGS:
-            lat_space (pd.DataFrame): DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
-            labels (list): List of labels for each sample. If None, all samples are considered as one group.
-            param (str): Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
-        RETURNS:
-            g (sns.FacetGrid): FacetGrid object containing the ridge line plot
+        """Creates a ridge line plot of latent space dimension where each row shows the density of a latent dimension and groups (ridges).
+        Args:
+            lat_space: If None, all samples are considered as one group.
+            param: Must be a column name (str) of clin_data
+        Returns:
+            g: FacetGrid object containing the ridge line plot
         """
         sns.set_theme(
             style="white", rc={"axes.facecolor": (0, 0, 0, 0)}
@@ -921,26 +915,20 @@ class Visualizer(BaseVisualizer):
     def make_loss_plot(
         df_plot: pd.DataFrame, plot_type: str
     ) -> matplotlib.figure.Figure:
-        """
-        Generates a plot for visualizing loss values from a DataFrame.
+        """Generates a plot for visualizing loss values from a DataFrame.
 
-        Parameters:
-        -----------
-        df_plot : pd.DataFrame
-            DataFrame containing the loss values to be plotted. It should have the columns:
-            - "Loss Term": The type of loss term (e.g., "total_loss", "reconstruction_loss").
-            - "Epoch": The epoch number.
-            - "Loss Value": The value of the loss.
-            - "Split": The data split (e.g., "train", "validation").
+        Args:
+            df_plot: DataFrame containing the loss values to be plotted. It should have the columns:
+                - "Loss Term": The type of loss term (e.g., "total_loss", "reconstruction_loss").
+                - "Epoch": The epoch number.
+                - "Loss Value": The value of the loss.
+                - "Split": The data split (e.g., "train", "validation").
 
-        plot_type : str
-            The type of plot to generate. It can be either "absolute" or "relative".
-            - "absolute": Generates a line plot for each unique loss term.
-            - "relative": Generates a density plot for each data split, excluding the "total_loss" term.
+            plot_type: The type of plot to generate. It can be either "absolute" or "relative".
+                - "absolute": Generates a line plot for each unique loss term.
+                - "relative": Generates a density plot for each data split, excluding the "total_loss" term.
 
         Returns:
-        --------
-        matplotlib.figure.Figure
             The generated matplotlib figure containing the loss plots.
         """
         fig_width_abs = 5 * len(df_plot["Loss Term"].unique())
@@ -1020,7 +1008,7 @@ class Visualizer(BaseVisualizer):
             if not isinstance(loss_values, dict):
                 # If it's not a dict, try to convert it or handle appropriately
                 if hasattr(loss_values, "to_dict"):
-                    loss_values = loss_values.to_dict()
+                    loss_values = loss_values.to_dict()  # type: ignore
                 else:
                     # For non-convertible types, you might need a custom solution
                     # For numpy arrays, you could do something like:
@@ -1053,7 +1041,7 @@ class Visualizer(BaseVisualizer):
         loss_values = result.losses.get()
         if not isinstance(loss_values, dict):
             if hasattr(loss_values, "to_dict"):
-                loss_values = loss_values.to_dict()
+                loss_values = loss_values.to_dict()  # ty: ignore
             else:
                 if hasattr(loss_values, "shape"):
                     loss_values = {i: val for i, val in enumerate(loss_values)}
@@ -1077,18 +1065,18 @@ class Visualizer(BaseVisualizer):
         loss_df_melt["Loss Value"] = loss_df_melt["Loss Value"].astype(float)
         return loss_df_melt
 
+    @no_type_check
     def plot_evaluation(
         self,
         result: Result,
     ) -> dict:
-        """
-        Plots the evaluation results from the Result object.
+        """Plots the evaluation results from the Result object.
 
-        Parameters:
-        result (Result): The Result object containing evaluation data.
+        Args:
+            result: The Result object containing evaluation data.
 
         Returns:
-        dict: The generated dictionary containing the evaluation plots.
+            The generated dictionary containing the evaluation plots.
         """
         ## Plot all results
 
@@ -1141,14 +1129,12 @@ class Visualizer(BaseVisualizer):
         metric: str,
         ml_alg: Optional[str] = None,
     ) -> None:
-        """
-        Displays the evaluation plot for a specific clinical parameter, metric, and optionally ML algorithm.
-        Parameters:
-        param (str): The clinical parameter to visualize.
-        metric (str): The metric to visualize.
-        ml_alg (str, optional): The ML algorithm to visualize. If None, plots all available algorithms.
-        Returns:
-        None
+        """Displays the evaluation plot for a specific clinical parameter, metric, and optionally ML algorithm.
+
+        Args:
+            param: The clinical parameter to visualize.
+            metric: The metric to visualize.
+            ml_alg: If None, plots all available algorithms.
         """
         plt.ioff()
         if "ML_Evaluation" not in self.plots.keys():
@@ -1200,9 +1186,9 @@ class Visualizer(BaseVisualizer):
         """Function to compute the coverage as described here (Equation3): https://doi.org/10.3390/e21100921
 
         Args:
-            latent_space - (pd.DataFrame): latent space with dimension sample vs. latent dimensions
+            latent_space: latent dimensions
         Returns:
-            cov - (float): coverage across latent dimensions
+            cov: coverage across latent dimensions
         """
         bins_per_dim = int(
             np.power(len(latent_space.index), 1 / len(latent_space.columns))

@@ -54,8 +54,7 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
         )
 
     def _to_df(self, modality: Optional[str] = None) -> pd.DataFrame:
-        """
-        Convert the dataset to a pandas DataFrame.
+        """Convert the dataset to a pandas DataFrame.
 
         Returns:
             DataFrame representation of the dataset

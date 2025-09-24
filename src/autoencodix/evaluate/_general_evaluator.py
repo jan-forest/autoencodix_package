@@ -1,4 +1,4 @@
-from typing import Any, Union, Tuple
+from typing import Union, no_type_check
 import warnings
 
 import pandas as pd
@@ -22,6 +22,7 @@ class GeneralEvaluator(BaseEvaluator):
         # super().__init__()
         pass
 
+    @no_type_check
     def evaluate(
         self,
         datasets: DatasetContainer,
@@ -36,42 +37,29 @@ class GeneralEvaluator(BaseEvaluator):
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
         split_type: str = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
     ) -> Result:
-        """
-        Evaluate the performance of machine learning models on various feature representations and clinical parameters.
+        """Evaluates the performance of machine learning models on various feature representations and clinical parameters.
+
         This method performs classification or regression tasks using specified machine learning models on different feature sets (e.g., latent space, PCA, UMAP, TSNE, RandomFeature) and clinical annotation parameters. It supports multiple evaluation strategies, including pre-defined train/valid/test splits, k-fold cross-validation, and leave-one-out cross-validation. The results are aggregated and stored in the provided `result` object.
-        Parameters
-        ----------
-        datasets : DatasetContainer
-            An DatasetContainer containing train, valid, and test datasets, each with `sample_ids` and `metadata` (either a DataFrame or a dictionary with a 'paired' key for clinical annotations).
-        result : Result
-            An Result object to store the evaluation results. Should have an `embedding_evaluation` attribute which updated (typically a DataFrame).
-        ml_model_class : ClassifierMixin, optional
-            The scikit-learn classifier to use for classification tasks (default: `sklearn.linear_model.LogisticRegression()`).
-        ml_model_regression : RegressorMixin, optional
-            The scikit-learn regressor to use for regression tasks (default: `sklearn.linear_model.LinearRegression()`).
-        params : list or str, optional
-            List of clinical annotation columns to evaluate, or "all" to use all columns (default: "all").
-        metric_class : str, optional
-            Scoring metric for classification tasks (default: "roc_auc_ovo").
-        metric_regression : str, optional
-            Scoring metric for regression tasks (default: "r2").
-        reference_methods : list, optional
-            List of feature representations to evaluate (e.g., "PCA", "UMAP", "TSNE", "RandomFeature"). "Latent" is always included (default: []).
-        split_type : str, optional
-            Evaluation strategy: "use-split" for pre-defined splits, "CV-N" for N-fold cross-validation, or "LOOCV" for leave-one-out cross-validation (default: "use-split").
-        Returns
-        -------
-        Result
-            The updated result object with evaluation results stored in `embedding_evaluation`.
-        Raises
-        ------
-        ValueError
-            If required annotation data is missing or improperly formatted, or if an unsupported split type is specified.
-        Notes
-        -----
         - Samples with missing annotation values for a given parameter are excluded from the corresponding evaluation.
         - For "RandomFeature", five random feature sets are evaluated.
         - The method appends results to any existing `embedding_evaluation` in the result object.
+
+        Args:
+            datasets: A DatasetContainer containing train, valid, and test datasets, each with `sample_ids` and `metadata` (either a DataFrame or a dictionary with a 'paired' key for clinical annotations).
+            result: An Result object to store the evaluation results. Should have an `embedding_evaluation` attribute which updated (typically a DataFrame).
+            ml_model_class: The scikit-learn classifier to use for classification tasks (default: `sklearn.linear_model.LogisticRegression()`).
+            ml_model_regression: The scikit-learn regressor to use for regression tasks (default: `sklearn.linear_model.LinearRegression()`).
+            params:List of clinical annotation columns to evaluate, or "all" to use all columns (default: "all").
+            metric_class: Scoring metric for classification tasks (default: "roc_auc_ovo").
+            metric_regression: Scoring metric for regression tasks (default: "r2").
+            reference_methods:List of feature representations to evaluate (e.g., "PCA", "UMAP", "TSNE", "RandomFeature"). "Latent" is always included (default: []).
+            split_type: which split to use
+                use-split" for pre-defined splits, "CV-N" for N-fold cross-validation, or "LOOCV" for leave-one-out cross-validation (default: "use-split").
+        Returns:
+            The updated result object with evaluation results stored in `embedding_evaluation`.
+        Raises
+            ValueError: If required annotation data is missing or improperly formatted, or if an unsupported split type is specified.
+
         """
 
         already_warned = False
@@ -279,27 +267,29 @@ class GeneralEvaluator(BaseEvaluator):
         metric: str,
         cv_folds: int = 5,
     ):
-        """
-        Function learns on the given data frame df and label data the provided sklearn model.
+        """Function learns on the given data frame df and label data the provided sklearn model.
+
         Cross validation is performed according to the config and scores are returned as output as specified by metrics
-        ARGS:
-            df (pd.DataFrame): Dataframe with input data
-            clin_data (pd.DataFrame): Dataframe with label data
-            task_param (str): Column name with label data
-            sklearn_ml (sklearn.module): Sklearn ML module specifying the ML algorithm
-            metric (str): string specifying the metric to be calculated by cross validation
-        RETURNS:
-            score_df (pd.DataFrame): data frame containing metrics (scores) for all CV runs (long format)
+
+        Args:
+            df: Dataframe with input data
+            clin_data: Dataframe with label data
+            task_param: Column name with label data
+            sklearn_ml: Sklearn ML module specifying the ML algorithm
+            metric: string specifying the metric to be calculated by cross validation
+            cv_folds:
+        Returns:
+            score_df: data frame containing metrics (scores) for all CV runs (long format)
 
         """
 
         # X -> df
         # Y -> task_param
-        y = clin_data.loc[df.index, task_param]
+        y: Union[pd.Series, pd.DataFrame] = clin_data.loc[df.index, task_param]
         score_df = dict()
 
         ## Cross Validation
-        if len(y.unique()) > 1:
+        if len(y.unique()) > 1:  # ty: ignore
             scores = cross_validate(
                 sklearn_ml, df, y, cv=cv_folds, scoring=metric, return_train_score=True
             )
@@ -332,9 +322,9 @@ class GeneralEvaluator(BaseEvaluator):
         return pd.DataFrame(score_df)
 
     @staticmethod
-    def _get_clin_data(datasets) -> pd.DataFrame:
-        """
-        Retrieves the clinical annotation DataFrame (clin_data) from the provided datasets.
+    def _get_clin_data(datasets) -> Union[pd.DataFrame, pd.Series]:
+        """Retrieves the clinical annotation DataFrame (clin_data) from the provided datasets.
+
         Handles both standard and XModalix dataset structures.
         """
         if hasattr(datasets.train, "metadata"):
@@ -410,25 +400,25 @@ class GeneralEvaluator(BaseEvaluator):
         #     clin_data = clin_data[~clin_data.index.duplicated(keep='first')]
         else:
             # Iterate over all splits and keys, concatenate if DataFrame
-                clin_data = pd.DataFrame()
-                for split_name in ["train", "test", "valid"]:
-                    split_temp = getattr(datasets, split_name, None)
-                    if split_temp is not None:
-                        for key in split_temp.datasets.keys():
-                            if isinstance(split_temp.datasets[key].metadata, pd.DataFrame):
-                                clin_data = pd.concat(
-                                    [
-                                        clin_data,
-                                        split_temp.datasets[key].metadata,
-                                    ],
-                                    axis=0,
-                                )
-                # remove duplicate rows
-                clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
-            # Raise error no annotation given
-            # raise ValueError(
-            #     "No annotation data found. Please provide a valid annotation data type."
-            # )
+            clin_data = pd.DataFrame()
+            for split_name in ["train", "test", "valid"]:
+                split_temp = getattr(datasets, split_name, None)
+                if split_temp is not None:
+                    for key in split_temp.datasets.keys():
+                        if isinstance(split_temp.datasets[key].metadata, pd.DataFrame):
+                            clin_data = pd.concat(
+                                [
+                                    clin_data,
+                                    split_temp.datasets[key].metadata,
+                                ],
+                                axis=0,
+                            )
+            # remove duplicate rows
+            clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
+        # Raise error no annotation given
+        # raise ValueError(
+        #     "No annotation data found. Please provide a valid annotation data type."
+        # )
         return clin_data
 
     def _enrich_results(
@@ -465,35 +455,22 @@ class GeneralEvaluator(BaseEvaluator):
         metric: str,
         ml_type: str,
     ):
-        """
-        Trains the provided sklearn model on the training split and evaluates it on train, valid, and test splits using the specified metric.
+        """Trains the provided sklearn model on the training split and evaluates it on train, valid, and test splits using the specified metric.
 
-        Parameters
-        ----------
-        sample_split : pd.DataFrame
-            DataFrame with sample IDs and their corresponding split ("train", "valid", "test").
-        df : pd.DataFrame
-            DataFrame with input features, indexed by sample IDs.
-        clin_data : pd.DataFrame
-            DataFrame with label/annotation data, indexed by sample IDs.
-        task_param : str
-            Column name in clin_data specifying the target variable.
-        sklearn_ml : ClassifierMixin or RegressorMixin
-            Instantiated sklearn model to use for training and evaluation.
-        metric : str
-            Scoring metric compatible with sklearn's get_scorer.
-        ml_type : str
-            Type of machine learning task ("classification" or "regression").
+        Args:
+            sample_split: DataFrame with sample IDs and their corresponding split ("train", "valid", "test").
+            df: DataFrame with input features, indexed by sample IDs.
+            clin_data: DataFrame with label/annotation data, indexed by sample IDs.
+            task_param: Column name in clin_data specifying the target variable.
+            sklearn_ml: Instantiated sklearn model to use for training and evaluation.
+            metric: Scoring metric compatible with sklearn's get_scorer.
+            ml_type: Type of machine learning task ("classification" or "regression").
 
-        Returns
-        -------
-        pd.DataFrame
+        Returns:
             DataFrame containing evaluation scores for each split (train, valid, test) and the specified metric.
 
         Raises
-        ------
-        ValueError
-            If the provided metric is not supported by sklearn.
+            ValueError: If the provided metric is not supported by sklearn.
         """
         split_list = ["train", "valid", "test"]
 
@@ -509,8 +486,8 @@ class GeneralEvaluator(BaseEvaluator):
         train_samples = [s for s in X_train.index]
         Y_train = clin_data.loc[train_samples, task_param]
         # train model once on training data
-        if len(Y_train.unique()) > 1:
-            sklearn_ml.fit(X_train, Y_train)
+        if len(Y_train.unique()) > 1:  # ty: ignore
+            sklearn_ml.fit(X_train, Y_train)  # ty: ignore
 
             # eval on all splits
             for split in split_list:
@@ -534,12 +511,19 @@ class GeneralEvaluator(BaseEvaluator):
 
                 if ml_type == "classification":
                     # Check that Y has only classes which are present in Y_train
-                    if len(set(Y.unique()).difference(set(Y_train.unique()))) > 0:
+                    if (
+                        len(
+                            set(Y.unique()).difference(  # ty: ignore
+                                set(Y_train.unique())  # ty: ignore
+                            )  # ty: ignore
+                        )  # ty: ignore
+                        > 0  # ty: ignore
+                    ):  # ty: ignore
                         print(
                             f"Classes in split {split} are not present in training data"
                         )
                         # Adjust Y to only contain classes present in Y_train
-                        Y = Y[Y.isin(Y_train.unique())]
+                        Y = Y[Y.isin(Y_train.unique())]  # ty: ignore
                         # Adjust X as well
                         X = X.loc[Y.index, :]
 
@@ -555,15 +539,14 @@ class GeneralEvaluator(BaseEvaluator):
 
     @staticmethod
     def _get_ml_type(clin_data: pd.DataFrame, task_param: str) -> str:
-        """
-        Determines the machine learning task type (classification or regression) based on the data type of a specified column in clinical data.
+        """Determines the machine learning task type (classification or regression) based on the data type of a specified column in clinical data.
 
         Args:
-            clin_data (pd.DataFrame): The clinical data as a pandas DataFrame.
-            task_param (str): The column name in clin_data to inspect for determining the task type.
+            clin_data: The clinical data as a pandas DataFrame.
+            task_param: The column name in clin_data to inspect for determining the task type.
 
         Returns:
-            str: "classification" if the first value in the specified column is a string, otherwise "regression".
+            "classification" if the first value in the specified column is a string, otherwise "regression".
         """
         ## Auto-Detection
         if type(list(clin_data[task_param])[0]) is str:
@@ -579,22 +562,24 @@ class GeneralEvaluator(BaseEvaluator):
     def _load_input_for_ml(
         task: str, dataset: DatasetContainer, result: Result
     ) -> pd.DataFrame:
-        """
-        Loads and processes input data for various machine learning tasks based on the specified task type.
-        Parameters:
-            task (str): The type of ML task. Supported values are "Latent", "UMAP", "PCA", "TSNE", and "RandomFeature".
-            dataset (DatasetContainer): The dataset container object holding train, validation, and test splits.
-            result (Result): The result object containing model configuration and methods to retrieve latent representations.
-        Returns:
-            pd.DataFrame: A DataFrame containing the processed input data suitable for the specified ML task.
-        Raises:
-            ValueError: If the provided task is not supported.
+        """Loads and processes input data for various machine learning tasks based on the specified task type.
+
+
         Task Details:
             - "Latent": Concatenates latent representations from train, validation, and test splits at the final epoch.
             - "UMAP": Applies UMAP dimensionality reduction to the concatenated dataset splits.
             - "PCA": Applies PCA dimensionality reduction to the concatenated dataset splits.
             - "TSNE": Applies t-SNE dimensionality reduction to the concatenated dataset splits.
             - "RandomFeature": Randomly samples columns (features) from the concatenated dataset splits.
+
+        Args:
+            task: The type of ML task. Supported values are "Latent", "UMAP", "PCA", "TSNE", and "RandomFeature".
+            dataset: The dataset container object holding train, validation, and test splits.
+            result: The result object containing model configuration and methods to retrieve latent representations.
+        Returns:
+            A DataFrame containing the processed input data suitable for the specified ML task.
+        Raises:
+            ValueError: If the provided task is not supported.
         """
 
         final_epoch = result.model.config.epochs - 1

@@ -1,4 +1,4 @@
-from typing import Union, Tuple
+from typing import Union, Tuple, Optional, no_type_check
 
 
 import pandas as pd
@@ -25,28 +25,30 @@ class XModalixEvaluator(GeneralEvaluator):
         pass
 
     @staticmethod
+    @no_type_check
     def pure_vae_comparison(
         xmodalix_result: Result,
         pure_vae_result: Result,
         to_key: str,
-        param: str = None,
+        param: Optional[str] = None,
     ) -> Tuple[Figure, pd.DataFrame]:
-        """
-        Compares the reconstruction performance of a pure VAE model and a cross-modal VAE (xmodalix) model using Mean Squared Error (MSE) on test samples.
+        """Compares the reconstruction performance of a pure VAE model and a cross-modal VAE (xmodalix) model using Mean Squared Error (MSE) on test samples.
+
         For each sample in the test set, computes the MSE between the original and reconstructed images for:
             - Pure VAE reconstructions ("imagix")
             - xmodalix reference reconstructions ("xmodalix_reference")
             - xmodalix translated reconstructions ("xmodalix_translated")
         The results are merged with sample metadata and returned in a long-format DataFrame suitable for plotting. Optionally, boxplots are generated grouped by a specified metadata parameter.
+
         Args:
-            xmodalix_result (Result): The result object containing xmodalix model outputs and test datasets.
-            pure_vae_result (Result): The result object containing pure VAE model outputs and test datasets.
-            to_key (str): The key specifying the target modality in the xmodalix dataset.
-            param (str, optional): Metadata column name to group boxplots by. If None, plots are grouped by model only.
+            xmodalix_result: The result object containing xmodalix model outputs and test datasets.
+            pure_vae_result: The result object containing pure VAE model outputs and test datasets.
+            to_key: The key specifying the target modality in the xmodalix dataset.
+            param: Metadata column name to group boxplots by. If None, plots are grouped by model only.
+
         Returns:
-            Tuple[Figure, pd.DataFrame]:
-                - Figure: The matplotlib/seaborn boxplot figure comparing MSE distributions.
-                - pd.DataFrame: Long-format DataFrame containing MSE values and associated metadata for each sample and model.
+                - The matplotlib/seaborn boxplot figure comparing MSE distributions.
+                - DataFrame: Long-format DataFrame containing MSE values and associated metadata for each sample and model.
         """
 
         if "IMG" not in to_key:
@@ -56,6 +58,8 @@ class XModalixEvaluator(GeneralEvaluator):
 
         ## Pure VAE MSE calculation
         meta_imagix = pure_vae_result.datasets.test.metadata
+        if meta_imagix is None:
+            raise ValueError("metadata cannot be None")
         sample_ids = list(meta_imagix.index)
 
         all_sample_order = sample_ids  ## TODO check code, seems unnecessary
@@ -207,9 +211,9 @@ class XModalixEvaluator(GeneralEvaluator):
         return fig, df_long
 
     @staticmethod
-    def _get_clin_data(datasets) -> pd.DataFrame:
-        """
-        Retrieves the clinical annotation DataFrame (clin_data) from the provided datasets.
+    def _get_clin_data(datasets) -> Union[pd.Series, pd.DataFrame]:
+        """Retrieves the clinical annotation DataFrame (clin_data) from the provided datasets.
+
         Handles both standard and XModalix dataset structures.
         """
         # XModalix-Case
@@ -247,7 +251,6 @@ class XModalixEvaluator(GeneralEvaluator):
         task: str,
         sub: str,
     ) -> pd.DataFrame:
-
         res_ml_alg = [str(sklearn_ml) for x in range(0, results.shape[0])]
         res_ml_type = [ml_type for x in range(0, results.shape[0])]
         res_ml_subtask = [sub for x in range(0, results.shape[0])]
@@ -291,22 +294,24 @@ class XModalixEvaluator(GeneralEvaluator):
     def _load_input_for_ml(
         task: str, dataset: DatasetContainer, result: Result
     ) -> pd.DataFrame:
-        """
-        Loads and processes input data for various machine learning tasks based on the specified task type.
-        Parameters:
-            task (str): The type of ML task. Supported values are "Latent", "UMAP", "PCA", "TSNE", and "RandomFeature".
-            dataset (DatasetContainer): The dataset container object holding train, validation, and test splits.
-            result (Result): The result object containing model configuration and methods to retrieve latent representations.
-        Returns:
-            pd.DataFrame: A DataFrame containing the processed input data suitable for the specified ML task.
-        Raises:
-            ValueError: If the provided task is not supported.
+        """Loads and processes input data for various machine learning tasks based on the specified task type.
+
         Task Details:
             - "Latent": Concatenates latent representations from train, validation, and test splits at the final epoch.
             - "UMAP": Applies UMAP dimensionality reduction to the concatenated dataset splits.
             - "PCA": Applies PCA dimensionality reduction to the concatenated dataset splits.
             - "TSNE": Applies t-SNE dimensionality reduction to the concatenated dataset splits.
             - "RandomFeature": Randomly samples columns (features) from the concatenated dataset splits.
+
+
+        Args:
+            task: The type of ML task. Supported values are "Latent", "UMAP", "PCA", "TSNE", and "RandomFeature".
+            dataset: The dataset container object holding train, validation, and test splits.
+            result: The result object containing model configuration and methods to retrieve latent representations.
+        Returns:
+            A DataFrame containing the processed input data suitable for the specified ML task.
+        Raises:
+            ValueError: If the provided task is not supported.
         """
 
         # final_epoch = result.model.config.epochs - 1

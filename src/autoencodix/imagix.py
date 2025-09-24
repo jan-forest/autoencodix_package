@@ -25,38 +25,13 @@ from autoencodix.visualize._imagix_visualizer import ImagixVisualizer
 
 
 class Imagix(BasePipeline):
-    """
-    Imagix specific version of the BasePipeline class.
-    Inherits preprocess, fit, predict, evaluate, and visualize methods from BasePipeline.
+    """Imagix specific version of the BasePipeline class.
 
-    Attributes
-    ----------
-    preprocessed_data : Optional[DatasetContainer]
-        User data if no datafiles in the config are provided. We expect these to be split and processed.
-    raw_user_data : Optional[DataPackage]
-        We give users the option to populate a DataPacke with raw data i.e. pd.DataFrames, MuData.
-        We will process this data as we would do wit raw files specified in the config.
-    config : Optional[Union[None, DefaultConfig]]
-        Configuration object containing customizations for the pipeline
-    _preprocessor : Preprocessor
-        Visualizer object to visualize the model output
-    _trainer : GeneralTrainer
-        Trainer object that trains the model
-    _evaluator : GeneralEvaluator
-        Evaluator object that evaluates the model performance or downstream tasks
-    result : Result
-        Result object to store the pipeline results
-    _datasets : Optional[DatasetContainer]
-        Container for train, validation, and test datasets (preprocessed)
-    data_splitter : DataSplitter
-        DataSplitter object to split the data into train, validation, and test sets
+    This class extends BasePipeline. See the parent class for a full list
+    of attributes and methods.
 
-    Methods
-    -------
-    all methods from BasePipeline
-
-    sample_latent_space(split: str = "test", epoch: int = -1) -> torch.Tensor
-        Samples new latent space points from the learned distribution.
+    Additional Attributes:
+        _default_config: Is set to DefaultConfig here.
 
     """
 
@@ -68,8 +43,8 @@ class Imagix(BasePipeline):
         model_type: Type[BaseAutoencoder] = ImageVAEArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = ImagePreprocessor,
-        visualizer: Optional[BaseVisualizer] = ImagixVisualizer,
-        evaluator: Optional[GeneralEvaluator] = GeneralEvaluator,
+        visualizer: Optional[Type[BaseVisualizer]] = ImagixVisualizer,
+        evaluator: Optional[Type[GeneralEvaluator]] = GeneralEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
@@ -80,29 +55,8 @@ class Imagix(BasePipeline):
         Some components are passed as types rather than instances because they require
         data that is only available after preprocessing.
 
-        Parameters
-        ----------
-        preprocessed_data : Union[np.ndarray, AnnData, pd.DataFrame, DatasetContainer]
-            Input data to be processed
-        trainer_type : Type[BaseTrainer]
-            Type of trainer to be instantiated during fit step, default is GeneralTrainer
-        dataset_type : Type[BaseDataset]
-            Type of dataset to be instantiated post-preprocessing, default is NumericDataset
-        loss_type : Type[BaseLoss], which loss to use for Imagix, default is VarixAutoencoderLoss
-        preprocessor : Optional[Preprocessor]
-            For data preprocessing, default creates new Preprocessor
-        visualizer : Optional[Visualizer]
-            For result visualization, default creates new Visualizer
-        evaluator : Optional[Evaluator]
-            For model evaluation, default creates new Evaluator
-        result : Optional[Result]
-            Container for pipeline results, default creates new Result
-        datasplitter_type : Type[DataSplitter], optional
-            Type of splitter to be instantiated during preprocessing, default is DataSplitter
-        custom_splits : Optional[Dict[str, np.ndarray]]
-            Custom train/valid/test split indices
-        config : Optional[DefaultConfig]
-            Configuration for all pipeline components
+        See Parentclass for full list of Args.
+
         """
         self._default_config = DefaultConfig()
         super().__init__(
@@ -140,13 +94,16 @@ class Imagix(BasePipeline):
     def sample_latent_space(
         self, config, split: str = "test", epoch: int = -1
     ) -> torch.Tensor:
-        """
-        Samples new latent space points from the learned distribution.
-        Parameters:
-            split: str - The split to sample from (train, valid, test), default is test
-            epoch: int - The epoch to sample from, default is the last epoch (-1)
+        """Samples new latent space points from the learned distribution.
+
+        Args:
+            split: The split to sample from (train, valid, test), default is test
+            epoch: The epoch to sample from, default is the last epoch (-1)
         Returns:
             z: torch.Tensor - The sampled latent space points
+        Raises:
+            ValueError: if model has not been trained.
+            TypeError: if mu and or logvar are no numpy arrays
 
         """
         if not hasattr(self, "_trainer") or self._trainer is None:

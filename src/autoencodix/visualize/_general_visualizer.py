@@ -1,5 +1,5 @@
 from dataclasses import field
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, Literal
 import warnings
 
 import matplotlib.figure
@@ -54,34 +54,26 @@ class GeneralVisualizer(BaseVisualizer):
     def show_latent_space(
         self,
         result: Result,
-        plot_type: str = "2D-scatter",
+        plot_type: Literal[
+            "2D-scatter", "Ridgeline", "Coverage-Correlation"
+        ] = "2D-scatter",
         labels: Optional[Union[list, pd.Series, None]] = None,
         param: Optional[Union[list, str]] = None,
         epoch: Optional[Union[int, None]] = None,
         split: str = "all",
         **kwargs,
     ) -> None:
-        """
-        Visualizes the latent space of the given result using different types of plots.
+        """Visualizes the latent space of the given result using different types of plots.
 
-        Parameters:
-        -----------
-        result : Result
-            The result object containing latent spaces and losses.
-        plot_type : str, optional
-            The type of plot to generate. Options are "2D-scatter", "Ridgeline", and "Coverage-Correlation". Default is "2D-scatter".
-        labels : list, optional
-            List of labels for the data points in the latent space. Default is None.
-        param : str, optional
-            List of parameters provided and stored as metadata. Strings must match column names. If not a list, string "all" is expected for convenient way to make plots for all parameters available. Default is None where no colored labels are plotted.
-        epoch : int, optional
-            The epoch number to visualize. If None, the last epoch is inferred from the losses. Default is None.
-        split : str, optional
-            The data split to visualize. Options are "train", "valid", "test", and "all". Default is "all".
+        Args:
+            result: The result object containing latent spaces and losses.
+            plot_type: The type of plot to generate. Options are "2D-scatter", "Ridgeline", and "Coverage-Correlation". Default is "2D-scatter".
+            labels: List of labels for the data points in the latent space. Default is None.
+            param: List of parameters provided and stored as metadata. Strings must match column names. If not a list, string "all" is expected for convenient way to make plots for all parameters available. Default is None where no colored labels are plotted.
+            epoch: The epoch number to visualize. If None, the last epoch is inferred from the losses. Default is None.
+            split: The data split to visualize. Options are "train", "valid", "test", and "all". Default is "all".
+            **kwargs: additional arguments.
 
-        Returns:
-        --------
-        None
         """
         plt.ioff()
         if plot_type == "Coverage-Correlation":
@@ -151,12 +143,22 @@ class GeneralVisualizer(BaseVisualizer):
                         clin_data = result.datasets.train.metadata["paired"]
                         if hasattr(result.datasets, "test"):
                             clin_data = pd.concat(
-                                [clin_data, result.datasets.test.metadata["paired"]],
+                                [
+                                    clin_data,
+                                    result.datasets.test.metadata[  # ty: ignore
+                                        "paired"
+                                    ],  # ty: ignore
+                                ],  # ty: ignore
                                 axis=0,
                             )
                         if hasattr(result.datasets, "valid"):
                             clin_data = pd.concat(
-                                [clin_data, result.datasets.valid.metadata["paired"]],
+                                [
+                                    clin_data,
+                                    result.datasets.valid.metadata[  # ty: ignore
+                                        "paired"
+                                    ],  # ty: ignore
+                                ],  # ty: ignore
                                 axis=0,
                             )
                     else:
@@ -164,9 +166,13 @@ class GeneralVisualizer(BaseVisualizer):
                         clin_data = pd.DataFrame()
                         for split_name in ["train", "test", "valid"]:
                             split_temp = getattr(result.datasets, split_name, None)
-                            if split_temp is not None and hasattr(split_temp, "metadata"):
+                            if split_temp is not None and hasattr(
+                                split_temp, "metadata"
+                            ):
                                 for key in split_temp.metadata.keys():
-                                    if isinstance(split_temp.metadata[key], pd.DataFrame):
+                                    if isinstance(
+                                        split_temp.metadata[key], pd.DataFrame
+                                    ):
                                         clin_data = pd.concat(
                                             [
                                                 clin_data,
@@ -185,12 +191,12 @@ class GeneralVisualizer(BaseVisualizer):
                     clin_data = result.datasets.train.metadata
                     if hasattr(result.datasets, "test"):
                         clin_data = pd.concat(
-                            [clin_data, result.datasets.test.metadata],
+                            [clin_data, result.datasets.test.metadata],  # ty: ignore
                             axis=0,
                         )
                     if hasattr(result.datasets, "valid"):
                         clin_data = pd.concat(
-                            [clin_data, result.datasets.valid.metadata],
+                            [clin_data, result.datasets.valid.metadata],  # ty: ignore
                             axis=0,
                         )
                 else:
@@ -205,7 +211,9 @@ class GeneralVisualizer(BaseVisualizer):
                     split_temp = getattr(result.datasets, split_name, None)
                     if split_temp is not None:
                         for key in split_temp.datasets.keys():
-                            if isinstance(split_temp.datasets[key].metadata, pd.DataFrame):
+                            if isinstance(
+                                split_temp.datasets[key].metadata, pd.DataFrame
+                            ):
                                 clin_data = pd.concat(
                                     [
                                         clin_data,
@@ -261,10 +269,11 @@ class GeneralVisualizer(BaseVisualizer):
                     ).tolist()
                 else:
                     param = ["user_label"]  # Default label if none provided
-
+            if not isinstance(param, list):
+                raise TypeError("Param needs to be converted to a list")
             for p in param:
                 if p in clin_data.columns:
-                    labels = clin_data.loc[df_latent.index, p].tolist()
+                    labels = clin_data.loc[df_latent.index, p].tolist()  # ty: ignore
 
                 if plot_type == "2D-scatter":
                     ## Make 2D Embedding with UMAP
@@ -299,14 +308,7 @@ class GeneralVisualizer(BaseVisualizer):
                     plt.show()
 
     def show_weights(self) -> None:
-        """
-        Display the model weights plot if it exists in the plots dictionary.
-        Parameters:
-        None
-        Returns:
-        None
-
-        """
+        """Display the model weights plot if it exists in the plots dictionary."""
 
         if "ModelWeights" not in self.plots.keys():
             print("Model weights not found in the plots dictionary")
@@ -339,24 +341,23 @@ class GeneralVisualizer(BaseVisualizer):
         scale: Optional[Union[str, None]] = None,
         no_leg: bool = False,
     ) -> matplotlib.figure.Figure:
-        """
-        Plots a 2D scatter plot of the given embedding with labels.
+        """Plots a 2D scatter plot of the given embedding with labels.
 
-        Parameters:
-        embedding (pd.DataFrame): DataFrame containing the 2D embedding coordinates.
-        labels (list): List of labels corresponding to each point in the embedding.
-        param (str, optional): Title for the legend. Defaults to None.
-        layer (str, optional): Title for the plot. Defaults to "latent space".
-        figsize (tuple, optional): Size of the figure. Defaults to (24, 15).
-        center (bool, optional): If True, centers the plot based on label means. Defaults to True.
-        plot_numeric (bool, optional): If True, treats labels as numeric. Defaults to False.
-        xlim (tuple, optional): Limits for the x-axis. Defaults to None.
-        ylim (tuple, optional): Limits for the y-axis. Defaults to None.
-        scale (str, optional): Scale for the axes (e.g., 'log'). Defaults to None.
-        no_leg (bool, optional): If True, no legend is displayed. Defaults to False.
+        Args:
+            embedding: DataFrame containing the 2D embedding coordinates.
+            labels: List of labels corresponding to each point in the embedding.
+            param: Title for the legend. Defaults to None.
+            layer: Title for the plot. Defaults to "latent space".
+            figsize: Size of the figure. Defaults to (24, 15).
+            center: If True, centers the plot based on label means. Defaults to True.
+            plot_numeric: If True, treats labels as numeric. Defaults to False.
+            xlim: Limits for the x-axis. Defaults to None.
+            ylim: Limits for the y-axis. Defaults to None.
+            scale:: Scale for the axes (e.g., 'log'). Defaults to None.
+            no_leg: If True, no legend is displayed. Defaults to False.
 
         Returns:
-        plt.Figure: The resulting matplotlib figure.
+            The resulting matplotlib figure.
         """
 
         numeric = False
@@ -472,14 +473,14 @@ class GeneralVisualizer(BaseVisualizer):
         labels: Optional[Union[list, pd.Series, None]] = None,
         param: Optional[Union[str, None]] = None,
     ) -> sns.FacetGrid:
-        """
-        Creates a ridge line plot of latent space dimension where each row shows the density of a latent dimension and groups (ridges).
-        ARGS:
-            lat_space (pd.DataFrame): DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
-            labels (list): List of labels for each sample. If None, all samples are considered as one group.
-            param (str): Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
-        RETURNS:
-            g (sns.FacetGrid): FacetGrid object containing the ridge line plot
+        """Creates a ridge line plot of latent space dimension where each row shows the density of a latent dimension and groups (ridges).
+
+        Args:
+            lat_space: DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
+            labels: List of labels for each sample. If None, all samples are considered as one group.
+            param: Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
+        Returns:
+            g: FacetGrid object containing the ridge line plot
         """
         sns.set_theme(
             style="white", rc={"axes.facecolor": (0, 0, 0, 0)}
@@ -580,14 +581,13 @@ class GeneralVisualizer(BaseVisualizer):
         self,
         result: Result,
     ) -> dict:
-        """
-        Plots the evaluation results from the Result object.
+        """Plots the evaluation results from the Result object.
 
-        Parameters:
-        result (Result): The Result object containing evaluation data.
+        Args:
+            result: The Result object containing evaluation data.
 
         Returns:
-        dict: The generated dictionary containing the evaluation plots.
+            The generated dictionary containing the evaluation plots.
         """
         ## Plot all results
 
@@ -596,13 +596,13 @@ class GeneralVisualizer(BaseVisualizer):
 
         for c in pd.unique(result.embedding_evaluation.CLINIC_PARAM):
             ml_plots[c] = dict()
-            for m in pd.unique(
+            for m in pd.unique(  # ty: ignore
                 result.embedding_evaluation.loc[
                     result.embedding_evaluation.CLINIC_PARAM == c, "metric"
                 ]
             ):
                 ml_plots[c][m] = dict()
-                for alg in pd.unique(
+                for alg in pd.unique(  # ty: ignore
                     result.embedding_evaluation.loc[
                         (result.embedding_evaluation.CLINIC_PARAM == c)
                         & (result.embedding_evaluation.metric == m),
@@ -646,9 +646,9 @@ class GeneralVisualizer(BaseVisualizer):
         """Function to compute the total correlation as described here (Equation2): https://doi.org/10.3390/e21100921
 
         Args:
-            latent_space - (pd.DataFrame): latent space with dimension sample vs. latent dimensions
+            latent_space: latent space with dimension sample vs. latent dimensions
         Returns:
-            tc - (float): total correlation across latent dimensions
+            tc: total correlation across latent dimensions
         """
         lat_cov = np.cov(latent_space.T)
         tc = 0.5 * (np.sum(np.log(np.diag(lat_cov))) - np.linalg.slogdet(lat_cov)[1])
@@ -659,9 +659,9 @@ class GeneralVisualizer(BaseVisualizer):
         """Function to compute the coverage as described here (Equation3): https://doi.org/10.3390/e21100921
 
         Args:
-            latent_space - (pd.DataFrame): latent space with dimension sample vs. latent dimensions
+            latent_space: latent space with dimension sample vs. latent dimensions
         Returns:
-            cov - (float): coverage across latent dimensions
+            cov: coverage across latent dimensions
         """
         bins_per_dim = int(
             np.power(len(latent_space.index), 1 / len(latent_space.columns))

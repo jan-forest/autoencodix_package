@@ -48,7 +48,7 @@ class ImagixVisualizer(GeneralVisualizer):
     #     plot_type: str = "2D-scatter",
     #     labels: Optional[Union[list, pd.Series, None]] = None,
     #     param: Optional[Union[list, str]] = None,
-# import pandas as pd
+    # import pandas as pd
     #     epoch: Optional[Union[int, None]] = None,
     #     split: str = "all",
     # ) -> None:
@@ -60,12 +60,18 @@ class ImagixVisualizer(GeneralVisualizer):
         )
 
     def show_image_recon_grid(self, result: Result, n_samples: int = 3) -> None:
+        if not hasattr(result.datasets, "test"):
+            raise ValueError("No test set found in datasets, has no attribute test")
+        if result.datasets.test is None:
+            raise ValueError("test set is None")
         meta = result.datasets.test.metadata
         sample_ids = meta.sample(n=n_samples, random_state=42).index
 
         all_sample_order = result.datasets.test.sample_ids
         indices = [
-            all_sample_order.index(sid) for sid in sample_ids if sid in all_sample_order
+            all_sample_order.index(sid)
+            for sid in sample_ids
+            if sid in all_sample_order  # ty: ignore
         ]
 
         fig, axes = plt.subplots(

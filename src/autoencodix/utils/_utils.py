@@ -209,7 +209,7 @@ def config_method(valid_params: Optional[set[str]] = None):
                     print(
                         f"\nWarning: Additional keyword arguments provided "
                         f"({', '.join(potential_config_kwargs.keys())}) "
-                        f"while an explicit 'config' object was also passed to {func.__name__}. " # type: ignore
+                        f"while an explicit 'config' object was also passed to {func.__name__}. "  # type: ignore
                         f"These additional arguments will be ignored as configuration overrides."
                     )
 

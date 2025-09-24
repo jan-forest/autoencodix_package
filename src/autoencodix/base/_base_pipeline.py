@@ -469,7 +469,7 @@ class BasePipeline(abc.ABC):
             loss_type=self._loss_type,
             ontologies=self._ontologies,  # Ontix
         )
-        trainer_result = self._trainer.train()
+        trainer_result: Result = self._trainer.train()
         self.result.update(other=trainer_result)
 
     def predict(

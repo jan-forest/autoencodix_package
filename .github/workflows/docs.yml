@@ -1,29 +1,47 @@
 name: docs
+
 on:
   push:
     branches:
-    - dev
+    - main
   pull_request:
     branches:
     - main
+env:
+  UV_SYSTEM_PYTHON: 1
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+    # Checkout the repo
+    - uses: actions/checkout@v3
 
-    # # https://github.com/marketplace/actions/deploy-mkdocs
-    # - uses: actions/checkout@v1
-    # - uses: mhausenblas/mkdocs-deploy-gh-pages@master
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    # https://squidfunk.github.io/mkdocs-material/publishing-your-site/?h=github#with-github-actions
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
+    # Setup Python
+    - uses: actions/setup-python@v4
       with:
-        python-version: 3.x
-    - run: pip install -U git+https://github.com/mkdocs/mkdocs.git#egg=mkdocs
-    - run: pip install mkdocs-material
-    - run: mkdocs gh-deploy --force
-    - run: mkdocs --version
+        python-version: 3.12
+
+    # Install uv
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: "0.8.22"
+
+    # Install dependencies using uv
+    - name: Install Python dependencies
+      run: |
+        uv pip install --upgrade pip
+        uv pip install -e .
+        uv pip install mkdocs mkdocs-material "mkdocstrings[python]==0.26.2"
+
+    # Build the documentation
+    - name: Build docs
+      run: uv run mkdocs build
+
+    # Deploy to GitHub Pages using peaceiris
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./site

@@ -14,7 +14,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.19">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.20">
     
     
       
@@ -22,7 +22,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.7e37652d.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.e53b48f4.min.css">
       
       
 
@@ -9029,7 +9029,8 @@ Uses node_names for decoder layers if model has ontologies.</p>
 <span class="normal">816</span>
 <span class="normal">817</span>
 <span class="normal">818</span>
-<span class="normal">819</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">XModalVisualizer</span><span class="p">(</span><span class="n">BaseVisualizer</span><span class="p">):</span>
+<span class="normal">819</span>
+<span class="normal">820</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">XModalVisualizer</span><span class="p">(</span><span class="n">BaseVisualizer</span><span class="p">):</span>
     <span class="n">plots</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span>
         <span class="n">default_factory</span><span class="o">=</span><span class="n">nested_dict</span>
     <span class="p">)</span>  <span class="c1">## Nested dictionary of plots as figure handles</span>
@@ -9192,8 +9193,9 @@ Uses node_names for decoder layers if model has ontologies.</p>
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">):</span>
                     <span class="n">param</span> <span class="o">=</span> <span class="p">[</span><span class="n">labels</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
                     <span class="c1"># Order by index of latent_data first, fill missing with &quot;unknown&quot;</span>
-                    <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span>
-                        <span class="n">latent_data</span><span class="p">[</span><span class="s2">&quot;sample_ids&quot;</span><span class="p">],</span> <span class="n">fill_value</span><span class="o">=</span><span class="s2">&quot;unknown&quot;</span>
+                    <span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span>  <span class="c1"># ty: ignore</span>
+                        <span class="n">latent_data</span><span class="p">[</span><span class="s2">&quot;sample_ids&quot;</span><span class="p">],</span>  <span class="c1"># ty: ignore</span>
+                        <span class="n">fill_value</span><span class="o">=</span><span class="s2">&quot;unknown&quot;</span><span class="p">,</span>  <span class="c1"># ty: ignore</span>
                     <span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">param</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;user_label&quot;</span><span class="p">]</span>  <span class="c1"># Default label if none provided</span>
@@ -9872,8 +9874,7 @@ Raises
 
             <details class="quote">
               <summary>Source code in <code>src/autoencodix/visualize/_xmodal_visualizer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">274</span>
-<span class="normal">275</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">275</span>
 <span class="normal">276</span>
 <span class="normal">277</span>
 <span class="normal">278</span>
@@ -10072,7 +10073,8 @@ Raises
 <span class="normal">471</span>
 <span class="normal">472</span>
 <span class="normal">473</span>
-<span class="normal">474</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@no_type_check</span>
+<span class="normal">474</span>
+<span class="normal">475</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@no_type_check</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">show_image_translation</span><span class="p">(</span>  <span class="c1"># ty: ignore</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">result</span><span class="p">:</span> <span class="n">Result</span><span class="p">,</span>
@@ -10346,7 +10348,7 @@ Raises
       <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.92b07e13.min.js"></script>
+      <script src="../../assets/javascripts/bundle.f55a23d4.min.js"></script>
       
     
   </body>

@@ -39,9 +39,9 @@ jobs:
     - name: Build docs
       run: uv run mkdocs build
 
+    # Deploy to GitHub Pages using peaceiris
     - name: Deploy to GitHub Pages
-
-      uses: actions/setup-python@v2
-      run: git config user.name 'github-actions[bot]' && git config user.email 'github-actions[bot]@users.noreply.github.com'
-    - name: Publish docs
-      run: mkdocs gh-deploy
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./site

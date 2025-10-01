@@ -83,6 +83,9 @@ class BaseLoss(nn.Module, ABC):
         y = y.unsqueeze(0)
         tiled_x = x.expand(x_size, y_size, dim)
         tiled_y = y.expand(x_size, y_size, dim)
+        print(f'device of tiled_x: {tiled_x.device}')
+
+        print(f'device of tiled_y: {tiled_y.device}')
 
         kernel_input = (tiled_x - tiled_y).pow(2).mean(2) / float(dim)
         return torch.exp(-kernel_input)
@@ -103,6 +106,8 @@ class BaseLoss(nn.Module, ABC):
             NotImplementedError: If unsupported loss reduction type is specified.
         """
         true_samples_kernel = self.compute_kernel(x=true_samples, y=true_samples)
+        z_device = z.device
+        true_samples = true_samples.to(z_device)
         z_kernel = self.compute_kernel(z, z)
         ztr_kernel = self.compute_kernel(x=true_samples, y=z)
 

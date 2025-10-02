@@ -83,9 +83,6 @@ class BaseLoss(nn.Module, ABC):
         y = y.unsqueeze(0)
         tiled_x = x.expand(x_size, y_size, dim)
         tiled_y = y.expand(x_size, y_size, dim)
-        print(f'device of tiled_x: {tiled_x.device}')
-
-        print(f'device of tiled_y: {tiled_y.device}')
 
         kernel_input = (tiled_x - tiled_y).pow(2).mean(2) / float(dim)
         return torch.exp(-kernel_input)

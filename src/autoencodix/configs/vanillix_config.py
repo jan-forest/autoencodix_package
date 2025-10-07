@@ -12,5 +12,7 @@ class VanillixConfig(DefaultConfig):
         ge=0,
         description="Beta weighting factor for VAE loss",
     )
-    epoch: int = Field(default=30, ge=0, description="How many epochs should the model train for.")
+    epoch: int = Field(
+        default=30, ge=0, description="How many epochs should the model train for."
+    )
     # TODO find sensible defaults for Vanillix

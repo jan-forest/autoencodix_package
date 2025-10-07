@@ -1,6 +1,6 @@
 import abc
 import copy
-from typing import Dict, Optional, Tuple, Type, Union, Any
+from typing import Dict, Optional, Tuple, Type, Union, Any, Literal
 
 import warnings
 import anndata as ad  # type: ignore
@@ -854,15 +854,17 @@ class BasePipeline(abc.ABC):
 
     def evaluate(
         self,
-        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(),  # Default is sklearn LogisticRegression
-        ml_model_regression: RegressorMixin = linear_model.LinearRegression(),  # Default is sklearn LinearRegression
+        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(),
+        ml_model_regression: RegressorMixin = linear_model.LinearRegression(),
         params: Union[
             list, str
         ] = [],  # Default empty list, to use all parameters use string "all"
         metric_class: str = "roc_auc_ovo",  # Default is 'roc_auc_ovo' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
-        split_type: str = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
+        split_type: Literal[
+            "use-split", "CV-5", "LOOC"
+        ] = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
     ) -> Result:
         """TODO"""
         if self._evaluator is None:

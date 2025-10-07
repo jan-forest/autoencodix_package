@@ -139,7 +139,7 @@ class GeneralPreprocessor(BasePreprocessor):
                         f"Expected a DataFrame for '{subkey}', got {type(df)}"
                     )
                 sample_counts[subkey] = df.shape[0]
-                print(f"cur shape: {subkey}: {df.shape}")
+                # print(f"cur shape: {subkey}: {df.shape}")
 
             # Validate all modalities have the same number of samples
             unique_sample_counts = set(sample_counts.values())

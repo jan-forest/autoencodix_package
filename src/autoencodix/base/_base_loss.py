@@ -103,6 +103,8 @@ class BaseLoss(nn.Module, ABC):
             NotImplementedError: If unsupported loss reduction type is specified.
         """
         true_samples_kernel = self.compute_kernel(x=true_samples, y=true_samples)
+        z_device = z.device
+        true_samples = true_samples.to(z_device)
         z_kernel = self.compute_kernel(z, z)
         ztr_kernel = self.compute_kernel(x=true_samples, y=z)
 

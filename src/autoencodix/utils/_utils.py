@@ -241,9 +241,14 @@ class Saver:
         Args:
             file_path: The base file path (without extensions).
         """
+
         self.file_path = file_path
         self.preprocessor_path = f"{file_path}_preprocessor.pkl"
         self.model_state_path = f"{file_path}_model.pth"
+
+        folder = os.path.dirname(self.file_path)
+        if folder:
+            os.makedirs(folder, exist_ok=True)
 
     def save(self, pipeline: "BasePipeline"):
         """Saves the BasePipeline object.

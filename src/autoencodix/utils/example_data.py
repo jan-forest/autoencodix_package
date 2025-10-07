@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from typing import Tuple
 import torch
 from sklearn.datasets import make_blobs  # type: ignore
 from sklearn.model_selection import train_test_split  # type: ignore
@@ -140,7 +141,7 @@ def generate_multi_bulk_example(
     n_features_modality1=100,
     n_features_modality2=80,
     random_seed=config.global_seed,
-):
+) -> Tuple[DataPackage, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Generate example data for MULTI_BULK case.
 
     Args:
@@ -150,7 +151,7 @@ def generate_multi_bulk_example(
         random_seed: Random seed for reproducibility
 
     Returns:
-        DataPackage with multi_bulk data
+        DataPackage with multi_bulk data and raw_data
     """
     np.random.seed(random_seed)
 
@@ -199,7 +200,7 @@ def generate_multi_bulk_example(
         "proteomics": annotation_df.copy(),
     }
 
-    return data_package
+    return data_package, df_mod1, df_mod2, annotation_df
 
 
 def generate_default_bulk_bulk_example(
@@ -381,6 +382,7 @@ def generate_multi_sc_example(
 
     data_package = DataPackage()
     data_package.multi_sc = {"multi_sc": mdata}
+    # data_package.annotation = {"multi_sc": mdata.obs}
 
     return data_package
 
@@ -388,5 +390,7 @@ def generate_multi_sc_example(
 # Pre-generated example data for direct import
 config = DefaultConfig()
 EXAMPLE_PROCESSED_DATA = generate_example_data(random_seed=config.global_seed)
-EXAMPLE_MULTI_BULK = generate_raw_datapackage(data_case=DataCase.MULTI_BULK)
+EXAMPLE_MULTI_BULK, raw_rna, raw_protein, annotation = generate_raw_datapackage(
+    data_case=DataCase.MULTI_BULK
+)
 EXAMPLE_MULTI_SC = generate_raw_datapackage(data_case=DataCase.MULTI_SINGLE_CELL)

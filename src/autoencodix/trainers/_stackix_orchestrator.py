@@ -290,7 +290,6 @@ class StackixOrchestrator:
             try:
                 latent_space = result.latentspaces.get(split=split, epoch=-1)
                 sample_ids = result.sample_ids.get(split=split, epoch=-1)
-                print(sample_ids)
 
                 if latent_space.shape[0] != len(sample_ids):
                     raise ValueError(

@@ -336,8 +336,10 @@ class XModalTrainer(BaseTrainer):
         sub_losses["clf_loss"] = total_clf_loss
         for k, v in sub_losses.items():
             if "_factor" not in k:
-                sub_losses[k] = v / n_samples_total # Average over all samples
-        self._epoch_loss = self._epoch_loss / n_samples_total # Average over all samples
+                sub_losses[k] = v / n_samples_total  # Average over all samples
+        self._epoch_loss = (
+            self._epoch_loss / n_samples_total
+        )  # Average over all samples
         return epoch_dynamics, sub_losses, n_samples_total
 
     def _train_one_epoch(self) -> Tuple[List[Dict], Dict[str, float], int]:
@@ -407,8 +409,10 @@ class XModalTrainer(BaseTrainer):
         sub_losses["clf_loss"] = self._clf_epoch_loss
         for k, v in sub_losses.items():
             if "_factor" not in k:
-                sub_losses[k] = v / n_samples_total # Average over all samples
-        self._epoch_loss = self._epoch_loss / n_samples_total # Average over all samples
+                sub_losses[k] = v / n_samples_total  # Average over all samples
+        self._epoch_loss = (
+            self._epoch_loss / n_samples_total
+        )  # Average over all samples
 
         return epoch_dynamics, sub_losses, n_samples_total
 
@@ -771,7 +775,6 @@ class XModalTrainer(BaseTrainer):
             [f"{k}: {v:.4f}" for k, v in sub_losses.items() if "_factor" not in k]
         )
         self._fabric.print(f"Sub-losses - {sub_loss_str}")
-        
 
     def _store_checkpoint(self, split: str, epoch_dynamics: List[Dict]) -> None:
         """Stores model checkpoints and epoch dynamics into the Result object.

@@ -242,8 +242,12 @@ class GeneralTrainer(BaseTrainer):
 
         for k, v in sub_losses.items():
             if "_factor" not in k:
-                sub_losses[k] = v / len(self._trainloader.dataset) # Average over all samples
-        total_loss = total_loss / len(self._trainloader.dataset) # Average over all samples
+                sub_losses[k] = v / len(
+                    self._trainloader.dataset
+                )  # Average over all samples
+        total_loss = total_loss / len(
+            self._trainloader.dataset
+        )  # Average over all samples
         return total_loss, sub_losses
 
     def _validate_epoch(
@@ -285,8 +289,12 @@ class GeneralTrainer(BaseTrainer):
 
         for k, v in sub_losses.items():
             if "_factor" not in k:
-                sub_losses[k] = v / len(self._validloader.dataset) # Average over all samples
-        total_loss = total_loss / len(self._validloader.dataset) # Average over all samples
+                sub_losses[k] = v / len(
+                    self._validloader.dataset
+                )  # Average over all samples
+        total_loss = total_loss / len(
+            self._validloader.dataset
+        )  # Average over all samples
         return total_loss, sub_losses
 
     def _log_losses(
@@ -307,10 +315,7 @@ class GeneralTrainer(BaseTrainer):
         self._result.sub_losses.add(
             epoch=epoch,
             split=split,
-            data={
-                k: v if "_factor" not in k else v
-                for k, v in sub_losses.items()
-            },
+            data={k: v if "_factor" not in k else v for k, v in sub_losses.items()},
         )
 
         self._fabric.print(

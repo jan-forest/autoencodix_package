@@ -869,15 +869,11 @@ class BasePreprocessor(abc.ABC):
         """
         print("--- Running Pairing-Aware Split ---")
 
-        # 1. Instantiate our new pairing-aware splitter with the full data package.
         pairing_splitter = PairedUnpairedSplitter(
             data_package=data_package, config=self.config
         )
 
-        # 2. Generate the single, synchronized dictionary of indices.
-        # This is the exact `split_indices_config` you want to return.
         split_indices_config = pairing_splitter.split()
-        print("Successfully generated synchronized indices for all modalities.")
 
         # 3. Instantiate your original DataPackageSplitter.
         # It now receives indices that are guaranteed to be consistent.

@@ -77,13 +77,13 @@ class BasePreprocessor(abc.ABC):
             DataCase.SINGLE_CELL_TO_SINGLE_CELL: SingleCellDataReader(),
             DataCase.IMG_TO_BULK: {
                 "bulk": BulkDataReader(config=self.config),
-                "img": ImageDataReader(),
+                "img": ImageDataReader(config=self.config),
             },
             DataCase.SINGLE_CELL_TO_IMG: {
                 "sc": SingleCellDataReader(),
-                "img": ImageDataReader(),
+                "img": ImageDataReader(config=self.config),
             },
-            DataCase.IMG_TO_IMG: ImageDataReader(),
+            DataCase.IMG_TO_IMG: ImageDataReader(config=self.config),
         }
 
     @abc.abstractmethod
@@ -261,9 +261,6 @@ class BasePreprocessor(abc.ABC):
         else:
             data_package = raw_user_data
         if self.config.requires_paired:
-            print(
-                f"datapackge in process_multi_single_cell {data_package} and multi_sc: {data_package.multi_sc}"
-            )
             common_ids = data_package.get_common_ids()
             if data_package.multi_sc is None:
                 raise ValueError("multi_sc in data_package is None")
@@ -309,7 +306,6 @@ class BasePreprocessor(abc.ABC):
         if raw_user_data is None:
             bulkreader = self.data_readers[DataCase.MULTI_BULK]
             bulk_dfs, annotation = bulkreader.read_data()
-            print(f"bulk_dfs keys in process_multi_bulk: {bulk_dfs.keys()}")
 
             data_package = DataPackage(multi_bulk=bulk_dfs, annotation=annotation)
         else:
@@ -654,6 +650,7 @@ class BasePreprocessor(abc.ABC):
 
             bulk_dfs, annotation_bulk = bulkreader.read_data()
             images, annotation_img = imgreader.read_data(config=self.config)
+
             annotation = {**annotation_bulk, **annotation_img}
 
             data_package = DataPackage(
@@ -851,9 +848,7 @@ class BasePreprocessor(abc.ABC):
     def _split_data_package(
         self, data_package: DataPackage
     ) -> Tuple[Dict[str, Optional[Dict[str, Any]]], Dict[str, Any]]:
-        """
-        Splits a data package into train/validation/test sets using a
-        pairing-aware strategy.
+        """Splits a data package into train/validation/test sets.
 
         This method first uses PairedUnpairedSplitter to generate a single,
         synchronized set of indices for all modalities. It then uses
@@ -867,26 +862,16 @@ class BasePreprocessor(abc.ABC):
             1. A dictionary of the split DataPackages.
             2. A dictionary of the synchronized integer indices used for the split.
         """
-        print("--- Running Pairing-Aware Split ---")
-
-        pairing_splitter = PairedUnpairedSplitter(
+        self.pairing_splitter = PairedUnpairedSplitter(
             data_package=data_package, config=self.config
         )
-
-        split_indices_config = pairing_splitter.split()
-
-        # 3. Instantiate your original DataPackageSplitter.
-        # It now receives indices that are guaranteed to be consistent.
+        split_indices_config = self.pairing_splitter.split()
         data_package_splitter = DataPackageSplitter(
             data_package=data_package,
             config=self.config,
             indices=split_indices_config,
         )
-
-        # 4. Perform the actual split using the synchronized indices.
         split_datasets = data_package_splitter.split()
-
-        # 5. Return both the split data and the indices used, just like your old method.
         return split_datasets, split_indices_config
 
     def _is_image_data(self, data: Any) -> bool:

@@ -21,5 +21,6 @@ class XModalixConfig(DefaultConfig):
         ge=0,
         description="Beta weighting factor for VAE loss",
     )
+    requires_paired: bool = Field(default=False)
 
     # TODO find sensible defaults for XModalix

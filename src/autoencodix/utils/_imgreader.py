@@ -34,11 +34,7 @@ class ImageSizeFinder:
         self.config = config
         found_image_type = False
         for data_type in config.data_config.data_info.keys():
-            print(f"Checking data type: {data_type}")
             if config.data_config.data_info[data_type].data_type == "IMG":
-                print("Found image type in config")
-                cur_data_info = config.data_config.data_info[data_type]
-                print(f"current data info: {cur_data_info}")
                 self.width = config.data_config.data_info[data_type].img_width_resize
                 self.height = config.data_config.data_info[data_type].img_height_resize
                 found_image_type = True
@@ -97,6 +93,9 @@ class ImageDataReader:
     Reads all images from the specified directory, processes them,
     and returns a list of ImgData objects.
     """
+
+    def __init__(self, config: DefaultConfig):
+        self.config = config
 
     def validate_image_path(self, image_path: Union[str, Path]) -> bool:
         """Checks if file extension is allowed:
@@ -209,8 +208,11 @@ class ImageDataReader:
         Raises:
             ValueError: If the annotation DataFrame is missing required columns.
         """
-        if "img_paths" not in annotation_df.columns:
-            raise ValueError("img_paths column is missing in the annotation_df")
+        if self.config.img_path_col not in annotation_df.columns:
+            raise ValueError(
+                f" The defined column for image paths: {self.config.img_path_col} column is missing in the annotation_df\
+                             you can define this in the config via the param `img_path_col`"
+            )
 
         SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
         paths = [
@@ -222,14 +224,15 @@ class ImageDataReader:
             paths = [
                 p
                 for p in paths
-                if os.path.basename(p) in annotation_df["img_paths"].tolist()
+                if os.path.basename(p)
+                in annotation_df[self.config.img_path_col].tolist()
             ]
         imgs = []
         for p in paths:
             img = self.parse_image_to_tensor(image_path=p, to_h=to_h, to_w=to_w)
             img_path = os.path.basename(p)
             subset: Union[pd.Series, pd.DataFrame] = annotation_df[
-                annotation_df["img_paths"] == img_path
+                annotation_df[self.config.img_path_col] == img_path
             ]
             if not subset.empty:
                 imgs.append(
@@ -254,7 +257,6 @@ class ImageDataReader:
             if data_info.extra_anno_file is None
             else os.path.join(data_info.extra_anno_file)
         )
-        print(f"reading annotation file: {anno_file}")
         sep = data_info.sep
         if anno_file.endswith(".parquet"):
             annotation = pd.read_parquet(anno_file)
@@ -332,11 +334,6 @@ class ImageDataReader:
                     for f in config.data_config.data_info.values()
                     if f.data_type == "ANNOTATION"
                 )
-                if not config.requires_paired:
-                    if config.requires_paired is not None:
-                        raise ValueError(
-                            "Img specific annotation file is required for unpaired translation."
-                        )
                 annotation = self.read_annotation_file(anno_info)
             except StopIteration:
                 raise ValueError("No annotation data found in the configuration.")

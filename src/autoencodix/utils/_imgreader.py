@@ -179,11 +179,7 @@ class ImageDataReader:
             return image
 
         except Exception as e:
-            if isinstance(e, (FileNotFoundError, ImageProcessingError, ValueError)):
-                raise
-            raise ImageProcessingError(
-                f"Unexpected error during image processing: {str(e)}"
-            )
+            raise e
 
     def read_all_images_from_dir(
         self,
@@ -238,7 +234,7 @@ class ImageDataReader:
                 imgs.append(
                     ImgData(
                         img=img,
-                        sample_id=subset["sample_ids"].iloc[0],
+                        sample_id=subset.index[0],
                         annotation=subset,
                     )
                 )
@@ -261,7 +257,7 @@ class ImageDataReader:
         if anno_file.endswith(".parquet"):
             annotation = pd.read_parquet(anno_file)
         elif anno_file.endswith((".csv", ".txt", ".tsv")):
-            annotation = pd.read_csv(anno_file, sep=sep)
+            annotation = pd.read_csv(anno_file, sep=sep, index_col=0)
         else:
             raise ValueError(f"Unsupported file type for: {anno_file}")
         return annotation
@@ -346,9 +342,7 @@ class ImageDataReader:
             is_paired=config.requires_paired,
         )
         annotations: pd.DataFrame = pd.concat([img.annotation for img in images])
-        annotations.index = annotations.sample_ids
 
-        del annotations["sample_ids"]
         return images, annotations
 
 

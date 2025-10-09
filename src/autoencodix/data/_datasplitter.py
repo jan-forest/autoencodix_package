@@ -442,11 +442,15 @@ class PairedUnpairedSplitter:
 
                     continue  # Skip normal annotation handling for "paired"
 
-                final_indices.setdefault("annotation", {})[anno_key] = {}
 
                 for split_name in ["train", "valid", "test"]:
                     for mod_name in per_modality_splits:
                         parent_key, child_key = mod_name.split(".")
+                        # in per_modality_splits are no annotation ids
+                        # thats what we do here, so we need to skip annotation
+                        # to not get empty arrays in final_indices
+                        if parent_key == "annotation":
+                            continue
                         if child_key == anno_key:
                             # Take split IDs from the corresponding modality only
                             split_ids = per_modality_splits.get(mod_name, {}).get(

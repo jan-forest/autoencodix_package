@@ -11,7 +11,7 @@ class XModalixConfig(DefaultConfig):
     """
 
     pretrain_epochs: int = Field(
-        default=50,  # Overridden default (was 0)
+        default=5,  # Overridden default (was 0)
         ge=0,
         description="Number of pretraining epochs, can be overwritten in DataInfo to have different number of pretraining epochs for each data modality",
     )

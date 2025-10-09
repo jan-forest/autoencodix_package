@@ -159,6 +159,10 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     model_config = ConfigDict(extra="forbid")
     # Datasets configuration --------------------------------------------------
     data_config: DataConfig = DataConfig(data_info={})
+    img_path_col: str = Field(
+        default="img_paths",
+        description="When working with images, we except a column in your annotation file that specifies the path of the image for a particular sample. Here you can define the name of this column",
+    )
     requires_paired: Union[bool, None] = Field(
         default_factory=lambda: True,
         description="Indicator if the samples for the xmodalix are paired, based on some sample id",

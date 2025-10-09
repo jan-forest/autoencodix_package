@@ -120,22 +120,17 @@ class BulkDataReader:
             if info.data_type == "NUMERIC":
                 bulk_dfs[key] = df
 
-                # Handle extra annotation file if specified
                 if hasattr(info, "extra_anno_file") and info.extra_anno_file:
                     extra_anno_file = os.path.join(info.extra_anno_file)
                     extra_anno_df = self._read_tabular_data(
                         file_path=extra_anno_file, sep=info.sep
                     )
                     if extra_anno_df is not None:
-                        # This handles the case where an annotation is explicitly tied to a data file
                         annotations[key] = extra_anno_df
 
             elif info.data_type == "ANNOTATION":
-                # This handles the global annotation file case
                 annotations[key] = df
 
-        # **MODIFIED CALL**
-        # The validation function now returns two synchronized dictionaries.
         bulk_dfs, annotations = self._validate_and_filter_unpaired(
             bulk_dfs, annotations
         )
@@ -225,6 +220,7 @@ class BulkDataReader:
         """
         try:
             if file_path.endswith(".parquet"):
+                print(f"reading parquet: {file_path}")
                 return pd.read_parquet(file_path)
             elif file_path.endswith((".csv", ".txt", ".tsv")):
                 return pd.read_csv(file_path, sep=sep, index_col=0)

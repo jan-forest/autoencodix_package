@@ -442,7 +442,6 @@ class PairedUnpairedSplitter:
 
                     continue  # Skip normal annotation handling for "paired"
 
-
                 for split_name in ["train", "valid", "test"]:
                     for mod_name in per_modality_splits:
                         parent_key, child_key = mod_name.split(".")

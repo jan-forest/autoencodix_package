@@ -862,10 +862,10 @@ class BasePreprocessor(abc.ABC):
             1. A dictionary of the split DataPackages.
             2. A dictionary of the synchronized integer indices used for the split.
         """
-        self.pairing_splitter = PairedUnpairedSplitter(
+        pairing_splitter = PairedUnpairedSplitter(
             data_package=data_package, config=self.config
         )
-        split_indices_config = self.pairing_splitter.split()
+        split_indices_config = pairing_splitter.split()
         data_package_splitter = DataPackageSplitter(
             data_package=data_package,
             config=self.config,

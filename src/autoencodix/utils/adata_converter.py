@@ -1,5 +1,7 @@
 from typing import Literal, Dict, Union
-from autoencodix.data import MultiModalDataset, NumericDataset, DatasetContainer
+from autoencodix.data._multimodal_dataset import MultiModalDataset
+from autoencodix.data._numeric_dataset import NumericDataset
+from autoencodix.data._datasetcontainer import DatasetContainer
 import anndata as ad
 import pandas as pd
 

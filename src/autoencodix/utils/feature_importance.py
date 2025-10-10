@@ -22,7 +22,7 @@ from captum.attr import (
 )
 from IPython.display import HTML, Image, clear_output, display
 
-from autoencodix.utils import AnnDataConverter
+from autoencodix.utils.adata_converter import AnnDataConverter
 
 warnings.filterwarnings("ignore")
 

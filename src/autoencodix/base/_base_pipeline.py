@@ -1,6 +1,6 @@
 import abc
 import copy
-from typing import Dict, Optional, Tuple, Type, Union, Any
+from typing import Dict, Optional, Tuple, Type, Union, Any, Literal
 
 import warnings
 import anndata as ad  # type: ignore
@@ -11,18 +11,19 @@ from mudata import MuData  # type: ignore
 from torch.utils.data import Dataset
 
 # ML evaluation
-from sklearn import linear_model
-from sklearn.base import ClassifierMixin, RegressorMixin, is_classifier, is_regressor
+from sklearn import linear_model  # type: ignore
+from sklearn.base import ClassifierMixin, RegressorMixin, is_classifier, is_regressor  # type: ignore
 
 
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
-from autoencodix.evaluate.evaluate import Evaluator
+
+# from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.base._base_evaluator import BaseEvaluator
 from autoencodix.utils._result import Result
 from autoencodix.utils._utils import Loader, Saver
 from autoencodix.configs.default_config import DataCase, DataInfo, DefaultConfig
-from autoencodix.visualize.visualize import Visualizer
 
 from ._base_autoencoder import BaseAutoencoder
 from ._base_dataset import BaseDataset
@@ -59,7 +60,6 @@ class BasePipeline(abc.ABC):
             If a list is provided, it is assumed to be a list of file paths to ontology files.
             First item in list or tuple will be treated as first layer (after latent space) and so on.
 
-        _
     """
 
     def __init__(
@@ -71,16 +71,16 @@ class BasePipeline(abc.ABC):
         datasplitter_type: Type[DataSplitter],
         preprocessor_type: Type[BasePreprocessor],
         data: Optional[
-            Union[DataPackage, DatasetContainer, ad.AnnData, MuData, pd.DataFrame, dict]
+            Union[DataPackage, DatasetContainer, ad.AnnData, MuData, pd.DataFrame, dict]  # type: ignore[invalid-type-form]
         ],
         visualizer: Optional[BaseVisualizer] = None,
-        evaluator: Optional[Evaluator] = None,
+        evaluator: Optional[BaseEvaluator] = None,
         result: Optional[Result] = None,
         config: Optional[DefaultConfig] = None,
         custom_split: Optional[Dict[str, np.ndarray]] = None,
         ontologies: Optional[Union[Tuple, Dict[Any, Any]]] = None,
         **kwargs: dict,
-    ) -> None:
+    ) -> None:  # ty: ignore[call-non-callable]
         """Initializes the pipeline with components and configuration.
 
         Args:
@@ -133,7 +133,7 @@ class BasePipeline(abc.ABC):
 
         self.preprocessed_data: Optional[DatasetContainer] = processed_data
         self.raw_user_data: Union[
-            DataPackage, ad.AnnData, MuData, pd.DataFrame, dict
+            DataPackage, ad.AnnData, MuData, pd.DataFrame, dict  # type: ignore[invalid-type-form]
         ] = raw_user_data
         self._trainer_type = trainer_type
         self._model_type = model_type
@@ -151,8 +151,16 @@ class BasePipeline(abc.ABC):
             config=self.config, ontologies=self._ontologies
         )
 
-        self._visualizer = visualizer if visualizer is not None else Visualizer()
-        self._evaluator = evaluator if evaluator is not None else Evaluator()
+        self._visualizer = (
+            visualizer()  # ty: ignore[call-non-callable]
+            if visualizer is not None
+            else BaseVisualizer()  # ty: ignore[call-non-callable]
+        )  # ty: ignore[call-non-callable]
+        self._evaluator = (
+            evaluator()  # ty: ignore[call-non-callable]
+            if evaluator is not None
+            else BaseEvaluator()  # ty: ignore[call-non-callable]
+        )  # ty: ignore[call-non-callable]
         self.result = result if result is not None else Result()
         self._dataset_type = dataset_type
         self._data_splitter = datasplitter_type(
@@ -215,12 +223,10 @@ class BasePipeline(abc.ABC):
 
         Args:
             data: Raw input data in various formats.
-            data_case: Specifies how to interpret the data structure.
 
         Returns:
-            A tuple containing:
-                - DataPackage containing the standardized data
-                - DataCase, muliti_single_cell or multi_bulk, etc.
+            DataPackage containing the standardized data
+            DataCase, muliti_single_cell or multi_bulk, etc.
 
         Raises:
             TypeError: If data format is not supported.
@@ -424,15 +430,15 @@ class BasePipeline(abc.ABC):
         Raises:
             NotImplementedError: If preprocessor is not initialized.
         """
-        print("preprocessing")
         if self._preprocessor_type is None:
             raise NotImplementedError("Preprocessor not initialized")
         self._validate_user_data()
         if self.preprocessed_data is None:
-            self._datasets = self._preprocessor.preprocess(
+            self.preprocessed_data = self._preprocessor.preprocess(
                 raw_user_data=self.raw_user_data,  # type: ignore
             )
-            self.result.datasets = self._datasets
+            self.result.datasets = self.preprocessed_data
+            self._datasets = self.preprocessed_data
         else:
             self._datasets = self.preprocessed_data
             self.result.datasets = self.preprocessed_data
@@ -464,12 +470,19 @@ class BasePipeline(abc.ABC):
             loss_type=self._loss_type,
             ontologies=self._ontologies,  # Ontix
         )
-        trainer_result = self._trainer.train()
+        trainer_result: Result = self._trainer.train()
         self.result.update(other=trainer_result)
 
     def predict(
         self,
-        data: Optional[Union[DataPackage, DatasetContainer, ad.AnnData, MuData]] = None,
+        data: Optional[
+            Union[
+                DataPackage,
+                DatasetContainer,
+                ad.AnnData,
+                MuData,  # ty: ignore[invalid-type-form]
+            ]  # ty: ignore[invalid-type-form]
+        ] = None,  # ty: ignore[invalid-type-form]
         config: Optional[Union[None, DefaultConfig]] = None,
         from_key: Optional[str] = None,
         to_key: Optional[str] = None,
@@ -496,7 +509,7 @@ class BasePipeline(abc.ABC):
         predict_data = self._prepare_prediction_data(data=data)
 
         predictor_results = self._generate_predictions(
-            predict_data=predict_data, from_key=from_key, to_key=to_key
+            predict_data=predict_data,
         )
 
         self._process_latent_results(
@@ -521,7 +534,14 @@ class BasePipeline(abc.ABC):
 
     def _prepare_prediction_data(
         self,
-        data: Optional[Union[DataPackage, DatasetContainer, ad.AnnData, MuData]] = None,
+        data: Optional[
+            Union[
+                DataPackage,
+                DatasetContainer,
+                ad.AnnData,
+                MuData,  # ty: ignore[invalid-type-form]
+            ]  # ty: ignore[invalid-type-form]
+        ] = None,  # ty: ignore[invalid-type-form]
     ) -> DatasetContainer:
         """Prepare and validate input data for prediction.
         Args:
@@ -598,22 +618,28 @@ class BasePipeline(abc.ABC):
     def _generate_predictions(
         self,
         predict_data: DatasetContainer,
-        from_key: Optional[str] = None,
-        to_key: Optional[str] = None,
     ):
-        """Generate predictions using the trained model."""
+        """Generate predictions using the trained model.
+        Args:
+            predict_data: DatasetContainer with preprocessed datasets for prediction.
+        Returns:
+            Predictor results containing latent spaces and reconstructions.
+
+        """
         self._validate_prediction_data(predict_data=predict_data)
         return self._trainer.predict(
             data=predict_data.test,
             model=self.result.model,
-            from_key=from_key,
-            to_key=to_key,
         )  # type: ignore
 
     def _process_latent_results(
         self, predictor_results, predict_data: DatasetContainer
     ):
-        """Process and store latent space results."""
+        """Process and store latent space results.
+        Args:
+            predictor_results: Results from the prediction step containing latents.
+            predict_data: DatasetContainer with preprocessed datasets for prediction.
+        """
         latent = predictor_results.latentspaces.get(epoch=-1, split="test")
         if isinstance(latent, dict):
             print("Detected dictionary in latent results, extracting array...")
@@ -688,7 +714,14 @@ class BasePipeline(abc.ABC):
         dataset_container: DatasetContainer,
         context: str = "DatasetContainer",
     ):
-        """Handle reconstruction for DatasetContainer input."""
+        """Handle reconstruction for DatasetContainer input.
+        Args:
+            raw_recon: Raw reconstruction tensor from the model.
+            dataset_container: Original DatasetContainer provided by the user.
+            context: Description of the data context for error messages.
+        Raises:
+            ValueError: If no test data is available in the container.
+        """
         if dataset_container.test is None:
             raise ValueError(f"No test data available in {context} for reconstruction.")
         temp = copy.deepcopy(dataset_container.test)
@@ -696,9 +729,15 @@ class BasePipeline(abc.ABC):
         self.result.final_reconstruction = temp
 
     def _handle_multi_single_cell_reconstruction(
-        self, raw_recon: torch.Tensor, predictor_results
+        self, raw_recon: torch.Tensor, predictor_results: Result
     ):
-        """Handle reconstruction for multi-single-cell data."""
+        """Handle reconstruction for multi-single-cell data
+        Args:
+            raw_recon: Raw reconstruction tensor from the model.
+            predictor_results: Results from the prediction step containing reconstructions.
+        Raises:
+            ValueError: If reconstruction formatting fails or data types are incompatible.
+        """
         pkg = self._preprocessor.format_reconstruction(
             reconstruction=raw_recon, result=predictor_results
         )
@@ -712,7 +751,11 @@ class BasePipeline(abc.ABC):
     def _handle_user_data_reconstruction(
         self, raw_recon: torch.Tensor, predictor_results
     ):
-        """Handle reconstruction for user-provided data formats."""
+        """Handle reconstruction for user-provided data formats.
+        Args:
+            raw_recon: Raw reconstruction tensor from the model.
+            predictor_results: Results from the prediction step containing reconstructions.
+        """
         pkg = self._preprocessor.format_reconstruction(
             reconstruction=raw_recon, result=predictor_results
         )
@@ -812,15 +855,17 @@ class BasePipeline(abc.ABC):
 
     def evaluate(
         self,
-        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(),  # Default is sklearn LogisticRegression
-        ml_model_regression: RegressorMixin = linear_model.LinearRegression(),  # Default is sklearn LinearRegression
+        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(),
+        ml_model_regression: RegressorMixin = linear_model.LinearRegression(),
         params: Union[
             list, str
         ] = [],  # Default empty list, to use all parameters use string "all"
-        metric_class: str = "roc_auc_ovr",  # Default is 'roc_auc_ovr' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
+        metric_class: str = "roc_auc_ovo",  # Default is 'roc_auc_ovo' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
-        split_type: str = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
+        split_type: Literal[
+            "use-split", "CV-5", "LOOC"
+        ] = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
     ) -> Result:
         """TODO"""
         if self._evaluator is None:
@@ -852,15 +897,9 @@ class BasePipeline(abc.ABC):
             split_type=split_type,
         )
 
-        ml_plots = self._visualizer.plot_evaluation(result=self.result)
+        _: Any = self._visualizer._plot_evaluation(result=self.result)
 
         return self.result
-
-    #     self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs
-    # ) -> None:
-    #     """Not Implemented yet"""
-    #     if config is None:
-    #         config = self.config
 
     def visualize(self, config: Optional[Union[None, DefaultConfig]] = None, **kwargs):
         """Creates visualizations of model results and performance.

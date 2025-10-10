@@ -11,32 +11,20 @@ from ._layer_factory import LayerFactory
 
 
 class OntixArchitecture(BaseAutoencoder):
-    """
-    Vanilla Autoencoder implementation with separate encoder and decoder construction.
+    """Ontology Autoencoder implementation with separate encoder and decoder construction.
 
-    Attributes
-    ----------
-    self.input_dim : int
-        number of input features
-    self.config: DefaultConfig
-        Configuration object containing model architecture parameters
-    self._encoder: nn.Module
-        Encoder network of the autoencoder
-    self._decoder: nn.Module
-        Decoder network of the autoencoder
+    Attributes:
+    input_dim: number of input features
+    config: Configuration object containing model architecture parameters
+    _encoder: Encoder network of the autoencoder
+    _decoder: Decoder network of the autoencoder
+    mu: Linear layer to compute the mean of the latent distribution
+    logvar: Linear layer to compute the log-variance of the latent distribution
+    masks: Tuple of weight masks for the decoder layers based on ontology
+    latent_dim: Dimension of the latent space, inferred from the first mask
+    ontologies: Ontology information.
+    feature_order: Order of features for input data.
 
-    Methods
-    -------
-    _build_network()
-        Construct the encoder and decoder networks via the LayerFactory
-    encode(x: torch.Tensor) -> torch.Tensor
-        Encode the input tensor x
-    decode(x: torch.Tensor) -> torch.Tensor
-        Decode the latent tensor x
-    forward(x: torch.Tensor) -> ModelOutput
-        Forward pass of the model, fills in the reconstruction and latentspace attributes of ModelOutput class.
-    reparameterize(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor
-        Reparameterization trick for VAE
     """
 
     def __init__(
@@ -46,13 +34,13 @@ class OntixArchitecture(BaseAutoencoder):
         ontologies: tuple,
         feature_order: list,
     ) -> None:
-        """
-        Initialize the Vanilla Autoencoder with the given configuration.
+        """Initialize the Vanilla Autoencoder with the given configuration.
 
-        Parameters
-        ----------
-        config : Optional[Union[None, DefaultConfig]]
-            Configuration object containing model parameters.
+        Args:
+            config: Configuration object containing model parameters.
+            input_dim: Number of input features.
+            ontologies: Ontology information.
+            feature_order: Order of features for input data.
         """
         if config is None:
             config = DefaultConfig()
@@ -90,18 +78,14 @@ class OntixArchitecture(BaseAutoencoder):
 
     def _make_masks(
         self, config: DefaultConfig, feature_order: list
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Create masks for sparse decoder based on ontology via config
+    ) -> Tuple[torch.Tensor, ...]:
+        """Create masks for sparse decoder based on ontology via config
 
-        Parameters
-        ----------
-        config : DefaultConfig
-            Configuration object containing model parameters
+        Args:
+            config: Configuration object containing model parameters
+            feature_order: Order of features for input data
 
-        Returns
-        -------
-        Tuple[torch.Tensor, torch.Tensor]
+        Returns:
             Tuple containing the masks for the decoder network
 
         """
@@ -172,8 +156,7 @@ class OntixArchitecture(BaseAutoencoder):
         return masks
 
     def _build_network(self) -> None:
-        """
-        Construct the encoder and decoder networks.
+        """Construct the encoder and decoder networks.
 
         Handles cases where `n_layers=0` by skipping the encoder and using only mu/logvar.
         """
@@ -240,27 +223,14 @@ class OntixArchitecture(BaseAutoencoder):
         if isinstance(m, nn.Linear):
             m.weight.data = m.weight.data.clamp(min=0)
 
-    ## Defined in the base class
-    # def _init_weights(self, m):
-    #     if isinstance(m, nn.Linear):
-    #         torch.nn.init.xavier_uniform_(m.weight)
-    #         m.bias.data.fill_(0.01)
-
-    ### Copy from Varix Architecture ###
     def encode(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Encode the input tensor x
+        """Encode the input tensor x
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Input tensor
+        Args:
+            x: Input tensor
 
-        Returns
-        -------
-        torch.Tensor
+        Returns:
             Encoded tensor
-
         """
         latent = x  # for case where n_layers=0
         if len(self._encoder) > 0:
@@ -273,52 +243,39 @@ class OntixArchitecture(BaseAutoencoder):
         return mu, logvar
 
     def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-        """
-        Reparameterization trick for VAE
+        """Reparameterization trick for VAE
 
-        Parameters:
-            mu : torch.Tensor
-            logvar : torch.Tensor
+        Args:
+            mu: Mean tensor
+            logvar: Log variance tensor
 
         Returns:
-            torch.Tensor
-
+            Reparameterized latent tensor
         """
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
         return mu + eps * std
 
     def decode(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Decode the latent tensor x
+        """Decode the latent tensor x
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Latent tensor
+        Args:
+            x: Latent tensor
 
-        Returns
-        -------
-        torch.Tensor
+        Returns:
+            torch.Tensor
             Decoded tensor
 
         """
-        # print(self._decoder)
-        # print(x.shape)
         return self._decoder(x)
 
     def forward(self, x: torch.Tensor) -> ModelOutput:
-        """
-        Forward pass of the model, fill
+        """Forward pass of the model, fill
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Input tensor
+        Args:
+            x: Input tensor
 
-        Returns
-        -------
-        ModelOutput
+        Returns:
             ModelOutput object containing the reconstructed tensor and latent tensor
 
         """
@@ -334,17 +291,12 @@ class OntixArchitecture(BaseAutoencoder):
         )
 
     def get_latent_space(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Returns the latent space representation of the input.
+        """Returns the latent space representation of the input.
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Input tensor
+        Args:
+            x: Input tensor
 
-        Returns
-        -------
-        torch.Tensor
+        Returns:
             Latent space representation
 
         """

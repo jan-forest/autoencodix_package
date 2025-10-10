@@ -1,7 +1,7 @@
 import scanpy as sc  # type: ignore
 import mudata as md  # type: ignore
 from anndata import AnnData  # type: ignore
-from typing import Dict, Any, TYPE_CHECKING, Optional, List
+from typing import Dict, Any, TYPE_CHECKING
 from autoencodix.configs.default_config import DefaultConfig
 
 if TYPE_CHECKING:
@@ -13,27 +13,23 @@ else:
 
 
 class SingleCellDataReader:
-    """Reader class for multi-modal single-cell data."""
+    """Reader for multi-modal single-cell data."""
 
     @staticmethod
-    def read_data(config: DefaultConfig) -> Dict[str, MuData]:
-        """
-        Read multiple single-cell modalities into MuData object(s).
+    def read_data(
+        config: DefaultConfig,
+    ) -> Dict[str, MuData]:  # ty: ignore[invalid-type-form]
+        """Read multiple single-cell modalities into MuData object(s).
 
-        Parameters
-        ----------
-        config : DefaultConfig
-            Configuration object containing data paths and parameters.
+        Args:
+        config: Configuration object containing data paths and parameters.
 
-        Returns
-        -------
-        Dict[str, md.MuData]]
-            For non-paired translation: Dict with modalty keys and mudata obj as value
-            For paired translation and non translation cases: dict with "paired" as key and mudata as value
+        Returns:
+            For non-paired translation: Dict of Dicts with {'multi_sc': DataDict} as outer dict and with modalty keys and mudata obj as inner dict.
+            For paired translation and non translation cases: dict with "multi_sc" as key and mudata as value
         """
         modalities: Dict[str, AnnData] = {}
 
-        # Process each modality
         for mod_key, mod_info in config.data_config.data_info.items():
             if not mod_info.is_single_cell:
                 continue

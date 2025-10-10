@@ -22,17 +22,18 @@ class BaseTrainer(abc.ABC):
     model training and prediction logic.
 
     Attributes:
-        trainset: The dataset used for training.
-        validset: The dataset used for validation, if provided.
-        result: An object to store and manage training results.
-        config: Configuration object containing training hyperparameters and settings.
-        model_type: The autoencoder model class to be trained.
-        loss_fn: Instantiated loss function specific to the model.
-        trainloader: DataLoader for the training dataset.
-        validloader: DataLoader for the validation dataset, if provided.
-        model: The instantiated model architecture.
-        optimizer: The optimizer used for training.
-        fabric: Lightning Fabric wrapper for device and precision management.
+        _trainset: The dataset used for training.
+        _validset: The dataset used for validation, if provided.
+        _result: An object to store and manage training results.
+        _config: Configuration object containing training hyperparameters and settings.
+        _model_type: The autoencoder model class to be trained.
+        _loss_fn: Instantiated loss function specific to the model.
+        _trainloader: DataLoader for the training dataset.
+        _validloader: DataLoader for the validation dataset, if provided.
+        _model: The instantiated model architecture.
+        _optimizer: The optimizer used for training.
+        _fabric: Lightning Fabric wrapper for device and precision management.
+        ontologies: Ontology information, if provided for Ontix
     """
 
     def __init__(
@@ -76,6 +77,9 @@ class BaseTrainer(abc.ABC):
             self._n_cpus = 0
 
     def _setup_fabric(self):
+        """
+        Sets up the model, optimizer, and data loaders with Lightning Fabric.
+        """
         self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
         self._init_model_architecture(ontologies=self.ontologies)  # Ontix
 
@@ -92,6 +96,7 @@ class BaseTrainer(abc.ABC):
         self._fabric.launch()
 
     def _init_loaders(self):
+        """Initializes the DataLoaders for training and validation datasets."""
         last_batch_is_one_sample = (
             len(self._trainset.data) % self._config.batch_size == 1
         )
@@ -172,6 +177,7 @@ class BaseTrainer(abc.ABC):
                 print("cpu not relevant here")
 
     def _init_model_architecture(self, ontologies: tuple) -> None:
+        """Initializes the model architecture, based on the model type and input dimension."""
         if ontologies is None:
             self._model = self._model_type(
                 config=self._config, input_dim=self._input_dim
@@ -185,14 +191,14 @@ class BaseTrainer(abc.ABC):
                 feature_order=self._trainset.feature_ids,  # type: ignore
             )
 
-    def _should_checkpoint(self, epoch: int):
+    def _should_checkpoint(self, epoch: int) -> bool:
         return (
             (epoch + 1) % self._config.checkpoint_interval == 0
             or epoch == self._config.epochs - 1
         )
 
     @abc.abstractmethod
-    def train(self, epochs_overwrite: Optional[int]) -> Result:
+    def train(self, epochs_overwrite: Optional[int] = None) -> Result:
         pass
 
     @abc.abstractmethod

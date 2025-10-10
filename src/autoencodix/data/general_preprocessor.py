@@ -17,6 +17,16 @@ from autoencodix.configs.default_config import DataCase, DefaultConfig
 
 
 class GeneralPreprocessor(BasePreprocessor):
+    """Preprocessor for handling multi-modal data.
+
+    Attributes:
+        _datapackage_dict: Dictionary holding DataPackage objects for each data split.
+        _dataset_container: Container holding processed datasets for each split.
+        _reverse_mapping_multi_bulk: Reverse mapping for multi-bulk data reconstruction.
+        _reverse_mapping_multi_sc: Reverse mapping for multi-single-cell data reconstruction.
+
+    """
+
     def __init__(
         self, config: DefaultConfig, ontologies: Optional[Union[Tuple, Dict]] = None
     ) -> None:
@@ -58,7 +68,10 @@ class GeneralPreprocessor(BasePreprocessor):
                 continue
         return layer_list
 
-    def _combine_modality_data(self, mudata: md.MuData) -> np.ndarray:
+    def _combine_modality_data(
+        self,
+        mudata: md.MuData,  # ty: ignore[invalid-type-form]
+    ) -> np.ndarray:  # ty: ignore[invalid-type-form]
         # Reset single-cell reverse mapping
         modality_data_list: List[np.ndarray] = []
         start_idx = 0
@@ -111,7 +124,6 @@ class GeneralPreprocessor(BasePreprocessor):
         return ds
 
     def _process_data_package(self, data_dict: Dict[str, Any]) -> BaseDataset:
-        # print(f"data_dict: {data_dict['data']}")
         data, split_ids = data_dict["data"], data_dict["indices"]
         # MULTI-BULK
         if data.multi_bulk is not None:
@@ -127,7 +139,7 @@ class GeneralPreprocessor(BasePreprocessor):
                         f"Expected a DataFrame for '{subkey}', got {type(df)}"
                     )
                 sample_counts[subkey] = df.shape[0]
-                print(f"cur shape: {subkey}: {df.shape}")
+                # print(f"cur shape: {subkey}: {df.shape}")
 
             # Validate all modalities have the same number of samples
             unique_sample_counts = set(sample_counts.values())
@@ -165,7 +177,9 @@ class GeneralPreprocessor(BasePreprocessor):
         # MULTI-SINGLE-CELL
         elif data.multi_sc is not None:
             # reset single-cell mapping
-            mudata: md.MuData = data.multi_sc.get("multi_sc", None)
+            mudata: md.MuData = data.multi_sc.get(  # ty: ignore[invalid-type-form]
+                "multi_sc", None
+            )  # ty: ignore[invalid-type-form]
             if mudata is None:
                 raise NotImplementedError(
                     "Unpaired multi Single Cell case not implemented vor Varix and Vanillix, set requires_paired=True in config"
@@ -207,13 +221,13 @@ class GeneralPreprocessor(BasePreprocessor):
             raise TypeError("Datapackage cannot be None")
 
         # prepare container
-        ds_container = DatasetContainer()
+        ds_container: DatasetContainer = DatasetContainer()
 
         for split in ["train", "test", "valid"]:
             split_data = self._datapackage_dict.get(split)
             self._split = split
             if not split_data or split_data["data"] is None:
-                ds_container[split] = None
+                ds_container[split] = None  # type: ignore
                 continue
             ds = self._process_data_package(split_data)
             ds_container[split] = ds
@@ -234,9 +248,7 @@ class GeneralPreprocessor(BasePreprocessor):
             )
 
     def _match_split(self, n_samples: int) -> str:
-        """
-        Match the split based on the number of samples.
-        """
+        """Match the split based on the number of samples."""
         print(f"n_samples in format recon: {n_samples}")
         for split, split_data in self._datapackage_dict.items():
             print(split)

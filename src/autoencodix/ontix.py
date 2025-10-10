@@ -9,12 +9,13 @@ from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.base._base_visualizer import BaseVisualizer
 from autoencodix.base._base_preprocessor import BasePreprocessor
 from autoencodix.base._base_autoencoder import BaseAutoencoder
+from autoencodix.base._base_evaluator import BaseEvaluator
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.general_preprocessor import GeneralPreprocessor
-from autoencodix.evaluate.evaluate import Evaluator
+from autoencodix.evaluate._general_evaluator import GeneralEvaluator
 
 # from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.modeling._ontix_architecture import OntixArchitecture
@@ -24,45 +25,20 @@ from autoencodix.configs.default_config import DefaultConfig
 
 from autoencodix.configs.ontix_config import OntixConfig
 from autoencodix.utils._losses import VarixLoss
-from autoencodix.visualize.visualize import Visualizer
+from autoencodix.visualize._general_visualizer import GeneralVisualizer
 
 
 ## Copy from Varix with ontology addition
 class Ontix(BasePipeline):
-    """
-    Ontix specific version of the BasePipeline class.
+    """Ontix specific version of the BasePipeline class.
+
     Inherits preprocess, fit, predict, evaluate, and visualize methods from BasePipeline.
 
-    Attributes
-    ----------
-    preprocessed_data : Optional[DatasetContainer]
-        User data if no datafiles in the config are provided. We expect these to be split and processed.
-    raw_user_data : Optional[DataPackage]
-        We give users the option to populate a DataPacke with raw data i.e. pd.DataFrames, MuData.
-        We will process this data as we would do wit raw files specified in the config.
-    config : Optional[Union[None, DefaultConfig]]
-        Configuration object containing customizations for the pipeline
-    _preprocessor : Preprocessor
-        Preprocessor object to preprocess the input data (maybe custom for Ontix)
-    _visualizer : Visualizer
-        Visualizer object to visualize the model output (maybe custom for Ontix)
-    _trainer : GeneralTrainer
-        Trainer object that trains the model (maybe custom for Ontix)
-    _evaluator : Evaluator
-        Evaluator object that evaluates the model performance or downstream tasks (maybe custom for Ontix)
-    result : Result
-        Result object to store the pipeline results
-    _datasets : Optional[DatasetContainer]
-        Container for train, validation, and test datasets (preprocessed)
-    data_splitter : DataSplitter
-        DataSplitter object to split the data into train, validation, and test sets
+    This class extends BasePipeline. See the parent class for a full list
+    of attributes and methods.
 
-    Methods
-    -------
-    all methods from BasePipeline
-
-    sample_latent_space(split: str = "test", epoch: int = -1) -> torch.Tensor
-        Samples new latent space points from the learned distribution.
+    Additional Attributes:
+        _default_config: Is set to OntixConfig here.
 
     """
 
@@ -76,8 +52,8 @@ class Ontix(BasePipeline):
         model_type: Type[BaseAutoencoder] = OntixArchitecture,
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = GeneralPreprocessor,
-        visualizer: Optional[BaseVisualizer] = None,
-        evaluator: Optional[Evaluator] = None,
+        visualizer: Type[BaseVisualizer] = GeneralVisualizer,
+        evaluator: Optional[Type[BaseEvaluator]] = GeneralEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
@@ -88,36 +64,11 @@ class Ontix(BasePipeline):
         Some components are passed as types rather than instances because they require
         data that is only available after preprocessing.
 
-        Parameters
-        ----------
-        ontologies: Union[tuple,list]
-                Tuple of dictionaries containing the ontologies to be used to construct sparse decoder layers.
-            If a list is provided, it is assumed to be a list of file paths to ontology files.
-            First item in list or tuple will be treated as first layer (after latent space) and so on.
-            Last layer need to contain features identical to the input data.
-        sep: Optional[str]
-            Separator used in ontology files, default is tab ("\t")
-        preprocessed_data : Union[np.ndarray, AnnData, pd.DataFrame, DatasetContainer]
-            Input data to be processed
-        trainer_type : Type[BaseTrainer]
-            Type of trainer to be instantiated during fit step, default is GeneralTrainer
-        dataset_type : Type[BaseDataset]
-            Type of dataset to be instantiated post-preprocessing, default is NumericDataset
-        loss_type : Type[BaseLoss], which loss to use for Varix, default is VarixAutoencoderLoss
-        preprocessor : Optional[Preprocessor]
-            For data preprocessing, default creates new Preprocessor
-        visualizer : Optional[Visualizer]
-            For result visualization, default creates new Visualizer
-        evaluator : Optional[Evaluator]
-            For model evaluation, default creates new Evaluator
-        result : Optional[Result]
-            Container for pipeline results, default creates new Result
-        datasplitter_type : Type[DataSplitter], optional
-            Type of splitter to be instantiated during preprocessing, default is DataSplitter
-        custom_splits : Optional[Dict[str, np.ndarray]]
-            Custom train/valid/test split indices
-        config : Optional[DefaultConfig]
-            Configuration for all pipeline components
+        See parent class for full list of Arguments.
+
+        Raises:
+            TypeError: if ontologies are not a Tuple or List.
+
         """
         self._default_config = OntixConfig()
         if isinstance(ontologies, tuple):
@@ -157,15 +108,19 @@ class Ontix(BasePipeline):
             )
 
     def sample_latent_space(self, split: str = "test", epoch: int = -1) -> torch.Tensor:
-        """
-        Samples new latent space points from the learned distribution.
-        Parameters:
-            split: str - The split to sample from (train, valid, test), default is test
-            epoch: int - The epoch to sample from, default is the last epoch (-1)
+        """Samples new latent space points from the learned distribution.
+
+        Args:
+            split: The split to sample from (train, valid, test), default is test
+            epoch: The epoch to sample from, default is the last epoch (-1)
         Returns:
             z: torch.Tensor - The sampled latent space points
+        Raises:
+            ValueError: if model has not been trained.
+            TypeError: if mu and or logvar are no numpy arrays
 
         """
+
         if not hasattr(self, "_trainer") or self._trainer is None:
             raise ValueError("Model is not trained yet. Please train the model first.")
         if self.result.mus is None or self.result.sigmas is None:
@@ -198,11 +153,12 @@ class Ontix(BasePipeline):
 
     def _read_ont_file(self, file_path: str, sep: str = "\t") -> dict:
         """Function to read-in text files of ontologies with format child - separator - parent into an dictionary.
-        ARGS:
-            file_path - (str): Path to file with ontology
-            sep - (str): Separator used in file
-        RETURNS:
-            ont_dic - (dict): Dictionary containing the ontology as described in the text file.
+
+        Args:
+            file_path: Path to file with ontology
+            sep: Separator used in file
+        Returns:
+            ont_dic: Dictionary containing the ontology as described in the text file.
 
         """
         ont_dic = dict()

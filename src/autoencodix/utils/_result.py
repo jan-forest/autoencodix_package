@@ -8,34 +8,19 @@ import pandas as pd
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.data.datapackage import DataPackage
 
-from mudata import MuData
+from mudata import MuData  # type: ignore
 from ._traindynamics import TrainingDynamics
 
 
 @dataclass
 class LossRegistry:
-    """
-    Dataclass to store multiple TrainingDynamics objects for different losses.
+    """Dataclass to store multiple TrainingDynamics objects for different losses.
+
     Objective is to make the Result class extensible for multiple losses that might
     be needed in the future for diffrent autoencoder architectures.
 
-    Attributes
-    ----------
-    _losses : Dict[str, TrainingDynamics]
-        A dictionary to store TrainingDynamics objects for different losses.
-    Methods
-    -------
-    add(data: Dict, split: str, epoch: int) -> None
-        Add a new loss value to the registry, calls the add method of TrainingDynamics.
-    get(key: str) -> TrainingDynamics
-        Retrieve a specific TrainingDynamics object from the registry, based on the loss name.
-    losses() -> Dict[str, TrainingDynamics]
-        Return all stored losses as a dictionary.
-    set(key: str, value: TrainingDynamics) -> None
-        Set a specific TrainingDynamics object in the registry.
-    keys() -> List[str]
-        Return all keys (loss names) in the registry as a list.
-
+    Attributes:
+        _losses: A dictionary to store TrainingDynamics objects for different losses.
     """
 
     _losses: Dict[str, TrainingDynamics] = field(default_factory=dict)
@@ -77,26 +62,19 @@ class LossRegistry:
 
 @dataclass
 class Result:
-    """
-    A dataclass to store results from the pipeline with predefined keys.
-    Attributes
-    ----------
-    latentspaces : TrainingDynamics
-        Stores latent space representations for 'train', 'valid', and 'test' splits.
-    sample_ids : TrainingDynamics
-        Stores sample identifiers for 'train', 'valid', and 'test' splits.
-    reconstructions : TrainingDynamics
-        Stores reconstructed outputs for 'train', 'valid', and 'test' splits.
-    mus : TrainingDynamics
-        Stores mean values of latent distributions for 'train', 'valid', and 'test' splits.
-    sigmas : TrainingDynamics
-        Stores standard deviations of latent distributions for 'train', 'valid', and 'test' splits.
-    losses : TrainingDynamics
-        Stores the total loss for different epochs and splits ('train', 'valid', 'test').
-    recon_losses : TrainingDynamics
-        Stores the reconstruction loss for different epochs and splits ('train', 'valid', 'test').
-    var_losses : TrainingDynamics
-        Stores the variational i.e. kl divergence loss for different epochs and splits ('train', 'valid', 'test').
+    """A dataclass to store results from the pipeline with predefined keys.
+
+    Attributes:
+        latentspaces: Stores latent space representations for 'train', 'valid', and 'test' splits.
+        sample_ids: Stores sample identifiers for 'train', 'valid', and 'test' splits.
+        reconstructions: Stores reconstructed outputs for 'train', 'valid', and 'test' splits.
+        mus: Stores mean values of latent distributions for 'train', 'valid', and 'test' splits.
+        sigmas: Stores standard deviations of latent distributions for 'train', 'valid', and 'test' splits.
+        losses: Stores the total loss for different epochs and splits ('train', 'valid', 'test').
+        sub_losses: LossRegistry (extendable) for all sublosses.
+        preprocessed_data: data after preprocessing
+        model: final trained model
+        model_checkpoints: model state at each checkpoint.
 
     """
 
@@ -119,7 +97,9 @@ class Result:
     )
 
     adata_latent: Optional[AnnData] = field(default_factory=AnnData)
-    final_reconstruction: Optional[Union[DataPackage, MuData]] = field(default=None)
+    final_reconstruction: Optional[
+        Union[DataPackage, MuData]  # ty: ignore[invalid-type-form]
+    ] = field(default=None)
     sub_results: Optional[Dict[str, Any]] = field(default=None)
     sub_reconstructions: Optional[Dict[str, Any]] = field(default=None)
 
@@ -131,12 +111,12 @@ class Result:
     # )  ## Nested dictionary of plots as figure handles
 
     def __getitem__(self, key: str) -> Any:
-        """
-        Retrieve the value associated with a specific key.
-        Parameters:
-            key (str): The name of the attribute to retrieve.
+        """Retrieve the value associated with a specific key.
+
+        Args:
+            key: The name of the attribute to retrieve.
         Returns:
-            Any: The value of the specified attribute.
+            The value of the specified attribute.
         Raises:
             KeyError - If the key is not a valid attribute of the Results class.
 
@@ -148,14 +128,13 @@ class Result:
         return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        """
-        Assign a value to a specific attribute.
-        Parameters:
-            key (str): The name of the attribute to set.
-            value (Any): The value to assign to the attribute.
+        """Assign a value to a specific attribute.
+
+        Args:
+            key: The name of the attribute to set.
+            value: The value to assign to the attribute.
         Raises:
-            KeyError
-                If the key is not a valid attribute of the Results class.
+            KeyError: If the key is not a valid attribute of the Results class.
 
         """
         if not hasattr(self, key):
@@ -190,19 +169,15 @@ class Result:
         return False
 
     def update(self, other: "Result") -> None:
-        """
-        Update the current Result object with values from another Result object.
+        """Update the current Result object with values from another Result object.
+
         For TrainingDynamics, merges the data across epochs and splits and overwrites if already exists.
         For all other attributes, replaces the current value with the other value.
 
-        Parameters:
-            other : Result
-                The Result object to update from.
+        Args:
+            other: The Result object to update from.
         Raises:
-            TypeError
-                If the input object is not a Result instance
-        Returns:
-            None
+            TypeError: If the input object is not a Result instance
 
         """
         if not isinstance(other, Result):
@@ -236,34 +211,27 @@ class Result:
     def _update_traindynamics(
         self, current_value: TrainingDynamics, other_value: TrainingDynamics
     ) -> TrainingDynamics:
-        """
-        Update TrainingDynamics object with values from another TrainingDynamics object.
+        """Update TrainingDynamics object with values from another TrainingDynamics object.
 
-        Parameters
-        ----------
-        current_value : TrainingDynamics
-            The current TrainingDynamics object to update.
-        other_value : TrainingDynamics
-            The TrainingDynamics object to update from.
+        Args:
+        current_value: The current TrainingDynamics object to update.
+        other_value: The TrainingDynamics object to update from.
 
-        Returns
-        -------
-        TrainingDynamics
+        Returns:
             Updated TrainingDynamics object.
 
-        Examples
-        --------
-        >>> current = TrainingDynamics()
-        >>> current._data = {1: {"train": np.array([1, 2, 3])},
-        ...                   2: None}
+        Examples:
+            >>> current = TrainingDynamics()
+            >>> current._data = {1: {"train": np.array([1, 2, 3])},
+            ...                   2: None}
 
-        >>> other = TrainingDynamics()
-        >>> other._data = {1: {"train": np.array([4, 5, 6])},
-        ...                 2: {"train": np.array([7, 8, 9])}}
-        >>> # after update
-        >>> print(current._data)
-        {1: {"train": np.array([4, 5, 6])}, # updated
-         2: {"train": np.array([7, 8, 9])}} # kept, because other was None
+            >>> other = TrainingDynamics()
+            >>> other._data = {1: {"train": np.array([4, 5, 6])},
+            ...                 2: {"train": np.array([7, 8, 9])}}
+            >>> # after update
+            >>> print(current._data)
+            {1: {"train": np.array([4, 5, 6])}, # updated
+            2: {"train": np.array([7, 8, 9])}} # kept, because other was None
 
         """
 
@@ -304,12 +272,9 @@ class Result:
         return current_value
 
     def __str__(self) -> str:
-        """
-        Provide a readable string representation of the Result object's public attributes.
+        """Provide a readable string representation of the Result object's public attributes.
 
-        Returns
-        -------
-        str
+        Returns:
             Formatted string showing all public attributes and their values
         """
         output = ["Result Object Public Attributes:", "-" * 30]
@@ -333,14 +298,29 @@ class Result:
         return "\n".join(output)
 
     def __repr__(self) -> str:
-        """
-        Return the same representation as __str__ for consistency.
-        """
+        """Return the same representation as __str__ for consistency."""
         return self.__str__()
 
     def get_latent_df(
-        self, epoch: int, split: str, modality: str = None
+        self, epoch: int, split: str, modality: Optional[str] = None
     ) -> pd.DataFrame:
+        """Return latent representations as a DataFrame.
+
+        Retrieves latent vectors and their corresponding sample IDs for a given
+        epoch and data split. If a specific modality is provided, the results
+        are restricted to that modality. Column names are inferred from model
+        ontologies if available; otherwise, generic latent dimension labels are
+        used.
+
+        Args:
+            epoch: The epoch number to retrieve latents from.
+            split: The dataset split to query (e.g., "train", "valid", "test").
+            modality: Optional modality name to filter the latents and sample IDs.
+
+        Returns:
+            A DataFrame where rows correspond to samples, columns represent latent
+            dimensions, and the index contains sample IDs.
+        """
         latents = self.latentspaces.get(epoch=epoch, split=split)
         ids = self.sample_ids.get(epoch=epoch, split=split)
         if modality is not None:  # for x-modalix and other multi-modal models
@@ -353,8 +333,25 @@ class Result:
         return pd.DataFrame(latents, index=ids, columns=cols)
 
     def get_reconstructions_df(
-        self, epoch: int, split: str, modality: str = None
+        self, epoch: int, split: str, modality: Optional[str] = None
     ) -> pd.DataFrame:
+        """Return reconstructions as a DataFrame.
+
+        Retrieves reconstructed features and their corresponding sample IDs for a
+        given epoch and data split. If a specific modality is provided, the results
+        are restricted to that modality. Column names are based on the dataset's
+        feature identifiers.
+
+        Args:
+            epoch: The epoch number to retrieve reconstructions from.
+            split: The dataset split to query (e.g., "train", "valid", "test").
+            modality: Optional modality name to filter the reconstructions and
+                sample IDs.
+
+        Returns:
+            A DataFrame where rows correspond to samples, columns represent
+            reconstructed features, and the index contains sample IDs.
+        """
         reconstructions = self.reconstructions.get(epoch=epoch, split=split)
         ids = self.sample_ids.get(epoch=epoch, split=split)
         if modality is not None:

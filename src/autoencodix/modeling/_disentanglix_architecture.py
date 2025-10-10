@@ -11,47 +11,29 @@ from ._layer_factory import LayerFactory
 
 
 class DisentanglixArchitecture(BaseAutoencoder):
-    """
-    Variational Autoencoder implementation with disentanglement control via additional loss terms for mutual information, total correlation and dimension-wise KL divergence.
+    """Variational Autoencoder implementation with disentanglement.
+
+    Control via additional loss terms for mutual information, total correlation and dimension-wise KL divergence.
     As described in "Isolating Sources of Disentanglement in VAEs" https://doi.org/10.48550/arXiv.1802.04942
 
 
-    Attributes
-    ----------
-    self.input_dim : int
-        number of input features
-    self.config: DefaultConfig
-        Configuration object containing model architecture parameters
-    self._encoder: nn.Module
-        Encoder network of the autoencoder
-    self._decoder: nn.Module
-        Decoder network of the autoencoder
-
-    Methods
-    -------
-    _build_network()
-        Construct the encoder and decoder networks via the LayerFactory
-    encode(x: torch.Tensor) -> torch.Tensor
-        Encode the input tensor x
-    decode(x: torch.Tensor) -> torch.Tensor
-        Decode the latent tensor x
-    forward(x: torch.Tensor) -> ModelOutput
-        Forward pass of the model, fills in the reconstruction and latentspace attributes of ModelOutput class.
-    reparametrize(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor
-        Reparameterization trick for VAE
+    Attributes:
+    input_dim:: number of input features
+    config: Configuration object containing model architecture parameters
+    _encoder: Encoder network of the autoencoder
+    _decoder: Decoder network of the autoencoder
+    mu: Linear layer to compute the mean of the latent distribution
+    logvar: Linear layer to compute the log-variance of the latent distribution
     """
 
     def __init__(
         self, config: Optional[Union[None, DefaultConfig]], input_dim: int
     ) -> None:
-        """
-        Initialize the Variational Autoencoder with the given configuration.
-        Similar to Varix.
+        """Initialize the Variational Autoencoder with the given configuration.
 
-        Parameters
-        ----------
-        config : Optional[Union[None, DefaultConfig]]
-            Configuration object containing model parameters.
+        Args:
+            config: Configuration object containing model parameters.
+            input_dim: Number of input features.
         """
         if config is None:
             config = DefaultConfig()
@@ -66,9 +48,7 @@ class DisentanglixArchitecture(BaseAutoencoder):
         self.apply(self._init_weights)
 
     def _build_network(self) -> None:
-        """
-        Construct the encoder and decoder networks.
-        Similar to Varix.
+        """Construct the encoder and decoder networks.
 
         Handles cases where `n_layers=0` by skipping the encoder and using only mu/logvar.
         """
@@ -125,20 +105,13 @@ class DisentanglixArchitecture(BaseAutoencoder):
         self._decoder = nn.Sequential(*decoder_layers)
 
     def encode(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Encode the input tensor x.
-        Similar to Varix.
+        """Encode the input tensor x.
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Input tensor
+        Args:
+            x: Input tensor
 
-        Returns
-        -------
-        torch.Tensor
-            Encoded tensor
-
+        Returns:
+            Mean and log-variance of the latent distribution
         """
         latent = x  # for case where n_layers=0
         if len(self._encoder) > 0:
@@ -151,16 +124,14 @@ class DisentanglixArchitecture(BaseAutoencoder):
         return mu, logvar
 
     def reparametrize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-        """
-        Reparameterization trick for VAE.
-        Similar to Varix.
+        """Reparameterization trick for VAE.
 
-        Parameters:
-            mu : torch.Tensor
-            logvar : torch.Tensor
+        Args:
+             mu: mean of the latent distribution
+             logvar: log-variance of the latent distribution
 
-        Returns:
-            torch.Tensor
+         Returns:
+             z: sampled latent vector
 
         """
         std = torch.exp(0.5 * logvar)
@@ -168,17 +139,12 @@ class DisentanglixArchitecture(BaseAutoencoder):
         return mu + eps * std
 
     def get_latent_space(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Returns the latent space representation of the input.
+        """Returns the latent space representation of the input.
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Input tensor
+        Args:
+            x: Input tensor
 
-        Returns
-        -------
-        torch.Tensor
+        Returns:
             Latent space representation
 
         """
@@ -187,34 +153,24 @@ class DisentanglixArchitecture(BaseAutoencoder):
         return z
 
     def decode(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Decode the latent tensor x
+        """Decode the latent tensor x
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Latent tensor
+        Args:
+            x: Latent tensor
 
-        Returns
-        -------
-        torch.Tensor
+        Returns:
             Decoded tensor
 
         """
         return self._decoder(x)
 
     def forward(self, x: torch.Tensor) -> ModelOutput:
-        """
-        Forward pass of the model, fill
+        """Forward pass of the model, fill
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Input tensor
+        Args:
+            x: Input tensor
 
-        Returns
-        -------
-        ModelOutput
+        Returns:
             ModelOutput object containing the reconstructed tensor and latent tensor
 
         """

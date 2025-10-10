@@ -3,10 +3,9 @@ import itertools
 from autoencodix.configs.default_config import DefaultConfig
 import torch
 from torch import nn
-from autoencodix.utils._model_output import ModelOutput
 from autoencodix.utils._annealer import AnnealingScheduler
 
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Any
 
 
 class BaseLoss(nn.Module, ABC):
@@ -21,6 +20,7 @@ class BaseLoss(nn.Module, ABC):
         recon_loss: Module for computing reconstruction loss (MSE or BCE).
         reduction_fn: Function to apply reduction (mean or sum).
         compute_kernel: Function to compute kernel for MMD loss.
+        annealing_scheduler: Helper for loss calculation with annealing.
     """
 
     def __init__(self, config: DefaultConfig, annealing_scheduler=None):
@@ -28,6 +28,7 @@ class BaseLoss(nn.Module, ABC):
 
         Args:
             config: Configuration parameters for the loss function.
+            annealing_scheduler: Helper class for loss calculation with annealing.
 
         Raises:
             NotImplementedError: If unsupported loss reduction or reconstruction
@@ -102,6 +103,8 @@ class BaseLoss(nn.Module, ABC):
             NotImplementedError: If unsupported loss reduction type is specified.
         """
         true_samples_kernel = self.compute_kernel(x=true_samples, y=true_samples)
+        z_device = z.device
+        true_samples = true_samples.to(z_device)
         z_kernel = self.compute_kernel(z, z)
         ztr_kernel = self.compute_kernel(x=true_samples, y=z)
 
@@ -193,7 +196,6 @@ class BaseLoss(nn.Module, ABC):
             latentspaces: A dictionary mapping modality names to their latent space tensors.
                         e.g., {'RNA': tensor_rna, 'ATAC': tensor_atac}
             sample_ids: A dictionary mapping modality names to their list of sample IDs.
-            reduction: The type of reduction to apply ('mean' or 'sum').
 
         Returns:
             A single scalar tensor representing the total paired loss.
@@ -295,14 +297,15 @@ class BaseLoss(nn.Module, ABC):
 
 
         Returns:
-            A tuple containing:
-              - The total loss value as a scalar tensor.
-              - A dictionary of individual loss components, where the keys are
+            - The total loss value as a scalar tensor.
+            - A dictionary of individual loss components, where the keys are
                 descriptive strings (e.g., "reconstruction_loss", "kl_loss") and
                 the values are the corresponding loss tensors.
+            - Implementation in subclasses is flexible, so for new loss classes this can differ.
 
         Note:
             Subclasses must implement this method to define the specific loss
             computation logic for their use case.
         """
+        # TODO maybe standardize the return types more i.e. request a scalar and a dict
         pass

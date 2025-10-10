@@ -18,30 +18,30 @@ from ..configs.default_config import DefaultConfig
 
 # only for type hints, to avoid circual import
 class BasePipeline:
+    """Only for type hints in utils, not real BasePipeline class"""
+
     pass
 
 
 def nested_dict():
-    """
-    Creates a nested defaultdict.
+    """Creates a nested defaultdict.
 
     This function returns a defaultdict where each value is another defaultdict
     of the same type. This allows for the creation of arbitrarily deep nested
     dictionaries without having to explicitly define each level.
 
     Returns:
-        defaultdict: A nested defaultdict where each value is another nested defaultdict.
+        :A nested defaultdict where each value is another nested defaultdict.
     """
     return defaultdict(nested_dict)
 
 
 def nested_to_tuple(d, base=()):
-    """
-    Recursively converts a nested dictionary into tuples.
+    """Recursively converts a nested dictionary into tuples.
 
-    Parameters:
-        d (dict): The dictionary to convert.
-        base (tuple, optional): The base tuple to start with. Defaults to ().
+    Args:
+        d: The dictionary to convert.
+        base: The base tuple to start with. Defaults to ().
 
     Yields:
         tuple: Tuples representing the nested dictionary structure, where each tuple
@@ -55,41 +55,33 @@ def nested_to_tuple(d, base=()):
 
 
 def show_figure(fig):
-    """
-    Display a given Matplotlib figure in a new window.
+    """Display a given Matplotlib figure in a new window.
 
-    Parameters:
-    fig (matplotlib.figure.Figure): The figure to be displayed.
+    Args:
+        fig: The figure to be displayed.
 
-    Returns:
-    None
     """
     dummy = plt.figure()
     new_manager = dummy.canvas.manager
-    new_manager.canvas.figure = fig
-    fig.set_canvas(new_manager.canvas)
+    new_manager.canvas.figure = fig  # ty: ignore[possibly-unbound-attribute]
+    fig.set_canvas(new_manager.canvas)  # ty: ignore[possibly-unbound-attribute]
 
 
 def config_method(valid_params: Optional[set[str]] = None):
-    """
-    Decorator for methods that accept configuration parameters via kwargs
-    or an explicit 'config' object.
+    """Decorator for methods that accept configuration parameters via kwargs or an explicit 'config' object.
 
     It separates kwargs intended for the function's signature from those
     intended as configuration overrides, validates the latter against
     `valid_params`, applies valid overrides to a copy of `self.config`,
     and passes the appropriate arguments to the decorated function.
 
-    Parameters
-    ----------
-    valid_params : set[str], optional
-        Set of valid configuration parameter names that can be overridden
-        via kwargs for this method. If None, all kwargs not matching the
-        function signature are considered potentially valid config overrides.
+    Args:
+        valid_params: Set of valid configuration parameter names that can be overridden
+            via kwargs for this method. If None, all kwargs not matching the
+            function signature are considered potentially valid config overrides.
     """
 
     def decorator(func: Callable) -> Callable:
-        # --- Docstring Modification (outside wrapper) ---
         sig = inspect.signature(func)
 
         param_docs = "\n\nValid configuration parameters (passed via **kwargs):\n"
@@ -161,7 +153,7 @@ def config_method(valid_params: Optional[set[str]] = None):
                     if invalid_config_params:
                         print(
                             f"\nWarning: The following parameters are not valid "
-                            f"configuration overrides for {func.__name__}:"
+                            f"configuration overrides for {func.__name__}:"  # type: ignore
                         )
                         print(
                             f"Invalid config parameters: {', '.join(invalid_config_params)}"
@@ -217,7 +209,7 @@ def config_method(valid_params: Optional[set[str]] = None):
                     print(
                         f"\nWarning: Additional keyword arguments provided "
                         f"({', '.join(potential_config_kwargs.keys())}) "
-                        f"while an explicit 'config' object was also passed to {func.__name__}. "
+                        f"while an explicit 'config' object was also passed to {func.__name__}. "  # type: ignore
                         f"These additional arguments will be ignored as configuration overrides."
                     )
 
@@ -234,24 +226,32 @@ def config_method(valid_params: Optional[set[str]] = None):
 
 
 class Saver:
-    """
-    Handles the saving of BasePipeline objects.
+    """Handles the saving of BasePipeline objects.
+
+    Atrributes:
+        file_path: path to save file.
+        preprocessor_path: path where pickle object of preprocesser should be saved.
+        model_state_path: path where model state dict should be saved.
+
     """
 
     def __init__(self, file_path: str):
-        """
-        Initializes the Saver with the base file path.
+        """Initializes the Saver with the base file path.
 
         Args:
             file_path: The base file path (without extensions).
         """
+
         self.file_path = file_path
         self.preprocessor_path = f"{file_path}_preprocessor.pkl"
         self.model_state_path = f"{file_path}_model.pth"
 
+        folder = os.path.dirname(self.file_path)
+        if folder:
+            os.makedirs(folder, exist_ok=True)
+
     def save(self, pipeline: "BasePipeline"):
-        """
-        Saves the BasePipeline object.
+        """Saves the BasePipeline object.
 
         Args:
             pipeline: The BasePipeline object to save.
@@ -290,13 +290,16 @@ class Saver:
 
 
 class Loader:
-    """
-    Handles the loading of BasePipeline objects.
+    """Handles the loading of BasePipeline objects.
+
+    Atrributes:
+        file_path: path of saved pipeline object.
+        preprocessor_path: path where pickle object of preprocesser should was saved.
+        model_state_path: path where model state dict was saved.
     """
 
     def __init__(self, file_path: str):
-        """
-        Initializes the Loader with the base file path.
+        """Initializes the Loader with the base file path.
 
         Args:
             file_path: The base file path (without extensions).
@@ -306,8 +309,7 @@ class Loader:
         self.model_state_path = f"{file_path}_model.pth"
 
     def load(self) -> Any:
-        """
-        Loads the BasePipeline object.
+        """Loads the BasePipeline object.
 
         Returns:
             The loaded BasePipeline object, or None on error.
@@ -382,7 +384,16 @@ class Loader:
 
 
 def flip_labels(labels: torch.Tensor) -> torch.Tensor:
-    """Randomly flip modality labels with probability (1 - 1/n_modalities), vectorized."""
+    """Randomly flip modality labels with probability (1 - 1/n_modalities), vectorized.
+
+    This is mainly used for advers training in multi modal xmodalix.
+
+    Args:
+        labels: tensor of labels
+    Returns:
+        flipped tensor
+
+    """
     device = labels.device
     n_modalities = labels.unique().numel()
     batch_size = labels.size(0)
@@ -415,11 +426,26 @@ def find_translation_keys(
     from_key: Optional[str] = None,
     to_key: Optional[str] = None,
 ) -> Dict[str, str]:  # type: ignore
-    """
-    Finds the 'from' and 'to' modalities for cross-modal prediction.
+    """Find translation source and target modalities.
+
+    Determines which modalities serve as the "from" and "to" directions for
+    cross-modal prediction, either from explicit arguments or from the
+    configuration.
+
+    Args:
+        config: Experiment configuration containing data information.
+        trained_modalities: List of trained modality names.
+        from_key: Optional name of the source modality.
+        to_key: Optional name of the target modality.
+
+    Returns:
+        A dictionary with two entries:
+            - "from": Name of the source modality.
+            - "to": Name of the target modality.
 
     Raises:
-        ValueError: If exactly one 'from' and one 'to' modality are not found.
+        ValueError: If no valid "from" or "to" modality is found, or if
+        multiple conflicting directions are specified.
     """
     from_key_final: Optional[str] = None
     to_key_final: Optional[str] = None

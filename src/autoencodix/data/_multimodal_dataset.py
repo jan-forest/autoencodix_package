@@ -1,15 +1,37 @@
 import torch
 import warnings
 import pandas as pd
-from typing import List, Dict, Any, Union, Tuple
+from typing import List, Dict, Any, Optional
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.configs.default_config import DefaultConfig
 
 import numpy as np
 
 
-class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):
+class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
+    """Handles multiple datasets of different modalities.
+
+    Attributes:
+        datasets: Dictionary of datasets for each modality.
+        n_modalities: Number of modalities.
+        sample_to_modalities: Mapping from sample IDs to available modalities.
+        sample_ids: List of all unique sample IDs across modalities.
+        config: Configuration object.
+        data: Data from the first modality (for compatibility).
+        feature_ids: Feature IDs (currently None, to be implemented).
+        _id_to_idx: Reverse lookup tables for sample IDs to indices per modality.
+        paired_sample_ids: List of sample IDs that have data in all modalities.
+        unpaired_sample_ids: List of sample IDs that do not have data in all modalities.
+    """
+
     def __init__(self, datasets: Dict[str, BaseDataset], config: DefaultConfig):
+        """
+        Initialize the MultiModalDataset.
+
+        Args:
+            datasets: Dictionary of datasets for each modality.
+            config: Configuration object.
+        """
         self.datasets = datasets
         self.n_modalities = len(self.datasets.keys())
         self.sample_to_modalities = self._build_sample_map()
@@ -31,8 +53,60 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):
             set(self.sample_ids) - set(self.paired_sample_ids)
         )
 
-        self.sampler = CoverageEnsuringSampler(self, batch_size=self.config.batch_size)
-        self.collate_fn = create_multimodal_collate_fn(self)
+    def _to_df(self, modality: Optional[str] = None) -> pd.DataFrame:
+        """Convert the dataset to a pandas DataFrame.
+
+        Returns:
+            DataFrame representation of the dataset
+        """
+        if modality is None:
+            all_modality = list(self.datasets.keys())
+        else:
+            all_modality = [modality]
+
+        df_all = pd.DataFrame()
+        for modality in all_modality:
+            if modality not in self.datasets:
+                raise ValueError(f"Unknown modality: {modality}")
+
+            ds = self.datasets[modality]
+            if isinstance(ds.data, torch.Tensor):
+                df = pd.DataFrame(
+                    ds.data.numpy(), columns=ds.feature_ids, index=ds.sample_ids
+                )
+            elif "IMG" in modality:
+                # Handle image modality
+                # Get the list of tensors
+                tensor_list = self.datasets[modality].data
+
+                # Flatten each tensor and collect as rows
+                rows = [
+                    (
+                        t.flatten().cpu().numpy()
+                        if isinstance(t, torch.Tensor)
+                        else t.flatten()
+                    )
+                    for t in tensor_list
+                ]
+
+                # Create DataFrame
+                df = pd.DataFrame(
+                    rows,
+                    index=ds.sample_ids,
+                    columns=["Pixel_" + str(i) for i in range(len(rows[0]))],
+                )
+            else:
+                raise TypeError(
+                    "Data is not a torch.Tensor and cannot be converted to DataFrame."
+                )
+
+            df = df.add_prefix(f"{modality}_")
+            if df_all.empty:
+                df_all = df
+            else:
+                df_all = pd.concat([df_all, df], axis=1, join="inner")
+
+        return df_all
 
     def _build_sample_map(self):
         sample_to_mods = {}
@@ -52,10 +126,6 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):
         return len(self.paired_sample_ids)
 
     def __getitem__(self, sample_id: str):
-        """
-        Fetch a full multi-modal sample by ID.
-        This replaces the collate_fn by returning a single structured sample.
-        """
         sample = {"sample_id": sample_id, "dtype": ""}
         for mod, ds in self.datasets.items():
             if sample_id not in self._id_to_idx[mod]:
@@ -67,15 +137,31 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):
         return sample
 
 
-class CoverageEnsuringSampler(torch.utils.data.Sampler):
+class CoverageEnsuringSampler(torch.utils.data.Sampler):  # type: ignore
     """
     Sampler that ensures all samples are seen at least once per epoch for each modality.
-    Uses a two-phase approach: coverage phase + random phase.
+
+
+    Attributes:
+        dataset: The MultiModalDataset to sample from.
+        paired_ids: List of sample IDs that have data in all modalities.
+        unpaired_ids: List of sample IDs that do not have data in all modalities.
+        batch_size: Number of samples per batch.
+        paired_ratio: Ratio of paired samples in each batch.
+        modality_samples: Dictionary mapping each modality to its list of sample IDs.
     """
 
     def __init__(
         self, multimodal_dataset: MultiModalDataset, paired_ratio=0.5, batch_size=64
     ):
+        """
+        Initialize the sampler.
+
+        Args:
+            multimodal_dataset: The MultiModalDataset to sample from.
+            paired_ratio: Ratio of paired samples in each batch.
+            batch_size: Number of samples per batch.
+        """
         self.dataset = multimodal_dataset
         self.paired_ids = multimodal_dataset.paired_sample_ids
         self.unpaired_ids = multimodal_dataset.unpaired_sample_ids
@@ -125,8 +211,63 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):
                 )
                 yield batch
 
+    # def _generate_coverage_batches(self):
+    #     """Generate batches that ensure all samples are covered
+
+    #     Returns:
+    #        List of batches ensuring coverage of all samples
+    #     """
+    #     coverage_batches = []
+
+    #     covered = {mod: set() for mod in self.modality_samples.keys()}
+
+    #     while not all(
+    #         len(covered[mod]) == len(self.modality_samples[mod])
+    #         for mod in self.modality_samples.keys()
+    #     ):
+    #         batch = []
+
+    #         for modality in self.modality_samples.keys():
+    #             uncovered = [
+    #                 s
+    #                 for s in self.modality_samples[modality]
+    #                 if s not in covered[modality]
+    #             ]
+
+    #             if uncovered:
+    #                 take = min(
+    #                     len(uncovered), self.batch_size // len(self.modality_samples)
+    #                 )
+    #                 selected = np.random.choice(uncovered, size=take, replace=False)
+    #                 batch.extend(selected)
+    #                 covered[modality].update(selected)
+
+    #         # Fill remaining batch slots with random samples
+    #         while len(batch) < self.batch_size:
+    #             if len(batch) < self.batch_size * self.paired_ratio and self.paired_ids:
+    #                 sample = np.random.choice(self.paired_ids)
+    #                 batch.append(sample)
+    #             elif self.unpaired_ids:
+    #                 sample = np.random.choice(self.unpaired_ids)
+    #                 batch.append(sample)
+    #             else:
+    #                 break
+
+    #         batch = list(set(batch))
+    #         if len(batch) > self.batch_size:
+    #             batch = batch[: self.batch_size]
+
+    #         if batch:
+    #             coverage_batches.append(batch)
+
+    #     return coverage_batches
+
     def _generate_coverage_batches(self):
-        """Generate batches that ensure all samples are covered"""
+        """Generate batches that ensure all samples are covered
+
+        Returns:
+        List of batches ensuring coverage of all samples
+        """
         coverage_batches = []
 
         covered = {mod: set() for mod in self.modality_samples.keys()}
@@ -136,6 +277,7 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):
             for mod in self.modality_samples.keys()
         ):
             batch = []
+            batch_set = set()  # Track unique samples in current batch
 
             for modality in self.modality_samples.keys():
                 uncovered = [
@@ -146,25 +288,51 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):
 
                 if uncovered:
                     take = min(
-                        len(uncovered), self.batch_size // len(self.modality_samples)
+                        len(uncovered),
+                        (self.batch_size - len(batch)) // len(self.modality_samples),
                     )
-                    selected = np.random.choice(uncovered, size=take, replace=False)
-                    batch.extend(selected)
-                    covered[modality].update(selected)
 
-            # Fill remaining batch slots with random samples
+                    # Select samples that aren't already in the batch
+                    available = [s for s in uncovered if s not in batch_set]
+                    if available:
+                        take = min(take, len(available))
+                        selected = np.random.choice(available, size=take, replace=False)
+                        batch.extend(selected)
+                        batch_set.update(selected)
+                        covered[modality].update(selected)
+
+            # Fill remaining batch slots with random samples, avoiding duplicates
             while len(batch) < self.batch_size:
+                candidate_pool = []
+
                 if len(batch) < self.batch_size * self.paired_ratio and self.paired_ids:
-                    sample = np.random.choice(self.paired_ids)
-                    batch.append(sample)
+                    candidate_pool = [s for s in self.paired_ids if s not in batch_set]
                 elif self.unpaired_ids:
-                    sample = np.random.choice(self.unpaired_ids)
+                    candidate_pool = [
+                        s for s in self.unpaired_ids if s not in batch_set
+                    ]
+
+                if not candidate_pool:
+                    # If no unique candidates available, allow repeats
+                    if (
+                        self.paired_ids
+                        and len(batch) < self.batch_size * self.paired_ratio
+                    ):
+                        candidate_pool = self.paired_ids
+                    elif self.unpaired_ids:
+                        candidate_pool = self.unpaired_ids
+                    else:
+                        break
+
+                if candidate_pool:
+                    sample = np.random.choice(candidate_pool)
                     batch.append(sample)
+                    batch_set.add(sample)
                 else:
                     break
 
-            batch = list(set(batch))
-            if len(batch) >= self.batch_size:
+            # No need for deduplication since we track uniqueness during construction
+            if len(batch) > self.batch_size:
                 batch = batch[: self.batch_size]
 
             if batch:
@@ -172,8 +340,13 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):
 
         return coverage_batches
 
-    def _generate_random_batches(self, coverage_batches):
-        """Generate additional random batches to fill the epoch"""
+    def _generate_random_batches(self, coverage_batches: List[Any]):
+        """Generate additional random batches to fill the epoch
+        Args:
+            coverage_batches: Batches already generated to ensure coverage
+        Returns:
+            List of additional random batches
+        """
         total_samples = len(self.paired_ids) + len(self.unpaired_ids)
         covered_samples = sum(len(batch) for batch in coverage_batches)
         remaining_samples = max(0, total_samples - covered_samples)
@@ -222,7 +395,9 @@ def create_multimodal_collate_fn(multimodal_dataset: MultiModalDataset):
 
     Args:
         multimodal_dataset: The multimodal dataset
-        stack_tensors: If True, attempt to stack tensors into a single tensor
+
+    Returns:
+        A collate function for DataLoader
     """
 
     def collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Dict[str, List]]:

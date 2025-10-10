@@ -11,7 +11,11 @@ from autoencodix.configs.default_config import DefaultConfig
 class ImagePreprocessor(GeneralPreprocessor):
     """
     Preprocessor for cross-modal data, handling multiple data types and their transformations.
-    Inherits from BasePreprocessor.
+
+
+    Attributes:
+        data_config: Configuration specific to data handling and preprocessing.
+        dataset_dicts: Dictionary holding datasets for different splits (train/test/valid).
     """
 
     def __init__(
@@ -27,6 +31,12 @@ class ImagePreprocessor(GeneralPreprocessor):
     ) -> DatasetContainer:
         """
         Preprocess the data according to the configuration.
+
+        Args:
+            raw_user_data: The raw data package provided by the user.
+            predict_new_data: Flag indicating if new data is being predicted.
+        Returns:
+            A DatasetContainer with processed training, validation, and test datasets.
         """
         self.dataset_dicts = self._general_preprocess(
             raw_user_data=raw_user_data, predict_new_data=predict_new_data
@@ -49,10 +59,9 @@ class ImagePreprocessor(GeneralPreprocessor):
             train=datasets["train"], test=datasets["test"], valid=datasets["valid"]
         )
 
-    def format_reconstruction(self, reconstruction, result=None):
-        pass
-
     def _process_dp(self, dp: DataPackage, indices: Dict[str, Any]) -> ImageDataset:
+        if dp.img is None:
+            raise ValueError("no img attribute found in datapackage")
         first_key = next(iter(list(dp.img.keys())))
         if not isinstance(dp.img, dict):
             raise TypeError(

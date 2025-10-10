@@ -1,6 +1,5 @@
 import copy
-import warnings
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -20,8 +19,6 @@ class DataPackageSplitter:
         data_package: The original DataPackage to split.
         config: The configuration settings for the splitting process.
         indices: The indices for each split (train/val/test).
-        to_indices: The indices for the "to" modality (if applicable).
-        from_indices: The indices for the "from" modality (if applicable).
     """
 
     def __init__(
@@ -53,6 +50,8 @@ class DataPackageSplitter:
             indices: The indices to use for indexing.
         Returns:
             The indexed object, or None if the input object is None.
+        Raises:
+            TypeError: If an unsupported type is encountered.
         """
 
         if obj is None:
@@ -65,7 +64,7 @@ class DataPackageSplitter:
             print(f"shape of obj: {obj.shape}")
             print(f"obj: {obj}")
             print(f"len(ind): {len(indices)}")
-            print(f"max of index{ np.max(indices)}")
+            print(f"max of index{np.max(indices)}")
             print(f"ind: {indices}")
             return obj[indices]
         else:
@@ -83,14 +82,15 @@ class DataPackageSplitter:
         Returns:
             A new DataPackage with attributes indexed by the provided indices,
             or None if indices are empty.
-        Raises:
-            TypeError: If an unsupported type is encountered in the DataPackage attributes.
         """
         if len(self.indices) == 0:
             return None
 
         split_data = {}
+        print("DP:")
+        print(self._data_package)
         for key, value in self._data_package.__dict__.items():
+            print(f"k: {key}")
             if value is None:
                 continue
             split_data[key] = {
@@ -100,13 +100,17 @@ class DataPackageSplitter:
         return DataPackage(**split_data)
 
     def _split_mudata(
-        self, mudata, indices_map: Dict[str, Dict[str, np.ndarray]], split: str
-    ) -> MuData:
+        self,
+        mudata: MuData,  # ty: ignore[invalid-type-form]
+        indices_map: Dict[str, Dict[str, np.ndarray]],
+        split: str,
+    ) -> MuData:  # ty: ignore[invalid-type-form]
         """Splits a MuData object based on the provided indices map.
 
         Args:
             mudata: The MuData object to split.
             indices_map: A dictionary mapping modalities to their respective indices.
+            split: The split type ("train", "valid", or "test").
         Returns:
             A new MuData object with the specified splits applied.
         """

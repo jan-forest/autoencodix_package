@@ -23,12 +23,12 @@ class FilterMethod(Enum):
     """Supported filtering methods.
 
     Attributes:
-        VARCORR (str): Filter by variance and correlation.
-        NOFILT (str): No filtering.
-        VAR (str): Filter by variance.
-        MAD (str): Filter by median absolute deviation.
-        NONZEROVAR (str): Filter by non-zero variance.
-        CORR (str): Filter by correlation.
+        VARCORR: Filter by variance and correlation.
+        NOFILT No filtering.
+        VAR: Filter by variance.
+        MAD: Filter by median absolute deviation.
+        NONZEROVAR: Filter by non-zero variance.
+        CORR: Filter by correlation.
     """
 
     VARCORR = "VARCORR"
@@ -47,9 +47,11 @@ class DataFilter:
     typically fitted on the training data and then applied to the other sets.
 
     Attributes:
-        data_info (DataInfo): Configuration object containing preprocessing parameters.
-        filtered_features (Optional[Set[str]]): Set of features to keep after filtering
-                                                on the training data. None initially.
+        data_info: Configuration object containing preprocessing parameters.
+        filtered_features: Set of features to keep after filtering on the training data. None initially.
+        _scaler: The fitted scaler object. None initially.
+        ontologies: Ontology information, if provided for Ontix.
+        config: Configuration object containing default parameters.
     """
 
     def __init__(
@@ -62,6 +64,8 @@ class DataFilter:
 
         Args:
             data_info: Configuration object containing preprocessing parameters.
+            config: Configuration object containing default parameters.
+            ontologies: Ontology information, if provided for Ontix.
         """
         self.data_info = data_info
         self.config = config
@@ -69,7 +73,7 @@ class DataFilter:
         self._scaler = None
         self.ontologies = ontologies  # Addition to Varix, mandotory for Ontix
 
-    def _filter_nonzero_variance(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _filter_nonzero_variance(self, df: pd.DataFrame) -> pd.Series:
         """Removes features with zero variance.
 
         Args:
@@ -81,7 +85,9 @@ class DataFilter:
         var = pd.Series(np.var(df, axis=0), index=df.columns)
         return df[var[var > 0].index]
 
-    def _filter_by_variance(self, df: pd.DataFrame, k: Optional[int]) -> pd.DataFrame:
+    def _filter_by_variance(
+        self, df: pd.DataFrame, k: Optional[int]
+    ) -> Union[pd.Series, pd.DataFrame]:
         """Keeps top k features by variance.
 
         Args:
@@ -100,7 +106,9 @@ class DataFilter:
         var = pd.Series(np.var(df, axis=0), index=df.columns)
         return df[var.sort_values(ascending=False).index[:k]]
 
-    def _filter_by_mad(self, df: pd.DataFrame, k: Optional[int]) -> pd.DataFrame:
+    def _filter_by_mad(
+        self, df: pd.DataFrame, k: Optional[int]
+    ) -> Union[pd.Series, pd.DataFrame]:
         """Keeps top k features by median absolute deviation.
 
         Args:
@@ -118,7 +126,7 @@ class DataFilter:
 
     def _filter_by_correlation(
         self, df: pd.DataFrame, k: Optional[int]
-    ) -> pd.DataFrame:
+    ) -> Union[pd.Series, pd.DataFrame]:
         """Filters features using correlation-based clustering.
 
         This method clusters features based on their correlation distance and
@@ -158,12 +166,12 @@ class DataFilter:
                     medoid_idx = cluster_points[np.argmin(sum_distances)]
                     medoid_indices.append(medoid_idx)
 
-            df_filt = df.iloc[:, medoid_indices]
+            df_filt: Union[pd.DataFrame, pd.Series] = df.iloc[:, medoid_indices]
             return df_filt
 
     def filter(
         self, df: pd.DataFrame, genes_to_keep: Optional[List] = None
-    ) -> Tuple[pd.DataFrame, List[str]]:
+    ) -> Tuple[Union[pd.Series, pd.DataFrame], List[str]]:
         """Applies the configured filtering method to the dataframe.
 
         This method is intended to be called on the training data to determine
@@ -185,14 +193,14 @@ class DataFilter:
         """
         if genes_to_keep is not None:
             try:
-                df = df[genes_to_keep]
+                df: Union[pd.Series, pd.DataFrame] = df[genes_to_keep]
                 return df, genes_to_keep
             except KeyError as e:
                 raise KeyError(
                     f"Some genes in genes_to_keep are not present in the dataframe: {e}"
                 )
 
-        MIN_FILTER = 10
+        MIN_FILTER = 2
         filtering_method = FilterMethod(self.data_info.filtering)
 
         if df.shape[0] < MIN_FILTER or df.empty:
@@ -258,7 +266,9 @@ class DataFilter:
     def _init_scaler(self) -> None:
         """Initializes the scaler based on the configured scaling method."""
         method = self.data_info.scaling
-        if method == "NONE":
+
+        if method == "NOTSET":
+            # if not set in data config, we use the global scaling config
             method = self.config.scaling
         if method == "MINMAX":
             self._scaler = MinMaxScaler(clip=True)
@@ -271,7 +281,7 @@ class DataFilter:
         else:
             self._scaler = None
 
-    def fit_scaler(self, df: pd.DataFrame) -> Any:
+    def fit_scaler(self, df: Union[pd.Series, pd.DataFrame]) -> Any:
         """Fits the scaler to the input dataframe (typically the training set).
 
         Args:
@@ -287,7 +297,9 @@ class DataFilter:
             warnings.warn("No scaling applied.")
         return self._scaler
 
-    def scale(self, df: pd.DataFrame, scaler: Any) -> pd.DataFrame:
+    def scale(
+        self, df: Union[pd.Series, pd.DataFrame], scaler: Any
+    ) -> Union[pd.Series, pd.DataFrame]:
         """Applies the fitted scaler to the input dataframe.
 
         Args:

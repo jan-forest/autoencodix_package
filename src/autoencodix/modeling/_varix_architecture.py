@@ -11,45 +11,28 @@ from ._layer_factory import LayerFactory
 
 
 class VarixArchitecture(BaseAutoencoder):
-    """
-    Vanilla Autoencoder implementation with separate encoder and decoder construction.
+    """Variational Autoencoder implementation with separate encoder and decoder construction.
 
-    Attributes
-    ----------
-    self.input_dim : int
-        number of input features
-    self.config: DefaultConfig
-        Configuration object containing model architecture parameters
-    self._encoder: nn.Module
-        Encoder network of the autoencoder
-    self._decoder: nn.Module
-        Decoder network of the autoencoder
+    Attributes:
+        input_dim: number of input features
+        config: Configuration object containing model architecture parameters
+        encoder: Encoder network of the autoencoder
+        decoder: Decoder network of the autoencoder
+        mu: Linear layer to compute the mean of the latent distribution
+    logvar: Linear layer to compute the log-variance of the latent distribution
 
-    Methods
-    -------
-    _build_network()
-        Construct the encoder and decoder networks via the LayerFactory
-    encode(x: torch.Tensor) -> torch.Tensor
-        Encode the input tensor x
-    decode(x: torch.Tensor) -> torch.Tensor
-        Decode the latent tensor x
-    forward(x: torch.Tensor) -> ModelOutput
-        Forward pass of the model, fills in the reconstruction and latentspace attributes of ModelOutput class.
-    reparameterize(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor
-        Reparameterization trick for VAE
     """
 
     def __init__(
         self, config: Optional[Union[None, DefaultConfig]], input_dim: int
     ) -> None:
-        """
-        Initialize the Vanilla Autoencoder with the given configuration.
+        """Initialize the Vanilla Autoencoder with the given configuration.
 
-        Parameters
-        ----------
-        config : Optional[Union[None, DefaultConfig]]
-            Configuration object containing model parameters.
+        Args:
+            config: Configuration object containing model parameters.
+            input_dim: Number of input features.
         """
+
         if config is None:
             config = DefaultConfig()
         self._config: DefaultConfig = config
@@ -63,8 +46,7 @@ class VarixArchitecture(BaseAutoencoder):
         self.apply(self._init_weights)
 
     def _build_network(self) -> None:
-        """
-        Construct the encoder and decoder networks.
+        """Construct the encoder and decoder networks.
 
         Handles cases where `n_layers=0` by skipping the encoder and using only mu/logvar.
         """
@@ -121,20 +103,16 @@ class VarixArchitecture(BaseAutoencoder):
         self._decoder = nn.Sequential(*decoder_layers)
 
     def encode(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Encode the input tensor x
+        """Encode the input tensor x.
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Input tensor
+        Args:
+            x: Input tensor
 
-        Returns
-        -------
-        torch.Tensor
+        Returns:
             Encoded tensor
 
         """
+
         latent = x  # for case where n_layers=0
         if len(self._encoder) > 0:
             latent = self._encoder(x)
@@ -146,12 +124,11 @@ class VarixArchitecture(BaseAutoencoder):
         return mu, logvar
 
     def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-        """
-        Reparameterization trick for VAE
+        """Reparameterization trick for VAE
 
-        Parameters:
-            mu : torch.Tensor
-            logvar : torch.Tensor
+        Args:
+            mu: torch.Tensor
+            logvar: torch.Tensor
 
         Returns:
             torch.Tensor
@@ -162,17 +139,12 @@ class VarixArchitecture(BaseAutoencoder):
         return mu + eps * std
 
     def get_latent_space(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Returns the latent space representation of the input.
+        """Returns the latent space representation of the input.
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Input tensor
+        Args:
+            x: Input tensor
 
-        Returns
-        -------
-        torch.Tensor
+        Returns:
             Latent space representation
 
         """
@@ -181,34 +153,24 @@ class VarixArchitecture(BaseAutoencoder):
         return z
 
     def decode(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Decode the latent tensor x
+        """Decode the latent tensor x
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Latent tensor
+        Args:
+            x: Latent tensor
 
-        Returns
-        -------
-        torch.Tensor
+        Returns:
             Decoded tensor
-
         """
+
         return self._decoder(x)
 
     def forward(self, x: torch.Tensor) -> ModelOutput:
-        """
-        Forward pass of the model, fill
+        """Forward pass of the model, fill
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Input tensor
+        Args:
+            x: Input tensor
 
-        Returns
-        -------
-        ModelOutput
+        Returns:
             ModelOutput object containing the reconstructed tensor and latent tensor
 
         """

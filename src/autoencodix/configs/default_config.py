@@ -31,10 +31,8 @@ class SchemaPrinterMixin:
         """
         Print a human-readable schema of all config parameters.
 
-        Parameters
-        ----------
-        filter_params : Optional[List[str]]
-            If provided, only print information for these parameters
+        Args:
+            filter_params: If provided, only print information for these parameters
         """
         if filter_params:
             print("Valid Keyword Arguments:")
@@ -72,9 +70,11 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     data_type: Literal["NUMERIC", "CATEGORICAL", "IMG", "ANNOTATION"] = Field(
         default="NUMERIC"
     )
-    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE"] = Field(
-        default="NONE",
-        description="Setting the scaling here in DataInfo overrides the globally set scaling method for the specific data modality",
+    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE", "NOTSET"] = (
+        Field(
+            default="NOTSET",
+            description="Setting the scaling here in DataInfo overrides the globally set scaling method for the specific data modality",
+        )
     )  # can also be set globally, for all data modalities.
 
     filtering: Literal["VAR", "MAD", "CORR", "VARCORR", "NOFILT", "NONZEROVAR"] = Field(
@@ -153,28 +153,16 @@ class DataConfig(BaseModel, SchemaPrinterMixin):
 
 # write tests: done
 class DefaultConfig(BaseModel, SchemaPrinterMixin):
-    """
-    Complete configuration for model, training, hardware, and data handling.
-
-    Attributes
-    ----------
-    all configuration parameters (change over time of development)
-
-    Methods
-    -------
-    update(**kwargs)
-        Update configuration with support for nested attributes.
-    get_params()
-        Get detailed information about all config fields including types and default values.
-    print_schema()
-        Print a human-readable schema of all config parameters.
-
-    """
+    """Complete configuration for model, training, hardware, and data handling."""
 
     # Input validation
     model_config = ConfigDict(extra="forbid")
     # Datasets configuration --------------------------------------------------
     data_config: DataConfig = DataConfig(data_info={})
+    img_path_col: str = Field(
+        default="img_paths",
+        description="When working with images, we except a column in your annotation file that specifies the path of the image for a particular sample. Here you can define the name of this column",
+    )
     requires_paired: Union[bool, None] = Field(
         default_factory=lambda: True,
         description="Indicator if the samples for the xmodalix are paired, based on some sample id",
@@ -475,7 +463,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
             if self.data_case is None:
                 import warnings
 
-                warnings.warn(f"Could not determine data_case: {e}")
+                warnings.warn(message="Could not determine data_case")
 
         return self
 
@@ -531,9 +519,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         """
         Get detailed information about all config fields including types and default values.
 
-        Returns
-        -------
-        Dict[str, Dict[str, Any]]
+        Returns:
             Dictionary containing field name, type, default value, and description if available
         """
         fields_info = {}

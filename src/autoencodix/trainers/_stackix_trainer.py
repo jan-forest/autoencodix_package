@@ -15,21 +15,33 @@ from autoencodix.configs.default_config import DefaultConfig
 
 
 class StackixTrainer(GeneralTrainer):
-    """
-    StackixTrainer is a wrapper class that conforms to the BaseTrainer interface
-    while internally using the StackixOrchestrator to perform the
-    actual training process.
+    """StackixTrainer is a wrapper for StackixOrchestrator that conforms to the BaseTrainer interface.
 
     This trainer maintains compatibility with the BasePipeline interface while
     leveraging the more modular and well-designed StackixOrchestrator
     classes for the actual implementation.
 
-    Attributes
-    ----------
-    _orchestrator : StackixOrchestrator
-        The orchestrator that manages modality model training and latent space preparation
-    _workdir : str
-        Directory for saving intermediate models and results
+    Attributes:
+    _workdir: Directory for saving intermediate models and results
+    _result: Result object to store training outcomes
+    _config: Configuration parameters for training and model architecture
+    _model_type: Type of autoencoder model to use for each modality
+    _loss_type: Type of loss function to use for training
+    _trainset: Training dataset containing multiple modalities
+    _validset: Validation dataset containing multiple modalities
+    _orchestrator_type: Type to use for orchestrating modality training (default is StackixOrchestrator)
+    _trainer_type: Type to use for training each modality model (default is GeneralTrainer)
+    _modality_trainers: Dictionary of trained models for each modality
+    _modality_results: Dictionary of training results for each modality
+    _trainer: Trainer for the stacked model
+    _fabric: Lightning Fabric wrapper for device and precision management
+    _train_latent_ds: Training dataset with concatenated latent spaces
+    _valid_latent_ds: Validation dataset with concatenated latent spaces
+    concat_idx: Indices used for concatenating latent spaces
+    _model: The instantiated stacked model architecture
+    _optimizer: The optimizer used for training
+    _orchestrator: The orchestrator that manages modality model training and latent space preparation
+    _workdir: Directory for saving intermediate models and results
     """
 
     def __init__(
@@ -44,28 +56,20 @@ class StackixTrainer(GeneralTrainer):
         trainer_type: Type[BaseTrainer] = GeneralTrainer,
         workdir: str = "./stackix_work",
         ontologies: Optional[Tuple] = None,
-    ):
-        """
-        Initialize the StackixTrainer with datasets and configuration.
+    ) -> None:
+        """Initialize the StackixTrainer with datasets and configuration.
 
-        Parameters
-        ----------
-        trainset : Optional[StackixDataset]
-            Training dataset containing multiple modalities
-        validset : Optional[StackixDataset]
-            Validation dataset containing multiple modalities
-        result : Result
-            Result object to store training outcomes
-        config : DefaultConfig
-            Configuration parameters for training and model architecture
-        model_type : Type[BaseAutoencoder]
-            Type of autoencoder model to use for each modality
-        loss_type : Type[BaseLoss]
-            Type of loss function to use for training
-        dataset_class : Type[BaseDataset], optional
-            Class to use for creating datasets (default is NumericDataset)
-        workdir : str, optional
-            Directory to save intermediate models and results (default is "./stackix_work")
+        Args:
+            trainset: Training dataset containing multiple modalities
+            validset: Validation dataset containing multiple modalities
+            result: Result object to store training outcomes
+            config: Configuration parameters for training and model architecture
+            model_type: Type of autoencoder model to use for each modality
+            loss_type: Type of loss function to use for training
+            orchestrator_type: Type to use for orchestrating modality training (default is StackixOrchestrator)
+            trainer_type: Type to use for training each modality model (default is GeneralTrainer)
+            workdir: Directory to save intermediate models and results (default is "./stackix_work")
+            onotologies: Ontology information, if provided for Ontix compatibility
         """
         self._workdir = workdir
         self._result = result
@@ -105,25 +109,19 @@ class StackixTrainer(GeneralTrainer):
         )
 
     def get_model(self) -> torch.nn.Module:
-        """
-        Get the trained model.
+        """Getter for the the trained model.
 
-        Returns
-        -------
-        torch.nn.Module
+        Returns:
             The trained model
         """
         return self._model
 
     def train(self) -> Result:
-        """
-        Train the stacked model on the concatenated latent space.
+        """Train the stacked model on the concatenated latent space.
 
         Uses the standard BaseTrainer training process but with the stacked model.
 
-        Returns
-        -------
-        Result
+        Returns:
             Training results including losses, latent spaces, and other metrics
         """
         print("Training each modality model...")
@@ -144,8 +142,7 @@ class StackixTrainer(GeneralTrainer):
         return self._result
 
     def _train_modalities(self) -> None:
-        """
-        Trains a Autoencoder for each modality in the dataset.
+        """Trains a Autoencoder for each modality in the dataset.
         This method orchestrates the training of individual modality models
 
         This method orchestrates the complete training process:
@@ -153,9 +150,6 @@ class StackixTrainer(GeneralTrainer):
         2. Extract and concatenate latent spaces
         3. Populates the self._modality_models and self._modality_results attributes
 
-        Returns
-        -------
-            None
         """
         # Step 1: Train individual modality models
         self._modality_trainers, self._modality_results = (
@@ -172,25 +166,11 @@ class StackixTrainer(GeneralTrainer):
         )
         self.concat_idx = self._orchestrator.concat_idx
 
-    # def _reconstruct(self, split: str) -> None:
-    #     stacked_recon = self._result.reconstructions.get(epoch=-1, split=split)
-
-    #     modality_reconstructions = {}
-    #     for name, (start_idx, end_idx) in self.concat_idx.items():
-    #         stacked_input = stacked_recon[:, start_idx:end_idx]
-    #         stacked_tensor = torch.tensor(stacked_input, dtype=torch.float32)
-    #         with self._fabric.autocast() and torch.no_grad():
-    #             model = self._modality_results[name].model
-    #             stacked_tensor = self._fabric.to_device(stacked_tensor)
-    #             model = self._fabric.to_device(model)
-    #             model.eval()
-    #             modality_reconstructions[name] = model.decode(stacked_tensor).cpu()
-
-    #     self._result.sub_reconstructions = modality_reconstructions
-
     def _reconstruct(self, split: str) -> None:
-        """
-        Orchestrates the reconstruction by delegating the task to the StackixOrchestrator.
+        """Orchestrates the reconstruction by delegating the task to the StackixOrchestrator.
+
+        Args:
+            split: The data split to reconstruct ('train', 'valid', 'test').
         """
         stacked_recon = self._result.reconstructions.get(epoch=-1, split=split)
         if stacked_recon is None:
@@ -208,7 +188,15 @@ class StackixTrainer(GeneralTrainer):
     def predict(
         self, data: BaseDataset, model: Optional[torch.nn.Module] = None, **kwargs
     ) -> Result:
-        """ """
+        """Make predictions on the given dataset.
+
+        Args:
+            data: The dataset to make predictions on.
+            model: The model to use for predictions. If None, uses the trained model.
+            **kwargs: Additional keyword arguments.
+        Returns:
+            Result: The prediction results including reconstructions and latent spaces.
+        """
         self.n_test = len(data) if data is not None else 0
         self._orchestrator.set_testset(testset=data)
         test_ds = self._orchestrator.prepare_latent_datasets(split="test")

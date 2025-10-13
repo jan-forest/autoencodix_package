@@ -866,6 +866,7 @@ class BasePipeline(abc.ABC):
         split_type: Literal[
             "use-split", "CV-5", "LOOC"
         ] = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
+        n_downsample: Optional[int] = 10000,
     ) -> Result:
         """TODO"""
         if self._evaluator is None:
@@ -895,6 +896,7 @@ class BasePipeline(abc.ABC):
             metric_regression=metric_regression,
             reference_methods=reference_methods,
             split_type=split_type,
+            n_downsample=n_downsample,
         )
 
         _: Any = self._visualizer._plot_evaluation(result=self.result)

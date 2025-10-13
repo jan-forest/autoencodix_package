@@ -1,6 +1,7 @@
 from typing import Union, no_type_check
 import warnings
 
+import numpy as np
 import pandas as pd
 from sklearn import linear_model
 from sklearn.model_selection import cross_validate
@@ -536,7 +537,8 @@ class GeneralEvaluator(BaseEvaluator):
                         # Adjust X as well
                         X = X.loc[Y.index, :]
 
-                score_temp = sklearn_scorer(sklearn_ml, X, Y)
+
+                score_temp = sklearn_scorer(sklearn_ml, X, Y, labels=np.sort(Y_train.unique()))
                 score_df["value"].append(score_temp)
         else:
             ## Warning that there is only one class in the training data

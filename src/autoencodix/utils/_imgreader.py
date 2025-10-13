@@ -257,7 +257,7 @@ class ImageDataReader:
         if anno_file.endswith(".parquet"):
             annotation = pd.read_parquet(anno_file)
         elif anno_file.endswith((".csv", ".txt", ".tsv")):
-            annotation = pd.read_csv(anno_file, sep=sep, index_col=0)
+            annotation = pd.read_csv(anno_file, sep=sep, index_col=0, engine="python")
         else:
             raise ValueError(f"Unsupported file type for: {anno_file}")
         return annotation

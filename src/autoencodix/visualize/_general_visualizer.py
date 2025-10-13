@@ -61,6 +61,7 @@ class GeneralVisualizer(BaseVisualizer):
         param: Optional[Union[list, str]] = None,
         epoch: Optional[Union[int, None]] = None,
         split: str = "all",
+        n_downsample: Optional[int] = 10000,
         **kwargs,
     ) -> None:
         """Visualizes the latent space of the given result using different types of plots.
@@ -72,6 +73,7 @@ class GeneralVisualizer(BaseVisualizer):
             param: List of parameters provided and stored as metadata. Strings must match column names. If not a list, string "all" is expected for convenient way to make plots for all parameters available. Default is None where no colored labels are plotted.
             epoch: The epoch number to visualize. If None, the last epoch is inferred from the losses. Default is None.
             split: The data split to visualize. Options are "train", "valid", "test", and "all". Default is "all".
+            n_downsample: If provided, downsample the data to this number of samples for faster visualization. Default is 10000. Set to None to disable downsampling.
             **kwargs: additional arguments.
 
         """
@@ -274,6 +276,13 @@ class GeneralVisualizer(BaseVisualizer):
             for p in param:
                 if p in clin_data.columns:
                     labels = clin_data.loc[df_latent.index, p].tolist()  # ty: ignore
+                
+                if n_downsample is not None:
+                    if df_latent.shape[0] > n_downsample:
+                       sample_idx = np.random.choice(df_latent.shape[0], n_downsample, replace=False)
+                       df_latent = df_latent.iloc[sample_idx]
+                       if labels is not None:
+                           labels = labels[sample_idx]
 
                 if plot_type == "2D-scatter":
                     ## Make 2D Embedding with UMAP
@@ -304,6 +313,17 @@ class GeneralVisualizer(BaseVisualizer):
                     )
 
                     fig = self.plots["Ridgeline"][epoch][split][p].figure
+                    show_figure(fig)
+                    plt.show()
+                
+                if plot_type == "Clustermap":
+                    ## Make clustermap plot
+
+                    self.plots["Clustermap"][epoch][split][p] = self._plot_latent_clustermap(
+                        lat_space=df_latent, labels=labels, param=p
+                    )
+
+                    fig = self.plots["Clustermap"][epoch][split][p]
                     show_figure(fig)
                     plt.show()
 
@@ -413,6 +433,7 @@ class GeneralVisualizer(BaseVisualizer):
                 y=embedding.iloc[:, 1],
                 hue=labels,
                 hue_order=np.unique(labels),
+                palette="tab20",
                 s=40,
                 alpha=0.5,
                 ec="black",
@@ -425,6 +446,7 @@ class GeneralVisualizer(BaseVisualizer):
                 y=means.iloc[:, 1],
                 hue=np.unique(labels),
                 hue_order=np.unique(labels),
+                palette="tab20",
                 s=200,
                 ec="black",
                 alpha=0.9,
@@ -466,7 +488,38 @@ class GeneralVisualizer(BaseVisualizer):
         plt.close()
         return fig
 
-    ## TODO Might be moved to BaseVisualizer if Ridgeline per Modality is used as in notebook
+    @staticmethod
+    def _plot_latent_clustermap(
+        lat_space: pd.DataFrame,
+        labels: Optional[Union[list, pd.Series, None]] = None,
+        param: Optional[Union[str, None]] = None,
+    ) -> matplotlib.figure.Figure:
+        """Creates a clustermap of the latent space dimension where each row shows the intensity of a latent dimension and columns are clustered.
+
+        Args:
+            lat_space: DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
+            labels: List of labels for each sample. If None, all samples are considered as one group.
+            param: Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
+        Returns:
+            fig: Figure object containing the clustermap
+        """
+        lat_space[param] = labels
+
+        cluster_figure =sns.clustermap(lat_space.groupby(param).mean(), 
+			   col_cluster=False,
+			   row_cluster=True,
+			   figsize=(1*lat_space.shape[1], 4+0.5*len(set(labels))),
+			   dendrogram_ratio=0.1,
+			   cmap="icefire",
+			   cbar_kws={'orientation': 'horizontal'},
+			   cbar_pos=(0.2, .95, .3, .02)
+			   ).fig
+        
+        plt.close()
+        lat_space.drop(columns=[param], inplace=True)
+        return cluster_figure
+
+
     @staticmethod
     def _plot_latent_ridge(
         lat_space: pd.DataFrame,
@@ -521,10 +574,13 @@ class GeneralVisualizer(BaseVisualizer):
             .max()
         )
 
-        if len(np.unique(df[param])) > 8:
-            cat_pal = sns.husl_palette(len(np.unique(df[param])))
-        else:
-            cat_pal = sns.color_palette(n_colors=len(np.unique(df[param])))
+        # if len(np.unique(df[param])) > 8:
+        #     cat_pal = sns.husl_palette(len(np.unique(df[param])))
+        # else:
+        #     cat_pal = sns.color_palette(n_colors=len(np.unique(df[param])))
+
+        cat_pal = sns.color_palette("tab20", n_colors=len(np.unique(df[param])))
+
 
         g = sns.FacetGrid(
             df[~exclude_missing_info],

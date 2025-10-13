@@ -36,6 +36,7 @@ class GeneralEvaluator(BaseEvaluator):
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
         split_type: str = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
+        n_downsample: Union[int, None] = 10000,  # Default is 10000, if provided downsample to this number of samples for faster evaluation. Set to None to disable downsampling.
     ) -> Result:
         """Evaluates the performance of machine learning models on various feature representations and clinical parameters.
 
@@ -55,6 +56,7 @@ class GeneralEvaluator(BaseEvaluator):
             reference_methods:List of feature representations to evaluate (e.g., "PCA", "UMAP", "TSNE", "RandomFeature"). "Latent" is always included (default: []).
             split_type: which split to use
                 use-split" for pre-defined splits, "CV-N" for N-fold cross-validation, or "LOOCV" for leave-one-out cross-validation (default: "use-split").
+            n_downsample: If provided, downsample the data to this number of samples for faster evaluation. Default is 10000. Set to None to disable downsampling.
         Returns:
             The updated result object with evaluation results stored in `embedding_evaluation`.
         Raises
@@ -190,6 +192,13 @@ class GeneralEvaluator(BaseEvaluator):
                                 samples_nonna.intersection(sample_split.index), :
                             ]
                         # print(sample_split)
+                    
+                    if n_downsample is not None:
+                        if df.shape[0] > n_downsample:
+                            sample_idx = np.random.choice(df.shape[0], n_downsample, replace=False)
+                            df = df.iloc[sample_idx]
+                            if split_type == "use-split":
+                                sample_split = sample_split.loc[df.index, :]
 
                     if ml_type == "classification":
                         metric = metric_class

@@ -1,3 +1,7 @@
 *.pyc
 __pycache__
 .env
+data/
+.venv/
+.github/
+notebooks/*/*

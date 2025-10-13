@@ -223,11 +223,21 @@ class XModalVisualizer(BaseVisualizer):
                         embedding = latent_data
 
                     # Merge with clinical data via sample_ids
+                    print(clin_data.index)
+                    clin_data["sample_ids"] = clin_data.index.astype(str)
+
                     embedding = embedding.merge(
                         clin_data.drop(columns=["modality"]),  # ty: ignore
-                        on="sample_ids",
+                        left_on="sample_ids",
+                        right_index=True,
                         how="left",
                     )
+
+                    # embedding = embedding.merge(
+                    #     clin_data.drop(columns=["modality"]),  # ty: ignore
+                    #     on="sample_ids",
+                    #     how="left",
+                    # )
 
                     self.plots["2D-scatter"][epoch][split][p] = (
                         self._plot_translate_latent(
@@ -521,7 +531,9 @@ class XModalVisualizer(BaseVisualizer):
         tensor_list = result.reconstructions.get(epoch=-1, split="test")[  # ty: ignore
             "translation"
         ]  # ty: ignore
-
+        print(f"len of tensor-list: {len(tensor_list)}")
+        tensor_ids = result.sample_ids.get(epoch=-1, split="test")["translation"]
+        print(f"len of tensor_ids: {len(tensor_ids)}")
         # Flatten each tensor and collect as rows (for image case)
         rows = [
             t.flatten().cpu().numpy() if isinstance(t, torch.Tensor) else t.flatten()
@@ -530,7 +542,9 @@ class XModalVisualizer(BaseVisualizer):
 
         # Create DataFrame
         df_translate_flat = pd.DataFrame(
-            rows, columns=["Pixel_" + str(i) for i in range(len(rows[0]))]
+            rows,
+            columns=["Pixel_" + str(i) for i in range(len(rows[0]))],
+            index=tensor_ids,
         )
 
         if reducer == "UMAP":
@@ -540,15 +554,29 @@ class XModalVisualizer(BaseVisualizer):
         elif reducer == "TSNE":
             reducer_model = TSNE(n_components=2)
 
-        df_red_comb = pd.DataFrame(
-            reducer_model.fit_transform(
-                pd.concat([df_processed, df_translate_flat], axis=0)
-            )
-        )
+        # making sure of index alignemnt
+        common_ids = df_processed.index.intersection(df_translate_flat.index)
+        df_processed = df_processed.loc[common_ids]
+        df_translate_flat = df_translate_flat.loc[common_ids]
+        df_translate_flat = df_translate_flat.reindex(df_processed.index)
+        df_translate_flat.index = pd.Index([i for i in range(len(common_ids))])
+        X = np.vstack([df_processed.values, df_translate_flat.values])
+        print(X)
+        df_red_comb = pd.DataFrame(reducer_model.fit_transform(X))
+
+        # df_comb = pd.concat(
+        #     [df_processed, df_translate_flat], axis=0, ignore_index=True
+        # )
 
         df_red_comb["origin"] = ["input"] * df_processed.shape[0] + [
             "translated"
         ] * df_translate_flat.shape[0]
+
+        # df_red_comb = pd.DataFrame(
+        #     reducer_model.fit_transform(
+        #         pd.concat([df_processed, df_translate_flat], axis=0)
+        #     )
+        # )
 
         labels = (
             list(result.datasets.test.datasets["img.IMG"].metadata[param])  # ty: ignore

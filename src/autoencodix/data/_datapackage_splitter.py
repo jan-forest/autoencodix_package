@@ -87,10 +87,7 @@ class DataPackageSplitter:
             return None
 
         split_data = {}
-        print("DP:")
-        print(self._data_package)
         for key, value in self._data_package.__dict__.items():
-            print(f"k: {key}")
             if value is None:
                 continue
             split_data[key] = {

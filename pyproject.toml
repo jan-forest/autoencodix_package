@@ -27,6 +27,8 @@ dependencies = [
     "dill>=0.4.0",
     "tensorboard>=2.19.0",
     "tensorboard-plugin-profile>=2.20.1",
+    "captum==0.7.0",
+    "gseapy==1.1.9",
     "mkdocstrings[python]>=0.30.0",
     "mkdocs-material>=9.6.19",
     "ipywidgets>=8.1.7",

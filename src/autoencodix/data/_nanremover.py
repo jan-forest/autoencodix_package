@@ -36,44 +36,6 @@ class NaNRemover:
         self.config = config
         self.relevant_cols = self.config.data_config.annotation_columns
 
-    def _process_sparse_matrix(self, matrix) -> np.ndarray:
-        """Converts sparse matrix to dense NumPy array and ensures float type.
-
-        Args:
-            matrix: The input matrix, which can be a sparse matrix (e.g., from scipy.sparse)
-                or a dense NumPy array.
-
-        Returns
-            A dense NumPy array of float type.
-        """
-        if issparse(matrix):
-            matrix = matrix.toarray()
-        return matrix.astype(float)
-
-    def _remove_nan_from_matrix(
-        self, matrix, name: str = ""
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """Removes NaNs from matrix, returns boolean masks for valid rows and columns.
-
-        Args:
-            matrix: The input matrix (NumPy array or sparse matrix) to process.
-            name: An optional string identifier for the matrix, used for printing
-                (though not currently implemented in the provided code).
-
-        Returns:
-            A tuple containing two boolean NumPy arrays:
-            - valid_rows: A 1D boolean array where True indicates a row without NaNs.
-            - valid_cols: A 1D boolean array where True indicates a column without NaNs.
-        """
-        matrix = self._process_sparse_matrix(matrix)
-        valid_cols = ~np.isnan(matrix).any(axis=0)
-        valid_rows = ~np.isnan(matrix).any(axis=1)
-
-        if not name:
-            name = "matrix"
-
-        return valid_rows, valid_cols
-
     def _process_modality(self, adata: ad.AnnData) -> ad.AnnData:
         """Converts NaN values in AnnData object to zero and metadata NaNs to 'missing'.
         Args:

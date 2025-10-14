@@ -81,7 +81,9 @@ class TrainingDynamics:
             self._data[epoch] = {}
         self._data[epoch][split] = data
 
-    def get(self, epoch: Optional[int] = None, split: Optional[str] = None) -> Union[
+    def get(
+        self, epoch: Optional[int] = None, split: Optional[str] = None
+    ) -> Union[
         np.ndarray,
         Dict[str, np.ndarray],
         Dict[int, Dict[str, np.ndarray]],
@@ -123,6 +125,8 @@ class TrainingDynamics:
             raise KeyError(
                 f"Invalid split type: {split}, we only support 'train', 'valid', and 'test' splits."
             )
+        if len(self._data.keys()) == 0:
+            return {}
         if epoch is None:
             # Case 1a: Split specified - return array of values across epochs
             if split is not None:

@@ -65,17 +65,23 @@ class Result:
     """A dataclass to store results from the pipeline with predefined keys.
 
     Attributes:
-        latentspaces: Stores latent space representations for 'train', 'valid', and 'test' splits.
-        sample_ids: Stores sample identifiers for 'train', 'valid', and 'test' splits.
-        reconstructions: Stores reconstructed outputs for 'train', 'valid', and 'test' splits.
-        mus: Stores mean values of latent distributions for 'train', 'valid', and 'test' splits.
-        sigmas: Stores standard deviations of latent distributions for 'train', 'valid', and 'test' splits.
-        losses: Stores the total loss for different epochs and splits ('train', 'valid', 'test').
-        sub_losses: LossRegistry (extendable) for all sublosses.
-        preprocessed_data: data after preprocessing
-        model: final trained model
-        model_checkpoints: model state at each checkpoint.
-
+        latentspaces: TrainingDynamics object storing latent space representations for 'train', 'valid', and 'test' splits.
+        sample_ids: TrainingDynamics object storing sample identifiers for 'train', 'valid', and 'test' splits.
+        reconstructions: TrainingDynamics object storing reconstructed outputs for 'train', 'valid', and 'test' splits.
+        mus: TrainingDynamics object storing mean values of latent distributions for 'train', 'valid', and 'test' splits.
+        sigmas: TrainingDynamics object storing standard deviations of latent distributions for 'train', 'valid', and 'test' splits.
+        losses: TrainingDynamics object storing the total loss for different epochs and splits ('train', 'valid', 'test').
+        sub_losses: LossRegistry object (extendable) for all sublosses.
+        preprocessed_data: torch.Tensor containing data after preprocessing.
+        model: final trained torch.nn.Module model.
+        model_checkpoints: TrainingDynamics object storing model state at each checkpoint.
+        datasets: Optional[DatasetContainer] containing train, valid, and test datasets.
+        new_datasets: Optional[DatasetContainer] containing new train, valid, and test datasets.
+        adata_latent: Optional[AnnData] containing latent representations as AnnData.
+        final_reconstruction: Optional[Union[DataPackage, MuData]] containing final reconstruction results.
+        sub_results: Optional[Dict[str, Any]] containing sub-results for multi-task or multi-modal models.
+        sub_reconstructions: Optional[Dict[str, Any]] containing sub-reconstructions for multi-task or multi-modal models.
+        embedding_evaluation: pd.DataFrame containing embedding evaluation results.
     """
 
     latentspaces: TrainingDynamics = field(default_factory=TrainingDynamics)
@@ -104,7 +110,7 @@ class Result:
     sub_reconstructions: Optional[Dict[str, Any]] = field(default=None)
 
     # Embedding evaluation results
-    embedding_evaluation: pd.DataFrame = pd.DataFrame()
+    embedding_evaluation: pd.DataFrame = field(default=pd.DataFrame())
 
     # plots: Dict[str, Any] = field(
     #     default_factory=nested_dict
@@ -321,16 +327,29 @@ class Result:
             A DataFrame where rows correspond to samples, columns represent latent
             dimensions, and the index contains sample IDs.
         """
-        latents = self.latentspaces.get(epoch=epoch, split=split)
-        ids = self.sample_ids.get(epoch=epoch, split=split)
-        if modality is not None:  # for x-modalix and other multi-modal models
-            latents = latents[modality]
-            ids = ids[modality]
-        if hasattr(self.model, "ontologies") and self.model.ontologies is not None:
-            cols = list(self.model.ontologies[0].keys())
-        else:
-            cols = ["LatDim_" + str(i) for i in range(latents.shape[1])]
-        return pd.DataFrame(latents, index=ids, columns=cols)
+        try:
+            latents = self.latentspaces.get(epoch=epoch, split=split)
+            ids = self.sample_ids.get(epoch=epoch, split=split)
+            if modality is not None:  # for x-modalix and other multi-modal models
+                latents = latents[modality]
+                ids = ids[modality]
+            if hasattr(self.model, "ontologies") and self.model.ontologies is not None:
+                cols = list(self.model.ontologies[0].keys())
+            else:
+                cols = ["LatDim_" + str(i) for i in range(latents.shape[1])]
+            return pd.DataFrame(latents, index=ids, columns=cols)
+        except Exception as e:
+            import warnings
+
+            warnings.warn(
+                f"We could not create visualizations for the loss plots.\n"
+                f"This usually happens if you try to visualize after saving and loading "
+                f"the pipeline object with `save_all=False`. This memory-efficient saving mode "
+                f"does not retain past training loss data.\n\n"
+                f"Original error message: {e}"
+            )
+
+            return pd.DataFrame()
 
     def get_reconstructions_df(
         self, epoch: int, split: str, modality: Optional[str] = None

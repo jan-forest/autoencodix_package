@@ -6,6 +6,7 @@ Use of OOP would be overkill for the simple functions in this module.
 import inspect
 import os
 from collections import defaultdict
+from dataclasses import MISSING, fields, is_dataclass
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional
 
@@ -232,10 +233,11 @@ class Saver:
         file_path: path to save file.
         preprocessor_path: path where pickle object of preprocesser should be saved.
         model_state_path: path where model state dict should be saved.
+        save_all: indicator if all results should be save, or only core pipeline functionalty
 
     """
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, save_all: bool):
         """Initializes the Saver with the base file path.
 
         Args:
@@ -243,6 +245,7 @@ class Saver:
         """
 
         self.file_path = file_path
+        self.save_all = save_all
         self.preprocessor_path = f"{file_path}_preprocessor.pkl"
         self.model_state_path = f"{file_path}_model.pth"
 
@@ -256,8 +259,19 @@ class Saver:
         Args:
             pipeline: The BasePipeline object to save.
         """
-        self._save_pipeline_object(pipeline)
+
         self._save_preprocessor(pipeline._preprocessor)  # type: ignore
+        if not self.save_all:
+            print("saving memory efficient")
+            self.reset_to_defaults(pipeline.result)  # ty: ignore
+            pipeline.preprocessed_data = None  # ty: ignore
+            pipeline.raw_user_data = None  # ty: ignore
+            pipeline._preprocessor = type(pipeline._preprocessor)(  # ty: ignore
+                config=pipeline.config  # ty: ignore
+            )  # ty: ignore
+            pipeline._visualizer = type(pipeline._visualizer)()  # ty: ignore
+
+        self._save_pipeline_object(pipeline)
         self._save_model_state(pipeline)
 
     def _save_pipeline_object(self, pipeline: "BasePipeline"):
@@ -287,6 +301,21 @@ class Saver:
             except (TypeError, OSError) as e:
                 print(f"Error saving model state: {e}")
                 raise e
+
+    def reset_to_defaults(self, obj):
+        if not is_dataclass(obj):
+            raise ValueError("Object must be a dataclass")
+
+        for f in fields(obj):
+            if f.name == "adata_latent" or f.name == "model":
+                print(f)
+                continue
+            if f.default_factory is not MISSING:
+                setattr(obj, f.name, f.default_factory())
+            elif f.default is not MISSING:
+                setattr(obj, f.name, f.default)
+            else:
+                setattr(obj, f.name, None)
 
 
 class Loader:
@@ -318,9 +347,7 @@ class Loader:
         if loaded_obj is None:
             return None  # Exit if the main object fails to load
 
-        loaded_obj._preprocessor = (
-            self._load_preprocessor()
-        )  # Load even if it doesn't exist
+        loaded_obj._preprocessor = self._load_preprocessor()
         loaded_obj.result.model = self._load_model_state(loaded_obj)
         return loaded_obj
 

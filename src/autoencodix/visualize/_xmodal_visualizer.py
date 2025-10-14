@@ -225,6 +225,10 @@ class XModalVisualizer(BaseVisualizer):
                     # Merge with clinical data via sample_ids
                     print(clin_data.index)
                     clin_data["sample_ids"] = clin_data.index.astype(str)
+                    clin_data.index = clin_data.index.astype(str)  # Add this line
+                    embedding["sample_ids"] = embedding["sample_ids"].astype(str)
+
+                    print(embedding)
 
                     embedding = embedding.merge(
                         clin_data.drop(columns=["modality"]),  # ty: ignore

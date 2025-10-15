@@ -55,3 +55,5 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.ty.rules]
+[tool.ty.src]
+exclude = ["src/autoencodix/utils/feature_importance.py", "**/.ipynb_checkpoints/**",]

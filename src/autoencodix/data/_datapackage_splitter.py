@@ -61,11 +61,11 @@ class DataPackageSplitter:
         elif isinstance(obj, list):
             return [obj[i] for i in indices]
         elif isinstance(obj, (AnnData, MuData)):
-            print(f"shape of obj: {obj.shape}")
-            print(f"obj: {obj}")
-            print(f"len(ind): {len(indices)}")
-            print(f"max of index{np.max(indices)}")
-            print(f"ind: {indices}")
+            # print(f"shape of obj: {obj.shape}")
+            # print(f"obj: {obj}")
+            # print(f"len(ind): {len(indices)}")
+            # print(f"max of index{np.max(indices)}")
+            # print(f"ind: {indices}")
             return obj[indices]
         else:
             raise TypeError(

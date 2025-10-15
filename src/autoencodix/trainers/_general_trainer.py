@@ -83,14 +83,13 @@ class GeneralTrainer(BaseTrainer):
 
         # we will set this later, in the predict method
         self.n_test: Optional[int] = None
-        self.n_train = len(trainset.data) if trainset else 0
-        self.n_valid = len(validset.data) if validset else 0
+        self.n_train = len(trainset) if trainset else 0
+        self.n_valid = len(validset) if validset else 0
         self.n_features = trainset.get_input_dim() if trainset else 0
         self.device = next(self._model.parameters()).device
-
         self._init_buffers()
 
-    def _init_buffers(self, input_data: Optional[BaseDataset] = None):
+    def _init_buffers(self, input_data: Optional[BaseDataset] = None) -> None:
         if input_data:
             self.n_features = input_data.get_input_dim()
 
@@ -103,63 +102,29 @@ class GeneralTrainer(BaseTrainer):
         def make_numpy_buffer(size: int):
             return np.empty((size,), dtype=object)
 
-        self._latentspace_buffer = {
-            "train": make_tensor_buffer(self.n_train, self.latent_dim),
-            "valid": (
-                make_tensor_buffer(self.n_valid, self.latent_dim)
-                if self.n_valid
-                else None
-            ),
-            "test": (
-                make_tensor_buffer(self.n_test, self.latent_dim)
-                if self.n_test
-                else None
-            ),
-        }
-        self._reconstruction_buffer = {
-            "train": make_tensor_buffer(self.n_train, self.n_features),
-            "valid": (
-                make_tensor_buffer(self.n_valid, self.n_features)
-                if self.n_valid
-                else None
-            ),
-            "test": (
-                make_tensor_buffer(self.n_test, self.n_features)
-                if self.n_test
-                else None
-            ),
-        }
-        self._mu_buffer = {
-            "train": make_tensor_buffer(self.n_train, self.latent_dim),
-            "valid": (
-                make_tensor_buffer(self.n_valid, self.latent_dim)
-                if self.n_valid
-                else None
-            ),
-            "test": (
-                make_tensor_buffer(self.n_test, self.latent_dim)
-                if self.n_test
-                else None
-            ),
-        }
-        self._sigma_buffer = {
-            "train": make_tensor_buffer(self.n_train, self.latent_dim),
-            "valid": (
-                make_tensor_buffer(self.n_valid, self.latent_dim)
-                if self.n_valid
-                else None
-            ),
-            "test": (
-                make_tensor_buffer(self.n_test, self.latent_dim)
-                if self.n_test
-                else None
-            ),
-        }
+        # Always create sample ID buffers
         self._sample_ids_buffer = {
             "train": make_numpy_buffer(self.n_train),
             "valid": make_numpy_buffer(self.n_valid) if self.n_valid else None,
             "test": make_numpy_buffer(self.n_test) if self.n_test else None,
         }
+
+        splits = ["test"] if self._config.save_memory else ["train", "valid", "test"]
+
+        def make_split_buffers(dim):
+            return {
+                split: (
+                    make_tensor_buffer(getattr(self, f"n_{split}"), dim)
+                    if getattr(self, f"n_{split}", 0) and (split in splits)
+                    else None
+                )
+                for split in ["train", "valid", "test"]
+            }
+
+        self._latentspace_buffer = make_split_buffers(self.latent_dim)
+        self._reconstruction_buffer = make_split_buffers(self.n_features)
+        self._mu_buffer = make_split_buffers(self.latent_dim)
+        self._sigma_buffer = make_split_buffers(self.latent_dim)
 
     def _apply_post_backward_processing(self):
         pass
@@ -332,6 +297,8 @@ class GeneralTrainer(BaseTrainer):
             epoch: The current epoch number.
         """
         self._result.model_checkpoints.add(epoch=epoch, data=self._model.state_dict())
+        if self._config.save_memory:
+            return
         self._dynamics_to_result(epoch, "train")
         if self._validset:
             self._dynamics_to_result(epoch, "valid")
@@ -354,6 +321,15 @@ class GeneralTrainer(BaseTrainer):
             **kwargs: Additional arguments (not used here).
 
         """
+        indices_np = (
+            indices.cpu().numpy()
+            if isinstance(indices, torch.Tensor)
+            else np.array(indices)
+        )
+
+        self._sample_ids_buffer[split][indices_np] = np.array(sample_ids)
+        if self._config.save_memory and split != "test":
+            return
         indices_np = (
             indices.cpu().numpy()
             if isinstance(indices, torch.Tensor)

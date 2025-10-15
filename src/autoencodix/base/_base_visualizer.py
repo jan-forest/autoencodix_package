@@ -63,7 +63,9 @@ class BaseVisualizer(abc.ABC):
         if plot_type == "absolute":
             if "loss_absolute" not in self.plots.keys():
                 print("Absolute loss plot not found in the plots dictionary")
-                print("This happens, when you did not run visualize() or if you saved and loaded the model with `save_all=False`")
+                print(
+                    "This happens, when you did not run visualize() or if you saved and loaded the model with `save_all=False`"
+                )
             else:
                 fig = self.plots["loss_absolute"]
                 show_figure(fig)
@@ -72,7 +74,9 @@ class BaseVisualizer(abc.ABC):
             if "loss_relative" not in self.plots.keys():
                 print("Relative loss plot not found in the plots dictionary")
 
-                print("This happens, when you did not run visualize() or if you saved and loaded the model with `save_all=False`")
+                print(
+                    "This happens, when you did not run visualize() or if you saved and loaded the model with `save_all=False`"
+                )
             else:
                 fig = self.plots["loss_relative"]
                 show_figure(fig)

@@ -47,6 +47,7 @@ dev = [
     "mkdocs-material>=9.6.19",
     "mkdocstrings>=0.30.0",
     "ty>=0.0.1a20",
+    "pympler>=1.1",
 ]
 
 [build-system]
@@ -54,3 +55,5 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.ty.rules]
+[tool.ty.src]
+exclude = ["src/autoencodix/utils/feature_importance.py", "**/.ipynb_checkpoints/**",]

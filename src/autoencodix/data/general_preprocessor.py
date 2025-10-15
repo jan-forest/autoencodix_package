@@ -6,6 +6,7 @@ import pandas as pd
 import torch
 from anndata import AnnData  # type: ignore
 from scipy.sparse import issparse  # type: ignore
+import scipy as sp
 
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_preprocessor import BasePreprocessor
@@ -41,12 +42,6 @@ class GeneralPreprocessor(BasePreprocessor):
             str, Dict[str, Tuple[List[int], List[str]]]
         ] = {"train": {}, "test": {}, "valid": {}}
 
-    def _extract_primary_data(self, modality_data: Any) -> np.ndarray:
-        primary_data = modality_data.X
-        if issparse(primary_data):
-            primary_data = primary_data.toarray()
-        return primary_data
-
     def _combine_layers(
         self, modality_name: str, modality_data: Any
     ) -> List[np.ndarray]:
@@ -54,24 +49,20 @@ class GeneralPreprocessor(BasePreprocessor):
         selected_layers = self.config.data_config.data_info[
             modality_name
         ].selected_layers
-
         for layer_name in selected_layers:
             if layer_name == "X":
-                data = self._extract_primary_data(modality_data)
-                layer_list.append(data)
+                x = modality_data.X
+                typex = type(x)
+                print(f"type of x in combine layers: {typex}")
+                layer_list.append(modality_data.X)
             elif layer_name in modality_data.layers:
-                layer_data = modality_data.layers[layer_name]
-                if issparse(layer_data):
-                    layer_data = layer_data.toarray()
-                layer_list.append(layer_data)
-            else:
-                continue
+                layer_list.append(modality_data.layers[layer_name])
         return layer_list
 
     def _combine_modality_data(
         self,
         mudata: md.MuData,  # ty: ignore[invalid-type-form]
-    ) -> np.ndarray:  # ty: ignore[invalid-type-form]
+    ) -> Union[np.ndarray, sp.sparse.spmatrix]:  # ty: ignore[invalid-type-form]
         # Reset single-cell reverse mapping
         modality_data_list: List[np.ndarray] = []
         start_idx = 0
@@ -79,7 +70,6 @@ class GeneralPreprocessor(BasePreprocessor):
         for modality_name, modality_data in mudata.mod.items():
             self._reverse_mapping_multi_sc[self._split][modality_name] = {}
             layers = self.config.data_config.data_info[modality_name].selected_layers
-
             for layer_name in layers:
                 if layer_name == "X":
                     n_feats = modality_data.shape[1]
@@ -100,21 +90,33 @@ class GeneralPreprocessor(BasePreprocessor):
                 modality_name=modality_name, modality_data=modality_data
             )
             modality_data_list.extend(combined_layers)
+        for arr in modality_data_list:
+            print(f"shape of arr: {arr.shape}")
+            print(f"sparsity: {issparse(arr)}")
+            print(f"type of arr: {type(arr)}")
+        all_sparse = all(issparse(arr) for arr in modality_data_list)
+        if all_sparse:
+            combined = sp.sparse.hstack(modality_data_list, format="csr")
+        else:
+            dense_layers = [
+                arr.toarray() if issparse(arr) else arr for arr in modality_data_list
+            ]
+            combined = np.concatenate(dense_layers, axis=1)
 
-        return np.concatenate(modality_data_list, axis=1)
+        return combined
 
     def _create_numeric_dataset(
         self,
-        data: np.ndarray,
+        data: Union[np.ndarray, sp.sparse.spmatrix],
         config: DefaultConfig,
         split_ids: np.ndarray,
         metadata: pd.DataFrame,
         ids: List[str],
         feature_ids: List[str],
     ) -> NumericDataset:
-        tensor_data = torch.from_numpy(data)
+        # keep sparse data sparse until batch level in training for memory efficency
         ds = NumericDataset(
-            data=tensor_data,
+            data=data,
             config=config,
             split_indices=split_ids,
             metadata=metadata,

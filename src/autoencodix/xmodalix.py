@@ -74,6 +74,10 @@ class XModalix(BasePipeline):
             config=config,
             custom_split=custom_splits,
         )
+        if not isinstance(self.config, XModalixConfig):
+            raise TypeError(
+                f"For XModalix Pipeline, we only allow XModalixConfig as type for config, got {type(self.config)}"
+            )
 
     def show_result(self):
         """Displays key visualizations of model results.

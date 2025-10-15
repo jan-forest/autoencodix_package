@@ -181,6 +181,9 @@ class BasePreprocessor(abc.ABC):
             A dictionary containing processed DataPackage objects for each data split.
         """
         if self.predict_new_data:
+            # we get the data modality keys from this structure in postsplit processing
+            # for predict_new data there do not exits real splits, because all is "test" data
+            # but the preprocessing code expects this splits, so we mock them
             # use train, because processing logic expects train split
             mock_split: Dict[str, Dict[str, Union[Any, DataPackage]]] = {
                 "test": {
@@ -188,7 +191,7 @@ class BasePreprocessor(abc.ABC):
                     "indices": {"paired": np.array([])},
                 },
                 "valid": {"data": None, "indices": {"paired": np.array([])}},
-                "train": {"data": None, "indices": {"paired": np.array([])}},
+                "train": {"data": data_package, "indices": {"paired": np.array([])}},
             }
             if self.config.skip_preprocessing:
                 return mock_split
@@ -407,6 +410,10 @@ class BasePreprocessor(abc.ABC):
             print(f"Processing {len(modality_keys)} MuData objects: {modality_keys}")
 
         # Initialize storage for scalers and gene filters for each modality
+        # if we do this for the first time, we need a train split and we dont
+        # fitted any scalers or features to keep yet.
+        # that's why in the predict_new case we can keep the mocksplit for train None
+        # because we never get in this if
         if (
             self.sc_scalers is None
             and self.sc_genes_to_keep is None

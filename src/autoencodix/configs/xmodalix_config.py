@@ -1,5 +1,6 @@
 from .default_config import DefaultConfig
-from pydantic import Field
+from pydantic import Field, model_validator
+import warnings
 
 
 class XModalixConfig(DefaultConfig):
@@ -22,5 +23,20 @@ class XModalixConfig(DefaultConfig):
         description="Beta weighting factor for VAE loss",
     )
     requires_paired: bool = Field(default=False)
+    save_memory: bool = Field(
+        default=False,
+        description="Always False — not supported for Stackix.",
+    )
+
+    @model_validator(mode="before")
+    def _force_save_memory_false(cls, values):
+        if values.get("save_memory") is True:
+            warnings.warn(
+                "`save_memory=True` is not supported for XModalixConfig — forcing to False., Set the checkpoint_interval to number of epochs if you want to save memory",
+                UserWarning,
+                stacklevel=2,
+            )
+            values["save_memory"] = False
+        return values
 
     # TODO find sensible defaults for XModalix

@@ -74,6 +74,7 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
                 df = pd.DataFrame(
                     ds.data.numpy(), columns=ds.feature_ids, index=ds.sample_ids
                 )
+            # TODO: note Max: I think this is hardcoded and our image data modality is not always named IMG 
             elif "IMG" in modality:
                 # Handle image modality
                 # Get the list of tensors

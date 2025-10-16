@@ -254,17 +254,17 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     gamma: float = Field(
         default=10.0,
         ge=0,
-        description="Gamma weighting factor for Adversial Loss Term i.e. for XModal Classfier training",
+        description="Gamma weighting factor for Adversial Loss Term i.e. for XModalix Classfier training",
     )
     delta_pair: float = Field(
         default=5.0,
         ge=0,
-        description="Delta weighting factor for paired loss term in XModale Training",
+        description="Delta weighting factor for paired loss term in XModalix Training",
     )
     delta_class: float = Field(
         default=5.0,
         ge=0,
-        description="Delta weighting factor for class loss term in XModale Training",
+        description="Delta weighting factor for class loss term in XModalix Training",
     )
     min_samples_per_split: int = Field(
         default=1, ge=1, description="Minimum number of samples per split"

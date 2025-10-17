@@ -49,6 +49,7 @@ dev = [
     "ty>=0.0.1a20",
     "cellxgene-census>=1.17.0",
     "syne-tune>=0.14.2",
+    "pympler>=1.1",
 ]
 
 [build-system]
@@ -56,3 +57,5 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.ty.rules]
+[tool.ty.src]
+exclude = ["src/autoencodix/utils/feature_importance.py", "**/.ipynb_checkpoints/**",]

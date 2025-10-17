@@ -595,29 +595,55 @@ class GeneralEvaluator(BaseEvaluator):
 
         final_epoch = result.model.config.epochs - 1
 
-        if task == "Latent":
-            df = pd.concat(
-                [
-                    result.get_latent_df(epoch=final_epoch, split="train"),
-                    result.get_latent_df(epoch=final_epoch, split="valid"),
-                    result.get_latent_df(epoch=-1, split="test"),
-                ]
-            )
-        elif task in ["UMAP", "PCA", "TSNE", "RandomFeature"]:
-            if dataset.train is None:
-                raise ValueError("train attribute of dataset cannot be None")
-            if dataset.valid is None:
-                raise ValueError("valid attribute of dataset cannot be None")
-            if dataset.test is None:
-                raise ValueError("test attribute of dataset cannot be None")
+        # if task == "Latent":
+        #     df = pd.concat(
+        #         [
+        #             result.get_latent_df(epoch=final_epoch, split="train"),
+        #             result.get_latent_df(epoch=final_epoch, split="valid"),
+        #             result.get_latent_df(epoch=-1, split="test"),
+        #         ]
+        #     )
 
-            df_processed = pd.concat(
-                [
-                    dataset.train._to_df(),
-                    dataset.test._to_df(),
-                    dataset.valid._to_df(),
-                ]
-            )
+        if task == "Latent":
+            dfs = []
+            for split in ["train", "valid", "test"]:
+                df_split = result.get_latent_df(
+                    epoch=final_epoch if split != "test" else -1, split=split
+                )
+                if df_split is not None and not df_split.empty:
+                    dfs.append(df_split)
+
+            df = pd.concat(dfs) if dfs else pd.DataFrame()
+
+        elif task in ["UMAP", "PCA", "TSNE", "RandomFeature"]:
+            dfs = []
+            for split_name in ["train", "valid", "test"]:
+                split_data = getattr(dataset, split_name, None)
+                if split_data is not None:
+                    dfs.append(split_data._to_df())
+
+            if not dfs:
+                raise ValueError(
+                    "No available dataset splits (train, valid, test) to process."
+                )
+
+            df_processed = pd.concat(dfs)
+
+            # elif task in ["UMAP", "PCA", "TSNE", "RandomFeature"]:
+            #     if dataset.train is None:
+            #         raise ValueError("train attribute of dataset cannot be None")
+            #     if dataset.valid is None:
+            #         raise ValueError("valid attribute of dataset cannot be None")
+            #     if dataset.test is None:
+            #         raise ValueError("test attribute of dataset cannot be None")
+
+            #     df_processed = pd.concat(
+            #         [
+            #             dataset.train._to_df(),
+            #             dataset.test._to_df(),
+            #             dataset.valid._to_df(),
+            #         ]
+            #     )
             if task == "UMAP":
                 reducer = UMAP(n_components=result.model.config.latent_dim)
                 df = pd.DataFrame(

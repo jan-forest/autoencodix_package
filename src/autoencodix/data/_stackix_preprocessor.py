@@ -1,15 +1,13 @@
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import torch
 
 from scipy.sparse import issparse  # type: ignore
-from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_preprocessor import BasePreprocessor
 import anndata as ad  # type: ignore
 from autoencodix.data._numeric_dataset import NumericDataset
-from autoencodix.data._stackix_dataset import StackixDataset
 from autoencodix.data._multimodal_dataset import MultiModalDataset
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._datasetcontainer import DatasetContainer
@@ -49,7 +47,7 @@ class StackixPreprocessor(BasePreprocessor):
         raw_user_data: Raw user data to preprocess, or None to use self._datapackage
 
         Returns:
-            Container with StackixDataset for each split
+            Container with MultiModalDataset for each split
 
         Raises:
             TypeError: If datapackage is None after preprocessing
@@ -162,9 +160,8 @@ class StackixPreprocessor(BasePreprocessor):
 
             if attr_name == "multi_bulk":
                 df = datapackage[attr_name][dict_key]
-                tensor = torch.from_numpy(df.values)
                 ds = NumericDataset(
-                    data=tensor,
+                    data=df.values,
                     config=self.config,
                     sample_ids=df.index,
                     feature_ids=df.columns,
@@ -189,7 +186,7 @@ class StackixPreprocessor(BasePreprocessor):
                     layer_list.append(layers)
                     mod_concat = np.concatenate(layer_list, axis=1)
                     ds = NumericDataset(
-                        data=torch.from_numpy(mod_concat),
+                        data=mod_concat,
                         config=self.config,
                         sample_ids=mudata.obs_names,
                         feature_ids=mod_data.var_names * len(layer_list),

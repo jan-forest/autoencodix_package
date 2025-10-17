@@ -97,9 +97,7 @@ class BaseTrainer(abc.ABC):
 
     def _init_loaders(self):
         """Initializes the DataLoaders for training and validation datasets."""
-        last_batch_is_one_sample = (
-            len(self._trainset.data) % self._config.batch_size == 1
-        )
+        last_batch_is_one_sample = len(self._trainset) % self._config.batch_size == 1
         corrected_bs = (
             self._config.batch_size + 1
             if last_batch_is_one_sample
@@ -117,7 +115,7 @@ class BaseTrainer(abc.ABC):
         )
         if self._validset:
             last_batch_is_one_sample = (
-                len(self._validset.data) % self._config.batch_size == 1
+                len(self._validset) % self._config.batch_size == 1
             )
             corrected_bs = (
                 self._config.batch_size + 1

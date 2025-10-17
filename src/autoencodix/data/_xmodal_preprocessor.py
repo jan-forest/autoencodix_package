@@ -114,7 +114,7 @@ class XModalPreprocessor(GeneralPreprocessor):
                     data.index
                 ]  # needed when we have only one annotation df containing metadata for all modalities
                 dataset_dict[k] = NumericDataset(
-                    data=torch.from_numpy(data.values),
+                    data=data.values,
                     config=self.config,
                     sample_ids=data.index,
                     feature_ids=data.columns,
@@ -143,11 +143,8 @@ class XModalPreprocessor(GeneralPreprocessor):
                         raise NotImplementedError(
                             "Xmodalix works only with X layer of single cell data as of now"
                         )
-                    x_data = torch.from_numpy(
-                        self._extract_primary_data(modality_data=mod_data)
-                    )
                     dataset_dict[k] = NumericDataset(
-                        data=x_data,
+                        data=mod_data.X,
                         config=self.config,
                         sample_ids=mod_data.obs_names,
                         feature_ids=mod_data.var_names,

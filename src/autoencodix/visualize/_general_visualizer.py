@@ -36,16 +36,25 @@ class GeneralVisualizer(BaseVisualizer):
             )
 
         ## Make long format of losses
-        loss_df_melt = self._make_loss_format(result=result, config=config)
+        try:
+            loss_df_melt = self._make_loss_format(result=result, config=config)
 
-        ## Make plot loss absolute
-        self.plots["loss_absolute"] = self._make_loss_plot(
-            df_plot=loss_df_melt, plot_type="absolute"
-        )
-        ## Make plot loss relative
-        self.plots["loss_relative"] = self._make_loss_plot(
-            df_plot=loss_df_melt, plot_type="relative"
-        )
+            ## Make plot loss absolute
+            self.plots["loss_absolute"] = self._make_loss_plot(
+                df_plot=loss_df_melt, plot_type="absolute"
+            )
+            ## Make plot loss relative
+            self.plots["loss_relative"] = self._make_loss_plot(
+                df_plot=loss_df_melt, plot_type="relative"
+            )
+        except Exception as e:
+            warnings.warn(
+                f"We could not create visualizations for the loss plots.\n"
+                f"This usually happens if you try to visualize after saving and loading "
+                f"the pipeline object with `save_all=False`. This memory-efficient saving mode "
+                f"does not retain past training loss data.\n\n"
+                f"Original error message: {e}"
+            )
 
         return result
 
@@ -649,6 +658,14 @@ class GeneralVisualizer(BaseVisualizer):
 
         ml_plots = dict()
         plt.ioff()
+        if not hasattr(result.embedding_evaluation, "CLINIC_PARAM"):
+            warnings.warn(
+                "We could not create visualizations for the evaluation plots.\n"
+                "This usually happens if you try to visualize after saving and loading "
+                "the pipeline object with `save_all=False`. This memory-efficient saving mode "
+                "Set save_all=True to avoid this, also this might be fixed soon."
+            )
+            return {}
 
         for c in pd.unique(result.embedding_evaluation.CLINIC_PARAM):
             ml_plots[c] = dict()

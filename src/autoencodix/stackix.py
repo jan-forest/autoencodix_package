@@ -78,6 +78,10 @@ class Stackix(BasePipeline):
             config=config,
             custom_split=custom_splits,
         )
+        if not isinstance(self.config, StackixConfig):
+            raise TypeError(
+                f"For Stackix Pipeline, we only allow StackixConfig as type for config, got {type(self.config)}"
+            )
 
     @config_method(
         valid_params={

@@ -204,6 +204,9 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     )
 
     # Training configuration --------------------------------------------------
+    save_memory: bool = Field(
+        default=False, description="If set to True we don't store TrainingDynamics"
+    )
     learning_rate: float = Field(
         default=0.001, gt=0, description="Learning rate for optimization"
     )

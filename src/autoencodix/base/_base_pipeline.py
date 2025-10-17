@@ -918,7 +918,7 @@ class BasePipeline(abc.ABC):
 
         self._visualizer.visualize(result=self.result, config=self.config)
 
-    def show_result(self):
+    def show_result(self, split: str = "all"):
         """Displays key visualizations of model results.
 
         This method generates the following visualizations:
@@ -937,9 +937,13 @@ class BasePipeline(abc.ABC):
 
         self._visualizer.show_loss(plot_type="absolute")
 
-        self._visualizer.show_latent_space(result=self.result, plot_type="Ridgeline")
+        self._visualizer.show_latent_space(
+            result=self.result, plot_type="Ridgeline", split=split
+        )
 
-        self._visualizer.show_latent_space(result=self.result, plot_type="2D-scatter")
+        self._visualizer.show_latent_space(
+            result=self.result, plot_type="2D-scatter", split=split
+        )
 
     def run(
         self, data: Optional[Union[DatasetContainer, DataPackage]] = None
@@ -960,13 +964,13 @@ class BasePipeline(abc.ABC):
         self.visualize()
         return self.result
 
-    def save(self, file_path):
+    def save(self, file_path: str, save_all: bool = False):
         """Saves the pipeline to a file.
 
         Args:
             file_path: Path where the pipeline should be saved.
         """
-        saver = Saver(file_path)
+        saver = Saver(file_path, save_all=save_all)
         saver.save(self)
 
     @classmethod

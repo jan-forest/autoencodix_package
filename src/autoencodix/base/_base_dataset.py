@@ -1,4 +1,5 @@
 import abc
+import scipy as sp
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -27,7 +28,7 @@ class BaseDataset(abc.ABC, Dataset):
 
     def __init__(
         self,
-        data: Union[torch.Tensor, List[ImgData]],
+        data: Union[torch.Tensor, List[ImgData], sp.sparse.spmatrix],
         config: Optional[Any] = None,
         sample_ids: Optional[List[Any]] = None,
         feature_ids: Optional[List[Any]] = None,
@@ -57,26 +58,10 @@ class BaseDataset(abc.ABC, Dataset):
         Returns:
             The number of samples in the dataset.
         """
-        return len(self.data)
-
-    def __getitem__(self, index: int) -> Union[
-        Tuple[Union[torch.Tensor, int], Union[torch.Tensor, ImgData], Any],
-        Dict[str, Tuple[Any, torch.Tensor, Any]],
-    ]:
-        """Retrieves a single sample and its corresponding label.
-
-        Args:
-            index: Index of the sample to retrieve.
-
-        Returns:
-            A tuple containing the index, the data sample and its label, or a dictionary
-            mapping keys to such tuples in case we have multiple uncombined data at this step.
-        """
-        if self.sample_ids is not None:
-            label = self.sample_ids[index]
+        if isinstance(self.data, list):
+            return len(self.data)
         else:
-            label = index
-        return index, self.data[index], label
+            return self.data.shape[0]
 
     def get_input_dim(self) -> Union[int, Tuple[int, ...]]:
         """Gets the input dimension of the dataset (n_features)
@@ -84,8 +69,9 @@ class BaseDataset(abc.ABC, Dataset):
         Returns:
             The input dimension of the dataset's feature space.
         """
-        if isinstance(self.data, torch.Tensor):
+        if isinstance(self.data, (torch.Tensor, sp.sparse.spmatrix)):
             return self.data.shape[1]
+
         elif isinstance(self.data, list):
             if len(self.data) == 0:
                 raise ValueError(

@@ -90,16 +90,13 @@ class GeneralPreprocessor(BasePreprocessor):
                 modality_name=modality_name, modality_data=modality_data
             )
             modality_data_list.extend(combined_layers)
-        for arr in modality_data_list:
-            print(f"shape of arr: {arr.shape}")
-            print(f"sparsity: {issparse(arr)}")
-            print(f"type of arr: {type(arr)}")
         all_sparse = all(issparse(arr) for arr in modality_data_list)
         if all_sparse:
             combined = sp.sparse.hstack(modality_data_list, format="csr")
         else:
             dense_layers = [
-                arr.toarray() if issparse(arr) else arr for arr in modality_data_list
+                arr.toarray() if issparse(arr) else arr  # ty: ignore
+                for arr in modality_data_list
             ]
             combined = np.concatenate(dense_layers, axis=1)
 
@@ -187,7 +184,7 @@ class GeneralPreprocessor(BasePreprocessor):
                     "Unpaired multi Single Cell case not implemented vor Varix and Vanillix, set requires_paired=True in config"
                 )
             combined_data = self._combine_modality_data(mudata)
-            combined_obs = pd.concat([mod.obs for mod in mudata.mod.values()], axis=1)
+
             # collect feature IDs in concatenation order
             feature_ids: List[str] = []
             for layers in self._reverse_mapping_multi_sc[self._split].values():
@@ -197,8 +194,8 @@ class GeneralPreprocessor(BasePreprocessor):
                 data=combined_data,
                 config=self.config,
                 split_ids=split_ids,
-                metadata=combined_obs,
-                ids=combined_obs.index.tolist(),
+                metadata=mudata.obs,
+                ids=mudata.index.tolist(),
                 feature_ids=feature_ids,
             )
         else:

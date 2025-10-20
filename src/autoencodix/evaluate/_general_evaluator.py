@@ -173,6 +173,7 @@ class GeneralEvaluator(BaseEvaluator):
                     ml_type = self._get_ml_type(clin_data, task_param)
 
                     if pd.isna(clin_data[task_param]).sum() > 0:
+                    # if pd.isna(clin_data[task_param]).values.any():
                         if not already_warned:
                             print(
                                 "There are NA values in the annotation file. Samples with missing data will be removed for ML task evaluation."

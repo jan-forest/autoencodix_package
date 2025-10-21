@@ -583,7 +583,7 @@ class XModalVisualizer(BaseVisualizer):
         # )
 
         labels = (
-            list(result.datasets.test.datasets["img.IMG"].metadata[param])  # ty: ignore
+            list(result.datasets.test.datasets[translated_modality].metadata[param])  # ty: ignore
             * 2
         )
         df_red_comb[param] = (

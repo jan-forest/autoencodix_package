@@ -195,7 +195,7 @@ class GeneralPreprocessor(BasePreprocessor):
                 config=self.config,
                 split_ids=split_ids,
                 metadata=mudata.obs,
-                ids=mudata.index.tolist(),
+                ids=mudata.obs_names.tolist(),
                 feature_ids=feature_ids,
             )
         else:

@@ -1,7 +1,14 @@
 from enum import Enum
 from typing import Any, Dict, Literal, Optional, List, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator,
+    model_validator,
+    ConfigDict,
+    ValidationInfo,
+)
 
 
 class SchemaPrinterMixin:
@@ -113,8 +120,6 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         description="Don't set this gets calculated dynamically, based on k_filter in general config ",
     )
     # image specific ------------------------------
-
-    img_root: Union[str, None] = Field(default=None)
     img_width_resize: Union[int, None] = Field(default=64)
     img_height_resize: Union[int, None] = Field(default=64)
     # annotation specific -------------------------
@@ -133,14 +138,27 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
             raise ValueError('"X" must always be a part of the selected_layers list')
         return v
 
-    # add validation to only allow quadratic image resizing
+    # # add validation to only allow quadratic image resizing
+    # @field_validator("img_width_resize", "img_height_resize")
+    # @classmethod
+    # def validate_image_resize(cls, v, values):
+    #     if v is not None and v <= 0:
+    #         raise ValueError("Image resize dimensions must be positive integers")
+    #     if "img_width_resize" in values and "img_height_resize" in values:
+    #         if values["img_width_resize"] != values["img_height_resize"]:
+    #             raise ValueError("Image width and height must be the same for resizing")
+    #     return v
+
     @field_validator("img_width_resize", "img_height_resize")
     @classmethod
-    def validate_image_resize(cls, v, values):
+    def validate_image_resize(cls, v, info: ValidationInfo):
         if v is not None and v <= 0:
             raise ValueError("Image resize dimensions must be positive integers")
-        if "img_width_resize" in values and "img_height_resize" in values:
-            if values["img_width_resize"] != values["img_height_resize"]:
+
+        # Access other field values through info.data
+        data = info.data
+        if "img_width_resize" in data and "img_height_resize" in data:
+            if data["img_width_resize"] != data["img_height_resize"]:
                 raise ValueError("Image width and height must be the same for resizing")
         return v
 

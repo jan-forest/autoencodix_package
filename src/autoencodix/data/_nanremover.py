@@ -97,16 +97,13 @@ class NaNRemover:
         if data.annotation is not None:
             non_na = {}
             for k, v in data.annotation.items():
-                print(f"anno: {k} has shape: {v.shape} before drop na")
                 if v is None:
                     continue
                 if self.relevant_cols is not None:
                     for col in self.relevant_cols:
                         if col in v.columns:
                             v.fillna(value={col: "missing"}, inplace=True)
-                            # v[col].fillna(value="missing", inplace=True)
 
-                print(f"anno: {k} has shape: {v.shape} after drop na")
                 non_na[k] = v
             data.annotation = non_na  # type: ignore
 

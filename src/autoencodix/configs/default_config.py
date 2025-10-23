@@ -311,9 +311,6 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     )
     # 0 uses cpu and not gpu
     n_gpus: int = Field(default=1, ge=1, description="Number of GPUs to use")
-    n_workers: int = Field(
-        default=0, ge=0, description="Number of data loading workers"
-    )
     checkpoint_interval: int = Field(
         default=10, ge=1, description="Interval for saving checkpoints"
     )

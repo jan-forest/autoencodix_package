@@ -1,4 +1,4 @@
-from typing import Literal, Dict, Union
+from typing import Literal, Dict
 from autoencodix.data._multimodal_dataset import MultiModalDataset
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data._datasetcontainer import DatasetContainer
@@ -50,7 +50,7 @@ class AnnDataConverter:
                 raise NotImplementedError(
                     f"Feature Importance is only implemented for NumericDataset, got type: {type(dataset)}"
                 )
-            result_dict[mod_name] = AnnDataConverter._numeric_ds_to_adata(dataset)
+            result_dict[mod_name] = AnnDataConverter._numeric_ds_to_adata(dataset)  # type: ignore
         return result_dict
 
     @staticmethod

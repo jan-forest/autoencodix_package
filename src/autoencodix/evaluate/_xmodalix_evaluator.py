@@ -269,6 +269,7 @@ class XModalixEvaluator(GeneralEvaluator):
         return results
 
     @staticmethod
+    @no_type_check
     def _expand_reference_methods(reference_methods: list, result: Result) -> list:
         """
         Expands each reference method by appending a suffix for every key of used data modalities.
@@ -284,9 +285,7 @@ class XModalixEvaluator(GeneralEvaluator):
         reference_methods = [
             f"{method}_$_{key}"
             for method in reference_methods
-            for key in result.latentspaces.get(
-                epoch=-1, split="train"
-            ).keys()  # ty: ignore[possibly-unbound-attribute]
+            for key in result.latentspaces.get(epoch=-1, split="train").keys()
         ]
 
         return reference_methods

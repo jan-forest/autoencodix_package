@@ -234,7 +234,7 @@ class ImageDataReader:
                 imgs.append(
                     ImgData(
                         img=img,
-                        sample_id=subset.index[0],
+                        sample_id=str(subset.index[0]),
                         annotation=subset,
                     )
                 )

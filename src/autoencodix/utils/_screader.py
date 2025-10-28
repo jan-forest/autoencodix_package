@@ -36,14 +36,41 @@ class SingleCellDataReader:
             adata = sc.read_h5ad(mod_info.file_path)
             modalities[mod_key] = adata
 
+        # if config.requires_paired:
+        #     mdata = md.MuData(modalities)
+        #     common_cells = list(
+        #         set.intersection(
+        #             *(set(adata.obs_names) for adata in modalities.values())
+        #         )
+        #     )
+        #     print(f"Number of common cells: {len(common_cells)}")
+        #     mdata = mdata[common_cells]
+        #     return {"multi_sc": mdata}
+
         if config.requires_paired:
-            mdata = md.MuData(modalities)
-            common_cells = list(
-                set.intersection(
-                    *(set(adata.obs_names) for adata in modalities.values())
-                )
+            common_cells_set = set.intersection(
+                *(set(adata.obs_names) for adata in modalities.values())
             )
-            print(f"Number of common cells: {len(common_cells)}")
-            mdata = mdata[common_cells]
+            common_cells_sorted = sorted(list(common_cells_set))
+
+            # Subset EACH modality individually with the sorted common cells
+            # This ensures each modality is aligned to the same order
+            aligned_modalities = {}
+            for mod_key, adata in modalities.items():
+                aligned_modalities[mod_key] = adata[common_cells_sorted].copy()
+            mdata = md.MuData(aligned_modalities)
+
+            print(f"Number of common cells: {len(common_cells_sorted)}")
+
+            # Clean obs_names: remove modality prefixes
+            cleaned_names = [
+                name.split(":")[-1] if ":" in name else name
+                for name in mdata.obs.columns
+            ]
+            mdata.obs.columns = cleaned_names
+
+            # Remove duplicate columns from obs
+            mdata.obs = mdata.obs.loc[:, ~mdata.obs.columns.duplicated(keep="first")]
+
             return {"multi_sc": mdata}
         return {"multi_sc": modalities}

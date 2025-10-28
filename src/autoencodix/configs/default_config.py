@@ -1,7 +1,14 @@
 from enum import Enum
 from typing import Any, Dict, Literal, Optional, List, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator,
+    model_validator,
+    ConfigDict,
+    ValidationInfo,
+)
 
 
 class SchemaPrinterMixin:
@@ -113,8 +120,6 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         description="Don't set this gets calculated dynamically, based on k_filter in general config ",
     )
     # image specific ------------------------------
-
-    img_root: Union[str, None] = Field(default=None)
     img_width_resize: Union[int, None] = Field(default=64)
     img_height_resize: Union[int, None] = Field(default=64)
     # annotation specific -------------------------
@@ -133,14 +138,27 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
             raise ValueError('"X" must always be a part of the selected_layers list')
         return v
 
-    # add validation to only allow quadratic image resizing
+    # # add validation to only allow quadratic image resizing
+    # @field_validator("img_width_resize", "img_height_resize")
+    # @classmethod
+    # def validate_image_resize(cls, v, values):
+    #     if v is not None and v <= 0:
+    #         raise ValueError("Image resize dimensions must be positive integers")
+    #     if "img_width_resize" in values and "img_height_resize" in values:
+    #         if values["img_width_resize"] != values["img_height_resize"]:
+    #             raise ValueError("Image width and height must be the same for resizing")
+    #     return v
+
     @field_validator("img_width_resize", "img_height_resize")
     @classmethod
-    def validate_image_resize(cls, v, values):
+    def validate_image_resize(cls, v, info: ValidationInfo):
         if v is not None and v <= 0:
             raise ValueError("Image resize dimensions must be positive integers")
-        if "img_width_resize" in values and "img_height_resize" in values:
-            if values["img_width_resize"] != values["img_height_resize"]:
+
+        # Access other field values through info.data
+        data = info.data
+        if "img_width_resize" in data and "img_height_resize" in data:
+            if data["img_width_resize"] != data["img_height_resize"]:
                 raise ValueError("Image width and height must be the same for resizing")
         return v
 
@@ -254,17 +272,17 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     gamma: float = Field(
         default=10.0,
         ge=0,
-        description="Gamma weighting factor for Adversial Loss Term i.e. for XModal Classfier training",
+        description="Gamma weighting factor for Adversial Loss Term i.e. for XModalix Classfier training",
     )
     delta_pair: float = Field(
         default=5.0,
         ge=0,
-        description="Delta weighting factor for paired loss term in XModale Training",
+        description="Delta weighting factor for paired loss term in XModalix Training",
     )
     delta_class: float = Field(
         default=5.0,
         ge=0,
-        description="Delta weighting factor for class loss term in XModale Training",
+        description="Delta weighting factor for class loss term in XModalix Training",
     )
     min_samples_per_split: int = Field(
         default=1, ge=1, description="Minimum number of samples per split"
@@ -293,9 +311,6 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     )
     # 0 uses cpu and not gpu
     n_gpus: int = Field(default=1, ge=1, description="Number of GPUs to use")
-    n_workers: int = Field(
-        default=0, ge=0, description="Number of data loading workers"
-    )
     checkpoint_interval: int = Field(
         default=10, ge=1, description="Interval for saving checkpoints"
     )

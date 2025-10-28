@@ -1,6 +1,6 @@
 import abc
 import copy
-from typing import Dict, Optional, Tuple, Type, Union, Any, Literal
+from typing import Dict, Optional, Tuple, Type, Union, Any, Literal, List
 
 import warnings
 import anndata as ad  # type: ignore
@@ -916,7 +916,7 @@ class BasePipeline(abc.ABC):
 
         self._visualizer.visualize(result=self.result, config=self.config)
 
-    def show_result(self, split: str = "all"):
+    def show_result(self, split: str = "all", **kwargs):
         """Displays key visualizations of model results.
 
         This method generates the following visualizations:
@@ -933,14 +933,15 @@ class BasePipeline(abc.ABC):
         """
         print("Creating plots ...")
 
+        params: Optional[Union[List[str], str]] = kwargs.pop("params", None)
         self._visualizer.show_loss(plot_type="absolute")
 
         self._visualizer.show_latent_space(
-            result=self.result, plot_type="Ridgeline", split=split
+            result=self.result, plot_type="Ridgeline", split=split, param=params
         )
 
         self._visualizer.show_latent_space(
-            result=self.result, plot_type="2D-scatter", split=split
+            result=self.result, plot_type="2D-scatter", split=split, param=params
         )
 
     def run(

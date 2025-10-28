@@ -420,7 +420,10 @@ class PairedUnpairedSplitter:
                 print(f"anno key: {anno_key}")
                 anno_id_to_pos = {sid: i for i, sid in enumerate(anno_df.index)}
                 final_indices.setdefault("annotation", {})[anno_key] = {}
-                if anno_key == "paired":
+                if (
+                    len(self.datapackage.annotation) == 1
+                    and self.config.requires_paired
+                ):
                     # For each split, take the union of all sample IDs across modalities
                     for split_name in ["train", "valid", "test"]:
                         split_ids_union = set().union(

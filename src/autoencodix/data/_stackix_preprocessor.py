@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, no_type_check
 
 import numpy as np
 import pandas as pd
@@ -79,6 +79,7 @@ class StackixPreprocessor(BasePreprocessor):
             primary_data = primary_data.toarray()
         return primary_data
 
+    @no_type_check
     def _combine_layers(
         self, modality_name: str, modality_data: Any
     ) -> Tuple[np.ndarray, Dict[str, tuple[int]]]:
@@ -94,19 +95,17 @@ class StackixPreprocessor(BasePreprocessor):
         layer_list: List[np.ndarray] = []
         layer_indices: Dict[str, Tuple[int]] = {}
 
-        selected_layers = self.config.data_config.data_info[
+        selected_layers: List[str] = self.config.data_config.data_info[
             modality_name
         ].selected_layers
 
         start_idx = 0
-        print("combine layers")
         for layer_name in selected_layers:
-            print(f"layer: {layer_name}")
             if layer_name == "X":
                 data = self._extract_primary_data(modality_data)
                 layer_list.append(data)
                 end_idx = start_idx + data.shape[1]
-                layer_indices[layer_name] = [start_idx, end_idx]
+                layer_indices[layer_name] = [start_idx, end_idx]  # type: ignore
                 start_idx += data.shape[1]
                 continue
             elif layer_name in modality_data.layers:
@@ -115,7 +114,7 @@ class StackixPreprocessor(BasePreprocessor):
                     layer_data = layer_data.toarray()
                 layer_list.append(layer_data)
                 end_idx = start_idx + layer_data.shape[1]
-                layer_indices[layer_name] = [start_idx, end_idx]
+                layer_indices[layer_name] = [start_idx, end_idx]  # type: ignore
                 start_idx += layer_data.shape[1]
 
         combined_data: np.ndarray = (

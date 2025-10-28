@@ -8,7 +8,7 @@ import os
 from collections import defaultdict
 from dataclasses import MISSING, fields, is_dataclass
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, no_type_check
 
 import dill as pickle  # type: ignore
 import torch
@@ -55,6 +55,7 @@ def nested_to_tuple(d, base=()):
             yield base + (k, v)
 
 
+@no_type_check
 def show_figure(fig):
     """Display a given Matplotlib figure in a new window.
 
@@ -64,8 +65,8 @@ def show_figure(fig):
     """
     dummy = plt.figure()
     new_manager = dummy.canvas.manager
-    new_manager.canvas.figure = fig  # ty: ignore[possibly-unbound-attribute]
-    fig.set_canvas(new_manager.canvas)  # ty: ignore[possibly-unbound-attribute]
+    new_manager.canvas.figure = fig
+    fig.set_canvas(new_manager.canvas)
 
 
 def config_method(valid_params: Optional[set[str]] = None):

@@ -990,6 +990,6 @@ class BasePreprocessor(abc.ABC):
 
     @abstractmethod
     def format_reconstruction(
-        self, reconstruction: torch.Tensor, result: Optional[Result] = None
+        self, reconstruction: Dict[str, torch.Tensor], result: Optional[Result] = None
     ) -> DataPackage:
         pass

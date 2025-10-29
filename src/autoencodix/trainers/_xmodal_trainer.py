@@ -121,7 +121,7 @@ class XModalTrainer(BaseTrainer):
         """Override parent's model init - we don't use a single model, needs to be there because is abstract in parent."""
         pass
 
-    def _setup_fabric(self):
+    def _setup_fabric(self, old_model=None):
         """Sets up the models, optimizers, and data loaders with Lightning Fabric."""
         self._init_adversarial_training()
         self._init_modality_training()
@@ -503,13 +503,7 @@ class XModalTrainer(BaseTrainer):
         Args:
             x: Latent representations to decode, shape (n_samples, latent_dim)
         """
-        with self._fabric.autocast(), torch.no_grad():
-            x = self._fabric.to_device(obj=x)
-            if not isinstance(x, torch.Tensor):
-                raise TypeError(
-                    f"Expected input to be a torch.Tensor, got {type(x)} instead."
-                )
-            return self._model.decode(x=x)
+        raise NotImplementedError("General decode step is not implemented for XModalix")
 
     def predict(
         self,

@@ -208,6 +208,11 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     latent_dim: int = Field(
         default=16, ge=1, description="Dimension of the latent space"
     )
+    hidden_dim: int = Field(
+        default=16,
+        ge=1,
+        description="Hidden dimension of image_vae, applies only to image_vae",
+    )
     n_layers: int = Field(
         default=3,
         ge=0,

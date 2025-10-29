@@ -3,6 +3,7 @@ Stores utility functions for the autoencodix package.
 Use of OOP would be overkill for the simple functions in this module.
 """
 
+import zipfile
 import inspect
 import os
 from collections import defaultdict
@@ -245,11 +246,11 @@ class Saver:
             file_path: The base file path (without extensions).
         """
 
-        self.file_path = file_path
         self.save_all = save_all
         self.preprocessor_path = f"{file_path}_preprocessor.pkl"
         self.model_state_path = f"{file_path}_model.pth"
 
+        self.file_path = f"{file_path}.pkl"
         folder = os.path.dirname(self.file_path)
         if folder:
             os.makedirs(folder, exist_ok=True)
@@ -262,10 +263,14 @@ class Saver:
         """
 
         self._save_preprocessor(pipeline._preprocessor)  # type: ignore
+        self._save_model_state(pipeline)
+        self.pipeline = pipeline
+
         if not self.save_all:
             print("saving memory efficient")
             self.reset_to_defaults(pipeline.result)  # ty: ignore
             pipeline.preprocessed_data = None  # ty: ignore
+            pipeline._datasets = None  # ty: ignore
             pipeline.raw_user_data = None  # ty: ignore
             pipeline._preprocessor = type(pipeline._preprocessor)(  # ty: ignore
                 config=pipeline.config  # ty: ignore
@@ -273,7 +278,14 @@ class Saver:
             pipeline._visualizer = type(pipeline._visualizer)()  # ty: ignore
 
         self._save_pipeline_object(pipeline)
-        self._save_model_state(pipeline)
+
+        with zipfile.ZipFile(f"{self.file_path}.zip", "w") as archive:
+            archive.write(self.file_path)
+            archive.write(self.preprocessor_path)
+            archive.write(self.model_state_path)
+        os.remove(self.file_path)
+        os.remove(self.preprocessor_path)
+        os.remove(self.model_state_path)
 
     def _save_pipeline_object(self, pipeline: "BasePipeline"):
         try:
@@ -294,22 +306,35 @@ class Saver:
                 print(f"Error saving preprocessor: {e}")
                 raise e
 
+    @no_type_check
     def _save_model_state(self, pipeline: "BasePipeline"):
         if pipeline.result is not None and pipeline.result.model is not None:  # type: ignore
             try:
+                pipeline.result.model.to("cpu")
                 torch.save(pipeline.result.model.state_dict(), self.model_state_path)  # type: ignore
                 print("Model state saved successfully.")
             except (TypeError, OSError) as e:
                 print(f"Error saving model state: {e}")
                 raise e
 
+    @no_type_check
     def reset_to_defaults(self, obj):
         if not is_dataclass(obj):
             raise ValueError("Object must be a dataclass")
 
         for f in fields(obj):
-            if f.name == "adata_latent" or f.name == "model":
-                print(f)
+            # we keep the adata_latent space as a "core result"
+            if f.name == "adata_latent":
+                continue
+            if f.name == "model":
+                # we need to keep the instantiated class, so we can load the state dict
+                # but we don't want to save the model twice (once via the pipeline object, once as model.pth)
+                # thus, we first save the state_dict, then reiniate the model to free memory
+                obj.model.init_args["ontologies"] = self.pipeline.ontologies
+                obj.model.init_args["feature_order"] = (
+                    self.pipeline._trainer.feature_order
+                )
+                obj.model = type(obj.model)(**obj.model.init_args)
                 continue
             if f.default_factory is not MISSING:
                 setattr(obj, f.name, f.default_factory())
@@ -334,9 +359,9 @@ class Loader:
         Args:
             file_path: The base file path (without extensions).
         """
-        self.file_path = file_path
         self.preprocessor_path = f"{file_path}_preprocessor.pkl"
         self.model_state_path = f"{file_path}_model.pth"
+        self.file_path = f"{file_path}.pkl"
 
     def load(self) -> Any:
         """Loads the BasePipeline object.
@@ -344,12 +369,16 @@ class Loader:
         Returns:
             The loaded BasePipeline object, or None on error.
         """
+        with zipfile.ZipFile(f"{self.file_path}.zip", "r") as archive:
+            archive.extractall()
+
         loaded_obj = self._load_pipeline_object()
         if loaded_obj is None:
-            return None  # Exit if the main object fails to load
+            raise ValueError("Error while loading pipeline object")
 
         loaded_obj._preprocessor = self._load_preprocessor()
         loaded_obj.result.model = self._load_model_state(loaded_obj)
+
         return loaded_obj
 
     def _load_pipeline_object(self) -> Any:
@@ -382,6 +411,7 @@ class Loader:
             print("Preprocessor file not found. Skipping preprocessor load.")
             return None
 
+    @no_type_check
     def _load_model_state(self, loaded_obj: "BasePipeline"):
         if os.path.exists(self.model_state_path):
             try:
@@ -389,8 +419,9 @@ class Loader:
                     loaded_obj.result is not None  # type: ignore
                     and loaded_obj.result.model is not None  # type: ignore
                 ):
-                    model_state = torch.load(self.model_state_path)
+                    model_state = torch.load(self.model_state_path, map_location="cpu")
                     try:
+                        loaded_obj.result.model.to("cpu")
                         loaded_obj.result.model.load_state_dict(model_state)  # type: ignore
 
                         print("Model state loaded successfully.")

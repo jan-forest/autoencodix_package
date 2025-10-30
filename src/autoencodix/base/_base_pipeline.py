@@ -136,6 +136,7 @@ class BasePipeline(abc.ABC):
             DataPackage, ad.AnnData, MuData, pd.DataFrame, dict  # type: ignore[invalid-type-form]
         ] = raw_user_data
         self._trainer_type = trainer_type
+        self._trainer: Optional[BaseTrainer] = None
         self._model_type = model_type
         self._loss_type = loss_type
         self._preprocessor_type = preprocessor_type
@@ -146,9 +147,9 @@ class BasePipeline(abc.ABC):
             self.config.data_case = datacase
             self._fill_data_info()
 
-        self._ontologies = ontologies
+        self.ontologies = ontologies
         self._preprocessor = self._preprocessor_type(
-            config=self.config, ontologies=self._ontologies
+            config=self.config, ontologies=self.ontologies
         )
 
         self._visualizer = (
@@ -468,8 +469,9 @@ class BasePipeline(abc.ABC):
             config=self.config,
             model_type=self._model_type,
             loss_type=self._loss_type,
-            ontologies=self._ontologies,  # Ontix
+            ontologies=self.ontologies,  # Ontix
         )
+
         trainer_result: Result = self._trainer.train()
         self.result.update(other=trainer_result)
 
@@ -504,7 +506,13 @@ class BasePipeline(abc.ABC):
             ValueError: If no test data is available or data format is invalid.
         """
         self._validate_prediction_requirements()
+        if self._trainer is None:
+            raise ValueError(
+                "Trainer not initialized, call fit first. If you used .save and .load, then you shoul not call .fit, then this is a bug."
+                "In this case please submit an issue."
+            )
 
+        self._trainer.setup_trainer(old_model=self.result.model)
         original_input = data
         predict_data = self._prepare_prediction_data(data=data)
 
@@ -724,9 +732,17 @@ class BasePipeline(abc.ABC):
         """
         if dataset_container.test is None:
             raise ValueError(f"No test data available in {context} for reconstruction.")
-        temp = copy.deepcopy(dataset_container.test)
-        temp.data = raw_recon
-        self.result.final_reconstruction = temp
+        try:
+            temp = copy.deepcopy(dataset_container.test)
+            temp.data = raw_recon
+            self.result.final_reconstruction = temp
+        except Exception as e:
+            print(
+                "Reconstruction Formatting (the process of using the reconstruction "
+                "output of the autoencoder models and combine it with metadata to get "
+                "the exact same data structure as the raw input data i.e, a DataPackage, "
+                "DatasetContainer, or AnnData) did not work for this data type or case."
+            )
 
     def _handle_multi_single_cell_reconstruction(
         self, raw_recon: torch.Tensor, predictor_results: Result

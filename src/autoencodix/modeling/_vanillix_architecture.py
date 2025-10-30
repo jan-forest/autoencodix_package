@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Union, Tuple, Dict
 
 import torch
 import torch.nn as nn
@@ -24,7 +24,11 @@ class VanillixArchitecture(BaseAutoencoder):
     """
 
     def __init__(
-        self, config: Optional[Union[None, DefaultConfig]], input_dim: int
+        self,
+        config: Optional[Union[None, DefaultConfig]],
+        input_dim: int,
+        ontologies: Optional[Union[Tuple, Dict]] = None,
+        feature_order: Optional[Union[Tuple, Dict]] = None,
     ) -> None:
         """Initialize the Vanilla Autoencoder with the given configuration.
 

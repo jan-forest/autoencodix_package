@@ -92,7 +92,9 @@ class Result:
     losses: TrainingDynamics = field(default_factory=TrainingDynamics)
     sub_losses: LossRegistry = field(default_factory=LossRegistry)
     preprocessed_data: torch.Tensor = field(default_factory=torch.Tensor)
-    model: torch.nn.Module = field(default_factory=torch.nn.Module)
+    model: Union[Dict[str, torch.nn.Module], torch.nn.Module] = field(
+        default_factory=torch.nn.Module
+    )
     model_checkpoints: TrainingDynamics = field(default_factory=TrainingDynamics)
 
     datasets: Optional[DatasetContainer] = field(

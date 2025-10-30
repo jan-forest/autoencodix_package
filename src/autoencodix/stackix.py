@@ -58,7 +58,6 @@ class Stackix(BasePipeline):
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
         config: Optional[DefaultConfig] = None,
         ontologies: Optional[Union[List, Dict]] = None,
-
     ) -> None:
         """Initialize the Stackix pipeline.
 
@@ -79,7 +78,7 @@ class Stackix(BasePipeline):
             datasplitter_type=datasplitter_type,
             config=config,
             custom_split=custom_splits,
-            ontologies=ontologies
+            ontologies=ontologies,
         )
         if not isinstance(self.config, StackixConfig):
             raise TypeError(

@@ -255,6 +255,7 @@ class Saver:
         if folder:
             os.makedirs(folder, exist_ok=True)
 
+    @no_type_check
     def save(self, pipeline: "BasePipeline"):
         """Saves the BasePipeline object.
 
@@ -269,6 +270,8 @@ class Saver:
         if not self.save_all:
             print("saving memory efficient")
             self.reset_to_defaults(pipeline.result)  # ty: ignore
+            pipeline._trainer.purge()
+
             pipeline.preprocessed_data = None  # ty: ignore
             pipeline._datasets = None  # ty: ignore
             pipeline.raw_user_data = None  # ty: ignore
@@ -282,10 +285,12 @@ class Saver:
         with zipfile.ZipFile(f"{self.file_path}.zip", "w") as archive:
             archive.write(self.file_path)
             archive.write(self.preprocessor_path)
-            archive.write(self.model_state_path)
+            for model_state_path in self.model_state_paths:
+                archive.write(model_state_path)
         os.remove(self.file_path)
         os.remove(self.preprocessor_path)
-        os.remove(self.model_state_path)
+        for model_state_path in self.model_state_paths:
+            os.remove(model_state_path)
 
     def _save_pipeline_object(self, pipeline: "BasePipeline"):
         try:
@@ -308,14 +313,34 @@ class Saver:
 
     @no_type_check
     def _save_model_state(self, pipeline: "BasePipeline"):
+        self.model_state_paths: List[str] = []
         if pipeline.result is not None and pipeline.result.model is not None:  # type: ignore
-            try:
-                pipeline.result.model.to("cpu")
-                torch.save(pipeline.result.model.state_dict(), self.model_state_path)  # type: ignore
-                print("Model state saved successfully.")
-            except (TypeError, OSError) as e:
-                print(f"Error saving model state: {e}")
-                raise e
+            if isinstance(pipeline.result.model, torch.nn.Module):
+                try:
+                    pipeline.result.model.to("cpu")
+                    torch.save(
+                        pipeline.result.model.state_dict(), self.model_state_path
+                    )  # type: ignore
+                    self.model_state_paths.append(self.model_state_path)
+
+                except (TypeError, OSError) as e:
+                    print(f"Error saving model state: {e}")
+                    raise e
+            elif isinstance(pipeline.result.model, dict):
+                for model_name, model in pipeline.result.model.items():
+                    if hasattr(model, "module"):
+                        model = model.module
+                    model.to("cpu")
+                    torch.save(
+                        model.state_dict(), f"{model_name}_{self.model_state_path}.pth"
+                    )  # type: ignore
+                    self.model_state_paths.append(
+                        f"{model_name}_{self.model_state_path}.pth"
+                    )
+            else:
+                raise TypeError(
+                    f"pipeline.result.model is neither a torch.nn.Module nor a dict, got {type(pipeline.result.model)}"
+                )
 
     @no_type_check
     def reset_to_defaults(self, obj):
@@ -330,11 +355,18 @@ class Saver:
                 # we need to keep the instantiated class, so we can load the state dict
                 # but we don't want to save the model twice (once via the pipeline object, once as model.pth)
                 # thus, we first save the state_dict, then reiniate the model to free memory
-                obj.model.init_args["ontologies"] = self.pipeline.ontologies
-                obj.model.init_args["feature_order"] = (
-                    self.pipeline._trainer.feature_order
-                )
-                obj.model = type(obj.model)(**obj.model.init_args)
+                if isinstance(obj.model, dict):
+                    empty_models = {}
+                    for model_name, model in obj.model.items():
+                        if hasattr(model, "module"):
+                            model = model.module
+                        empty_models[model_name] = type(model)(**model.init_args)
+                elif isinstance(obj.model, torch.nn.Module):
+                    obj.model.init_args["ontologies"] = self.pipeline.ontologies
+                    obj.model.init_args["feature_order"] = (
+                        self.pipeline._trainer.feature_order
+                    )
+                    obj.model = type(obj.model)(**obj.model.init_args)
                 continue
             if f.default_factory is not MISSING:
                 setattr(obj, f.name, f.default_factory())
@@ -413,33 +445,39 @@ class Loader:
 
     @no_type_check
     def _load_model_state(self, loaded_obj: "BasePipeline"):
-        if os.path.exists(self.model_state_path):
-            try:
-                if (
-                    loaded_obj.result is not None  # type: ignore
-                    and loaded_obj.result.model is not None  # type: ignore
-                ):
-                    model_state = torch.load(self.model_state_path, map_location="cpu")
-                    try:
-                        loaded_obj.result.model.to("cpu")
-                        loaded_obj.result.model.load_state_dict(model_state)  # type: ignore
-
-                        print("Model state loaded successfully.")
-                        return loaded_obj.result.model  # type: ignore
-                    except Exception as e:
-                        print(
-                            f"Error when loading model, filling obj.result.model with None: {e}"
-                        )
-                        return None
-
-                else:
-                    return None
-                    print("Warning: Model not initialized. Skipping model state load.")
-            except (RuntimeError, OSError) as e:
-                print(f"Error loading model state: {e}")
+        if loaded_obj.result is None:  # type: ignore:
+            raise ValueError("Loaded pipeline has no result attribute")
+        if loaded_obj.result.model is None:
+            raise ValueError("Loaded pipeline result has no model attribute")
+        if isinstance(loaded_obj.result.model, dict):
+            for model_name, model in loaded_obj.result.model.items():
+                if hasattr(model, "module"):
+                    model = model.module
+                if not os.path.exists(f"{model_name}_{self.model_state_path}.pth"):
+                    raise FileNotFoundError(
+                        f"Model state file not found at {model_name}_{self.model_state_path}.pth"
+                    )
+                model_state = torch.load(
+                    f"{model_name}_{self.model_state_path}.pth", map_location="cpu"
+                )
+                loaded_obj.result.model[model_name].to("cpu")
+                loaded_obj.result.model[model_name].load_state_dict(  # type: ignore
+                    model_state
+                )
+            return loaded_obj.result.model  # type: ignore
+        elif isinstance(loaded_obj.result.model, torch.nn.Module):
+            if not os.path.exists(self.model_state_path):
+                raise FileNotFoundError(
+                    f"Model state file not found at {self.model_state_path}"
+                )
+            model_state = torch.load(self.model_state_path, map_location="cpu")
+            loaded_obj.result.model.to("cpu")
+            loaded_obj.result.model.load_state_dict(model_state)  # type: ignore
+            return loaded_obj.result.model  # type: ignore
         else:
-            print("Model state file not found. Skipping model state load.")
-            return None
+            raise TypeError(
+                f"Loaded model is neither a dict nor a torch.nn.Module, got {type(loaded_obj.result.model)}"
+            )
 
 
 def flip_labels(labels: torch.Tensor) -> torch.Tensor:
@@ -508,11 +546,14 @@ def find_translation_keys(
     """
     from_key_final: Optional[str] = None
     to_key_final: Optional[str] = None
-    simple_names: List[str] = [tm.split(".")[1] for tm in trained_modalities]
+    simple_names: List[str] = [
+        tm.split(".", 1)[1] if "." in tm else tm for tm in trained_modalities
+    ]
 
     if from_key and to_key:
         for name in trained_modalities:
-            simple_name = name.split(".")[1]
+            simple_name = name.split(".", 1)[1] if "." in name else name
+
             if from_key == simple_name or from_key == name:
                 from_key_final = name
             # use if instead of elif to allow for reference prediciton where from_key == to_key
@@ -527,8 +568,7 @@ def find_translation_keys(
 
     data_info = config.data_config.data_info
     for name in trained_modalities:
-        simple_name = name.split(".")[1]
-
+        simple_name = name.split(".", 1)[1] if "." in name else name
         cur_info = data_info.get(simple_name)
         if not cur_info or not hasattr(cur_info, "translate_direction"):
             continue

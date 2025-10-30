@@ -58,7 +58,9 @@ class BaseTrainer(abc.ABC):
         self.setup_trainer()
 
     def setup_trainer(self, old_model=None):
-        self._input_validation()
+        if old_model is None:
+            self._input_validation()
+            self._init_loaders()
         self._handle_reproducibility()
 
         self._loss_fn = self._loss_type(config=self._config)
@@ -72,8 +74,6 @@ class BaseTrainer(abc.ABC):
             strategy=self._config.gpu_strategy,
         )
 
-        self._init_loaders()
-
         self._fabric.launch()
         self._setup_fabric(old_model=old_model)
         self._n_cpus = os.cpu_count()
@@ -84,7 +84,6 @@ class BaseTrainer(abc.ABC):
         """
         Sets up the model, optimizer, and data loaders with Lightning Fabric.
         """
-        self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
         self._init_model_architecture(
             ontologies=self.ontologies, old_model=old_model
         )  # Ontix
@@ -96,9 +95,10 @@ class BaseTrainer(abc.ABC):
         )
 
         self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
-        self._trainloader = self._fabric.setup_dataloaders(self._trainloader)  # type: ignore
-        if self._validloader is not None:
-            self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
+        if old_model is None:
+            self._trainloader = self._fabric.setup_dataloaders(self._trainloader)  # type: ignore
+            if self._validloader is not None:
+                self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
 
     def _init_loaders(self):
         """Initializes the DataLoaders for training and validation datasets."""
@@ -184,6 +184,8 @@ class BaseTrainer(abc.ABC):
         if old_model:
             self._model = old_model
             return
+
+        self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
         self.feature_order = self._trainset.feature_ids
         if ontologies is None:
             self._model = self._model_type(
@@ -216,4 +218,9 @@ class BaseTrainer(abc.ABC):
     def predict(
         self, data: BaseDataset, model: Optional[torch.nn.Module] = None, **kwargs
     ) -> Result:
+        pass
+
+    @abc.abstractmethod
+    def purge(self) -> None:
+        """Cleans up any resources used during training, such as cached data or large attributes."""
         pass

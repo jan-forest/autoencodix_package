@@ -1,4 +1,7 @@
 from collections import defaultdict
+
+from lightning_fabric.wrappers import _FabricModule
+import gc
 import os
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
@@ -123,12 +126,10 @@ class XModalTrainer(BaseTrainer):
 
     def _setup_fabric(self, old_model=None):
         """Sets up the models, optimizers, and data loaders with Lightning Fabric."""
+
+        self._fabric.launch()
         self._init_adversarial_training()
         self._init_modality_training()
-        for dynamics in self._modality_dynamics.values():
-            dynamics["model"], dynamics["optim"] = self._fabric.setup(
-                dynamics["model"], dynamics["optim"]
-            )
         self._latent_clf, self._clf_optim = self._fabric.setup(
             self._latent_clf, self._clf_optim
         )
@@ -137,7 +138,10 @@ class XModalTrainer(BaseTrainer):
         if self._validloader is not None:
             self._validloader = self._fabric.setup_dataloaders(self._validloader)
 
-        self._fabric.launch()
+        for dynamics in self._modality_dynamics.values():
+            dynamics["model"], dynamics["optim"] = self._fabric.setup(
+                dynamics["model"], dynamics["optim"]
+            )
 
     def _init_loaders(self):
         """Initializes DataLoaders for training and validation datasets."""
@@ -495,7 +499,9 @@ class XModalTrainer(BaseTrainer):
                         split="valid",
                         epoch_dynamics=valid_epoch_dynamics,
                     )
-
+        # save final model
+        self._store_checkpoint(split="train", epoch_dynamics=train_epoch_dynamics)
+        self._store_final_models()
         return self._result
 
     def decode(self, x: torch.Tensor):
@@ -509,7 +515,7 @@ class XModalTrainer(BaseTrainer):
         self,
         data: BaseDataset,
         # split: Literal["train", "valid", "test"] = "test",
-        model: Optional[Any] = None,
+        model: Optional[Dict[str, torch.nn.Module]] = None,
         **kwargs,
     ) -> Result:
         """Performs cross-modal prediction from a specified 'from' modality to a 'to' modality.
@@ -532,6 +538,17 @@ class XModalTrainer(BaseTrainer):
             raise TypeError(
                 f"type of data has to be MultiModalDataset, got: {type(data)}"
             )
+        if model is not None and not hasattr(self, "_modality_dynamics"):
+            self._modality_dynamics = {mod_name: {} for mod_name in model.keys()}
+
+            for mod_name, mod_model in model.items():
+                mod_model.eval()
+                if not isinstance(mod_model, _FabricModule):
+                    mod_model = self._fabric.setup_module(mod_model)
+                mod_model.to(self._fabric.device)
+                self._modality_dynamics[mod_name]["model"] = mod_model
+            # self._setup_fabric(old_model=model)
+
         from_key = kwargs.pop("from_key", None)
         to_key = kwargs.pop("to_key", None)
         predict_keys = find_translation_keys(
@@ -782,3 +799,55 @@ class XModalTrainer(BaseTrainer):
         state_to_save["latent_clf"] = self._latent_clf.state_dict()
         self._result.model_checkpoints.add(epoch=self._cur_epoch, data=state_to_save)
         self._dynamics_to_result(split=split, epoch_dynamics=epoch_dynamics)
+
+    def _store_final_models(self) -> None:
+        """Stores the final trained models into the Result object."""
+        final_models = {
+            mod_name: dynamics["model"]
+            for mod_name, dynamics in self._modality_dynamics.items()
+        }
+        self._result.model = final_models
+
+    def purge(self) -> None:
+        """
+        Cleans up all instantiated resources used during training, including
+        all modality-specific models/optimizers and the adversarial classifier.
+        """
+
+        if hasattr(self, "_modality_dynamics"):
+            for mod_name, dynamics in self._modality_dynamics.items():
+                if "model" in dynamics and dynamics["model"] is not None:
+                    # Remove the model and its optimizer from the dynamics dict
+                    del dynamics["model"]
+                if "optim" in dynamics and dynamics["optim"] is not None:
+                    del dynamics["optim"]
+            # Delete the container itself after cleaning contents
+            del self._modality_dynamics
+
+        if hasattr(self, "_latent_clf"):
+            del self._latent_clf
+        if hasattr(self, "_clf_optim"):
+            del self._clf_optim
+
+        if hasattr(self, "_trainloader"):
+            del self._trainloader
+        if hasattr(self, "_validloader") and self._validloader is not None:
+            del self._validloader
+        if hasattr(self, "_trainset"):
+            del self._trainset
+        if hasattr(self, "_validset"):
+            del self._validset
+        if hasattr(self, "_loss_fn"):
+            del self._loss_fn
+        if hasattr(self, "sub_loss"):  # Directly accessible sub_loss instance
+            del self.sub_loss
+        if hasattr(self, "_clf_loss_fn"):
+            del self._clf_loss_fn
+
+        if hasattr(self, "_all_dynamics"):
+            del self._all_dynamics
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        gc.collect()

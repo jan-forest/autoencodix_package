@@ -4,7 +4,8 @@ import pandas as pd
 
 ## Pre-handling of Anndata-files
 # anndata_file = "./large_sc_data/gtex_all-tissue_v9.h5ad"
-anndata_file = "./large_sc_data/census_tune_split.h5ad"
+anndata_file = "./notebooks/large_sc_data/census_train_split.h5ad"
+# anndata_file = "./notebooks/large_sc_data/census_tune_split.h5ad"
 # anndata_file = "./large_sc_data/pan_immune_blood.h5ad"
 
 
@@ -15,7 +16,7 @@ print(adata)
 import glob
 
 # Find all files ending with "_level2.tsv" in the folder
-tsv_files = glob.glob("llm_ontologies/*_level2.tsv")
+tsv_files = glob.glob("./notebooks/llm_ontologies/*_level2.tsv")
 
 # Read only the first column (gene names) from each file and collect unique gene names
 gene_names = set()
@@ -26,8 +27,6 @@ for file in tsv_files:
 print(f"Total unique gene names: {len(gene_names)}")
 
 # Filter adata to keep only the relevant genes
-print(list(gene_names)[:5])
-print(adata.var_names[:5])
 
 adata = adata[:, adata.var_names.isin(gene_names)]
 print(adata)
@@ -44,8 +43,8 @@ from sklearn.model_selection import train_test_split  # type: ignore
 import numpy as np
 n_samples = adata.n_obs
 random_seed = 42  # For reproducibility
-valid_proportion = 0.9
-first_test_size = 0.4 
+valid_proportion = 0.5
+first_test_size = 0.01 
 
 train_idx, temp_idx = train_test_split(
 	np.arange(n_samples),
@@ -79,7 +78,7 @@ import yaml
 from pathlib import Path
 
 scconfig = OntixConfig.model_validate(
-    yaml.safe_load(Path("large-ontix.yaml").read_text())
+    yaml.safe_load(Path("./notebooks/large-ontix.yaml").read_text())
 )
 
 
@@ -122,24 +121,9 @@ del train_dataset, val_dataset, test_dataset  # Free up memory
 print("individual datasets deleted")
 ## Save the processed data as pickle file
 import pickle
-with open("./large_sc_data/census-processed-chatgpt.pkl", "wb") as f:
+# with open("./notebooks/large_sc_data/census-processed-chatgpt.pkl", "wb") as f:
+with open("./notebooks/large_sc_data/census-finaltrain-processed-chatgpt.pkl", "wb") as f:
 	pickle.dump(processed_data, f)
 
 print("processed data saved")
 
-
-# ontology_name = "chatgpt_ontology__"
-# ont_files = [
-# 	# Order from Latent Dim -> Hidden Dim -> Input Dim
-# 	f"./llm_ontologies/{ontology_name}ensembl_level1.tsv",
-# 	f"./llm_ontologies/{ontology_name}ensembl_level2.tsv",
-# 	]
-
-# import autoencodix as acx
-
-# ontix = acx.Ontix(data=processed_data,ontologies=ont_files, config=scconfig)
-# del processed_data  # Free up memory
-# ontix.run()
-# ontix._visualizer.show_latent_space(result=ontix.result, plot_type='Ridgeline', param=["cell_type","tissue"], split='test')
-# ontix._visualizer.save_plots(path='./large_ontix_save/', which='all', format='png')
-# ontix.save(file_path="./large_ontix_save/large-ontix.pkl")

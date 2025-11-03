@@ -722,11 +722,12 @@ class BasePipeline(abc.ABC):
         Raises:
             ValueError: If no test data is available in the container.
         """
-        if dataset_container.test is None:
-            raise ValueError(f"No test data available in {context} for reconstruction.")
-        temp = copy.deepcopy(dataset_container.test)
-        temp.data = raw_recon
-        self.result.final_reconstruction = temp
+        # if dataset_container.test is None:
+        #     raise ValueError(f"No test data available in {context} for reconstruction.")
+        # temp = copy.deepcopy(dataset_container.test)
+        # temp.data = raw_recon
+        # self.result.final_reconstruction = temp
+        pass
 
     def _handle_multi_single_cell_reconstruction(
         self, raw_recon: torch.Tensor, predictor_results: Result

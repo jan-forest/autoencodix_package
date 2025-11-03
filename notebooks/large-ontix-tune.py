@@ -1,3 +1,4 @@
+from datetime import datetime
 from syne_tune import Tuner, StoppingCriterion
 from syne_tune.backend import PythonBackend
 from syne_tune.config_space import randint, uniform, loguniform
@@ -86,7 +87,7 @@ def syne_trainer(
 		metric_regression = own_metric_regression, 
 		reference_methods = [], # No reference methods for tuning
 		split_type = "use-split",
-		n_downsample = int(acx_container.train.data.shape[0]*0.5), # Use a subset of the data for faster evaluation
+		n_downsample = int(acx_container.train.data.shape[0]*0.1), # Use a subset of the data for faster evaluation
 	)
 
 	avg_mltask_performance = ontix.result.embedding_evaluation.loc[
@@ -103,21 +104,22 @@ def syne_trainer(
 
 
 
-tasks = ["cell_type", "tissue", "development_stage", "sex"] ## Include disease later when available
+tasks = ["cell_type", "tissue", "development_stage", "sex", "disease"] ## Include disease later when available
 ontology_name = "chatgpt_ontology__"
-file_pkl = "./notebooks/large_sc_data/large-ontix-processed-data.pkl"
+# file_pkl = "./notebooks/large_sc_data/large-ontix-processed-data.pkl"
+file_pkl = "./notebooks/large_sc_data/census-processed-chatgpt.pkl"
 
 # Hyperparameter configuration space
 config_space = {
 	## Fixed params
-	"epochs": 50,
-	"checkpoint_interval": 50,
+	"epochs": 250,
+	"checkpoint_interval": 250,
 	"loss_reduction": "sum",
 	"data_path": file_pkl,
 	"ontology_name": ontology_name,
 	"tasks": "$".join(tasks),
 	## Tunable params
-	"batch_size": randint(32, 512),
+	"batch_size": randint(128, 4096),
 	"drop_p": uniform(0.0, 0.9),
 	"enc_factor": randint(1, 5),
 	"weight_decay": loguniform(1e-5, 1e-1),
@@ -146,11 +148,17 @@ tuner = Tuner(
     trial_backend=PythonBackend(tune_function=syne_trainer, config_space=config_space),
     scheduler=scheduler,
     stop_criterion=StoppingCriterion(
-		max_wallclock_time=600,  # in seconds
+		# max_wallclock_time=160000,  # in seconds
+		max_wallclock_time=210000,  # in seconds
 		# max_num_trials_completed=2,
 		),
     n_workers=3,  # how many trials are evaluated in parallel
 )
+
+import torch
+print(torch.cuda.get_device_name(0))
+print('Allocated:', round(torch.cuda.memory_allocated(0)/1024**3,1), 'GB')
+print('Cached:   ', round(torch.cuda.memory_reserved(0)/1024**3,1), 'GB')
 
 tuner.run()
 
@@ -160,5 +168,8 @@ print(f"best result found: {tuning_experiment.best_config()}")
 
 import pickle
 
-with open("./notebooks/large_ontix_save/large_ontix_syne_tune_experiment.pkl", "wb") as f:
+# current date for filename
+current_date = datetime.now().strftime("%Y-%m-%d")
+
+with open(f"./notebooks/large_ontix_save/large_ontix_chatgpt_experiment_{current_date}.pkl", "wb") as f:
 	pickle.dump(tuning_experiment, f)

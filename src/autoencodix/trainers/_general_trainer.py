@@ -178,8 +178,10 @@ class GeneralTrainer(BaseTrainer):
         """
         total_loss = 0.0
         sub_losses: Dict[str, float] = defaultdict(float)
-
+        current_batch = 0
         for indices, features, sample_ids in self._trainloader:
+            print(f"Processing batch {current_batch+1}/{len(self._trainloader)}", end="\r")
+            current_batch += 1
             self._optimizer.zero_grad()
             model_outputs = self._model(features)
             loss, batch_sub_losses = self._loss_fn(

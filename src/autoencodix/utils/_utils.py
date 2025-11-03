@@ -266,6 +266,7 @@ class Saver:
             self.reset_to_defaults(pipeline.result)  # ty: ignore
             pipeline.preprocessed_data = None  # ty: ignore
             pipeline.raw_user_data = None  # ty: ignore
+            pipeline._datasets = None
             pipeline._preprocessor = type(pipeline._preprocessor)(  # ty: ignore
                 config=pipeline.config  # ty: ignore
             )  # ty: ignore

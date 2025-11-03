@@ -232,6 +232,33 @@ class GeneralVisualizer(BaseVisualizer):
                                     ],
                                     axis=0,
                                 )
+                if len(clin_data) == 0: ## New predict case
+                    for split_name in ["train", "test", "valid"]:
+                        split_temp = getattr(result.new_datasets, split_name, None)
+                        if split_temp is not None:
+                            if len(split_temp.datasets.keys()) > 0:
+                                for key in split_temp.datasets.keys():
+                                    if isinstance(
+                                        split_temp.datasets[key].metadata, pd.DataFrame
+                                    ):
+                                        clin_data = pd.concat(
+                                            [
+                                                clin_data,
+                                                split_temp.datasets[key].metadata,
+                                            ],
+                                            axis=0,
+                                        )
+                            else:
+                                if isinstance(
+                                    split_temp.metadata, pd.DataFrame
+                                ):
+                                    clin_data = pd.concat(
+                                        [
+                                            clin_data,
+                                            split_temp.metadata,
+                                        ],
+                                        axis=0,
+                                    )
                 # remove duplicate rows
                 clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
 
@@ -291,7 +318,7 @@ class GeneralVisualizer(BaseVisualizer):
                        sample_idx = np.random.choice(df_latent.shape[0], n_downsample, replace=False)
                        df_latent = df_latent.iloc[sample_idx]
                        if labels is not None:
-                           labels = labels[sample_idx]
+                           labels = [labels[i] for i in sample_idx]
 
                 if plot_type == "2D-scatter":
                     ## Make 2D Embedding with UMAP
@@ -437,12 +464,16 @@ class GeneralVisualizer(BaseVisualizer):
                 ec="black",
             )
         else:
+            if len(np.unique(labels)) > 8:
+                cat_pal = sns.color_palette("tab20", n_colors=len(np.unique(labels)))
+            else:
+                cat_pal = sns.color_palette("tab10", n_colors=len(np.unique(labels)))
             ax2 = sns.scatterplot(
                 x=embedding.iloc[:, 0],
                 y=embedding.iloc[:, 1],
                 hue=labels,
                 hue_order=np.unique(labels),
-                palette="tab20",
+                palette=cat_pal,
                 s=40,
                 alpha=0.5,
                 ec="black",
@@ -455,7 +486,7 @@ class GeneralVisualizer(BaseVisualizer):
                 y=means.iloc[:, 1],
                 hue=np.unique(labels),
                 hue_order=np.unique(labels),
-                palette="tab20",
+                palette=cat_pal,
                 s=200,
                 ec="black",
                 alpha=0.9,
@@ -588,7 +619,10 @@ class GeneralVisualizer(BaseVisualizer):
         # else:
         #     cat_pal = sns.color_palette(n_colors=len(np.unique(df[param])))
 
-        cat_pal = sns.color_palette("tab20", n_colors=len(np.unique(df[param])))
+        if len(np.unique(df[param])) > 8:
+            cat_pal = sns.color_palette("tab20", n_colors=len(np.unique(df[param])))
+        else:
+            cat_pal = sns.color_palette("tab10", n_colors=len(np.unique(df[param])))
 
 
         g = sns.FacetGrid(

@@ -6,7 +6,7 @@ import scanpy
 import sys
 import math
 
-folder = "./census_chunks/"
+folder = "./notebooks/census_chunks/"
 # Create folder if it doesn't exist
 if not os.path.exists(folder):
     os.makedirs(folder)
@@ -20,7 +20,7 @@ max_chunk_size = 1000
 perc_genes = 0.05
 
 # Find all files ending with "_level1.tsv" in the folder
-tsv_files = glob.glob("llm_ontologies/*_level2.tsv")
+tsv_files = glob.glob("./notebooks/llm_ontologies/*_level2.tsv")
 
 # Read only the first column (gene names) from each file and collect unique gene names
 gene_names = set()
@@ -41,7 +41,8 @@ else:
 	part = 0
 
 total_parts = 12
-all_chunks = human_meta_counts.index[::-1][0:24]  # Change [0:5] to [:] for all chunks in production
+# all_chunks = human_meta_counts.index[::-1][:]  # Change [0:5] to [:] for all chunks in production
+all_chunks = human_meta_counts.index[0:11]  # Change [0:5] to [:] for all chunks in production
 num_chunks = len(all_chunks)
 chunks_per_part = math.ceil(num_chunks / total_parts)
 start_idx = part * chunks_per_part

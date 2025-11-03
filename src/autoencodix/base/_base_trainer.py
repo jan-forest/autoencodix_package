@@ -71,6 +71,7 @@ class BaseTrainer(abc.ABC):
         )
 
         self._init_loaders()
+        self._fabric.launch()
         self._setup_fabric()
         self._n_cpus = os.cpu_count()
         if self._n_cpus is None:
@@ -93,7 +94,6 @@ class BaseTrainer(abc.ABC):
         self._trainloader = self._fabric.setup_dataloaders(self._trainloader)  # type: ignore
         if self._validloader is not None:
             self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
-        self._fabric.launch()
 
     def _init_loaders(self):
         """Initializes the DataLoaders for training and validation datasets."""

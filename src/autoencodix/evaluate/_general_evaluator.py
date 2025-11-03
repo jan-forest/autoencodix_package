@@ -1,6 +1,7 @@
 from typing import Union, no_type_check
 import warnings
 
+import numpy as np
 import pandas as pd
 from sklearn import linear_model
 from sklearn.model_selection import cross_validate
@@ -36,6 +37,7 @@ class GeneralEvaluator(BaseEvaluator):
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
         split_type: str = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
+        n_downsample: Union[int, None] = 10000,  # Default is 10000, if provided downsample to this number of samples for faster evaluation. Set to None to disable downsampling.
     ) -> Result:
         """Evaluates the performance of machine learning models on various feature representations and clinical parameters.
 
@@ -55,6 +57,7 @@ class GeneralEvaluator(BaseEvaluator):
             reference_methods:List of feature representations to evaluate (e.g., "PCA", "UMAP", "TSNE", "RandomFeature"). "Latent" is always included (default: []).
             split_type: which split to use
                 use-split" for pre-defined splits, "CV-N" for N-fold cross-validation, or "LOOCV" for leave-one-out cross-validation (default: "use-split").
+            n_downsample: If provided, downsample the data to this number of samples for faster evaluation. Default is 10000. Set to None to disable downsampling.
         Returns:
             The updated result object with evaluation results stored in `embedding_evaluation`.
         Raises
@@ -191,6 +194,13 @@ class GeneralEvaluator(BaseEvaluator):
                                 samples_nonna.intersection(sample_split.index), :
                             ]
                         # print(sample_split)
+                    
+                    if n_downsample is not None:
+                        if df.shape[0] > n_downsample:
+                            sample_idx = np.random.choice(df.shape[0], n_downsample, replace=False)
+                            df = df.iloc[sample_idx]
+                            if split_type == "use-split":
+                                sample_split = sample_split.loc[df.index, :]
 
                     if ml_type == "classification":
                         metric = metric_class
@@ -528,7 +538,8 @@ class GeneralEvaluator(BaseEvaluator):
                         # Adjust X as well
                         X = X.loc[Y.index, :]
 
-                score_temp = sklearn_scorer(sklearn_ml, X, Y)
+
+                score_temp = sklearn_scorer(sklearn_ml, X, Y, labels=np.sort(Y_train.unique()))
                 score_df["value"].append(score_temp)
         else:
             ## Warning that there is only one class in the training data

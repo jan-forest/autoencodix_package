@@ -148,19 +148,16 @@ class TrainingDynamics:
                 if epoch in self._data.keys() and split == "test"
                 else max(self._data.keys()) + (epoch + 1)
             )
-        # Case 2: Epoch specified
         if epoch >= 0 and epoch not in self._data:
             if split is not None:
                 return np.array([])
             return {}
-        # handle reverse indexing
         epoch_data = self._data[epoch]
 
-        # Case 2a: No split specified - return all splits for epoch
         if split is None:
             return epoch_data
 
-        # Case 2b: Both epoch and split specified
+        # Case: Both epoch and split specified
         return epoch_data.get(split, np.array([]))
 
     def __getitem__(

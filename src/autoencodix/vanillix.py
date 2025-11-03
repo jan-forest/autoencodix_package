@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Type, Union
+from typing import Dict, Optional, Type, Union, List
 
 import numpy as np
 
@@ -51,6 +51,7 @@ class Vanillix(BasePipeline):
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
         config: Optional[DefaultConfig] = None,
+        ontologies: Optional[Union[List, Dict]] = None,
     ) -> None:
         """Initialize Vanillix pipeline with customizable components.
 
@@ -73,4 +74,5 @@ class Vanillix(BasePipeline):
             datasplitter_type=datasplitter_type,
             config=config,
             custom_split=custom_splits,
+            ontologies=ontologies,
         )

@@ -1,6 +1,6 @@
 import abc
 import copy
-from typing import Dict, Optional, Tuple, Type, Union, Any, Literal
+from typing import Dict, Optional, Tuple, Type, Union, Any, Literal, List
 
 import warnings
 import anndata as ad  # type: ignore
@@ -136,6 +136,7 @@ class BasePipeline(abc.ABC):
             DataPackage, ad.AnnData, MuData, pd.DataFrame, dict  # type: ignore[invalid-type-form]
         ] = raw_user_data
         self._trainer_type = trainer_type
+        self._trainer: Optional[BaseTrainer] = None
         self._model_type = model_type
         self._loss_type = loss_type
         self._preprocessor_type = preprocessor_type
@@ -146,9 +147,9 @@ class BasePipeline(abc.ABC):
             self.config.data_case = datacase
             self._fill_data_info()
 
-        self._ontologies = ontologies
+        self.ontologies = ontologies
         self._preprocessor = self._preprocessor_type(
-            config=self.config, ontologies=self._ontologies
+            config=self.config, ontologies=self.ontologies
         )
 
         self._visualizer = (
@@ -468,8 +469,9 @@ class BasePipeline(abc.ABC):
             config=self.config,
             model_type=self._model_type,
             loss_type=self._loss_type,
-            ontologies=self._ontologies,  # Ontix
+            ontologies=self.ontologies,  # Ontix
         )
+
         trainer_result: Result = self._trainer.train()
         self.result.update(other=trainer_result)
 
@@ -504,7 +506,13 @@ class BasePipeline(abc.ABC):
             ValueError: If no test data is available or data format is invalid.
         """
         self._validate_prediction_requirements()
+        if self._trainer is None:
+            raise ValueError(
+                "Trainer not initialized, call fit first. If you used .save and .load, then you shoul not call .fit, then this is a bug."
+                "In this case please submit an issue."
+            )
 
+        self._trainer.setup_trainer(old_model=self.result.model)
         original_input = data
         predict_data = self._prepare_prediction_data(data=data)
 
@@ -722,6 +730,7 @@ class BasePipeline(abc.ABC):
         Raises:
             ValueError: If no test data is available in the container.
         """
+
         # if dataset_container.test is None:
         #     raise ValueError(f"No test data available in {context} for reconstruction.")
         # temp = copy.deepcopy(dataset_container.test)
@@ -919,7 +928,7 @@ class BasePipeline(abc.ABC):
 
         self._visualizer.visualize(result=self.result, config=self.config)
 
-    def show_result(self, split: str = "all"):
+    def show_result(self, split: str = "all", **kwargs):
         """Displays key visualizations of model results.
 
         This method generates the following visualizations:
@@ -936,14 +945,15 @@ class BasePipeline(abc.ABC):
         """
         print("Creating plots ...")
 
+        params: Optional[Union[List[str], str]] = kwargs.pop("params", None)
         self._visualizer.show_loss(plot_type="absolute")
 
         self._visualizer.show_latent_space(
-            result=self.result, plot_type="Ridgeline", split=split
+            result=self.result, plot_type="Ridgeline", split=split, param=params
         )
 
         self._visualizer.show_latent_space(
-            result=self.result, plot_type="2D-scatter", split=split
+            result=self.result, plot_type="2D-scatter", split=split, param=params
         )
 
     def run(

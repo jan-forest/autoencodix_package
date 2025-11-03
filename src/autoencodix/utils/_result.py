@@ -92,7 +92,9 @@ class Result:
     losses: TrainingDynamics = field(default_factory=TrainingDynamics)
     sub_losses: LossRegistry = field(default_factory=LossRegistry)
     preprocessed_data: torch.Tensor = field(default_factory=torch.Tensor)
-    model: torch.nn.Module = field(default_factory=torch.nn.Module)
+    model: Union[Dict[str, torch.nn.Module], torch.nn.Module] = field(
+        default_factory=torch.nn.Module
+    )
     model_checkpoints: TrainingDynamics = field(default_factory=TrainingDynamics)
 
     datasets: Optional[DatasetContainer] = field(
@@ -110,7 +112,7 @@ class Result:
     sub_reconstructions: Optional[Dict[str, Any]] = field(default=None)
 
     # Embedding evaluation results
-    embedding_evaluation: pd.DataFrame = field(default=pd.DataFrame())
+    embedding_evaluation: pd.DataFrame = field(default_factory=pd.DataFrame)
 
     # plots: Dict[str, Any] = field(
     #     default_factory=nested_dict

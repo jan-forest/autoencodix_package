@@ -66,9 +66,13 @@ class NaNRemover:
 
         # Handle obs metadata
         if self.relevant_cols is not None:
+            print(adata.obs.columns)
             for col in self.relevant_cols:
                 if col in adata.obs.columns:
-                    adata.obs[col] = adata.obs[col].astype("category").fillna("missing")
+                    if isinstance(adata.obs[col].dtype, pd.CategoricalDtype):
+                        # Add "missing" to categories first, then fill
+                        adata.obs[col] = adata.obs[col].cat.add_categories(["missing"])
+                    adata.obs[col] = adata.obs[col].fillna("missing").astype("category")
         return adata
 
     def remove_nan(self, data: DataPackage) -> DataPackage:
@@ -98,7 +102,8 @@ class NaNRemover:
                 if self.relevant_cols is not None:
                     for col in self.relevant_cols:
                         if col in v.columns:
-                            v.dropna(subset=[col], inplace=True)
+                            v.fillna(value={col: "missing"}, inplace=True)
+
                 non_na[k] = v
             data.annotation = non_na  # type: ignore
 

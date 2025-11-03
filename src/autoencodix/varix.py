@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Type, Union
+from typing import Dict, Optional, Type, Union, List
 import torch
 import numpy as np
 
@@ -51,6 +51,7 @@ class Varix(BasePipeline):
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
+        ontologies: Optional[Union[List, Dict]] = None,
         config: Optional[DefaultConfig] = None,
     ) -> None:
         """Initialize Varix pipeline with customizable components.
@@ -75,6 +76,7 @@ class Varix(BasePipeline):
             datasplitter_type=datasplitter_type,
             config=config,
             custom_split=custom_splits,
+            ontologies=ontologies,
         )
 
     @config_method(

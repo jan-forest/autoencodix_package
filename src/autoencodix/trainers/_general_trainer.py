@@ -1,4 +1,6 @@
 import torch
+
+import gc
 import os
 import numpy as np
 from typing import Optional, Type, Union, Tuple, Any, Dict, List
@@ -451,3 +453,33 @@ class GeneralTrainer(BaseTrainer):
             The trained model as a torch.nn.Module.
         """
         return self._model
+
+    def purge(self) -> None:
+        """Cleans up any resources used during training, such as cached data or large attributes."""
+
+        attrs_to_delete = [
+            "_trainloader",
+            "_validloader",
+            "_model",
+            "_optimizer",
+            "_latentspace_buffer",
+            "_reconstruction_buffer",
+            "_mu_buffer",
+            "_sigma_buffer",
+            "_sample_ids_buffer",
+            "_trainset",
+            "_loss_fn",
+            "_validset",
+        ]
+
+        for attr in attrs_to_delete:
+            if hasattr(self, attr):
+                value = getattr(self, attr)
+                # Optional: ensure non-None before deletion
+                if value is not None:
+                    delattr(self, attr)
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        gc.collect()

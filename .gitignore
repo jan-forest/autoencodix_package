@@ -5,3 +5,6 @@ data/
 .venv/
 .github/
 notebooks/*/*
+*.pth
+*.pkl
+*.ipynb

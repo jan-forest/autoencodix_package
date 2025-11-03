@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Type, Union
+from typing import Dict, Optional, Type, Union, List
 import torch
 import numpy as np
 
@@ -57,6 +57,7 @@ class Stackix(BasePipeline):
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
         config: Optional[DefaultConfig] = None,
+        ontologies: Optional[Union[List, Dict]] = None,
     ) -> None:
         """Initialize the Stackix pipeline.
 
@@ -77,6 +78,7 @@ class Stackix(BasePipeline):
             datasplitter_type=datasplitter_type,
             config=config,
             custom_split=custom_splits,
+            ontologies=ontologies,
         )
         if not isinstance(self.config, StackixConfig):
             raise TypeError(

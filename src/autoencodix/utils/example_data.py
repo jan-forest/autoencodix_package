@@ -384,7 +384,7 @@ def generate_multi_sc_example(
     data_package.multi_sc = {"multi_sc": mdata}
     # data_package.annotation = {"multi_sc": mdata.obs}
 
-    return data_package
+    return data_package, rna_adata, mdata
 
 
 # Pre-generated example data for direct import
@@ -393,4 +393,6 @@ EXAMPLE_PROCESSED_DATA = generate_example_data(random_seed=config.global_seed)
 EXAMPLE_MULTI_BULK, raw_rna, raw_protein, annotation = generate_raw_datapackage(
     data_case=DataCase.MULTI_BULK
 )
-EXAMPLE_MULTI_SC = generate_raw_datapackage(data_case=DataCase.MULTI_SINGLE_CELL)
+EXAMPLE_MULTI_SC, sample_adata, sample_mudata = generate_raw_datapackage(
+    data_case=DataCase.MULTI_SINGLE_CELL
+)

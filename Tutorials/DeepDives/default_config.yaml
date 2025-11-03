@@ -1,0 +1,207 @@
+data_config:
+  data_info:
+    multi_sc:
+      file_path: ''
+      data_type: NUMERIC
+      scaling: NOTSET
+      filtering: VAR
+      sep: null
+      extra_anno_file: null
+      is_single_cell: false
+      min_cells: 0.05
+      min_genes: 0.02
+      selected_layers:
+      - X
+      is_X: false
+      normalize_counts: true
+      log_transform: true
+      k_filter: 20
+      img_width_resize: 64
+      img_height_resize: 64
+      translate_direction: null
+      pretrain_epochs: 0
+    multi_bulk:
+      file_path: ''
+      data_type: NUMERIC
+      scaling: NOTSET
+      filtering: VAR
+      sep: null
+      extra_anno_file: null
+      is_single_cell: false
+      min_cells: 0.05
+      min_genes: 0.02
+      selected_layers:
+      - X
+      is_X: false
+      normalize_counts: true
+      log_transform: true
+      k_filter: 20
+      img_width_resize: 64
+      img_height_resize: 64
+      translate_direction: null
+      pretrain_epochs: 0
+    transcriptomics:
+      file_path: ''
+      data_type: NUMERIC
+      scaling: NOTSET
+      filtering: VAR
+      sep: null
+      extra_anno_file: null
+      is_single_cell: false
+      min_cells: 0.05
+      min_genes: 0.02
+      selected_layers:
+      - X
+      is_X: false
+      normalize_counts: true
+      log_transform: true
+      k_filter: 20
+      img_width_resize: 64
+      img_height_resize: 64
+      translate_direction: null
+      pretrain_epochs: 0
+    proteomics:
+      file_path: ''
+      data_type: NUMERIC
+      scaling: NOTSET
+      filtering: VAR
+      sep: null
+      extra_anno_file: null
+      is_single_cell: false
+      min_cells: 0.05
+      min_genes: 0.02
+      selected_layers:
+      - X
+      is_X: false
+      normalize_counts: true
+      log_transform: true
+      k_filter: 20
+      img_width_resize: 64
+      img_height_resize: 64
+      translate_direction: null
+      pretrain_epochs: 0
+    annotation:
+      file_path: ''
+      data_type: NUMERIC
+      scaling: NOTSET
+      filtering: VAR
+      sep: null
+      extra_anno_file: null
+      is_single_cell: false
+      min_cells: 0.05
+      min_genes: 0.02
+      selected_layers:
+      - X
+      is_X: false
+      normalize_counts: true
+      log_transform: true
+      k_filter: 20
+      img_width_resize: 64
+      img_height_resize: 64
+      translate_direction: null
+      pretrain_epochs: 0
+    img:
+      file_path: ''
+      data_type: NUMERIC
+      scaling: NOTSET
+      filtering: VAR
+      sep: null
+      extra_anno_file: null
+      is_single_cell: false
+      min_cells: 0.05
+      min_genes: 0.02
+      selected_layers:
+      - X
+      is_X: false
+      normalize_counts: true
+      log_transform: true
+      k_filter: 20
+      img_width_resize: 64
+      img_height_resize: 64
+      translate_direction: null
+      pretrain_epochs: 0
+    from_modality:
+      file_path: ''
+      data_type: NUMERIC
+      scaling: NOTSET
+      filtering: VAR
+      sep: null
+      extra_anno_file: null
+      is_single_cell: false
+      min_cells: 0.05
+      min_genes: 0.02
+      selected_layers:
+      - X
+      is_X: false
+      normalize_counts: true
+      log_transform: true
+      k_filter: 20
+      img_width_resize: 64
+      img_height_resize: 64
+      translate_direction: null
+      pretrain_epochs: 0
+    to_modality:
+      file_path: ''
+      data_type: NUMERIC
+      scaling: NOTSET
+      filtering: VAR
+      sep: null
+      extra_anno_file: null
+      is_single_cell: false
+      min_cells: 0.05
+      min_genes: 0.02
+      selected_layers:
+      - X
+      is_X: false
+      normalize_counts: true
+      log_transform: true
+      k_filter: 20
+      img_width_resize: 64
+      img_height_resize: 64
+      translate_direction: null
+      pretrain_epochs: 0
+  require_common_cells: false
+  annotation_columns: null
+img_path_col: img_paths
+requires_paired: true
+data_case: !!python/object/apply:autoencodix.configs.default_config.DataCase
+- Multi Bulk
+k_filter: 20
+scaling: MINMAX
+skip_preprocessing: false
+class_param: null
+latent_dim: 8
+n_layers: 3
+enc_factor: 4
+input_dim: 10000
+drop_p: 0.1
+save_memory: false
+learning_rate: 0.001
+batch_size: 32
+epochs: 10
+weight_decay: 0.01
+reconstruction_loss: mse
+default_vae_loss: kl
+loss_reduction: sum
+beta: 1
+beta_mi: 1
+beta_tc: 1
+beta_dimKL: 1
+use_mss: true
+gamma: 10.0
+delta_pair: 5.0
+delta_class: 5.0
+min_samples_per_split: 1
+anneal_function: logistic-mid
+pretrain_epochs: 0
+device: auto
+n_gpus: 1
+n_workers: 0
+checkpoint_interval: 10
+float_precision: '32'
+gpu_strategy: auto
+train_ratio: 0.7
+test_ratio: 0.2
+valid_ratio: 0.1
+reproducible: false
+global_seed: 1

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, no_type_check
 
 import numpy as np
 import pandas as pd
@@ -39,7 +39,7 @@ class StackixPreprocessor(BasePreprocessor):
         self._dataset_container: Optional[DatasetContainer] = None
 
     def preprocess(
-        self, raw_user_data: Optional[DataPackage] = None
+        self, raw_user_data: Optional[DataPackage] = None, predict_new_data=False
     ) -> DatasetContainer:
         """Execute preprocessing steps for Stackix architecture.
 
@@ -52,7 +52,9 @@ class StackixPreprocessor(BasePreprocessor):
         Raises:
             TypeError: If datapackage is None after preprocessing
         """
-        self._datapackage = self._general_preprocess(raw_user_data)
+        self._datapackage = self._general_preprocess(
+            raw_user_data, predict_new_data=predict_new_data
+        )
         self._dataset_container = DatasetContainer()
 
         for split in ["train", "valid", "test"]:
@@ -79,6 +81,7 @@ class StackixPreprocessor(BasePreprocessor):
             primary_data = primary_data.toarray()
         return primary_data
 
+    @no_type_check
     def _combine_layers(
         self, modality_name: str, modality_data: Any
     ) -> Tuple[np.ndarray, Dict[str, tuple[int]]]:
@@ -94,19 +97,17 @@ class StackixPreprocessor(BasePreprocessor):
         layer_list: List[np.ndarray] = []
         layer_indices: Dict[str, Tuple[int]] = {}
 
-        selected_layers = self.config.data_config.data_info[
+        selected_layers: List[str] = self.config.data_config.data_info[
             modality_name
         ].selected_layers
 
         start_idx = 0
-        print("combine layers")
         for layer_name in selected_layers:
-            print(f"layer: {layer_name}")
             if layer_name == "X":
                 data = self._extract_primary_data(modality_data)
                 layer_list.append(data)
                 end_idx = start_idx + data.shape[1]
-                layer_indices[layer_name] = [start_idx, end_idx]
+                layer_indices[layer_name] = [start_idx, end_idx]  # type: ignore
                 start_idx += data.shape[1]
                 continue
             elif layer_name in modality_data.layers:
@@ -115,7 +116,7 @@ class StackixPreprocessor(BasePreprocessor):
                     layer_data = layer_data.toarray()
                 layer_list.append(layer_data)
                 end_idx = start_idx + layer_data.shape[1]
-                layer_indices[layer_name] = [start_idx, end_idx]
+                layer_indices[layer_name] = [start_idx, end_idx]  # type: ignore
                 start_idx += layer_data.shape[1]
 
         combined_data: np.ndarray = (
@@ -225,10 +226,10 @@ class StackixPreprocessor(BasePreprocessor):
             )
 
         if self.config.data_case == DataCase.MULTI_BULK:
-            return self._format_multi_bulk(reconstruction=reconstruction)
+            return self._format_multi_bulk(reconstructions=reconstruction)
 
         elif self.config.data_case == DataCase.MULTI_SINGLE_CELL:
-            return self._format_multi_sc(reconstruction=reconstruction)
+            return self._format_multi_sc(reconstructions=reconstruction)
         else:
             raise ValueError(
                 f"Unsupported data_case {self.config.data_case} for StackixPreprocessor."
@@ -250,7 +251,7 @@ class StackixPreprocessor(BasePreprocessor):
             stackix_ds = self._dataset_container["test"]
             if stackix_ds is None:
                 raise ValueError("No dataset found for split: test")
-            dataset_dict = stackix_ds.dataset_dict
+            dataset_dict = stackix_ds.datasets
             df = pd.DataFrame(
                 reconstruction.numpy(),
                 index=dataset_dict[name].sample_ids,
@@ -263,7 +264,7 @@ class StackixPreprocessor(BasePreprocessor):
         dp["annotation"] = annotation_dict
         return dp
 
-    def _format_multi_sc(self, reconstruction: Dict[str, torch.Tensor]) -> DataPackage:
+    def _format_multi_sc(self, reconstructions: Dict[str, torch.Tensor]) -> DataPackage:
         """Formats reconstructed tensors back into a MuData object for single-cell data.
 
         This uses the stored layer indices to accurately split the reconstructed tensor
@@ -291,10 +292,10 @@ class StackixPreprocessor(BasePreprocessor):
         if stackix_ds is None:
             raise ValueError("No dataset found for split: test")
 
-        dataset_dict = stackix_ds.dataset_dict
+        dataset_dict = stackix_ds.datasets
 
         # Process each modality in the reconstruction
-        for mod_name, recon_tensor in reconstruction.items():
+        for mod_name, recon_tensor in reconstructions.items():
             if not isinstance(recon_tensor, torch.Tensor):
                 raise TypeError(
                     f"Expected value to be of type torch.Tensor, got {type(recon_tensor)}."

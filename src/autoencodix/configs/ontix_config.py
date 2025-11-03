@@ -23,7 +23,7 @@ class OntixConfig(DefaultConfig):
         positive-value scaler.
         """
         # Define the set of allowed scaling methods
-        allowed_scalers = {"MINMAX", "NONE"}
+        allowed_scalers = {"MINMAX", "NONE", "NOTSET"}
 
         # Loop through each data modality defined in the data_config
         for modality_name, data_info in self.data_config.data_info.items():

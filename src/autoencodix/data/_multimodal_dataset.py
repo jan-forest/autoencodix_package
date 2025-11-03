@@ -74,12 +74,16 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
                 df = pd.DataFrame(
                     ds.data.numpy(), columns=ds.feature_ids, index=ds.sample_ids
                 )
-            elif "IMG" in modality:
+            # TODO: note Max: I think this is hardcoded and our image data modality is not always named IMG
+            elif isinstance(ds.data, list):
                 # Handle image modality
                 # Get the list of tensors
                 tensor_list = self.datasets[modality].data
+                if not isinstance(tensor_list[0], torch.Tensor):
+                    raise TypeError(
+                        f" Image List is not a List[torch.Tensor], but a {type(tensor_list[0])} and cannot be converted to DataFrame."
+                    )
 
-                # Flatten each tensor and collect as rows
                 rows = [
                     (
                         t.flatten().cpu().numpy()
@@ -89,7 +93,6 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
                     for t in tensor_list
                 ]
 
-                # Create DataFrame
                 df = pd.DataFrame(
                     rows,
                     index=ds.sample_ids,
@@ -97,7 +100,7 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
                 )
             else:
                 raise TypeError(
-                    "Data is not a torch.Tensor and cannot be converted to DataFrame."
+                    f"Data is not a torch.Tensor or image data, but a {type(ds.data)} and cannot be converted to DataFrame."
                 )
 
             df = df.add_prefix(f"{modality}_")

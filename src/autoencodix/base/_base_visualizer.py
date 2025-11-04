@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib
 from matplotlib import pyplot as plt
 import seaborn as sns  # type: ignore
+import seaborn.objects as so
 import torch
 import warnings
 
@@ -79,8 +80,9 @@ class BaseVisualizer(abc.ABC):
                 )
             else:
                 fig = self.plots["loss_relative"]
-                show_figure(fig)
-                plt.show()
+                fig.show()
+                # show_figure(fig)
+                # plt.show()
 
         if plot_type not in ["absolute", "relative"]:
             print(
@@ -335,23 +337,31 @@ class BaseVisualizer(abc.ABC):
                 & (df_plot["Loss Term"].isin(valid_terms))
             )
 
-            fig, axes = plt.subplots(1, 2, figsize=(fig_width_rel, 5), sharey=True)
+            df_plot.loc[exclude,"Relative Loss Value"] = df_plot[exclude].groupby(["Split", "Epoch"])["Loss Value"].transform(
+                                                                            lambda x: x / x.sum()
+                                                                        )
+            fig =(
+                so.Plot(df_plot[exclude], "Epoch", "Relative Loss Value", color="Loss Term")
+                    .add(so.Area(alpha=.7), so.Stack())
+                ).facet("Split").layout(size=(fig_width_rel, 5))
+            
+            # fig, axes = plt.subplots(1, 2, figsize=(fig_width_rel, 5), sharey=True)
 
-            ax = 0
+            # ax = 0
 
-            for split in df_plot["Split"].unique():
-                axes[ax] = sns.kdeplot(
-                    data=df_plot[exclude & (df_plot["Split"] == split)],
-                    x="Epoch",
-                    hue="Loss Term",
-                    multiple="fill",
-                    weights="Loss Value",
-                    clip=[0, df_plot["Epoch"].max()],
-                    ax=axes[ax],
-                ).set_title(split)
-                ax += 1
+            # for split in df_plot["Split"].unique():
+            #     axes[ax] = sns.kdeplot(
+            #         data=df_plot[exclude & (df_plot["Split"] == split)],
+            #         x="Epoch",
+            #         hue="Loss Term",
+            #         multiple="fill",
+            #         weights="Loss Value",
+            #         clip=[0, df_plot["Epoch"].max()],
+            #         ax=axes[ax],
+            #     ).set_title(split)
+            #     ax += 1
 
-            plt.close()
+            # plt.close()
 
         return fig
 

@@ -146,121 +146,122 @@ class GeneralVisualizer(BaseVisualizer):
             if epoch is None:
                 epoch = result.model.config.epochs - 1
 
-            ## Getting clin_data
-            if hasattr(result.datasets.train, "metadata"):
-                # Check if metadata is a dictionary and contains 'paired'
-                if isinstance(result.datasets.train.metadata, dict):
-                    if "paired" in result.datasets.train.metadata:
-                        clin_data = result.datasets.train.metadata["paired"]
-                        if hasattr(result.datasets, "test"):
-                            clin_data = pd.concat(
-                                [
-                                    clin_data,
-                                    result.datasets.test.metadata[  # ty: ignore
-                                        "paired"
-                                    ],  # ty: ignore
-                                ],  # ty: ignore
-                                axis=0,
-                            )
-                        if hasattr(result.datasets, "valid"):
-                            clin_data = pd.concat(
-                                [
-                                    clin_data,
-                                    result.datasets.valid.metadata[  # ty: ignore
-                                        "paired"
-                                    ],  # ty: ignore
-                                ],  # ty: ignore
-                                axis=0,
-                            )
-                    else:
-                        # Iterate over all splits and keys, concatenate if DataFrame
-                        clin_data = pd.DataFrame()
-                        for split_name in ["train", "test", "valid"]:
-                            split_temp = getattr(result.datasets, split_name, None)
-                            if split_temp is not None and hasattr(
-                                split_temp, "metadata"
-                            ):
-                                for key in split_temp.metadata.keys():
-                                    if isinstance(
-                                        split_temp.metadata[key], pd.DataFrame
-                                    ):
-                                        clin_data = pd.concat(
-                                            [
-                                                clin_data,
-                                                split_temp.metadata[key],
-                                            ],
-                                            axis=0,
-                                        )
-                        # remove duplicate rows
-                        clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
-                        # if clin_data.empty:
-                        #     # Raise error no annotation given
-                        #     raise ValueError(
-                        #         "Please provide paired annotation data with key 'paired' in metadata dictionary."
-                        #     )
-                elif isinstance(result.datasets.train.metadata, pd.DataFrame):
-                    clin_data = result.datasets.train.metadata
-                    if hasattr(result.datasets, "test"):
-                        clin_data = pd.concat(
-                            [clin_data, result.datasets.test.metadata],  # ty: ignore
-                            axis=0,
-                        )
-                    if hasattr(result.datasets, "valid"):
-                        clin_data = pd.concat(
-                            [clin_data, result.datasets.valid.metadata],  # ty: ignore
-                            axis=0,
-                        )
-                else:
-                    # Raise error no annotation given
-                    raise ValueError(
-                        "Metadata is not a dictionary or DataFrame. Please provide a valid annotation data type."
-                    )
-            else:
-                # Iterate over all splits and keys, concatenate if DataFrame
-                clin_data = pd.DataFrame()
-                for split_name in ["train", "test", "valid"]:
-                    split_temp = getattr(result.datasets, split_name, None)
-                    if split_temp is not None:
-                        for key in split_temp.datasets.keys():
-                            if isinstance(
-                                split_temp.datasets[key].metadata, pd.DataFrame
-                            ):
-                                clin_data = pd.concat(
-                                    [
-                                        clin_data,
-                                        split_temp.datasets[key].metadata,
-                                    ],
-                                    axis=0,
-                                )
-                if len(clin_data) == 0: ## New predict case
-                    for split_name in ["train", "test", "valid"]:
-                        split_temp = getattr(result.new_datasets, split_name, None)
-                        if split_temp is not None:
-                            if len(split_temp.datasets.keys()) > 0:
-                                for key in split_temp.datasets.keys():
-                                    if isinstance(
-                                        split_temp.datasets[key].metadata, pd.DataFrame
-                                    ):
-                                        clin_data = pd.concat(
-                                            [
-                                                clin_data,
-                                                split_temp.datasets[key].metadata,
-                                            ],
-                                            axis=0,
-                                        )
-                            else:
-                                if isinstance(
-                                    split_temp.metadata, pd.DataFrame
-                                ):
-                                    clin_data = pd.concat(
-                                        [
-                                            clin_data,
-                                            split_temp.metadata,
-                                        ],
-                                        axis=0,
-                                    )
-                # remove duplicate rows
-                clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
+            # ## Getting clin_data
+            clin_data = self._collect_all_metadata(result=result)
+            # if hasattr(result.datasets.train, "metadata"):
+            #     # Check if metadata is a dictionary and contains 'paired'
+            #     if isinstance(result.datasets.train.metadata, dict):
+            #         if "paired" in result.datasets.train.metadata:
+            #             clin_data = result.datasets.train.metadata["paired"]
+            #             if hasattr(result.datasets, "test"):
+            #                 clin_data = pd.concat(
+            #                     [
+            #                         clin_data,
+            #                         result.datasets.test.metadata[  # ty: ignore
+            #                             "paired"
+            #                         ],  # ty: ignore
+            #                     ],  # ty: ignore
+            #                     axis=0,
+            #                 )
+            #             if hasattr(result.datasets, "valid"):
+            #                 clin_data = pd.concat(
+            #                     [
+            #                         clin_data,
+            #                         result.datasets.valid.metadata[  # ty: ignore
+            #                             "paired"
+            #                         ],  # ty: ignore
+            #                     ],  # ty: ignore
+            #                     axis=0,
+            #                 )
+            #         else:
+            #             # Iterate over all splits and keys, concatenate if DataFrame
+            #             clin_data = pd.DataFrame()
+            #             for split_name in ["train", "test", "valid"]:
+            #                 split_temp = getattr(result.datasets, split_name, None)
+            #                 if split_temp is not None and hasattr(
+            #                     split_temp, "metadata"
+            #                 ):
+            #                     for key in split_temp.metadata.keys():
+            #                         if isinstance(
+            #                             split_temp.metadata[key], pd.DataFrame
+            #                         ):
+            #                             clin_data = pd.concat(
+            #                                 [
+            #                                     clin_data,
+            #                                     split_temp.metadata[key],
+            #                                 ],
+            #                                 axis=0,
+            #                             )
+            #             # remove duplicate rows
+            #             clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
+            #             # if clin_data.empty:
+            #             #     # Raise error no annotation given
+            #             #     raise ValueError(
+            #             #         "Please provide paired annotation data with key 'paired' in metadata dictionary."
+            #             #     )
+            #     elif isinstance(result.datasets.train.metadata, pd.DataFrame):
+            #         clin_data = result.datasets.train.metadata
+            #         if hasattr(result.datasets, "test"):
+            #             clin_data = pd.concat(
+            #                 [clin_data, result.datasets.test.metadata],  # ty: ignore
+            #                 axis=0,
+            #             )
+            #         if hasattr(result.datasets, "valid"):
+            #             clin_data = pd.concat(
+            #                 [clin_data, result.datasets.valid.metadata],  # ty: ignore
+            #                 axis=0,
+            #             )
+            #     else:
+            #         # Raise error no annotation given
+            #         raise ValueError(
+            #             "Metadata is not a dictionary or DataFrame. Please provide a valid annotation data type."
+            #         )
+            # else:
+            #     # Iterate over all splits and keys, concatenate if DataFrame
+            #     clin_data = pd.DataFrame()
+            #     for split_name in ["train", "test", "valid"]:
+            #         split_temp = getattr(result.datasets, split_name, None)
+            #         if split_temp is not None:
+            #             for key in split_temp.datasets.keys():
+            #                 if isinstance(
+            #                     split_temp.datasets[key].metadata, pd.DataFrame
+            #                 ):
+            #                     clin_data = pd.concat(
+            #                         [
+            #                             clin_data,
+            #                             split_temp.datasets[key].metadata,
+            #                         ],
+            #                         axis=0,
+            #                     )
+            #     if len(clin_data) == 0: ## New predict case
+            #         for split_name in ["train", "test", "valid"]:
+            #             split_temp = getattr(result.new_datasets, split_name, None)
+            #             if split_temp is not None:
+            #                 if len(split_temp.datasets.keys()) > 0:
+            #                     for key in split_temp.datasets.keys():
+            #                         if isinstance(
+            #                             split_temp.datasets[key].metadata, pd.DataFrame
+            #                         ):
+            #                             clin_data = pd.concat(
+            #                                 [
+            #                                     clin_data,
+            #                                     split_temp.datasets[key].metadata,
+            #                                 ],
+            #                                 axis=0,
+            #                             )
+            #                 else:
+            #                     if isinstance(
+            #                         split_temp.metadata, pd.DataFrame
+            #                     ):
+            #                         clin_data = pd.concat(
+            #                             [
+            #                                 clin_data,
+            #                                 split_temp.metadata,
+            #                             ],
+            #                             axis=0,
+            #                         )
+            #     # remove duplicate rows
+            #     clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
 
                 # # Raise error no annotation given
                 # raise ValueError(

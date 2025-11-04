@@ -3,6 +3,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn import linear_model
 from sklearn.model_selection import cross_validate
 from sklearn.decomposition import PCA
@@ -16,7 +17,9 @@ from sklearn.base import ClassifierMixin, RegressorMixin
 from autoencodix.utils._result import Result
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.base._base_evaluator import BaseEvaluator
+from autoencodix.base._base_visualizer import BaseVisualizer
 
+sklearn.set_config(enable_metadata_routing=True)
 
 class GeneralEvaluator(BaseEvaluator):
     def __init__(self):
@@ -85,7 +88,10 @@ class GeneralEvaluator(BaseEvaluator):
         for task in reference_methods:
             print(f"Perform ML task with feature df: {task}")
 
-            clin_data = self._get_clin_data(datasets)
+            # clin_data = self._get_clin_data(datasets)
+            clin_data = BaseVisualizer._collect_all_metadata(result=result)
+            # print(clin_data)
+
 
             if split_type == "use-split":
                 # Pandas dataframe with sample_ids and split information
@@ -211,6 +217,10 @@ class GeneralEvaluator(BaseEvaluator):
                         sklearn_ml = ml_model_regression
 
                     if split_type == "use-split":
+                        # print("Sample Split:")
+                        # print(sample_split)
+                        # print("Latent:")
+                        # print(df)
                         results = self._single_ml_presplit(
                             sample_split=sample_split,
                             df=df,
@@ -332,105 +342,105 @@ class GeneralEvaluator(BaseEvaluator):
 
         return pd.DataFrame(score_df)
 
-    @staticmethod
-    def _get_clin_data(datasets) -> Union[pd.DataFrame, pd.Series]:
-        """Retrieves the clinical annotation DataFrame (clin_data) from the provided datasets.
+    # @staticmethod
+    # def _get_clin_data(datasets) -> Union[pd.DataFrame, pd.Series]:
+    #     """Retrieves the clinical annotation DataFrame (clin_data) from the provided datasets.
 
-        Handles both standard and XModalix dataset structures.
-        """
-        if hasattr(datasets.train, "metadata"):
-            # Check if metadata is a dictionary and contains 'paired'
-            if isinstance(datasets.train.metadata, dict):
-                if "paired" in datasets.train.metadata:
-                    clin_data = datasets.train.metadata["paired"]
-                    if hasattr(datasets, "test"):
-                        clin_data = pd.concat(
-                            [clin_data, datasets.test.metadata["paired"]],
-                            axis=0,
-                        )
-                    if hasattr(datasets, "valid"):
-                        clin_data = pd.concat(
-                            [clin_data, datasets.valid.metadata["paired"]],
-                            axis=0,
-                        )
-                else:
-                    # Iterate over all splits and keys, concatenate if DataFrame
-                    clin_data = pd.DataFrame()
-                    for split_name in ["train", "test", "valid"]:
-                        split_temp = getattr(datasets, split_name, None)
-                        if split_temp is not None and hasattr(split_temp, "metadata"):
-                            for key in split_temp.metadata.keys():
-                                if isinstance(split_temp.metadata[key], pd.DataFrame):
-                                    clin_data = pd.concat(
-                                        [
-                                            clin_data,
-                                            split_temp.metadata[key],
-                                        ],
-                                        axis=0,
-                                    )
-                    # remove duplicate rows
-                    clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
-                    # Raise error no annotation given
-                    raise ValueError(
-                        "Please provide paired annotation data with key 'paired' in metadata dictionary."
-                    )
-            elif isinstance(datasets.train.metadata, pd.DataFrame):
-                clin_data = datasets.train.metadata
-                if hasattr(datasets, "test"):
-                    clin_data = pd.concat(
-                        [clin_data, datasets.test.metadata],
-                        axis=0,
-                    )
-                if hasattr(datasets, "valid"):
-                    clin_data = pd.concat(
-                        [clin_data, datasets.valid.metadata],
-                        axis=0,
-                    )
-            else:
-                # Raise error no annotation given
-                raise ValueError(
-                    "Metadata is not a dictionary or DataFrame. Please provide a valid annotation data type."
-                )
-        # elif hasattr(datasets.train, "datasets"):
-        #     # XModalix-Case
-        #     clin_data = pd.DataFrame()
-        #     splits = [
-        #         datasets.train, datasets.valid, datasets.test
-        #     ]
+    #     Handles both standard and XModalix dataset structures.
+    #     """
+    #     if hasattr(datasets.train, "metadata"):
+    #         # Check if metadata is a dictionary and contains 'paired'
+    #         if isinstance(datasets.train.metadata, dict):
+    #             if "paired" in datasets.train.metadata:
+    #                 clin_data = datasets.train.metadata["paired"]
+    #                 if hasattr(datasets, "test"):
+    #                     clin_data = pd.concat(
+    #                         [clin_data, datasets.test.metadata["paired"]],
+    #                         axis=0,
+    #                     )
+    #                 if hasattr(datasets, "valid"):
+    #                     clin_data = pd.concat(
+    #                         [clin_data, datasets.valid.metadata["paired"]],
+    #                         axis=0,
+    #                     )
+    #             else:
+    #                 # Iterate over all splits and keys, concatenate if DataFrame
+    #                 clin_data = pd.DataFrame()
+    #                 for split_name in ["train", "test", "valid"]:
+    #                     split_temp = getattr(datasets, split_name, None)
+    #                     if split_temp is not None and hasattr(split_temp, "metadata"):
+    #                         for key in split_temp.metadata.keys():
+    #                             if isinstance(split_temp.metadata[key], pd.DataFrame):
+    #                                 clin_data = pd.concat(
+    #                                     [
+    #                                         clin_data,
+    #                                         split_temp.metadata[key],
+    #                                     ],
+    #                                     axis=0,
+    #                                 )
+    #                 # remove duplicate rows
+    #                 clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
+    #                 # Raise error no annotation given
+    #                 raise ValueError(
+    #                     "Please provide paired annotation data with key 'paired' in metadata dictionary."
+    #                 )
+    #         elif isinstance(datasets.train.metadata, pd.DataFrame):
+    #             clin_data = datasets.train.metadata
+    #             if hasattr(datasets, "test"):
+    #                 clin_data = pd.concat(
+    #                     [clin_data, datasets.test.metadata],
+    #                     axis=0,
+    #                 )
+    #             if hasattr(datasets, "valid"):
+    #                 clin_data = pd.concat(
+    #                     [clin_data, datasets.valid.metadata],
+    #                     axis=0,
+    #                 )
+    #         else:
+    #             # Raise error no annotation given
+    #             raise ValueError(
+    #                 "Metadata is not a dictionary or DataFrame. Please provide a valid annotation data type."
+    #             )
+    #     # elif hasattr(datasets.train, "datasets"):
+    #     #     # XModalix-Case
+    #     #     clin_data = pd.DataFrame()
+    #     #     splits = [
+    #     #         datasets.train, datasets.valid, datasets.test
+    #     #     ]
 
-        #     for s in splits:
-        #         for k in s.datasets.keys():
-        #             print(f"Processing dataset: {k}")
-        #             # Merge metadata by overlapping columns
-        #             overlap = clin_data.columns.intersection(s.datasets[k].metadata.columns)
-        #             if overlap.empty:
-        #                 overlap = s.datasets[k].metadata.columns
-        #             clin_data = pd.concat([clin_data, s.datasets[k].metadata[overlap]], axis=0)
+    #     #     for s in splits:
+    #     #         for k in s.datasets.keys():
+    #     #             print(f"Processing dataset: {k}")
+    #     #             # Merge metadata by overlapping columns
+    #     #             overlap = clin_data.columns.intersection(s.datasets[k].metadata.columns)
+    #     #             if overlap.empty:
+    #     #                 overlap = s.datasets[k].metadata.columns
+    #     #             clin_data = pd.concat([clin_data, s.datasets[k].metadata[overlap]], axis=0)
 
-        #     # Remove duplicate rows
-        #     clin_data = clin_data[~clin_data.index.duplicated(keep='first')]
-        else:
-            # Iterate over all splits and keys, concatenate if DataFrame
-            clin_data = pd.DataFrame()
-            for split_name in ["train", "test", "valid"]:
-                split_temp = getattr(datasets, split_name, None)
-                if split_temp is not None:
-                    for key in split_temp.datasets.keys():
-                        if isinstance(split_temp.datasets[key].metadata, pd.DataFrame):
-                            clin_data = pd.concat(
-                                [
-                                    clin_data,
-                                    split_temp.datasets[key].metadata,
-                                ],
-                                axis=0,
-                            )
-            # remove duplicate rows
-            clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
-        # Raise error no annotation given
-        # raise ValueError(
-        #     "No annotation data found. Please provide a valid annotation data type."
-        # )
-        return clin_data
+    #     #     # Remove duplicate rows
+    #     #     clin_data = clin_data[~clin_data.index.duplicated(keep='first')]
+    #     else:
+    #         # Iterate over all splits and keys, concatenate if DataFrame
+    #         clin_data = pd.DataFrame()
+    #         for split_name in ["train", "test", "valid"]:
+    #             split_temp = getattr(datasets, split_name, None)
+    #             if split_temp is not None:
+    #                 for key in split_temp.datasets.keys():
+    #                     if isinstance(split_temp.datasets[key].metadata, pd.DataFrame):
+    #                         clin_data = pd.concat(
+    #                             [
+    #                                 clin_data,
+    #                                 split_temp.datasets[key].metadata,
+    #                             ],
+    #                             axis=0,
+    #                         )
+    #         # remove duplicate rows
+    #         clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
+    #     # Raise error no annotation given
+    #     # raise ValueError(
+    #     #     "No annotation data found. Please provide a valid annotation data type."
+    #     # )
+    #     return clin_data
 
     def _enrich_results(
         self,

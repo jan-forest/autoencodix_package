@@ -424,6 +424,7 @@ class GeneralVisualizer(BaseVisualizer):
                     print(
                         "The provided label column is numeric and converted to categories."
                     )
+                    labels = [float("nan") if not isinstance(x, float) else x for x in labels]
                     labels = (
                         pd.qcut(
                             x=pd.Series(labels),
@@ -590,11 +591,13 @@ class GeneralVisualizer(BaseVisualizer):
         # print(labels[0])
         if not isinstance(labels[0], str):
             if len(np.unique(labels)) > 3:
-                labels = pd.qcut(
+                # Change all non-float labels to NaN
+                labels = [x if isinstance(x, float) else float("nan") for x in labels]
+                labels = list(pd.qcut(
                     x=pd.Series(labels),
                     q=4,
                     labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
-                ).astype(str)
+                ).astype(str))
             else:
                 labels = [str(x) for x in labels]
 
@@ -620,10 +623,10 @@ class GeneralVisualizer(BaseVisualizer):
         # else:
         #     cat_pal = sns.color_palette(n_colors=len(np.unique(df[param])))
 
-        if len(np.unique(df[param])) > 8:
-            cat_pal = sns.color_palette("tab20", n_colors=len(np.unique(df[param])))
+        if len(np.unique(labels)) > 8:
+            cat_pal = sns.color_palette("tab20", n_colors=len(labels))
         else:
-            cat_pal = sns.color_palette("tab10", n_colors=len(np.unique(df[param])))
+            cat_pal = sns.color_palette("tab10", n_colors=len(labels))
 
 
         g = sns.FacetGrid(

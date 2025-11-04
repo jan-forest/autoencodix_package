@@ -710,6 +710,8 @@ class XModalVisualizer(BaseVisualizer):
         # print(labels[0])
         if not isinstance(labels[0], str):
             if len(np.unique(labels)) > 3:
+                # Change all non-float labels to NaN
+                labels = [x if isinstance(x, float) else float("nan") for x in labels]
                 labels = pd.qcut(
                     x=pd.Series(labels),
                     q=4,

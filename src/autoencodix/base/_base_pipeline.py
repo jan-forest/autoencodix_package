@@ -896,6 +896,9 @@ class BasePipeline(abc.ABC):
                 "Evaluation continues but may produce incorrect results or errors."
             )
 
+        if len(params) == 0:
+            params = self.config.data_config.annotation_columns  # type: ignore
+            
         self.result = self._evaluator.evaluate(
             datasets=self._datasets,
             result=self.result,
@@ -946,6 +949,9 @@ class BasePipeline(abc.ABC):
         print("Creating plots ...")
 
         params: Optional[Union[List[str], str]] = kwargs.pop("params", None)
+        # Check if params are empty and annotation columns are available in config
+        if params is None and self.config.data_config.annotation_columns:
+            params = self.config.data_config.annotation_columns
         self._visualizer.show_loss(plot_type="absolute")
 
         self._visualizer.show_latent_space(

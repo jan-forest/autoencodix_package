@@ -548,8 +548,14 @@ class GeneralEvaluator(BaseEvaluator):
                         # Adjust X as well
                         X = X.loc[Y.index, :]
 
-
-                score_temp = sklearn_scorer(sklearn_ml, X, Y, labels=np.sort(Y_train.unique()))
+                if ml_type == "classification":
+                    score_temp = sklearn_scorer(sklearn_ml, X, Y, labels=np.sort(Y_train.unique()))
+                elif ml_type == "regression":
+                    score_temp = sklearn_scorer(sklearn_ml, X, Y)
+                else:
+                    raise ValueError(
+                        f"Your ML type {ml_type} is not supported. Please use 'classification' or 'regression'."
+                    )
                 score_df["value"].append(score_temp)
         else:
             ## Warning that there is only one class in the training data

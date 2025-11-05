@@ -96,18 +96,18 @@ class XModalix(BasePipeline):
         """
         print("Creating plots ...")
 
-        self._visualizer.show_loss(plot_type="absolute")
+        self.visualizer.show_loss(plot_type="absolute")
 
-        self._visualizer.show_latent_space(result=self.result, plot_type="Ridgeline")
+        self.visualizer.show_latent_space(result=self.result, plot_type="Ridgeline")
 
-        self._visualizer.show_latent_space(result=self.result, plot_type="2D-scatter")
+        self.visualizer.show_latent_space(result=self.result, plot_type="2D-scatter")
 
         dm_keys = find_translation_keys(
             config=self.config,
             trained_modalities=self._trainer._modality_dynamics.keys(),
         )
         if "IMG" in dm_keys["to"]:
-            self._visualizer.show_image_translation(
+            self.visualizer.show_image_translation(
                 result=self.result,
                 from_key=dm_keys["from"],
                 to_key=dm_keys["to"],

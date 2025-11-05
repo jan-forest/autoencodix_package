@@ -152,12 +152,12 @@ class BasePipeline(abc.ABC):
             config=self.config, ontologies=self.ontologies
         )
 
-        self._visualizer = (
+        self.visualizer = (
             visualizer()  # ty: ignore[call-non-callable]
             if visualizer is not None
             else BaseVisualizer()  # ty: ignore[call-non-callable]
         )  # ty: ignore[call-non-callable]
-        self._evaluator = (
+        self.evaluator = (
             evaluator()  # ty: ignore[call-non-callable]
             if evaluator is not None
             else BaseEvaluator()  # ty: ignore[call-non-callable]
@@ -879,7 +879,7 @@ class BasePipeline(abc.ABC):
         n_downsample: Optional[int] = 10000,
     ) -> Result:
         """TODO"""
-        if self._evaluator is None:
+        if self.evaluator is None:
             raise NotImplementedError("Evaluator not initialized")
         if self.result.model is None:
             raise NotImplementedError(
@@ -898,8 +898,14 @@ class BasePipeline(abc.ABC):
 
         if len(params) == 0:
             params = self.config.data_config.annotation_columns  # type: ignore
-            
-        self.result = self._evaluator.evaluate(
+        
+        if len(params) == 0:
+            raise ValueError(
+                "No parameters specified for evaluation. Please provide a list of "
+                "parameters or ensure that annotation_columns are set in the config."
+            )
+
+        self.result = self.evaluator.evaluate(
             datasets=self._datasets,
             result=self.result,
             ml_model_class=ml_model_class,
@@ -912,7 +918,7 @@ class BasePipeline(abc.ABC):
             n_downsample=n_downsample,
         )
 
-        _: Any = self._visualizer._plot_evaluation(result=self.result)
+        _: Any = self.visualizer._plot_evaluation(result=self.result)
 
         return self.result
 
@@ -926,10 +932,10 @@ class BasePipeline(abc.ABC):
         Raises:
             NotImplementedError: If visualizer is not initialized.
         """
-        if self._visualizer is None:
+        if self.visualizer is None:
             raise NotImplementedError("Visualizer not initialized")
 
-        self._visualizer.visualize(result=self.result, config=self.config)
+        self.visualizer.visualize(result=self.result, config=self.config)
 
     def show_result(self, split: str = "all", **kwargs):
         """Displays key visualizations of model results.
@@ -952,13 +958,13 @@ class BasePipeline(abc.ABC):
         # Check if params are empty and annotation columns are available in config
         if params is None and self.config.data_config.annotation_columns:
             params = self.config.data_config.annotation_columns
-        self._visualizer.show_loss(plot_type="absolute")
+        self.visualizer.show_loss(plot_type="absolute")
 
-        self._visualizer.show_latent_space(
+        self.visualizer.show_latent_space(
             result=self.result, plot_type="Ridgeline", split=split, param=params
         )
 
-        self._visualizer.show_latent_space(
+        self.visualizer.show_latent_space(
             result=self.result, plot_type="2D-scatter", split=split, param=params
         )
 

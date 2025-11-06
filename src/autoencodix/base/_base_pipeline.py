@@ -904,6 +904,20 @@ class BasePipeline(abc.ABC):
                 "No parameters specified for evaluation. Please provide a list of "
                 "parameters or ensure that annotation_columns are set in the config."
             )
+        
+        if "RandomFeature" in reference_methods:
+            if self._datasets is None:
+                raise ValueError(
+                    "Datasets not available for adding RandomFeature. Please keep "
+                    "preprocessed data available before evaluation."
+                )
+        
+        if len(self.result.latentspaces._data) == 0:
+            raise ValueError(
+                "No latent spaces found in results. Please run predict() to "
+                "calculate embeddings before evaluation."
+            )
+
 
         self.result = self.evaluator.evaluate(
             datasets=self._datasets,
@@ -958,15 +972,28 @@ class BasePipeline(abc.ABC):
         # Check if params are empty and annotation columns are available in config
         if params is None and self.config.data_config.annotation_columns:
             params = self.config.data_config.annotation_columns
-        self.visualizer.show_loss(plot_type="absolute")
+        
+        if len(self.result.losses._data) != 0:
+            self.visualizer.show_loss(plot_type="absolute")
+        else:
+            warnings.warn(
+                "No loss data found in results. Skipping loss curve visualization."
+            )
 
-        self.visualizer.show_latent_space(
-            result=self.result, plot_type="Ridgeline", split=split, param=params
-        )
+        if len(self.result.latentspaces._data) != 0:
+            self.visualizer.show_latent_space(
+                result=self.result, plot_type="Ridgeline", split=split, param=params
+            )
+            self.visualizer.show_latent_space(
+                result=self.result, plot_type="2D-scatter", split=split, param=params
+            )
+        else:
+            warnings.warn(
+                "No latent spaces found in results. Please run predict() to "
+                "calculate embeddings."
+            )
+        
 
-        self.visualizer.show_latent_space(
-            result=self.result, plot_type="2D-scatter", split=split, param=params
-        )
 
     def run(
         self, data: Optional[Union[DatasetContainer, DataPackage]] = None

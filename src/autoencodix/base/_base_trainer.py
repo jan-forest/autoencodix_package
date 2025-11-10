@@ -74,7 +74,6 @@ class BaseTrainer(abc.ABC):
             strategy=self._config.gpu_strategy,
         )
 
-        self._init_loaders()
         self._fabric.launch()
         self._setup_fabric(old_model=old_model)
         self._n_cpus = os.cpu_count()
@@ -203,9 +202,8 @@ class BaseTrainer(abc.ABC):
 
     def _should_checkpoint(self, epoch: int) -> bool:
         return (
-            (epoch + 1) % self._config.checkpoint_interval == 0
-            or epoch == self._config.epochs - 1
-        )
+            epoch + 1
+        ) % self._config.checkpoint_interval == 0 or epoch == self._config.epochs - 1
 
     @abc.abstractmethod
     def train(self, epochs_overwrite: Optional[int] = None) -> Result:

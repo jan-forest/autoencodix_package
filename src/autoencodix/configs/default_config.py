@@ -125,9 +125,8 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     # annotation specific -------------------------
     # xmodalix specific -------------------------
     translate_direction: Union[Literal["from", "to"], None] = Field(default=None)
-    pretrain_epochs: int = Field(
-        default=0,
-        ge=0,
+    pretrain_epochs: Optional[int] = Field(
+        default=None,
         description="Number of pretraining epochs. This overwrites the global 'pretraining_epochs' in DefaultConfig class to have different number of pretraining epochs for each data modality",
     )
 

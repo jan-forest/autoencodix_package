@@ -275,6 +275,7 @@ class Saver:
             pipeline.preprocessed_data = None  # ty: ignore
             pipeline._datasets = None  # ty: ignore
             pipeline.raw_user_data = None  # ty: ignore
+            pipeline._datasets = None
             pipeline._preprocessor = type(pipeline._preprocessor)(  # ty: ignore
                 config=pipeline.config  # ty: ignore
             )  # ty: ignore

@@ -218,8 +218,8 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         ge=0,
         description="Number of layers in encoder/decoder, without latent layer. If 0, is only the latent layer.",
     )
-    enc_factor: int = Field(
-        default=4, ge=1, description="Scaling factor for encoder dimensions"
+    enc_factor: float = Field(
+        default=4, gt=0, description="Scaling factor for encoder dimensions"
     )
     input_dim: int = Field(default=10000, ge=1, description="Input dimension")
     drop_p: float = Field(

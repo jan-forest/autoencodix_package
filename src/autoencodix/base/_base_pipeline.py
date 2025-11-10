@@ -730,19 +730,13 @@ class BasePipeline(abc.ABC):
         Raises:
             ValueError: If no test data is available in the container.
         """
-        if dataset_container.test is None:
-            raise ValueError(f"No test data available in {context} for reconstruction.")
-        try:
-            temp = copy.deepcopy(dataset_container.test)
-            temp.data = raw_recon
-            self.result.final_reconstruction = temp
-        except Exception as e:
-            print(
-                "Reconstruction Formatting (the process of using the reconstruction "
-                "output of the autoencoder models and combine it with metadata to get "
-                "the exact same data structure as the raw input data i.e, a DataPackage, "
-                "DatasetContainer, or AnnData) did not work for this data type or case."
-            )
+
+        # if dataset_container.test is None:
+        #     raise ValueError(f"No test data available in {context} for reconstruction.")
+        # temp = copy.deepcopy(dataset_container.test)
+        # temp.data = raw_recon
+        # self.result.final_reconstruction = temp
+        pass
 
     def _handle_multi_single_cell_reconstruction(
         self, raw_recon: torch.Tensor, predictor_results: Result
@@ -882,6 +876,7 @@ class BasePipeline(abc.ABC):
         split_type: Literal[
             "use-split", "CV-5", "LOOC"
         ] = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
+        n_downsample: Optional[int] = 10000,
     ) -> Result:
         """TODO"""
         if self._evaluator is None:
@@ -911,6 +906,7 @@ class BasePipeline(abc.ABC):
             metric_regression=metric_regression,
             reference_methods=reference_methods,
             split_type=split_type,
+            n_downsample=n_downsample,
         )
 
         _: Any = self._visualizer._plot_evaluation(result=self.result)

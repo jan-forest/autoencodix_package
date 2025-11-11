@@ -1,6 +1,7 @@
 from typing import Dict, Optional, Type, Union, List
 
 import numpy as np
+import torch
 
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_preprocessor import BasePreprocessor
@@ -76,3 +77,65 @@ class Vanillix(BasePipeline):
             custom_split=custom_splits,
             ontologies=ontologies,
         )
+
+    def sample_latent_space(
+        self,
+        n_samples: int,
+        split: str = "test",
+        epoch: int = -1,
+    ) -> torch.Tensor:
+        """Samples latent space points from the empirical latent distribution.
+
+        This method draws new latent points by fitting a diagonal Gaussian
+        distribution to the latent codes of the specified split and epoch, and
+        sampling from it. This enables approximate generative sampling for
+        autoencoders that do not model uncertainty explicitly.
+
+        Args:
+            n_samples: The number of latent points to sample. Must be a positive
+                integer.
+            split: The split to sample from (train, valid, test), default is test.
+            epoch: The epoch to sample from, default is the last epoch (-1).
+
+        Returns:
+            z: torch.Tensor - The sampled latent space points.
+
+        Raises:
+            ValueError: If the model has not been trained, latent codes have not
+                been computed, or n_samples is not a positive integer.
+            TypeError: If the stored latent codes are not numpy arrays.
+        """
+
+        if not hasattr(self, "_trainer") or self._trainer is None:
+            raise ValueError("Model is not trained yet. Please train the model first.")
+        if self.result.latentspaces is None:
+            raise ValueError("Model has no stored latent codes for sampling.")
+        if not isinstance(n_samples, int) or n_samples <= 0:
+            raise ValueError("n_samples must be a positive integer.")
+
+        Z = self.result.latentspaces.get(split=split, epoch=epoch)
+
+        if not isinstance(Z, np.ndarray):
+            raise TypeError(
+                f"Expected latent codes to be of type numpy.ndarray, got {type(Z)}."
+            )
+
+        Z_t = torch.from_numpy(Z).to(
+            device=self._trainer._model.device,
+            dtype=self._trainer._model.dtype,
+        )
+
+        with torch.no_grad():
+            # Fit empirical diagonal Gaussian
+            global_mu = Z_t.mean(dim=0)
+            global_std = Z_t.std(dim=0)
+
+            eps = torch.randn(
+                n_samples,
+                Z_t.shape[1],
+                device=Z_t.device,
+                dtype=Z_t.dtype,
+            )
+
+            z = global_mu + eps * global_std
+            return z

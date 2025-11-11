@@ -74,30 +74,43 @@ class GeneralEvaluator(BaseEvaluator):
 
         reference_methods.append("Latent")
 
-        # ## TODO when x-modalix is ready, check how to adjust evaluation of both latent spaces
-        # is_modalix = False # TODO Remove and implement individual Evaluators later
-
-        # if type(result.latentspaces.get(epoch=-1,split="train")) == dict:
-        #     # For X-Modalix and others with multiple VAE Latentspaces
-        #     reference_methods = [f"{method}_$_{key}" for method in reference_methods for key in result.latentspaces.get(epoch=-1,split="train").keys()]
-        #     is_modalix = True
         reference_methods = self._expand_reference_methods(
             reference_methods=reference_methods, result=result
         )
+
+        ## Overwrite original datasets with new_datasets if available after predict with other data
+        if datasets is None:
+            datasets = DatasetContainer()
+        if bool(result.new_datasets.train):
+            datasets.train = result.new_datasets.train
+        if bool(result.new_datasets.valid):
+            datasets.valid = result.new_datasets.valid
+        if bool(result.new_datasets.test):
+            datasets.test = result.new_datasets.test
+
+        if not bool(datasets.train or datasets.valid or datasets.test):
+            raise ValueError(
+                "No datasets found in result object. Please run predict with new data or save/load with all datasets by using save_all=True."
+            )
+        elif split_type == "use-split" and (bool(datasets.train) + bool(datasets.valid) + bool(datasets.test)) < 2:
+            warnings.warn(
+                "Warning: Less than two splits found in result datasets for 'use-split' evaluation. Switch to cross-validation (CV-5) instead."
+            )
+            split_type = "CV-5"
 
         for task in reference_methods:
             print(f"Perform ML task with feature df: {task}")
 
             # clin_data = self._get_clin_data(datasets)
             clin_data = BaseVisualizer._collect_all_metadata(result=result)
-            # print(clin_data)
+            
 
 
             if split_type == "use-split":
                 # Pandas dataframe with sample_ids and split information
                 sample_split = pd.DataFrame(columns=["SAMPLE_ID", "SPLIT"])
 
-                if hasattr(datasets, "train"):
+                if datasets.train is not None:
                     if hasattr(datasets.train, "paired_sample_ids"):
                         if datasets.train.paired_sample_ids is not None:
                             sample_ids = datasets.train.paired_sample_ids
@@ -115,11 +128,11 @@ class GeneralEvaluator(BaseEvaluator):
                         axis=0,
                         ignore_index=True,
                     )
-                else:
-                    raise ValueError(
-                        "No training data found. Please provide a valid training dataset."
-                    )
-                if hasattr(datasets, "valid"):
+                # else:
+                #     raise ValueError(
+                #         "No training data found. Please provide a valid training dataset."
+                #     )
+                if datasets.valid is not None:
                     if hasattr(datasets.valid, "paired_sample_ids"):
                         if datasets.valid.paired_sample_ids is not None:
                             sample_ids = datasets.valid.paired_sample_ids
@@ -137,7 +150,7 @@ class GeneralEvaluator(BaseEvaluator):
                         axis=0,
                         ignore_index=True,
                     )
-                if hasattr(datasets, "test"):
+                if datasets.test is not None:
                     if hasattr(datasets.test, "paired_sample_ids"):
                         if datasets.test.paired_sample_ids is not None:
                             sample_ids = datasets.test.paired_sample_ids
@@ -515,6 +528,9 @@ class GeneralEvaluator(BaseEvaluator):
                 X = df.loc[
                     sample_split.loc[sample_split.SPLIT == split, "SAMPLE_ID"], :
                 ]
+                if X.shape[0] == 0:
+                    # No samples in this split, skip
+                    continue
                 samples = [s for s in X.index]
                 Y = clin_data.loc[samples, task_param]
 

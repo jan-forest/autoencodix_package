@@ -279,7 +279,7 @@ class Saver:
             pipeline._preprocessor = type(pipeline._preprocessor)(  # ty: ignore
                 config=pipeline.config  # ty: ignore
             )  # ty: ignore
-            pipeline._visualizer = type(pipeline._visualizer)()  # ty: ignore
+            pipeline.visualizer = type(pipeline.visualizer)()  # ty: ignore
 
         self._save_pipeline_object(pipeline)
 

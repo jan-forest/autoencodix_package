@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 import seaborn as sns
 
+import sklearn
 from sklearn.decomposition import PCA
 from umap import UMAP
 from sklearn.manifold import TSNE
@@ -17,6 +18,8 @@ from sklearn.base import ClassifierMixin, RegressorMixin
 from autoencodix.utils._result import Result
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.evaluate._general_evaluator import GeneralEvaluator
+
+sklearn.set_config(enable_metadata_routing=True)
 
 
 class XModalixEvaluator(GeneralEvaluator):

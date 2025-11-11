@@ -489,3 +489,58 @@ class BaseVisualizer(abc.ABC):
         fig.suptitle("Model Weights", size=20)
         plt.close()
         return fig
+
+    @staticmethod
+    def _collect_all_metadata(result):
+        all_metadata = pd.DataFrame()
+
+        # 1) collect metadata from results.datasets
+
+        # 1a) iterate over splits [train, valid, test] if they exist
+        for split in ['train', 'valid', 'test']:
+            
+            if hasattr(result.datasets, split) and result.datasets[split] is not None:
+                if hasattr(result.datasets[split], 'metadata'):
+                    split_metadata = result.datasets[split].metadata
+
+                    # 1b) if result.datasets.split is a dictionary, iterate over keys (modalities)
+                    if isinstance(split_metadata, dict):
+                        for modality, modality_data in split_metadata.items():
+                            all_metadata = pd.concat([all_metadata, modality_data], axis=0)
+                    # 1c) if result.datasets.split is a Dataframe, just collect metadata directly
+                    elif isinstance(split_metadata, pd.DataFrame):
+                        all_metadata = pd.concat([all_metadata, split_metadata], axis=0)
+                else:
+                    split_modalities = result.datasets[split].datasets
+                    if isinstance(split_modalities, dict):
+                        for modality, modality_data in split_modalities.items():
+                            if hasattr(modality_data, 'metadata'):
+                                modality_metadata = modality_data.metadata
+                                if isinstance(modality_metadata, pd.DataFrame):
+                                    all_metadata = pd.concat([all_metadata, modality_metadata], axis=0)
+
+        # 2) collect metadata from results.new_datasets in the same way
+        if hasattr(result, 'new_datasets'):
+            for split in ['train', 'valid', 'test']:
+                if hasattr(result.new_datasets, split) and result.new_datasets[split] is not None:
+                    if hasattr(result.new_datasets[split], 'metadata'):
+                        split_metadata = result.new_datasets[split].metadata
+
+                        if isinstance(split_metadata, dict):
+                            for modality, modality_data in split_metadata.items():
+                                all_metadata = pd.concat([all_metadata, modality_data], axis=0)
+                        elif isinstance(split_metadata, pd.DataFrame):
+                            all_metadata = pd.concat([all_metadata, split_metadata], axis=0)
+                    else:
+                        split_modalities = result.new_datasets[split].datasets
+                        if isinstance(split_modalities, dict):
+                            for modality, modality_data in split_modalities.items():
+                                if hasattr(modality_data, 'metadata'):
+                                    modality_metadata = modality_data.metadata
+                                    if isinstance(modality_metadata, pd.DataFrame):
+                                        all_metadata = pd.concat([all_metadata, modality_metadata], axis=0)
+
+        # Remove duplicate rows if any
+        all_metadata = all_metadata.loc[~all_metadata.index.duplicated(keep='first')]
+
+        return all_metadata

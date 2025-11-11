@@ -74,7 +74,6 @@ class BaseTrainer(abc.ABC):
             strategy=self._config.gpu_strategy,
         )
 
-        self._init_loaders()
         self._fabric.launch()
         self._setup_fabric(old_model=old_model)
         self._n_cpus = os.cpu_count()

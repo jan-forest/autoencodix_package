@@ -31,8 +31,8 @@ class GeneralEvaluator(BaseEvaluator):
         self,
         datasets: DatasetContainer,
         result: Result,
-        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(),  # Default is sklearn LogisticRegression
-        ml_model_regression: RegressorMixin = linear_model.LinearRegression(),  # Default is sklearn LinearRegression
+        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(max_iter=1000),  # Default is sklearn LogisticRegression
+        ml_model_regression: RegressorMixin = linear_model.LinearRegression(max_iter=1000),  # Default is sklearn LinearRegression
         params: Union[
             list, str
         ] = "all",  # No default? ... or all params in annotation?
@@ -81,10 +81,7 @@ class GeneralEvaluator(BaseEvaluator):
         ## Overwrite original datasets with new_datasets if available after predict with other data
         if datasets is None:
             datasets = DatasetContainer()
-        if bool(result.new_datasets.train):
-            datasets.train = result.new_datasets.train
-        if bool(result.new_datasets.valid):
-            datasets.valid = result.new_datasets.valid
+
         if bool(result.new_datasets.test):
             datasets.test = result.new_datasets.test
 
@@ -92,9 +89,9 @@ class GeneralEvaluator(BaseEvaluator):
             raise ValueError(
                 "No datasets found in result object. Please run predict with new data or save/load with all datasets by using save_all=True."
             )
-        elif split_type == "use-split" and (bool(datasets.train) + bool(datasets.valid) + bool(datasets.test)) < 2:
+        elif split_type == "use-split" and not bool(datasets.train):
             warnings.warn(
-                "Warning: Less than two splits found in result datasets for 'use-split' evaluation. Switch to cross-validation (CV-5) instead."
+                "Warning: No train split found in result datasets for 'use-split' evaluation. ML model cannot be trained without a train split. Switch to cross-validation (CV-5) instead."
             )
             split_type = "CV-5"
 

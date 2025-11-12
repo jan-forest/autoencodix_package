@@ -897,8 +897,11 @@ class BasePipeline(abc.ABC):
             )
 
         if len(params) == 0:
-            params = self.config.data_config.annotation_columns  # type: ignore
-        
+            if self.config.data_config.annotation_columns is None:
+                params = []  # type: ignore
+            else:
+                params = self.config.data_config.annotation_columns  # type: ignore
+
         if len(params) == 0:
             raise ValueError(
                 "No parameters specified for evaluation. Please provide a list of "

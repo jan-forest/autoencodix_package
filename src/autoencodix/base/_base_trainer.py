@@ -61,7 +61,6 @@ class BaseTrainer(abc.ABC):
         if old_model is None:
             self._input_validation()
             self._init_loaders()
-        self._handle_reproducibility()
 
         self._loss_fn = self._loss_type(config=self._config)
 
@@ -76,6 +75,8 @@ class BaseTrainer(abc.ABC):
 
         self._fabric.launch()
         self._setup_fabric(old_model=old_model)
+
+        self._handle_reproducibility()
         self._n_cpus = os.cpu_count()
         if self._n_cpus is None:
             self._n_cpus = 0
@@ -167,17 +168,27 @@ class BaseTrainer(abc.ABC):
         if self._config.reproducible:
             torch.use_deterministic_algorithms(True)
             torch.manual_seed(seed=self._config.global_seed)
-            if self._config.device == "cuda":
+            if self._model.device.type == "cuda":
                 torch.cuda.manual_seed(seed=self._config.global_seed)
                 torch.cuda.manual_seed_all(seed=self._config.global_seed)
                 torch.backends.cudnn.deterministic = True
                 torch.backends.cudnn.benchmark = False
-            elif self._config.device == "mps":
-                raise NotImplementedError(
-                    "MPS backend does not support reproducibility settings."
+
+            elif self._model.device.type == "mps":
+                torch.mps.manual_seed(seed=self._config.global_seed)
+
+                # Use deterministic algorithms where possible,
+                # but only WARN instead of crashing if one is not available.
+                torch.use_deterministic_algorithms(True, warn_only=True)
+
+                print(
+                    "Warning: MPS backend has limited support for deterministic algorithms. "
+                    "Seeding is active, but full reproducibility is not guaranteed."
                 )
             else:
-                print("cpu not relevant here")
+                print(
+                    f"Reproducibility settings for device {self._model.device.type} are not implemented or necessary i.e. for cpu."
+                )
 
     def _init_model_architecture(self, ontologies: tuple, old_model=None) -> None:
         """Initializes the model architecture, based on the model type and input dimension."""

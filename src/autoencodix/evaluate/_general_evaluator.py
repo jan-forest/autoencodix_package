@@ -21,6 +21,7 @@ from autoencodix.base._base_visualizer import BaseVisualizer
 
 sklearn.set_config(enable_metadata_routing=True)
 
+
 class GeneralEvaluator(BaseEvaluator):
     def __init__(self):
         # super().__init__()
@@ -40,7 +41,9 @@ class GeneralEvaluator(BaseEvaluator):
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
         split_type: str = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
-        n_downsample: Union[int, None] = 10000,  # Default is 10000, if provided downsample to this number of samples for faster evaluation. Set to None to disable downsampling.
+        n_downsample: Union[
+            int, None
+        ] = 10000,  # Default is 10000, if provided downsample to this number of samples for faster evaluation. Set to None to disable downsampling.
     ) -> Result:
         """Evaluates the performance of machine learning models on various feature representations and clinical parameters.
 
@@ -91,7 +94,6 @@ class GeneralEvaluator(BaseEvaluator):
             # clin_data = self._get_clin_data(datasets)
             clin_data = BaseVisualizer._collect_all_metadata(result=result)
             # print(clin_data)
-
 
             if split_type == "use-split":
                 # Pandas dataframe with sample_ids and split information
@@ -200,10 +202,12 @@ class GeneralEvaluator(BaseEvaluator):
                                 samples_nonna.intersection(sample_split.index), :
                             ]
                         # print(sample_split)
-                    
+
                     if n_downsample is not None:
                         if df.shape[0] > n_downsample:
-                            sample_idx = np.random.choice(df.shape[0], n_downsample, replace=False)
+                            sample_idx = np.random.choice(
+                                df.shape[0], n_downsample, replace=False
+                            )
                             df = df.iloc[sample_idx]
                             if split_type == "use-split":
                                 sample_split = sample_split.loc[df.index, :]
@@ -549,7 +553,9 @@ class GeneralEvaluator(BaseEvaluator):
                         X = X.loc[Y.index, :]
 
                 if ml_type == "classification":
-                    score_temp = sklearn_scorer(sklearn_ml, X, Y, labels=np.sort(Y_train.unique()))
+                    score_temp = sklearn_scorer(
+                        sklearn_ml, X, Y, labels=np.sort(Y_train.unique())
+                    )
                 elif ml_type == "regression":
                     score_temp = sklearn_scorer(sklearn_ml, X, Y)
                 else:

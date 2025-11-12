@@ -47,8 +47,8 @@ dev = [
     "mkdocs-material>=9.6.19",
     "mkdocstrings>=0.30.0",
     "ty>=0.0.1a20",
-    "cellxgene-census>=1.17.0",
-    "syne-tune>=0.14.2",
+    # "cellxgene-census>=1.17.0",
+    # "syne-tune>=0.14.2",
     "pympler>=1.1",
 ]
 

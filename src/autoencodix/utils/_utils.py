@@ -267,21 +267,24 @@ class Saver:
         self._save_model_state(pipeline)
         self.pipeline = pipeline
 
+        self.pipeline._trainer.purge()
+
         if not self.save_all:
             print("saving memory efficient")
             self.reset_to_defaults(pipeline.result)  # ty: ignore
-            pipeline._trainer.purge()
 
-            pipeline.preprocessed_data = None  # ty: ignore
-            pipeline._datasets = None  # ty: ignore
-            pipeline.raw_user_data = None  # ty: ignore
-            pipeline._datasets = None
-            pipeline._preprocessor = type(pipeline._preprocessor)(  # ty: ignore
+            self.pipeline.preprocessed_data = None  # ty: ignore
+            self.pipeline._datasets = None  # ty: ignore
+            self.pipeline.raw_user_data = None  # ty: ignore
+            self.pipeline._datasets = None
+            self.pipeline._preprocessor = type(
+                self.pipeline._preprocessor
+            )(  # ty: ignore
                 config=pipeline.config  # ty: ignore
             )  # ty: ignore
-            pipeline.visualizer = type(pipeline.visualizer)()  # ty: ignore
+            self.pipeline.visualizer = type(self.pipeline.visualizer)()  # ty: ignore
 
-        self._save_pipeline_object(pipeline)
+        self._save_pipeline_object(self.pipeline)
 
         with zipfile.ZipFile(f"{self.file_path}.zip", "w") as archive:
             archive.write(self.file_path)

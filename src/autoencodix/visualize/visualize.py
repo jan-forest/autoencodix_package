@@ -705,7 +705,9 @@ class Visualizer(BaseVisualizer):
                         "The provided label column is numeric and converted to categories."
                     )
                     # Change non-float labels to NaN
-                    labels = [x if isinstance(x, float) else float("nan") for x in labels]
+                    labels = [
+                        x if isinstance(x, float) else float("nan") for x in labels
+                    ]
                     labels = (
                         pd.qcut(
                             x=pd.Series(labels),

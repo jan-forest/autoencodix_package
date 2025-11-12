@@ -107,7 +107,6 @@ class Ontix(BasePipeline):
                 f"For Ontix Pipeline, we only allow OntixConfig as type for config, got {type(self.config)}"
             )
 
-
     def _read_ont_file(self, file_path: str, sep: str = "\t") -> dict:
         """Function to read-in text files of ontologies with format child - separator - parent into an dictionary.
 

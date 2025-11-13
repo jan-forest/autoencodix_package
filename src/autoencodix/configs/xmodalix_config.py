@@ -4,6 +4,7 @@ from pydantic import Field, model_validator
 import warnings
 from typing import Optional
 
+
 class XModalixConfig(DefaultConfig):
     """
     A specialized configuration inheriting from DefaultConfig.

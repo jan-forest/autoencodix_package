@@ -2,6 +2,7 @@ from .default_config import DefaultConfig
 
 from pydantic import Field, model_validator
 import warnings
+from typing import Optional
 
 
 class XModalixConfig(DefaultConfig):
@@ -12,9 +13,8 @@ class XModalixConfig(DefaultConfig):
     for the XModalix model, while inheriting all other settings.
     """
 
-    pretrain_epochs: int = Field(
-        default=5,  # Overridden default (was 0)
-        ge=0,
+    pretrain_epochs: Optional[int] = Field(
+        default=None,  # Overridden default (was 0)
         description="Number of pretraining epochs, can be overwritten in DataInfo to have different number of pretraining epochs for each data modality",
     )
 

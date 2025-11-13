@@ -183,7 +183,8 @@ class GeneralTrainer(BaseTrainer):
         current_batch = 0
         for indices, features, sample_ids in self._trainloader:
             print(
-                f"Processing batch {current_batch+1}/{len(self._trainloader)}", end="\r"
+                f"Processing batch {current_batch + 1}/{len(self._trainloader)}",
+                end="\r",
             )
             current_batch += 1
             self._optimizer.zero_grad()

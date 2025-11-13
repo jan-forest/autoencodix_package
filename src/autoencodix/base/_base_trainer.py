@@ -105,8 +105,8 @@ class BaseTrainer(abc.ABC):
 
     def _init_loaders(self):
         """Initializes the DataLoaders for training and validation datasets."""
-        g = torch.Generator()
-        g.manual_seed(self._config.global_seed)
+        # g = torch.Generator()
+        # g.manual_seed(self._config.global_seed)
         last_batch_is_one_sample = len(self._trainset) % self._config.batch_size == 1
         corrected_bs = (
             self._config.batch_size + 1
@@ -123,7 +123,7 @@ class BaseTrainer(abc.ABC):
             shuffle=True,
             batch_size=corrected_bs,
             worker_init_fn=self._seed_worker,
-            generator=g,
+            # generator=g,
         )
         if self._validset:
             last_batch_is_one_sample = (

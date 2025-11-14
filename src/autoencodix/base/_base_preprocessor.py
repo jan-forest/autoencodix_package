@@ -931,7 +931,7 @@ class BasePreprocessor(abc.ABC):
         """
 
         scaling_method = self.config.data_config.data_info[info_key].scaling
-        if scaling_method == "NONE":
+        if scaling_method == "NOTSET":
             scaling_method = self.config.scaling
         processed_images = []
         normalizer = ImageNormalizer()  # Instance created once here

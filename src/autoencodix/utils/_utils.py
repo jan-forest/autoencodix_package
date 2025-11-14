@@ -10,12 +10,14 @@ from collections import defaultdict
 from dataclasses import MISSING, fields, is_dataclass
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, no_type_check
+from autoencodix.data._datasetcontainer import DatasetContainer
+from autoencodix.utils._result import Result
 
 import dill as pickle  # type: ignore
 import torch
 from matplotlib import pyplot as plt
 
-from ..configs.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 # only for type hints, to avoid circual import
@@ -23,6 +25,26 @@ class BasePipeline:
     """Only for type hints in utils, not real BasePipeline class"""
 
     pass
+
+
+def get_dataset(result: Result) -> Optional[DatasetContainer]:
+    """Retrieve the dataset from the Result object, depending on if new_datasets is filled.
+
+    Args:
+        result: The Result object containing the dataset.
+    Returns:
+        The appropriate DatasetContainer object.
+
+    """
+    splits = ["train", "valid", "test"]
+    if not result.new_datasets:
+        return result.datasets
+    new_values: List[Any] = [result.new_datasets[split] for split in splits]
+    # check if all new_datasets are None
+    if all(v is None for v in new_values):
+        return result.datasets
+    else:
+        return result.new_datasets
 
 
 def nested_dict():
@@ -277,9 +299,7 @@ class Saver:
             self.pipeline._datasets = None  # ty: ignore
             self.pipeline.raw_user_data = None  # ty: ignore
             self.pipeline._datasets = None
-            self.pipeline._preprocessor = type(
-                self.pipeline._preprocessor
-            )(  # ty: ignore
+            self.pipeline._preprocessor = type(self.pipeline._preprocessor)(  # ty: ignore
                 config=pipeline.config  # ty: ignore
             )  # ty: ignore
             self.pipeline.visualizer = type(self.pipeline.visualizer)()  # ty: ignore

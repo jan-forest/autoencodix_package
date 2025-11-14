@@ -22,6 +22,7 @@ from captum.attr import (
 )
 from IPython.display import HTML, Image, clear_output, display
 
+from autoencodix.modeling._captum_forward import CaptumForward
 from autoencodix.utils.adata_converter import AnnDataConverter
 
 warnings.filterwarnings("ignore")
@@ -43,9 +44,9 @@ class Vanillix_EncoderSingleDim(nn.Module):
             )
 
         total_elements = x.numel()
-        assert (
-            total_elements % self.input_dim == 0
-        ), f"Total elements {total_elements} is not a multiple of input_dim {self.input_dim}"
+        assert total_elements % self.input_dim == 0, (
+            f"Total elements {total_elements} is not a multiple of input_dim {self.input_dim}"
+        )
 
         batch_size = x.size(0)
         x = x.view(batch_size, -1)
@@ -518,9 +519,9 @@ class Varix_EncoderSingleDim(nn.Module):
             )
 
         total_elements = x.numel()
-        assert (
-            total_elements % self.input_dim == 0
-        ), f"Total elements {total_elements} is not a multiple of input_dim {self.input_dim}"
+        assert total_elements % self.input_dim == 0, (
+            f"Total elements {total_elements} is not a multiple of input_dim {self.input_dim}"
+        )
 
         batch_size = x.size(0)
         x = x.view(batch_size, -1)

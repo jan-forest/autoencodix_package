@@ -1,5 +1,4 @@
 import abc
-import copy
 from typing import Dict, Optional, Tuple, Type, Union, Any, Literal, List
 
 import warnings
@@ -1176,3 +1175,6 @@ class BasePipeline(abc.ABC):
         with torch.no_grad():
             generated = self.decode(latent=latent_prior)
             return generated
+
+    def explain(self):
+        pass

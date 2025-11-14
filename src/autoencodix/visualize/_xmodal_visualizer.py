@@ -283,10 +283,9 @@ class XModalVisualizer(BaseVisualizer):
         result: Result,
         from_key: str,
         to_key: str,
-        split: str = "test",
         n_sample_per_class: int = 3,
         param: Optional[str] = None,
-    ) -> None:  # ty: ignore
+        ) -> None:  # ty: ignore
         """Visualizes image translation results for a given dataset.
 
         Split by displaying a grid of original, translated, and reference images,grouped by class values.
@@ -307,25 +306,15 @@ class XModalVisualizer(BaseVisualizer):
                 "Image translation grid visualization is only possible for translation to IMG data type."
             )
         else:
-            # if not split == "test":
-            #     # make warning ... change in future TODO
-            #     warnings.warn(
-            #         "Currently, only 'test' split is supported for image translation visualization."
-            #     )
-            #     split = "test"
 
+            split = "test"  # Currently only test split is supported
             ## Get n samples per class
             if split == "test":
                 meta = result.datasets.test.datasets[to_key].metadata
-                # sample_ids_list = result.datasets.test.datasets[to_key].sample_ids
-                sample_ids_list = result.sample_ids.get(epoch=-1, split="test")[to_key]
-            if split == "train":
-                meta = result.datasets.train.datasets[to_key].metadata
-                # sample_ids_list = result.datasets.train.datasets[to_key].sample_ids
-                sample_ids_list = result.sample_ids.get(epoch=-1, split="train")[to_key]
-            if split == "valid":
-                meta = result.datasets.valid.datasets[to_key].metadata
-                sample_ids_list = result.sample_ids.get(epoch=-1, split="valid")[to_key]
+                paired_sample_ids = result.datasets.test.paired_sample_ids
+
+            # Restrict meta to only paired sample ids
+            meta = meta.loc[paired_sample_ids]
 
             if param is None:
                 param = "user-label"
@@ -353,31 +342,24 @@ class XModalVisualizer(BaseVisualizer):
                 for val in class_values
             }
 
-            sample_idx_per_class = dict()
-            sample_idx_list = []
+            print(f"Sample per class: {sample_per_class}")
 
-            # Get indices
-            for class_value in sample_per_class:
-                # Get sample ids for the current class value
-                sids = sample_per_class[class_value]
-                # Get indices of these sample ids in the sample_ids_list
-                indices = [
-                    list(sample_ids_list).index(sid)
-                    for sid in sids
-                    if sid in sample_ids_list
-                ]
-                # Store the indices in the dictionary
-                sample_idx_per_class[class_value] = indices
-                # Store the indices in the list
-                sample_idx_list.extend(indices)
+            # Lookup of sample indices per modality
+            sample_ids_per_key = dict()
+
+            for key in result.sample_ids.get(epoch=-1, split="test").keys():
+                sample_ids_per_key[key] = result.sample_ids.get(epoch=-1, split="test")[key]
+            # Original 
+            sample_ids_per_key["original"] = result.datasets.test.datasets[to_key].sample_ids
+            
 
             ## Generate Image Grid
-            # Number of test (or train or valid) samples from all values in sample_idx_per_class dictionary
+            # Number of test (or train or valid) samples from all values in sample_per_class dictionary
             n_test_samples = sum(
-                len(indices) for indices in sample_idx_per_class.values()
+                len(indices) for indices in sample_per_class.values()
             )
 
-            #
+            # #
             col_labels = []
             for class_value in sample_per_class:
                 col_labels.extend(
@@ -397,21 +379,17 @@ class XModalVisualizer(BaseVisualizer):
 
             for i, ax in enumerate(axes.flat):
                 row = int(i / n_test_samples)
-                test_sample = sample_idx_list[i % n_test_samples]
+                # test_sample = sample_idx_list[i % n_test_samples]
+                # print(f"Row: {row}, Column: {i % n_test_samples}")
+                # print(f"Current sample: {col_labels[i % n_test_samples]}")
 
                 if row == 0:
                     if split == "test":
-                        img_temp = result.datasets.test.datasets[to_key][test_sample][
+                        idx_original = list(sample_ids_per_key["original"]).index(col_labels[i % n_test_samples].split("sample:")[1])
+                        img_temp = result.datasets.test.datasets[to_key][idx_original][
                             1
                         ].squeeze()  # Stored as Tuple (index, tensor, sample_id)
-                    if split == "train":
-                        img_temp = result.datasets.train.datasets[to_key][test_sample][
-                            1
-                        ].squeeze()  # Stored as Tuple (index, tensor, sample_id)
-                    if split == "valid":
-                        img_temp = result.datasets.valid.datasets[to_key][test_sample][
-                            1
-                        ].squeeze()  # Stored as Tuple (index, tensor, sample_id)
+
                     # Original image
                     ax.imshow(np.asarray(img_temp))
                     ax.axis("off")
@@ -439,10 +417,11 @@ class XModalVisualizer(BaseVisualizer):
 
                 if row == 1:
                     # Translated image
+                    idx_translated = list(sample_ids_per_key["translation"]).index(col_labels[i % n_test_samples].split("sample:")[1])
                     ax.imshow(
                         result.reconstructions.get(epoch=-1, split=split)[
                             "translation"
-                        ][test_sample].squeeze()
+                        ][idx_translated].squeeze()
                     )
                     ax.axis("off")
                     # Row label
@@ -458,10 +437,11 @@ class XModalVisualizer(BaseVisualizer):
 
                 if row == 2:
                     # Reference image reconstruction
+                    idx_reference = list(sample_ids_per_key[f"reference_{to_key}_to_{to_key}"]).index(col_labels[i % n_test_samples].split("sample:")[1])
                     ax.imshow(
                         result.reconstructions.get(epoch=-1, split=split)[
                             f"reference_{to_key}_to_{to_key}"
-                        ][test_sample].squeeze()
+                        ][idx_reference].squeeze()
                     )
                     ax.axis("off")
                     # Row label

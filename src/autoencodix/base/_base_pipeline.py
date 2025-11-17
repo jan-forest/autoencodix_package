@@ -1,7 +1,7 @@
 import abc
-import copy
 from typing import Dict, Optional, Tuple, Type, Union, Any, Literal, List
 
+from unittest import result
 import warnings
 import anndata as ad  # type: ignore
 import numpy as np
@@ -22,7 +22,9 @@ from autoencodix.data.datapackage import DataPackage
 # from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.base._base_evaluator import BaseEvaluator
 from autoencodix.utils._result import Result
-from autoencodix.utils._utils import Loader, Saver
+from autoencodix.utils._utils import Loader, Saver, get_dataset
+from autoencodix.utils.adata_converter import AnnDataConverter
+from autoencodix.utils._llm_explainer import LLMExplainer
 from autoencodix.configs.default_config import DataCase, DataInfo, DefaultConfig
 
 from ._base_autoencoder import BaseAutoencoder
@@ -1176,3 +1178,60 @@ class BasePipeline(abc.ABC):
         with torch.no_grad():
             generated = self.decode(latent=latent_prior)
             return generated
+
+    def explain(
+        self,
+        explainer: Any,
+        baseline_type: Literal["mean", "random_sample"] = "mean",
+        n_subset: int = 100,
+        llm_explain: bool = False,
+        llm_client: Literal["ollama", "mistral"] = "mistral",
+        llm_model: str = "mistral-medium-latest",
+    ):  # TODO Vincent: add return type
+        my_converter = AnnDataConverter()
+        dataset: Optional[DatasetContainer] = get_dataset(self.result)
+        if dataset is None:
+            raise ValueError(
+                "No dataset available for explanation."
+                "This happens if you used .save and .load, and did not run .predict before."
+                "This can also happen if you run .explain before .preprocess or .fit."
+            )
+        adata_train: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
+            dataset, split="train"
+        )
+        adata_test: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
+            dataset, split="test"
+        )
+        adata_valid: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
+            dataset, split="valid"
+        )
+        model = self.result.model
+        if model is None:
+            raise ValueError(
+                "No model available for explanation."
+                "This happens if you used .save and .load, and did not run .fit before."
+                "This can also happen if you run .explain before .fit."
+            )
+        # TODO Vincent: Implement feature importance explanation
+        # Best with Explainer class that gets initialized here and has a method
+        # Maybe like:
+        # explainer = FeatureImportanceExplainer(adata_train, adata_test, model, explainer, ...)
+        # output = explainer.explain()
+        # also note tha adata_<split> can be None, if the split is not available
+        # so best to check this before concatenating or using them
+
+        if llm_explain:
+            # TODO Vincent: 
+            # Je nachdem wie die Gene Liste aussieht, müsstet du noch in src/autoencodix/utils/_llm_explainer.py
+            # in _init_prompt anpassen, wie der prompt gebaut wird. Ich gehe jetzt von einer Liste aus String aus, aber
+            # ich wusste nicht genau was dein return Typ ist.
+
+            llm_explainer = LLMExplainer(
+                client_name=llm_client,
+                model_name=llm_model,
+                gene_list=["GeneA", "GeneB", "GeneC"],  # Example gene list
+            )
+            explanation = llm_explainer.explain()
+            print("LLM Explanation:")
+            print(explanation)
+            return explanation

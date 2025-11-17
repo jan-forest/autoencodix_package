@@ -344,8 +344,8 @@ class XModalTrainer(BaseTrainer):
         for k, v in sub_losses.items():
             if "_factor" not in k:
                 sub_losses[k] = v / n_samples_total  # Average over all samples
-        self._epoch_loss = (
-            self._epoch_loss / n_samples_total
+        self._epoch_loss_valid = (
+            self._epoch_loss_valid / n_samples_total
         )  # Average over all samples
         return epoch_dynamics, sub_losses, n_samples_total
 

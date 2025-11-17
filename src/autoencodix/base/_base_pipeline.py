@@ -909,7 +909,10 @@ class BasePipeline(abc.ABC):
             )
 
         if len(params) == 0:
-            params = self.config.data_config.annotation_columns  # type: ignore
+            if self.config.data_config.annotation_columns is None:
+                params = []  # type: ignore
+            else:
+                params = self.config.data_config.annotation_columns  # type: ignore
 
         if len(params) == 0:
             raise ValueError(
@@ -1221,7 +1224,7 @@ class BasePipeline(abc.ABC):
         # so best to check this before concatenating or using them
 
         if llm_explain:
-            # TODO Vincent: 
+            # TODO Vincent:
             # Je nachdem wie die Gene Liste aussieht, müsstet du noch in src/autoencodix/utils/_llm_explainer.py
             # in _init_prompt anpassen, wie der prompt gebaut wird. Ich gehe jetzt von einer Liste aus String aus, aber
             # ich wusste nicht genau was dein return Typ ist.

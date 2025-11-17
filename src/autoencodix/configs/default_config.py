@@ -113,7 +113,7 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         default=True, description="Whether to normalize by total counts"
     )
     log_transform: bool = Field(
-        default=True, description="Whether to apply log1p transformation"
+        default=False, description="Whether to apply log1p transformation"
     )
     k_filter: Optional[int] = Field(
         default=20,

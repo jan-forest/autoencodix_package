@@ -204,7 +204,7 @@ class XModalLoss(BaseLoss):
             + self.config.delta_class * class_loss
         )
         loss_dict = {
-            "total_loss": total_loss,
+            # "total_loss": total_loss, ## Removed for consistency with other losses
             "adver_loss": self.config.gamma * adver_loss,
             "aggregated_sub_losses": aggregated_sub_losses,
             "paired_loss": self.config.delta_pair * paired_loss,

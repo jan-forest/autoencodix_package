@@ -299,7 +299,9 @@ class Saver:
             self.pipeline._datasets = None  # ty: ignore
             self.pipeline.raw_user_data = None  # ty: ignore
             self.pipeline._datasets = None
-            self.pipeline._preprocessor = type(self.pipeline._preprocessor)(  # ty: ignore
+            self.pipeline._preprocessor = type(
+                self.pipeline._preprocessor
+            )(  # ty: ignore
                 config=pipeline.config  # ty: ignore
             )  # ty: ignore
             self.pipeline.visualizer = type(self.pipeline.visualizer)()  # ty: ignore

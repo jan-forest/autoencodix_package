@@ -108,7 +108,7 @@ class XModalVisualizer(BaseVisualizer):
         else:
             # Set Defaults
             if epoch is None:
-                epoch = result.latentspaces.epochs()[-1]  # Last epoch
+                epoch = -1
 
             ## Collect all metadata and latent spaces from datasets
             clin_data = []
@@ -137,12 +137,7 @@ class XModalVisualizer(BaseVisualizer):
                         latent_data.append(df_latent)
                         if hasattr(ds, "metadata") and ds.metadata is not None:
                             df = ds.metadata.copy()
-                            # Add sample_ids as a column if it's the index
-                            if (
-                                df.index.name == "sample_ids"
-                                and "sample_ids" not in df.columns
-                            ):
-                                df = df.reset_index()
+                            df["sample_ids"] = df.index.astype(str)
                             df["split"] = s
                             df["modality"] = key
                             clin_data.append(df)
@@ -159,6 +154,12 @@ class XModalVisualizer(BaseVisualizer):
                 clin_data = pd.DataFrame()
 
             ## Label options
+            if param is None:
+                modality = list(result.model.keys())[
+                    0
+                ]  # Take the first since configs are same for all sub-VAEs
+                param = result.model[modality].config.data_config.annotation_columns
+
             if labels is None and param is None:
                 labels = ["all"] * latent_data["sample_ids"].unique().shape[0]
 
@@ -223,12 +224,9 @@ class XModalVisualizer(BaseVisualizer):
                         embedding = latent_data
 
                     # Merge with clinical data via sample_ids
-                    print(clin_data.index)
                     clin_data["sample_ids"] = clin_data.index.astype(str)
                     clin_data.index = clin_data.index.astype(str)  # Add this line
                     embedding["sample_ids"] = embedding["sample_ids"].astype(str)
-
-                    print(embedding)
 
                     embedding = embedding.merge(
                         clin_data.drop(columns=["modality"]),  # ty: ignore
@@ -236,12 +234,6 @@ class XModalVisualizer(BaseVisualizer):
                         right_index=True,
                         how="left",
                     )
-
-                    # embedding = embedding.merge(
-                    #     clin_data.drop(columns=["modality"]),  # ty: ignore
-                    #     on="sample_ids",
-                    #     how="left",
-                    # )
 
                     self.plots["2D-scatter"][epoch][split][p] = (
                         self._plot_translate_latent(
@@ -292,7 +284,6 @@ class XModalVisualizer(BaseVisualizer):
         result: Result,
         from_key: str,
         to_key: str,
-        split: str = "test",
         n_sample_per_class: int = 3,
         param: Optional[str] = None,
     ) -> None:  # ty: ignore
@@ -310,31 +301,21 @@ class XModalVisualizer(BaseVisualizer):
             ValueError: If `to_key` does not correspond to an image dataset.
         """
 
-        if "IMG" not in to_key:
+        if "img" not in to_key:
             raise ValueError(
                 f"You provided as 'to_key' {to_key} a non-image dataset. "
                 "Image translation grid visualization is only possible for translation to IMG data type."
             )
         else:
-            # if not split == "test":
-            #     # make warning ... change in future TODO
-            #     warnings.warn(
-            #         "Currently, only 'test' split is supported for image translation visualization."
-            #     )
-            #     split = "test"
 
+            split = "test"  # Currently only test split is supported
             ## Get n samples per class
             if split == "test":
                 meta = result.datasets.test.datasets[to_key].metadata
-                # sample_ids_list = result.datasets.test.datasets[to_key].sample_ids
-                sample_ids_list = result.sample_ids.get(epoch=-1, split="test")[to_key]
-            if split == "train":
-                meta = result.datasets.train.datasets[to_key].metadata
-                # sample_ids_list = result.datasets.train.datasets[to_key].sample_ids
-                sample_ids_list = result.sample_ids.get(epoch=-1, split="train")[to_key]
-            if split == "valid":
-                meta = result.datasets.valid.datasets[to_key].metadata
-                sample_ids_list = result.sample_ids.get(epoch=-1, split="valid")[to_key]
+                paired_sample_ids = result.datasets.test.paired_sample_ids
+
+            # Restrict meta to only paired sample ids
+            meta = meta.loc[paired_sample_ids]
 
             if param is None:
                 param = "user-label"
@@ -362,31 +343,25 @@ class XModalVisualizer(BaseVisualizer):
                 for val in class_values
             }
 
-            sample_idx_per_class = dict()
-            sample_idx_list = []
+            print(f"Sample per class: {sample_per_class}")
 
-            # Get indices
-            for class_value in sample_per_class:
-                # Get sample ids for the current class value
-                sids = sample_per_class[class_value]
-                # Get indices of these sample ids in the sample_ids_list
-                indices = [
-                    list(sample_ids_list).index(sid)
-                    for sid in sids
-                    if sid in sample_ids_list
+            # Lookup of sample indices per modality
+            sample_ids_per_key = dict()
+
+            for key in result.sample_ids.get(epoch=-1, split="test").keys():
+                sample_ids_per_key[key] = result.sample_ids.get(epoch=-1, split="test")[
+                    key
                 ]
-                # Store the indices in the dictionary
-                sample_idx_per_class[class_value] = indices
-                # Store the indices in the list
-                sample_idx_list.extend(indices)
+            # Original
+            sample_ids_per_key["original"] = result.datasets.test.datasets[
+                to_key
+            ].sample_ids
 
             ## Generate Image Grid
-            # Number of test (or train or valid) samples from all values in sample_idx_per_class dictionary
-            n_test_samples = sum(
-                len(indices) for indices in sample_idx_per_class.values()
-            )
+            # Number of test (or train or valid) samples from all values in sample_per_class dictionary
+            n_test_samples = sum(len(indices) for indices in sample_per_class.values())
 
-            #
+            # #
             col_labels = []
             for class_value in sample_per_class:
                 col_labels.extend(
@@ -401,26 +376,24 @@ class XModalVisualizer(BaseVisualizer):
             fig, axes = plt.subplots(
                 ncols=n_test_samples,  # Number of classes
                 nrows=3,  # Original, translated, reference
-                figsize=(n_test_samples * 4, 3 * 4),
+                figsize=(n_test_samples * 2, 3 * 2),
             )
 
             for i, ax in enumerate(axes.flat):
                 row = int(i / n_test_samples)
-                test_sample = sample_idx_list[i % n_test_samples]
+                # test_sample = sample_idx_list[i % n_test_samples]
+                # print(f"Row: {row}, Column: {i % n_test_samples}")
+                # print(f"Current sample: {col_labels[i % n_test_samples]}")
 
                 if row == 0:
                     if split == "test":
-                        img_temp = result.datasets.test.datasets[to_key][test_sample][
+                        idx_original = list(sample_ids_per_key["original"]).index(
+                            col_labels[i % n_test_samples].split("sample:")[1]
+                        )
+                        img_temp = result.datasets.test.datasets[to_key][idx_original][
                             1
                         ].squeeze()  # Stored as Tuple (index, tensor, sample_id)
-                    if split == "train":
-                        img_temp = result.datasets.train.datasets[to_key][test_sample][
-                            1
-                        ].squeeze()  # Stored as Tuple (index, tensor, sample_id)
-                    if split == "valid":
-                        img_temp = result.datasets.valid.datasets[to_key][test_sample][
-                            1
-                        ].squeeze()  # Stored as Tuple (index, tensor, sample_id)
+
                     # Original image
                     ax.imshow(np.asarray(img_temp))
                     ax.axis("off")
@@ -448,10 +421,13 @@ class XModalVisualizer(BaseVisualizer):
 
                 if row == 1:
                     # Translated image
+                    idx_translated = list(sample_ids_per_key["translation"]).index(
+                        col_labels[i % n_test_samples].split("sample:")[1]
+                    )
                     ax.imshow(
                         result.reconstructions.get(epoch=-1, split=split)[
                             "translation"
-                        ][test_sample].squeeze()
+                        ][idx_translated].squeeze()
                     )
                     ax.axis("off")
                     # Row label
@@ -467,10 +443,13 @@ class XModalVisualizer(BaseVisualizer):
 
                 if row == 2:
                     # Reference image reconstruction
+                    idx_reference = list(
+                        sample_ids_per_key[f"reference_{to_key}_to_{to_key}"]
+                    ).index(col_labels[i % n_test_samples].split("sample:")[1])
                     ax.imshow(
                         result.reconstructions.get(epoch=-1, split=split)[
                             f"reference_{to_key}_to_{to_key}"
-                        ][test_sample].squeeze()
+                        ][idx_reference].squeeze()
                     )
                     ax.axis("off")
                     # Row label
@@ -500,44 +479,34 @@ class XModalVisualizer(BaseVisualizer):
         ## TODO add similar labels/param logic from other visualizations
         dataset = result.datasets
 
-        if split not in ["train", "valid", "test"]:
+        ## Overwrite original datasets with new_datasets if available after predict with other data
+        if dataset is None:
+            dataset = DatasetContainer()
+
+        if bool(result.new_datasets.test):
+            dataset.test = result.new_datasets.test
+
+        if split not in ["train", "valid", "test", "all"]:
             raise ValueError(f"Unknown split: {split}")
 
-        if split in ["train", "valid"]:
+        if dataset.test is None:
+            raise ValueError("test of dataset is None")
+
+        if split == "test":
+            df_processed = dataset.test._to_df(modality=translated_modality)
+        else:
             raise NotImplementedError(
                 "2D translation visualization is currently only implemented for the 'test' split since reconstruction is only performed on test-split."
             )
 
-        if not hasattr(dataset, "train"):
-            raise ValueError("dataset has no attribute train")
-
-        if not hasattr(dataset, "valid"):
-            raise ValueError("dataset has no attribute train")
-
-        if not hasattr(dataset, "valid"):
-            raise ValueError("dataset has no attribute train")
-
-        if dataset.valid is None:
-            raise ValueError("valid of dataset is None")
-        if dataset.train is None:
-            raise ValueError("train of dataset is None")
-        if dataset.test is None:
-            raise ValueError("test of dataset is None")
-
-        if split == "train":
-            df_processed = dataset.train._to_df(modality=translated_modality)
-        if split == "valid":
-            df_processed = dataset.valid._to_df(modality=translated_modality)
-        if split == "test":
-            df_processed = dataset.test._to_df(modality=translated_modality)
-
         # Get translated reconstruction
-        tensor_list = result.reconstructions.get(epoch=-1, split="test")[  # ty: ignore
+        tensor_list = result.reconstructions.get(epoch=-1, split=split)[  # ty: ignore
             "translation"
         ]  # ty: ignore
         print(f"len of tensor-list: {len(tensor_list)}")
-        tensor_ids = result.sample_ids.get(epoch=-1, split="test")["translation"]
+        tensor_ids = result.sample_ids.get(epoch=-1, split=split)["translation"]
         print(f"len of tensor_ids: {len(tensor_ids)}")
+
         # Flatten each tensor and collect as rows (for image case)
         rows = [
             t.flatten().cpu().numpy() if isinstance(t, torch.Tensor) else t.flatten()
@@ -547,7 +516,7 @@ class XModalVisualizer(BaseVisualizer):
         # Create DataFrame
         df_translate_flat = pd.DataFrame(
             rows,
-            columns=["Pixel_" + str(i) for i in range(len(rows[0]))],
+            columns=["Feature_" + str(i) for i in range(len(rows[0]))],
             index=tensor_ids,
         )
 
@@ -565,7 +534,6 @@ class XModalVisualizer(BaseVisualizer):
         df_translate_flat = df_translate_flat.reindex(df_processed.index)
         df_translate_flat.index = pd.Index([i for i in range(len(common_ids))])
         X = np.vstack([df_processed.values, df_translate_flat.values])
-        print(X)
         df_red_comb = pd.DataFrame(reducer_model.fit_transform(X))
 
         # df_comb = pd.concat(
@@ -593,7 +561,13 @@ class XModalVisualizer(BaseVisualizer):
         )  ## TODO fix for not matching lengths
 
         g = sns.FacetGrid(
-            df_red_comb, col="origin", hue=param, sharex=True, sharey=True
+            df_red_comb,
+            col="origin",
+            hue=param,
+            sharex=True,
+            sharey=True,
+            height=8,
+            aspect=1,
         )
         g.map_dataframe(sns.scatterplot, x=0, y=1, alpha=0.7)
         g.add_legend()

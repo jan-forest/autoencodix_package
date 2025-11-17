@@ -24,6 +24,7 @@ from autoencodix.base._base_evaluator import BaseEvaluator
 from autoencodix.utils._result import Result
 from autoencodix.utils._utils import Loader, Saver, get_dataset
 from autoencodix.utils.adata_converter import AnnDataConverter
+from autoencodix.utils._llm_explainer import LLMExplainer
 from autoencodix.configs.default_config import DataCase, DataInfo, DefaultConfig
 
 from ._base_autoencoder import BaseAutoencoder
@@ -1184,6 +1185,8 @@ class BasePipeline(abc.ABC):
         baseline_type: Literal["mean", "random_sample"] = "mean",
         n_subset: int = 100,
         llm_explain: bool = False,
+        llm_client: Literal["ollama", "mistral"] = "mistral",
+        llm_model: str = "mistral-medium-latest",
     ):  # TODO Vincent: add return type
         my_converter = AnnDataConverter()
         dataset: Optional[DatasetContainer] = get_dataset(self.result)
@@ -1213,7 +1216,22 @@ class BasePipeline(abc.ABC):
         # Best with Explainer class that gets initialized here and has a method
         # Maybe like:
         # explainer = FeatureImportanceExplainer(adata_train, adata_test, model, explainer, ...)
-        # return explainer.explain()
-        # also note tath adata_<split> can be None, if the split is not available
+        # output = explainer.explain()
+        # also note tha adata_<split> can be None, if the split is not available
         # so best to check this before concatenating or using them
-        pass
+
+        if llm_explain:
+            # TODO Vincent: 
+            # Je nachdem wie die Gene Liste aussieht, müsstet du noch in src/autoencodix/utils/_llm_explainer.py
+            # in _init_prompt anpassen, wie der prompt gebaut wird. Ich gehe jetzt von einer Liste aus String aus, aber
+            # ich wusste nicht genau was dein return Typ ist.
+
+            llm_explainer = LLMExplainer(
+                client_name=llm_client,
+                model_name=llm_model,
+                gene_list=["GeneA", "GeneB", "GeneC"],  # Example gene list
+            )
+            explanation = llm_explainer.explain()
+            print("LLM Explanation:")
+            print(explanation)
+            return explanation

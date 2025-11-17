@@ -24,7 +24,8 @@ from autoencodix.utils._losses import XModalLoss
 from autoencodix.utils._utils import find_translation_keys
 from autoencodix.visualize._xmodal_visualizer import XModalVisualizer
 
-from mudata import MuData  # type: ignore
+from mudata import MuData
+import torch  # type: ignore
 
 
 class XModalix(BasePipeline):
@@ -299,3 +300,13 @@ class XModalix(BasePipeline):
             self.result.update(other=valid_pred_results)
 
         return self.result
+
+    def sample_latent_space(
+        self,
+        n_samples: int,
+        split: str = "test",
+        epoch: int = -1,
+    ) -> torch.Tensor:
+        raise NotImplementedError(
+            "Sampling latent space is not implemented for XModalix."
+        )

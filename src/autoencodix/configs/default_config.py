@@ -77,11 +77,11 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     data_type: Literal["NUMERIC", "CATEGORICAL", "IMG", "ANNOTATION"] = Field(
         default="NUMERIC"
     )
-    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE", "NOTSET"] = (
-        Field(
-            default="NOTSET",
-            description="Setting the scaling here in DataInfo overrides the globally set scaling method for the specific data modality",
-        )
+    scaling: Literal[
+        "STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE", "NOTSET", "LOG1P"
+    ] = Field(
+        default="NOTSET",
+        description="Setting the scaling here in DataInfo overrides the globally set scaling method for the specific data modality",
     )  # can also be set globally, for all data modalities.
 
     filtering: Literal["VAR", "MAD", "CORR", "VARCORR", "NOFILT", "NONZEROVAR"] = Field(
@@ -192,7 +192,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     k_filter: Union[int, None] = Field(
         default=20, description="Number of features to keep"
     )
-    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE"] = Field(
+    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE", "LOG1P"] = Field(
         default="STANDARD",
         description="Setting the scaling here for all data modalities, can per overruled by setting scaling at data modality level per data modality",
     )

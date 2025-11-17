@@ -60,25 +60,25 @@ class TestGeneralTrainerIntegration:
         )
 
     def test_result_not_overwritten(self, general_trainer, filled_result):
-
         before_preprocessed_data = filled_result.preprocessed_data
         result = general_trainer.train()
-        assert (
-            result.preprocessed_data is not None
-        ), "Preprocessed data should not overwrite."
-        assert (
-            result.preprocessed_data is before_preprocessed_data
-        ), "Preprocessed data should not overwrite."
+        assert result.preprocessed_data is not None, (
+            "Preprocessed data should not overwrite."
+        )
+        assert result.preprocessed_data is before_preprocessed_data, (
+            "Preprocessed data should not overwrite."
+        )
 
-    @pytest.mark.parametrize("devices", ["cpu", "cuda"])
-    def test_reproducible(self, devices, train_dataset, valid_dataset):
-        # if device not available, skip tes
-        if not torch.cuda.is_available() and devices == "cuda":
+    @pytest.mark.parametrize("device", ["cpu", "cuda", "mps"])
+    def test_reproducible(self, device, train_dataset, valid_dataset):
+        # if device not available, skip test
+        if not torch.cuda.is_available() and device == "cuda":
             pytest.skip("CUDA not available.")
-        if not torch.backends.mps.is_available and devices == "mps":
+        if torch.backends.mps.is_available and device == "mps":
+                # For MPS we cannot gurantee full reproducibility
             pytest.skip("MPS not available.")
         config = DefaultConfig(
-            device=devices, epochs=3, checkpoint_interval=1, reproducible=True
+            device=device, epochs=3, checkpoint_interval=1, reproducible=True
         )
         general_trainer = GeneralTrainer(
             trainset=train_dataset,
@@ -102,9 +102,14 @@ class TestGeneralTrainerIntegration:
         result2 = general_trainer.train()
         train_losses2 = result2.losses.get(split="train")
         reconstructed_data2 = result2.reconstructions.get(split="train")
-        assert np.array_equal(
-            train_loss1, train_losses2
-        ), "Training should be reproducible."
-        assert np.array_equal(
-            reconstructed_data1, reconstructed_data2
-        ), "Reconstruction should be reproducible."
+        print(f"device: {device}")
+        print("train_loss1, train_losses2")
+        print(train_loss1, train_losses2)
+        assert np.array_equal(train_loss1, train_losses2), (
+            "Training should be reproducible."
+        )
+        print("reconstructed_data1, reconstructed_data2")
+        print(reconstructed_data1, reconstructed_data2)
+        assert np.array_equal(reconstructed_data1, reconstructed_data2), (
+            "Reconstruction should be reproducible."
+        )

@@ -10,12 +10,14 @@ from collections import defaultdict
 from dataclasses import MISSING, fields, is_dataclass
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, no_type_check
+from autoencodix.data._datasetcontainer import DatasetContainer
+from autoencodix.utils._result import Result
 
 import dill as pickle  # type: ignore
 import torch
 from matplotlib import pyplot as plt
 
-from ..configs.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 # only for type hints, to avoid circual import
@@ -23,6 +25,26 @@ class BasePipeline:
     """Only for type hints in utils, not real BasePipeline class"""
 
     pass
+
+
+def get_dataset(result: Result) -> Optional[DatasetContainer]:
+    """Retrieve the dataset from the Result object, depending on if new_datasets is filled.
+
+    Args:
+        result: The Result object containing the dataset.
+    Returns:
+        The appropriate DatasetContainer object.
+
+    """
+    splits = ["train", "valid", "test"]
+    if not result.new_datasets:
+        return result.datasets
+    new_values: List[Any] = [result.new_datasets[split] for split in splits]
+    # check if all new_datasets are None
+    if all(v is None for v in new_values):
+        return result.datasets
+    else:
+        return result.new_datasets
 
 
 def nested_dict():
@@ -267,21 +289,22 @@ class Saver:
         self._save_model_state(pipeline)
         self.pipeline = pipeline
 
+        self.pipeline._trainer.purge()
+
         if not self.save_all:
             print("saving memory efficient")
             self.reset_to_defaults(pipeline.result)  # ty: ignore
-            pipeline._trainer.purge()
 
-            pipeline.preprocessed_data = None  # ty: ignore
-            pipeline._datasets = None  # ty: ignore
-            pipeline.raw_user_data = None  # ty: ignore
-            pipeline._datasets = None
-            pipeline._preprocessor = type(pipeline._preprocessor)(  # ty: ignore
+            self.pipeline.preprocessed_data = None  # ty: ignore
+            self.pipeline._datasets = None  # ty: ignore
+            self.pipeline.raw_user_data = None  # ty: ignore
+            self.pipeline._datasets = None
+            self.pipeline._preprocessor = type(self.pipeline._preprocessor)(  # ty: ignore
                 config=pipeline.config  # ty: ignore
             )  # ty: ignore
-            pipeline.visualizer = type(pipeline.visualizer)()  # ty: ignore
+            self.pipeline.visualizer = type(self.pipeline.visualizer)()  # ty: ignore
 
-        self._save_pipeline_object(pipeline)
+        self._save_pipeline_object(self.pipeline)
 
         with zipfile.ZipFile(f"{self.file_path}.zip", "w") as archive:
             archive.write(self.file_path)

@@ -263,10 +263,10 @@ class GeneralVisualizer(BaseVisualizer):
             #     # remove duplicate rows
             #     clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
 
-                # # Raise error no annotation given
-                # raise ValueError(
-                #     "No annotation data found. Please provide a valid annotation data type."
-                # )
+            # # Raise error no annotation given
+            # raise ValueError(
+            #     "No annotation data found. Please provide a valid annotation data type."
+            # )
 
             if split == "all":
                 df_latent = pd.concat(
@@ -313,13 +313,15 @@ class GeneralVisualizer(BaseVisualizer):
             for p in param:
                 if p in clin_data.columns:
                     labels = clin_data.loc[df_latent.index, p].tolist()  # ty: ignore
-                
+
                 if n_downsample is not None:
                     if df_latent.shape[0] > n_downsample:
-                       sample_idx = np.random.choice(df_latent.shape[0], n_downsample, replace=False)
-                       df_latent = df_latent.iloc[sample_idx]
-                       if labels is not None:
-                           labels = [labels[i] for i in sample_idx]
+                        sample_idx = np.random.choice(
+                            df_latent.shape[0], n_downsample, replace=False
+                        )
+                        df_latent = df_latent.iloc[sample_idx]
+                        if labels is not None:
+                            labels = [labels[i] for i in sample_idx]
 
                 if plot_type == "2D-scatter":
                     ## Make 2D Embedding with UMAP
@@ -352,12 +354,14 @@ class GeneralVisualizer(BaseVisualizer):
                     fig = self.plots["Ridgeline"][epoch][split][p].figure
                     show_figure(fig)
                     plt.show()
-                
+
                 if plot_type == "Clustermap":
                     ## Make clustermap plot
 
-                    self.plots["Clustermap"][epoch][split][p] = self._plot_latent_clustermap(
-                        lat_space=df_latent, labels=labels, param=p
+                    self.plots["Clustermap"][epoch][split][p] = (
+                        self._plot_latent_clustermap(
+                            lat_space=df_latent, labels=labels, param=p
+                        )
                     )
 
                     fig = self.plots["Clustermap"][epoch][split][p]
@@ -424,7 +428,9 @@ class GeneralVisualizer(BaseVisualizer):
                     print(
                         "The provided label column is numeric and converted to categories."
                     )
-                    labels = [float("nan") if not isinstance(x, float) else x for x in labels]
+                    labels = [
+                        float("nan") if not isinstance(x, float) else x for x in labels
+                    ]
                     labels = (
                         pd.qcut(
                             x=pd.Series(labels),
@@ -547,20 +553,20 @@ class GeneralVisualizer(BaseVisualizer):
         """
         lat_space[param] = labels
 
-        cluster_figure =sns.clustermap(lat_space.groupby(param).mean(), 
-			   col_cluster=False,
-			   row_cluster=True,
-			   figsize=(1*lat_space.shape[1], 4+0.5*len(set(labels))),
-			   dendrogram_ratio=0.1,
-			   cmap="icefire",
-			   cbar_kws={'orientation': 'horizontal'},
-			   cbar_pos=(0.2, .95, .3, .02)
-			   ).fig
-        
+        cluster_figure = sns.clustermap(
+            lat_space.groupby(param).mean(),
+            col_cluster=False,
+            row_cluster=True,
+            figsize=(1 * lat_space.shape[1], 4 + 0.5 * len(set(labels))),
+            dendrogram_ratio=0.1,
+            cmap="icefire",
+            cbar_kws={"orientation": "horizontal"},
+            cbar_pos=(0.2, 0.95, 0.3, 0.02),
+        ).fig
+
         plt.close()
         lat_space.drop(columns=[param], inplace=True)
         return cluster_figure
-
 
     @staticmethod
     def _plot_latent_ridge(
@@ -593,11 +599,13 @@ class GeneralVisualizer(BaseVisualizer):
             if len(np.unique(labels)) > 3:
                 # Change all non-float labels to NaN
                 labels = [x if isinstance(x, float) else float("nan") for x in labels]
-                labels = list(pd.qcut(
-                    x=pd.Series(labels),
-                    q=4,
-                    labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
-                ).astype(str))
+                labels = list(
+                    pd.qcut(
+                        x=pd.Series(labels),
+                        q=4,
+                        labels=["1stQ", "2ndQ", "3rdQ", "4thQ"],
+                    ).astype(str)
+                )
             else:
                 labels = [str(x) for x in labels]
 
@@ -627,7 +635,6 @@ class GeneralVisualizer(BaseVisualizer):
             cat_pal = sns.color_palette("tab20", n_colors=len(labels))
         else:
             cat_pal = sns.color_palette("tab10", n_colors=len(labels))
-
 
         g = sns.FacetGrid(
             df[~exclude_missing_info],

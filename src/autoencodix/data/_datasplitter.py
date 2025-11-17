@@ -423,7 +423,7 @@ class PairedUnpairedSplitter:
                 if (
                     len(self.datapackage.annotation) == 1
                     and self.config.requires_paired
-                ):
+                ) or (anno_key == "paired" and self.config.requires_paired):
                     # For each split, take the union of all sample IDs across modalities
                     for split_name in ["train", "valid", "test"]:
                         split_ids_union = set().union(

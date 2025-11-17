@@ -192,7 +192,7 @@ class BaseTrainer(abc.ABC):
                 )
             else:
                 print(
-                    f"Reproducibility settings for device {self._model.device.type} are not implemented or necessary i.e. for cpu."
+                    f"Reproducibility settings for device {self._config.device} are not implemented or necessary i.e. for cpu."
                 )
 
     def _seed_worker(self, worker_id):

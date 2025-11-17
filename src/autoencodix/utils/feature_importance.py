@@ -44,9 +44,9 @@ class Vanillix_EncoderSingleDim(nn.Module):
             )
 
         total_elements = x.numel()
-        assert total_elements % self.input_dim == 0, (
-            f"Total elements {total_elements} is not a multiple of input_dim {self.input_dim}"
-        )
+        assert (
+            total_elements % self.input_dim == 0
+        ), f"Total elements {total_elements} is not a multiple of input_dim {self.input_dim}"
 
         batch_size = x.size(0)
         x = x.view(batch_size, -1)
@@ -519,9 +519,9 @@ class Varix_EncoderSingleDim(nn.Module):
             )
 
         total_elements = x.numel()
-        assert total_elements % self.input_dim == 0, (
-            f"Total elements {total_elements} is not a multiple of input_dim {self.input_dim}"
-        )
+        assert (
+            total_elements % self.input_dim == 0
+        ), f"Total elements {total_elements} is not a multiple of input_dim {self.input_dim}"
 
         batch_size = x.size(0)
         x = x.view(batch_size, -1)

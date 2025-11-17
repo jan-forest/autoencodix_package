@@ -155,7 +155,9 @@ class XModalVisualizer(BaseVisualizer):
 
             ## Label options
             if param is None:
-                modality = list(result.model.keys())[0]  # Take the first since configs are same for all sub-VAEs
+                modality = list(result.model.keys())[
+                    0
+                ]  # Take the first since configs are same for all sub-VAEs
                 param = result.model[modality].config.data_config.annotation_columns
 
             if labels is None and param is None:
@@ -226,7 +228,6 @@ class XModalVisualizer(BaseVisualizer):
                     clin_data.index = clin_data.index.astype(str)  # Add this line
                     embedding["sample_ids"] = embedding["sample_ids"].astype(str)
 
-
                     embedding = embedding.merge(
                         clin_data.drop(columns=["modality"]),  # ty: ignore
                         left_on="sample_ids",
@@ -285,7 +286,7 @@ class XModalVisualizer(BaseVisualizer):
         to_key: str,
         n_sample_per_class: int = 3,
         param: Optional[str] = None,
-        ) -> None:  # ty: ignore
+    ) -> None:  # ty: ignore
         """Visualizes image translation results for a given dataset.
 
         Split by displaying a grid of original, translated, and reference images,grouped by class values.
@@ -348,16 +349,17 @@ class XModalVisualizer(BaseVisualizer):
             sample_ids_per_key = dict()
 
             for key in result.sample_ids.get(epoch=-1, split="test").keys():
-                sample_ids_per_key[key] = result.sample_ids.get(epoch=-1, split="test")[key]
-            # Original 
-            sample_ids_per_key["original"] = result.datasets.test.datasets[to_key].sample_ids
-            
+                sample_ids_per_key[key] = result.sample_ids.get(epoch=-1, split="test")[
+                    key
+                ]
+            # Original
+            sample_ids_per_key["original"] = result.datasets.test.datasets[
+                to_key
+            ].sample_ids
 
             ## Generate Image Grid
             # Number of test (or train or valid) samples from all values in sample_per_class dictionary
-            n_test_samples = sum(
-                len(indices) for indices in sample_per_class.values()
-            )
+            n_test_samples = sum(len(indices) for indices in sample_per_class.values())
 
             # #
             col_labels = []
@@ -385,7 +387,9 @@ class XModalVisualizer(BaseVisualizer):
 
                 if row == 0:
                     if split == "test":
-                        idx_original = list(sample_ids_per_key["original"]).index(col_labels[i % n_test_samples].split("sample:")[1])
+                        idx_original = list(sample_ids_per_key["original"]).index(
+                            col_labels[i % n_test_samples].split("sample:")[1]
+                        )
                         img_temp = result.datasets.test.datasets[to_key][idx_original][
                             1
                         ].squeeze()  # Stored as Tuple (index, tensor, sample_id)
@@ -417,7 +421,9 @@ class XModalVisualizer(BaseVisualizer):
 
                 if row == 1:
                     # Translated image
-                    idx_translated = list(sample_ids_per_key["translation"]).index(col_labels[i % n_test_samples].split("sample:")[1])
+                    idx_translated = list(sample_ids_per_key["translation"]).index(
+                        col_labels[i % n_test_samples].split("sample:")[1]
+                    )
                     ax.imshow(
                         result.reconstructions.get(epoch=-1, split=split)[
                             "translation"
@@ -437,7 +443,9 @@ class XModalVisualizer(BaseVisualizer):
 
                 if row == 2:
                     # Reference image reconstruction
-                    idx_reference = list(sample_ids_per_key[f"reference_{to_key}_to_{to_key}"]).index(col_labels[i % n_test_samples].split("sample:")[1])
+                    idx_reference = list(
+                        sample_ids_per_key[f"reference_{to_key}_to_{to_key}"]
+                    ).index(col_labels[i % n_test_samples].split("sample:")[1])
                     ax.imshow(
                         result.reconstructions.get(epoch=-1, split=split)[
                             f"reference_{to_key}_to_{to_key}"
@@ -553,7 +561,13 @@ class XModalVisualizer(BaseVisualizer):
         )  ## TODO fix for not matching lengths
 
         g = sns.FacetGrid(
-            df_red_comb, col="origin", hue=param, sharex=True, sharey=True, height=8, aspect=1
+            df_red_comb,
+            col="origin",
+            hue=param,
+            sharex=True,
+            sharey=True,
+            height=8,
+            aspect=1,
         )
         g.map_dataframe(sns.scatterplot, x=0, y=1, alpha=0.7)
         g.add_legend()

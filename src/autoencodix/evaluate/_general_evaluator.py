@@ -32,7 +32,9 @@ class GeneralEvaluator(BaseEvaluator):
         self,
         datasets: DatasetContainer,
         result: Result,
-        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(max_iter=1000),  # Default is sklearn LogisticRegression
+        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(
+            max_iter=1000
+        ),  # Default is sklearn LogisticRegression
         ml_model_regression: RegressorMixin = linear_model.LinearRegression(),  # Default is sklearn LinearRegression
         params: Union[
             list, str
@@ -103,7 +105,6 @@ class GeneralEvaluator(BaseEvaluator):
 
             # clin_data = self._get_clin_data(datasets)
             clin_data = BaseVisualizer._collect_all_metadata(result=result)
-            
 
             if split_type == "use-split":
                 # Pandas dataframe with sample_ids and split information
@@ -355,7 +356,6 @@ class GeneralEvaluator(BaseEvaluator):
                     score_df["value"].extend(scores[m])
 
         return pd.DataFrame(score_df)
-
 
     def _enrich_results(
         self,

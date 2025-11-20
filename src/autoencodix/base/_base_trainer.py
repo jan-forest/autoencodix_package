@@ -1,4 +1,6 @@
 import abc
+import random
+import numpy as np
 import os
 import warnings
 from typing import Optional, Type, List, cast, Tuple, Union
@@ -53,14 +55,18 @@ class BaseTrainer(abc.ABC):
         self._validset = validset
         self._result = result
         self._config = config
+        self._loss_type = loss_type
         self.ontologies = ontologies
+        self.setup_trainer()
 
-        # Call this first for tests to work
-        self._input_validation()
+    def setup_trainer(self, old_model=None):
+        if old_model is None:
+            self._input_validation()
+            self._init_loaders()
+
+        self._loss_fn = self._loss_type(config=self._config)
+
         self._handle_reproducibility()
-
-        self._loss_fn = loss_type(config=self._config)
-
         # Internal data handling
         self._model: BaseAutoencoder
         self._fabric = Fabric(
@@ -70,18 +76,20 @@ class BaseTrainer(abc.ABC):
             strategy=self._config.gpu_strategy,
         )
 
-        self._init_loaders()
-        self._setup_fabric()
+        self._fabric.launch()
+        self._setup_fabric(old_model=old_model)
+
         self._n_cpus = os.cpu_count()
         if self._n_cpus is None:
             self._n_cpus = 0
 
-    def _setup_fabric(self):
+    def _setup_fabric(self, old_model=None):
         """
         Sets up the model, optimizer, and data loaders with Lightning Fabric.
         """
-        self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
-        self._init_model_architecture(ontologies=self.ontologies)  # Ontix
+        self._init_model_architecture(
+            ontologies=self.ontologies, old_model=old_model
+        )  # Ontix
 
         self._optimizer = torch.optim.AdamW(
             params=self._model.parameters(),
@@ -90,16 +98,16 @@ class BaseTrainer(abc.ABC):
         )
 
         self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
-        self._trainloader = self._fabric.setup_dataloaders(self._trainloader)  # type: ignore
-        if self._validloader is not None:
-            self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
-        self._fabric.launch()
+        if old_model is None:
+            self._trainloader = self._fabric.setup_dataloaders(self._trainloader)  # type: ignore
+            if self._validloader is not None:
+                self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
 
     def _init_loaders(self):
         """Initializes the DataLoaders for training and validation datasets."""
-        last_batch_is_one_sample = (
-            len(self._trainset.data) % self._config.batch_size == 1
-        )
+        # g = torch.Generator()
+        # g.manual_seed(self._config.global_seed)
+        last_batch_is_one_sample = len(self._trainset) % self._config.batch_size == 1
         corrected_bs = (
             self._config.batch_size + 1
             if last_batch_is_one_sample
@@ -114,10 +122,12 @@ class BaseTrainer(abc.ABC):
             cast(BaseDataset, self._trainset),
             shuffle=True,
             batch_size=corrected_bs,
+            worker_init_fn=self._seed_worker,
+            # generator=g,
         )
         if self._validset:
             last_batch_is_one_sample = (
-                len(self._validset.data) % self._config.batch_size == 1
+                len(self._validset) % self._config.batch_size == 1
             )
             corrected_bs = (
                 self._config.batch_size + 1
@@ -164,26 +174,46 @@ class BaseTrainer(abc.ABC):
         if self._config.reproducible:
             torch.use_deterministic_algorithms(True)
             torch.manual_seed(seed=self._config.global_seed)
-            if self._config.device == "cuda":
+            random.seed(self._config.global_seed)
+            np.random.seed(self._config.global_seed)
+            if torch.cuda.is_available():
                 torch.cuda.manual_seed(seed=self._config.global_seed)
                 torch.cuda.manual_seed_all(seed=self._config.global_seed)
                 torch.backends.cudnn.deterministic = True
                 torch.backends.cudnn.benchmark = False
-            elif self._config.device == "mps":
-                raise NotImplementedError(
-                    "MPS backend does not support reproducibility settings."
+            if torch.backends.mps.is_available():
+                torch.mps.manual_seed(seed=self._config.global_seed)
+
+                # torch.use_deterministic_algorithms(True, warn_only=True)
+
+                print(
+                    "Warning: MPS backend has limited support for deterministic algorithms. "
+                    "Seeding is active, but full reproducibility is not guaranteed."
                 )
             else:
-                print("cpu not relevant here")
+                print(
+                    f"Reproducibility settings for device {self._config.device} are not implemented or necessary i.e. for cpu."
+                )
 
-    def _init_model_architecture(self, ontologies: tuple) -> None:
+    def _seed_worker(self, worker_id):
+        worker_seed = self._config.global_seed + worker_id
+        np.random.seed(worker_seed)
+        random.seed(worker_seed)
+
+    def _init_model_architecture(self, ontologies: tuple, old_model=None) -> None:
         """Initializes the model architecture, based on the model type and input dimension."""
+        if old_model:
+            self._model = old_model
+            return
+
+        self._input_dim = cast(BaseDataset, self._trainset).get_input_dim()
+        self.feature_order = self._trainset.feature_ids
         if ontologies is None:
             self._model = self._model_type(
                 config=self._config, input_dim=self._input_dim
             )
+
         else:
-            ## Ontix specific
             self._model = self._model_type(
                 config=self._config,
                 input_dim=self._input_dim,
@@ -193,8 +223,9 @@ class BaseTrainer(abc.ABC):
 
     def _should_checkpoint(self, epoch: int) -> bool:
         return (
-            epoch + 1
-        ) % self._config.checkpoint_interval == 0 or epoch == self._config.epochs - 1
+            (epoch + 1) % self._config.checkpoint_interval == 0
+            or epoch == self._config.epochs - 1
+        )
 
     @abc.abstractmethod
     def train(self, epochs_overwrite: Optional[int] = None) -> Result:
@@ -208,4 +239,9 @@ class BaseTrainer(abc.ABC):
     def predict(
         self, data: BaseDataset, model: Optional[torch.nn.Module] = None, **kwargs
     ) -> Result:
+        pass
+
+    @abc.abstractmethod
+    def purge(self) -> None:
+        """Cleans up any resources used during training, such as cached data or large attributes."""
         pass

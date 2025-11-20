@@ -1,7 +1,7 @@
 import abc
-import copy
-from typing import Dict, Optional, Tuple, Type, Union, Any
+from typing import Dict, Optional, Tuple, Type, Union, Any, Literal, List
 
+from unittest import result
 import warnings
 import anndata as ad  # type: ignore
 import numpy as np
@@ -22,7 +22,9 @@ from autoencodix.data.datapackage import DataPackage
 # from autoencodix.evaluate.evaluate import Evaluator
 from autoencodix.base._base_evaluator import BaseEvaluator
 from autoencodix.utils._result import Result
-from autoencodix.utils._utils import Loader, Saver
+from autoencodix.utils._utils import Loader, Saver, get_dataset
+from autoencodix.utils.adata_converter import AnnDataConverter
+from autoencodix.utils._llm_explainer import LLMExplainer
 from autoencodix.configs.default_config import DataCase, DataInfo, DefaultConfig
 
 from ._base_autoencoder import BaseAutoencoder
@@ -136,6 +138,7 @@ class BasePipeline(abc.ABC):
             DataPackage, ad.AnnData, MuData, pd.DataFrame, dict  # type: ignore[invalid-type-form]
         ] = raw_user_data
         self._trainer_type = trainer_type
+        self._trainer: Optional[BaseTrainer] = None
         self._model_type = model_type
         self._loss_type = loss_type
         self._preprocessor_type = preprocessor_type
@@ -146,17 +149,17 @@ class BasePipeline(abc.ABC):
             self.config.data_case = datacase
             self._fill_data_info()
 
-        self._ontologies = ontologies
+        self.ontologies = ontologies
         self._preprocessor = self._preprocessor_type(
-            config=self.config, ontologies=self._ontologies
+            config=self.config, ontologies=self.ontologies
         )
 
-        self._visualizer = (
+        self.visualizer = (
             visualizer()  # ty: ignore[call-non-callable]
             if visualizer is not None
             else BaseVisualizer()  # ty: ignore[call-non-callable]
         )  # ty: ignore[call-non-callable]
-        self._evaluator = (
+        self.evaluator = (
             evaluator()  # ty: ignore[call-non-callable]
             if evaluator is not None
             else BaseEvaluator()  # ty: ignore[call-non-callable]
@@ -434,10 +437,11 @@ class BasePipeline(abc.ABC):
             raise NotImplementedError("Preprocessor not initialized")
         self._validate_user_data()
         if self.preprocessed_data is None:
-            self._datasets = self._preprocessor.preprocess(
+            self.preprocessed_data = self._preprocessor.preprocess(
                 raw_user_data=self.raw_user_data,  # type: ignore
             )
-            self.result.datasets = self._datasets
+            self.result.datasets = self.preprocessed_data
+            self._datasets = self.preprocessed_data
         else:
             self._datasets = self.preprocessed_data
             self.result.datasets = self.preprocessed_data
@@ -467,9 +471,10 @@ class BasePipeline(abc.ABC):
             config=self.config,
             model_type=self._model_type,
             loss_type=self._loss_type,
-            ontologies=self._ontologies,  # Ontix
+            ontologies=self.ontologies,  # Ontix
         )
-        trainer_result = self._trainer.train()
+
+        trainer_result: Result = self._trainer.train()
         self.result.update(other=trainer_result)
 
     def predict(
@@ -503,7 +508,13 @@ class BasePipeline(abc.ABC):
             ValueError: If no test data is available or data format is invalid.
         """
         self._validate_prediction_requirements()
+        if self._trainer is None:
+            raise ValueError(
+                "Trainer not initialized, call fit first. If you used .save and .load, then you shoul not call .fit, then this is a bug."
+                "In this case please submit an issue."
+            )
 
+        self._trainer.setup_trainer(old_model=self.result.model)
         original_input = data
         predict_data = self._prepare_prediction_data(data=data)
 
@@ -721,11 +732,13 @@ class BasePipeline(abc.ABC):
         Raises:
             ValueError: If no test data is available in the container.
         """
-        if dataset_container.test is None:
-            raise ValueError(f"No test data available in {context} for reconstruction.")
-        temp = copy.deepcopy(dataset_container.test)
-        temp.data = raw_recon
-        self.result.final_reconstruction = temp
+
+        # if dataset_container.test is None:
+        #     raise ValueError(f"No test data available in {context} for reconstruction.")
+        # temp = copy.deepcopy(dataset_container.test)
+        # temp.data = raw_recon
+        # self.result.final_reconstruction = temp
+        pass
 
     def _handle_multi_single_cell_reconstruction(
         self, raw_recon: torch.Tensor, predictor_results: Result
@@ -839,10 +852,20 @@ class BasePipeline(abc.ABC):
             # Check size compatibility
             expected_latent_dim = self.config.latent_dim
             if not latent.shape[1] == expected_latent_dim:
-                raise ValueError(
-                    f"Input tensor has shape {latent.shape}, but the model expects a "
-                    f"latent vector of size {expected_latent_dim}."
-                )
+                if self._trainer._model._mu.in_features == latent.shape[1]:
+                    warnings.warn(
+                        f"latent_prior has latent dimension {latent.shape[1]}, "
+                        "which matches the input feature dimension of the model. Did you "
+                        "mean to provide latent vectors of dimension "
+                        "For Ontix this is the default behaviour and the warning can be ignored. "
+                        f"{self.config.latent_dim}?"
+                    )
+                else:
+                    raise ValueError(
+                        f"latent_prior has incompatible latent dimension {latent.shape[1]}, "
+                        f"expected {self.config.latent_dim}."
+                    )
+
             latent_tensor = latent
         else:
             raise TypeError(
@@ -854,18 +877,21 @@ class BasePipeline(abc.ABC):
 
     def evaluate(
         self,
-        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(),  # Default is sklearn LogisticRegression
-        ml_model_regression: RegressorMixin = linear_model.LinearRegression(),  # Default is sklearn LinearRegression
+        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(),
+        ml_model_regression: RegressorMixin = linear_model.LinearRegression(),
         params: Union[
             list, str
         ] = [],  # Default empty list, to use all parameters use string "all"
-        metric_class: str = "roc_auc_ovr",  # Default is 'roc_auc_ovr' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
+        metric_class: str = "roc_auc_ovo",  # Default is 'roc_auc_ovo' via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
-        split_type: str = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
+        split_type: Literal[
+            "use-split", "CV-5", "LOOC"
+        ] = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
+        n_downsample: Optional[int] = 10000,
     ) -> Result:
         """TODO"""
-        if self._evaluator is None:
+        if self.evaluator is None:
             raise NotImplementedError("Evaluator not initialized")
         if self.result.model is None:
             raise NotImplementedError(
@@ -882,7 +908,32 @@ class BasePipeline(abc.ABC):
                 "Evaluation continues but may produce incorrect results or errors."
             )
 
-        self.result = self._evaluator.evaluate(
+        if len(params) == 0:
+            if self.config.data_config.annotation_columns is None:
+                params = []  # type: ignore
+            else:
+                params = self.config.data_config.annotation_columns  # type: ignore
+
+        if len(params) == 0:
+            raise ValueError(
+                "No parameters specified for evaluation. Please provide a list of "
+                "parameters or ensure that annotation_columns are set in the config."
+            )
+
+        if "RandomFeature" in reference_methods:
+            if self._datasets is None:
+                raise ValueError(
+                    "Datasets not available for adding RandomFeature. Please keep "
+                    "preprocessed data available before evaluation."
+                )
+
+        if len(self.result.latentspaces._data) == 0:
+            raise ValueError(
+                "No latent spaces found in results. Please run predict() to "
+                "calculate embeddings before evaluation."
+            )
+
+        self.result = self.evaluator.evaluate(
             datasets=self._datasets,
             result=self.result,
             ml_model_class=ml_model_class,
@@ -892,9 +943,10 @@ class BasePipeline(abc.ABC):
             metric_regression=metric_regression,
             reference_methods=reference_methods,
             split_type=split_type,
+            n_downsample=n_downsample,
         )
 
-        ml_plots: Any = self._visualizer._plot_evaluation(result=self.result)
+        _: Any = self.visualizer._plot_evaluation(result=self.result)
 
         return self.result
 
@@ -908,12 +960,12 @@ class BasePipeline(abc.ABC):
         Raises:
             NotImplementedError: If visualizer is not initialized.
         """
-        if self._visualizer is None:
+        if self.visualizer is None:
             raise NotImplementedError("Visualizer not initialized")
 
-        self._visualizer.visualize(result=self.result, config=self.config)
+        self.visualizer.visualize(result=self.result, config=self.config)
 
-    def show_result(self):
+    def show_result(self, split: str = "all", **kwargs):
         """Displays key visualizations of model results.
 
         This method generates the following visualizations:
@@ -930,11 +982,30 @@ class BasePipeline(abc.ABC):
         """
         print("Creating plots ...")
 
-        self._visualizer.show_loss(plot_type="absolute")
+        params: Optional[Union[List[str], str]] = kwargs.pop("params", None)
+        # Check if params are empty and annotation columns are available in config
+        if params is None and self.config.data_config.annotation_columns:
+            params = self.config.data_config.annotation_columns
 
-        self._visualizer.show_latent_space(result=self.result, plot_type="Ridgeline")
+        if len(self.result.losses._data) != 0:
+            self.visualizer.show_loss(plot_type="absolute")
+        else:
+            warnings.warn(
+                "No loss data found in results. Skipping loss curve visualization."
+            )
 
-        self._visualizer.show_latent_space(result=self.result, plot_type="2D-scatter")
+        if len(self.result.latentspaces._data) != 0:
+            self.visualizer.show_latent_space(
+                result=self.result, plot_type="Ridgeline", split=split, param=params
+            )
+            self.visualizer.show_latent_space(
+                result=self.result, plot_type="2D-scatter", split=split, param=params
+            )
+        else:
+            warnings.warn(
+                "No latent spaces found in results. Please run predict() to "
+                "calculate embeddings."
+            )
 
     def run(
         self, data: Optional[Union[DatasetContainer, DataPackage]] = None
@@ -955,13 +1026,13 @@ class BasePipeline(abc.ABC):
         self.visualize()
         return self.result
 
-    def save(self, file_path):
+    def save(self, file_path: str, save_all: bool = False):
         """Saves the pipeline to a file.
 
         Args:
             file_path: Path where the pipeline should be saved.
         """
-        saver = Saver(file_path)
+        saver = Saver(file_path, save_all=save_all)
         saver.save(self)
 
     @classmethod
@@ -976,3 +1047,194 @@ class BasePipeline(abc.ABC):
         """
         loader = Loader(file_path)
         return loader.load()
+
+    def sample_latent_space(
+        self,
+        n_samples: int,
+        split: str = "test",
+        epoch: int = -1,
+    ) -> torch.Tensor:
+        """Samples latent space points from the learned distribution.
+
+        If `n_samples` is not provided, this method returns one latent point per
+        sample in the specified split (legacy behavior). If `n_samples` is given,
+        it draws samples from the aggregated posterior distribution of the split.
+
+        Args:
+            split: The split to sample from (train, valid, test), default is test.
+            epoch: The epoch to sample from, default is the last epoch (-1).
+            n_samples: Optional number of latent points to sample. If None,
+                returns one latent point per available sample in the split.
+
+        Returns:
+            z: torch.Tensor - The sampled latent space points.
+
+        Raises:
+            ValueError: If the model has not been trained or latent statistics
+                have not been computed.
+            TypeError: If mu or logvar are not numpy arrays.
+        """
+
+        if not hasattr(self, "_trainer") or self._trainer is None:
+            raise ValueError("Model is not trained yet. Please train the model first.")
+        if self.result.mus is None or self.result.sigmas is None:
+            raise ValueError("Model has not learned the latent space distribution yet.")
+        if not isinstance(n_samples, int) or n_samples <= 0:
+            raise ValueError("n_samples must be a positive integer.")
+
+        mu = self.result.mus.get(split=split, epoch=epoch)
+        logvar = self.result.sigmas.get(split=split, epoch=epoch)
+
+        if not isinstance(mu, np.ndarray):
+            raise TypeError(
+                f"Expected value to be of type numpy.ndarray, got {type(mu)}."
+                "This can happen if the model was not trained with VAE loss or if you forgot to run predict()"
+            )
+        if not isinstance(logvar, np.ndarray):
+            raise TypeError(
+                f"Expected value to be of type numpy.ndarray, got {type(logvar)}."
+            )
+
+        mu_t = torch.from_numpy(mu).to(
+            device=self._trainer._model.device, dtype=self._trainer._model.dtype
+        )
+        logvar_t = torch.from_numpy(logvar).to(
+            device=self._trainer._model.device, dtype=self._trainer._model.dtype
+        )
+
+        with torch.no_grad():
+            global_mu = mu_t.mean(dim=0)
+            global_logvar = logvar_t.mean(dim=0)
+
+            mu_exp = global_mu.expand(n_samples, -1)
+            logvar_exp = global_logvar.expand(n_samples, -1)
+
+            z = self._trainer._model.reparameterize(mu_exp, logvar_exp)
+            return z
+
+    def generate(
+        self,
+        n_samples: Optional[int] = None,
+        latent_prior: Optional[Union[np.ndarray, torch.Tensor]] = None,
+        split: str = "test",
+        epoch: int = -1,
+    ) -> torch.Tensor:
+        """Generates new samples from the model's latent space.
+
+        This method allows for the generation of new data samples by sampling
+        from the model's latent space. Users can either provide a custom latent
+        prior or specify the number of samples to generate. If a custom latent
+        prior is provided, its batch dimension must be compatible with n_samples.
+
+        Args:
+            n_samples: The number of samples to generate.
+            latent_prior: Optional custom latent prior distribution. If provided,
+                this will be used for sampling instead of the learned distribution.
+                The prior must either be a single latent vector or a batch of
+                latent vectors matching n_samples.
+            split: The split to sample from (train, valid, test), default is test.
+            epoch: The epoch to sample from, default is the last epoch (-1).
+
+        Returns:
+            torch.Tensor: The generated samples in the input space.
+
+        Raises:
+            ValueError: If n_samples is not a positive integer or if the latent
+                prior has incompatible dimensions.
+            TypeError: If latent_prior is not a numpy array or tensor.
+        """
+        if not isinstance(n_samples, int) or n_samples <= 0:
+            if latent_prior is None:
+                raise ValueError(
+                    "n_samples must be a positive integer or latent_prior provided."
+                )
+
+        if latent_prior is None:
+            latent_prior = self.sample_latent_space(
+                n_samples=n_samples, split=split, epoch=epoch
+            )
+
+        if isinstance(latent_prior, np.ndarray):
+            latent_prior = torch.from_numpy(latent_prior).to(
+                device=self._trainer._model.device,
+                dtype=self._trainer._model.dtype,
+            )
+        if not isinstance(latent_prior, torch.Tensor):
+            raise TypeError(
+                f"latent_prior must be numpy.ndarray or torch.Tensor, got {type(latent_prior)}."
+            )
+        if not latent_prior.shape[1] == self.config.latent_dim:
+            if self._trainer._model._mu.in_features == latent_prior.shape[1]:
+                warnings.warn(
+                    f"latent_prior has latent dimension {latent_prior.shape[1]}, "
+                    "which matches the input feature dimension of the model. Did you "
+                    "mean to provide latent vectors of dimension "
+                    "For Ontix this is the default behaviour and the warning can be ignored. "
+                    f"{self.config.latent_dim}?"
+                )
+            else:
+                raise ValueError(
+                    f"latent_prior has incompatible latent dimension {latent_prior.shape[1]}, "
+                    f"expected {self.config.latent_dim}."
+                )
+
+        with torch.no_grad():
+            generated = self.decode(latent=latent_prior)
+            return generated
+
+    def explain(
+        self,
+        explainer: Any,
+        baseline_type: Literal["mean", "random_sample"] = "mean",
+        n_subset: int = 100,
+        llm_explain: bool = False,
+        llm_client: Literal["ollama", "mistral"] = "mistral",
+        llm_model: str = "mistral-medium-latest",
+    ):  # TODO Vincent: add return type
+        my_converter = AnnDataConverter()
+        dataset: Optional[DatasetContainer] = get_dataset(self.result)
+        if dataset is None:
+            raise ValueError(
+                "No dataset available for explanation."
+                "This happens if you used .save and .load, and did not run .predict before."
+                "This can also happen if you run .explain before .preprocess or .fit."
+            )
+        adata_train: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
+            dataset, split="train"
+        )
+        adata_test: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
+            dataset, split="test"
+        )
+        adata_valid: Optional[Dict[str, ad.AnnData]] = my_converter.dataset_to_adata(
+            dataset, split="valid"
+        )
+        model = self.result.model
+        if model is None:
+            raise ValueError(
+                "No model available for explanation."
+                "This happens if you used .save and .load, and did not run .fit before."
+                "This can also happen if you run .explain before .fit."
+            )
+        # TODO Vincent: Implement feature importance explanation
+        # Best with Explainer class that gets initialized here and has a method
+        # Maybe like:
+        # explainer = FeatureImportanceExplainer(adata_train, adata_test, model, explainer, ...)
+        # output = explainer.explain()
+        # also note tha adata_<split> can be None, if the split is not available
+        # so best to check this before concatenating or using them
+
+        if llm_explain:
+            # TODO Vincent:
+            # Je nachdem wie die Gene Liste aussieht, müsstet du noch in src/autoencodix/utils/_llm_explainer.py
+            # in _init_prompt anpassen, wie der prompt gebaut wird. Ich gehe jetzt von einer Liste aus String aus, aber
+            # ich wusste nicht genau was dein return Typ ist.
+
+            llm_explainer = LLMExplainer(
+                client_name=llm_client,
+                model_name=llm_model,
+                gene_list=["GeneA", "GeneB", "GeneC"],  # Example gene list
+            )
+            explanation = llm_explainer.explain()
+            print("LLM Explanation:")
+            print(explanation)
+            return explanation

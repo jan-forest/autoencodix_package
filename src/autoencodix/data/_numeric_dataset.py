@@ -1,6 +1,10 @@
+from __future__ import annotations
 import torch
+
+import scipy as sp
+from scipy.sparse import issparse
 import numpy as np
-from typing import Optional, List, Union, Any, Dict
+from typing import Optional, List, Union, Any, Dict, Tuple, no_type_check
 import pandas as pd
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.base._base_dataset import BaseDataset, DataSetTypes
@@ -86,7 +90,6 @@ class TensorAwareDataset(BaseDataset):
                 for t in tensor_list
             ]
 
-            # Create DataFrame
             df_flat = pd.DataFrame(
                 rows,
                 index=self.sample_ids,
@@ -111,8 +114,7 @@ class TensorAwareDataset(BaseDataset):
 
 
 class NumericDataset(TensorAwareDataset):
-    """
-    A custom PyTorch dataset that handles tensors.
+    """A custom PyTorch dataset that handles tensors.
 
 
     Attributes:
@@ -127,7 +129,7 @@ class NumericDataset(TensorAwareDataset):
 
     def __init__(
         self,
-        data: torch.Tensor,
+        data: Union[torch.Tensor, np.ndarray, sp.sparse.spmatrix],
         config: DefaultConfig,
         sample_ids: Union[None, List[Any]] = None,
         feature_ids: Union[None, List[Any]] = None,
@@ -154,28 +156,49 @@ class NumericDataset(TensorAwareDataset):
             raise ValueError("config cannot be None")
 
         # Convert data to appropriate dtype once during initialization
-        target_dtype = self._get_target_dtype()
-        self.data = self._to_tensor(data, target_dtype)
+        self.target_dtype = self._get_target_dtype()
+        # keep data sparce if it is a scipy sparse matrix to be memory
+        # efficient for large single cell data, convert at batch level to dense tensor
+        if isinstance(self.data, (np.ndarray, torch.Tensor)):
+            self.data = self._to_tensor(data, self.target_dtype)
 
         self.metadata = metadata
         self.split_indices = split_indices
         self.mytype = DataSetTypes.NUM
 
-    def _to_df(self) -> pd.DataFrame:
-        """
-        Convert the dataset to a pandas DataFrame.
+    @no_type_check
+    def __getitem__(self, index: int) -> Union[
+        Tuple[
+            Union[torch.Tensor, int],
+            Union[torch.Tensor, "ImgData"],  # ty: ignore  # noqa: F821
+            Any,
+        ],
+        Dict[str, Tuple[Any, torch.Tensor, Any]],
+    ]:
+        """Retrieves a single sample and its corresponding label.
+
+        Args:
+            index: Index of the sample to retrieve.
 
         Returns:
-            DataFrame representation of the dataset
+            A tuple containing the index, the data sample and its label, or a dictionary
+            mapping keys to such tuples in case we have multiple uncombined data at this step.
         """
-        if isinstance(self.data, torch.Tensor):
-            return pd.DataFrame(
-                self.data.numpy(), columns=self.feature_ids, index=self.sample_ids
-            )
+
+        row = self.data[index]  # idx: int, slice, or list
+        if self.sample_ids is not None:
+            label = self.sample_ids[index]
         else:
-            raise TypeError(
-                "Data is not a torch.Tensor and cannot be converted to DataFrame."
-            )
+            label = index
+        if issparse(row):
+            # print("calling to array")
+
+            # print(f"Size of data sparse: {asizeof.asizeof(row)}")
+            row = torch.tensor(row.toarray(), dtype=self.target_dtype).squeeze(0)
+
+            # print(f"Size of data dense: {asizeof.asizeof(row)}")
+
+        return index, row, label
 
     def __len__(self) -> int:
         """Returns the number of samples (rows) in the dataset"""

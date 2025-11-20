@@ -1,7 +1,14 @@
 from enum import Enum
 from typing import Any, Dict, Literal, Optional, List, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator,
+    model_validator,
+    ConfigDict,
+    ValidationInfo,
+)
 
 
 class SchemaPrinterMixin:
@@ -70,8 +77,10 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     data_type: Literal["NUMERIC", "CATEGORICAL", "IMG", "ANNOTATION"] = Field(
         default="NUMERIC"
     )
-    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE"] = Field(
-        default="NONE",
+    scaling: Literal[
+        "STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE", "NOTSET", "LOG1P"
+    ] = Field(
+        default="NOTSET",
         description="Setting the scaling here in DataInfo overrides the globally set scaling method for the specific data modality",
     )  # can also be set globally, for all data modalities.
 
@@ -104,23 +113,20 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         default=True, description="Whether to normalize by total counts"
     )
     log_transform: bool = Field(
-        default=True, description="Whether to apply log1p transformation"
+        default=False, description="Whether to apply log1p transformation"
     )
     k_filter: Optional[int] = Field(
         default=20,
         description="Don't set this gets calculated dynamically, based on k_filter in general config ",
     )
     # image specific ------------------------------
-
-    img_root: Union[str, None] = Field(default=None)
     img_width_resize: Union[int, None] = Field(default=64)
     img_height_resize: Union[int, None] = Field(default=64)
     # annotation specific -------------------------
     # xmodalix specific -------------------------
     translate_direction: Union[Literal["from", "to"], None] = Field(default=None)
-    pretrain_epochs: int = Field(
-        default=0,
-        ge=0,
+    pretrain_epochs: Optional[int] = Field(
+        default=None,
         description="Number of pretraining epochs. This overwrites the global 'pretraining_epochs' in DefaultConfig class to have different number of pretraining epochs for each data modality",
     )
 
@@ -131,14 +137,27 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
             raise ValueError('"X" must always be a part of the selected_layers list')
         return v
 
-    # add validation to only allow quadratic image resizing
+    # # add validation to only allow quadratic image resizing
+    # @field_validator("img_width_resize", "img_height_resize")
+    # @classmethod
+    # def validate_image_resize(cls, v, values):
+    #     if v is not None and v <= 0:
+    #         raise ValueError("Image resize dimensions must be positive integers")
+    #     if "img_width_resize" in values and "img_height_resize" in values:
+    #         if values["img_width_resize"] != values["img_height_resize"]:
+    #             raise ValueError("Image width and height must be the same for resizing")
+    #     return v
+
     @field_validator("img_width_resize", "img_height_resize")
     @classmethod
-    def validate_image_resize(cls, v, values):
+    def validate_image_resize(cls, v, info: ValidationInfo):
         if v is not None and v <= 0:
             raise ValueError("Image resize dimensions must be positive integers")
-        if "img_width_resize" in values and "img_height_resize" in values:
-            if values["img_width_resize"] != values["img_height_resize"]:
+
+        # Access other field values through info.data
+        data = info.data
+        if "img_width_resize" in data and "img_height_resize" in data:
+            if data["img_width_resize"] != data["img_height_resize"]:
                 raise ValueError("Image width and height must be the same for resizing")
         return v
 
@@ -157,6 +176,10 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     model_config = ConfigDict(extra="forbid")
     # Datasets configuration --------------------------------------------------
     data_config: DataConfig = DataConfig(data_info={})
+    img_path_col: str = Field(
+        default="img_paths",
+        description="When working with images, we except a column in your annotation file that specifies the path of the image for a particular sample. Here you can define the name of this column",
+    )
     requires_paired: Union[bool, None] = Field(
         default_factory=lambda: True,
         description="Indicator if the samples for the xmodalix are paired, based on some sample id",
@@ -169,7 +192,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     k_filter: Union[int, None] = Field(
         default=20, description="Number of features to keep"
     )
-    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE"] = Field(
+    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE", "LOG1P"] = Field(
         default="STANDARD",
         description="Setting the scaling here for all data modalities, can per overruled by setting scaling at data modality level per data modality",
     )
@@ -184,13 +207,18 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     latent_dim: int = Field(
         default=16, ge=1, description="Dimension of the latent space"
     )
+    hidden_dim: int = Field(
+        default=16,
+        ge=1,
+        description="Hidden dimension of image_vae, applies only to image_vae",
+    )
     n_layers: int = Field(
         default=3,
         ge=0,
         description="Number of layers in encoder/decoder, without latent layer. If 0, is only the latent layer.",
     )
-    enc_factor: int = Field(
-        default=4, ge=1, description="Scaling factor for encoder dimensions"
+    enc_factor: float = Field(
+        default=4, gt=0, description="Scaling factor for encoder dimensions"
     )
     input_dim: int = Field(default=10000, ge=1, description="Input dimension")
     drop_p: float = Field(
@@ -198,6 +226,9 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     )
 
     # Training configuration --------------------------------------------------
+    save_memory: bool = Field(
+        default=False, description="If set to True we don't store TrainingDynamics"
+    )
     learning_rate: float = Field(
         default=0.001, gt=0, description="Learning rate for optimization"
     )
@@ -245,17 +276,17 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     gamma: float = Field(
         default=10.0,
         ge=0,
-        description="Gamma weighting factor for Adversial Loss Term i.e. for XModal Classfier training",
+        description="Gamma weighting factor for Adversial Loss Term i.e. for XModalix Classfier training",
     )
     delta_pair: float = Field(
         default=5.0,
         ge=0,
-        description="Delta weighting factor for paired loss term in XModale Training",
+        description="Delta weighting factor for paired loss term in XModalix Training",
     )
     delta_class: float = Field(
         default=5.0,
         ge=0,
-        description="Delta weighting factor for class loss term in XModale Training",
+        description="Delta weighting factor for class loss term in XModalix Training",
     )
     min_samples_per_split: int = Field(
         default=1, ge=1, description="Minimum number of samples per split"
@@ -284,9 +315,6 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     )
     # 0 uses cpu and not gpu
     n_gpus: int = Field(default=1, ge=1, description="Number of GPUs to use")
-    n_workers: int = Field(
-        default=0, ge=0, description="Number of data loading workers"
-    )
     checkpoint_interval: int = Field(
         default=10, ge=1, description="Interval for saving checkpoints"
     )

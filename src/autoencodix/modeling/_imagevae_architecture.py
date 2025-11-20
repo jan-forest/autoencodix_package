@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Union, Dict
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._model_output import ModelOutput
 from autoencodix.base._base_autoencoder import BaseAutoencoder
@@ -42,8 +42,9 @@ class ImageVAEArchitecture(BaseAutoencoder):
         self,
         input_dim: Tuple[int, int, int],  # (C,W,H) the input image shape
         config: Optional[DefaultConfig],
+        ontologies: Optional[Union[Tuple, Dict]] = None,
+        feature_order: Optional[Union[Tuple, Dict]] = None,
         # the input_dim is the number of channels in the image, e.g. 3
-        hidden_dim: int = 16,
     ):
         """Initialize the ImageVAEArchitecture with the given configuration.
 
@@ -60,7 +61,7 @@ class ImageVAEArchitecture(BaseAutoencoder):
         self.latent_dim: int = self._config.latent_dim
         self.nc, self.h, self.w = input_dim
         self.img_shape: Tuple[int, int, int] = input_dim
-        self.hidden_dim: int = hidden_dim
+        self.hidden_dim: int = self._config.hidden_dim
         self._build_network()
         self.apply(self._init_weights)
 

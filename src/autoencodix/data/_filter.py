@@ -72,6 +72,7 @@ class DataFilter:
         self.filtered_features: Optional[Set[str]] = None
         self._scaler = None
         self.ontologies = ontologies  # Addition to Varix, mandotory for Ontix
+        self._init_scaler()
 
     def _filter_nonzero_variance(self, df: pd.DataFrame) -> pd.Series:
         """Removes features with zero variance.
@@ -200,7 +201,7 @@ class DataFilter:
                     f"Some genes in genes_to_keep are not present in the dataframe: {e}"
                 )
 
-        MIN_FILTER = 10
+        MIN_FILTER = 2
         filtering_method = FilterMethod(self.data_info.filtering)
 
         if df.shape[0] < MIN_FILTER or df.empty:
@@ -265,16 +266,18 @@ class DataFilter:
 
     def _init_scaler(self) -> None:
         """Initializes the scaler based on the configured scaling method."""
-        method = self.data_info.scaling
-        if method == "NONE":
-            method = self.config.scaling
-        if method == "MINMAX":
+        self.method = self.data_info.scaling
+
+        if self.method == "NOTSET":
+            # if not set in data config, we use the global scaling config
+            self.method = self.config.scaling
+        if self.method == "MINMAX":
             self._scaler = MinMaxScaler(clip=True)
-        elif method == "STANDARD":
+        elif self.method == "STANDARD":
             self._scaler = StandardScaler()
-        elif method == "ROBUST":
+        elif self.method == "ROBUST":
             self._scaler = RobustScaler()
-        elif method == "MAXABS":
+        elif self.method == "MAXABS":
             self._scaler = MaxAbsScaler()
         else:
             self._scaler = None
@@ -295,7 +298,9 @@ class DataFilter:
             warnings.warn("No scaling applied.")
         return self._scaler
 
-    def scale(self, df: Union[pd.Series, pd.DataFrame], scaler: Any) -> Union[pd.Series, pd.DataFrame]:
+    def scale(
+        self, df: Union[pd.Series, pd.DataFrame], scaler: Any
+    ) -> Union[pd.Series, pd.DataFrame]:
         """Applies the fitted scaler to the input dataframe.
 
         Args:
@@ -305,10 +310,14 @@ class DataFilter:
         Returns:
             Scaled dataframe.
         """
+        if self.method == "LOG1P":
+            X_log = np.log1p(df.values)
+            X_norm = X_log / np.log1p(np.max(X_log, axis=0))
+            df_scaled = pd.DataFrame(X_norm, columns=df.columns, index=df.index)
+            return df_scaled
         if scaler is None:
             warnings.warn("No scaler has been fitted yet or scaling is set to none.")
             return df
-
         df_scaled = pd.DataFrame(
             scaler.transform(df), columns=df.columns, index=df.index
         )

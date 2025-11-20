@@ -50,6 +50,12 @@ class BaseAutoencoder(ABC, nn.Module):
         self.config = config
         self.ontologies = ontologies
         self.feature_order = feature_order
+        self.init_args = dict(
+            config=config,
+            input_dim=input_dim,
+            ontologies=ontologies,
+            feature_order=feature_order,
+        )
 
     @abstractmethod
     def _build_network(self) -> None:

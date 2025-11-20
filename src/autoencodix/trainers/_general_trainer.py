@@ -1,4 +1,6 @@
 import torch
+
+import gc
 import os
 import numpy as np
 from typing import Optional, Type, Union, Tuple, Any, Dict, List
@@ -83,14 +85,13 @@ class GeneralTrainer(BaseTrainer):
 
         # we will set this later, in the predict method
         self.n_test: Optional[int] = None
-        self.n_train = len(trainset.data) if trainset else 0
-        self.n_valid = len(validset.data) if validset else 0
+        self.n_train = len(trainset) if trainset else 0
+        self.n_valid = len(validset) if validset else 0
         self.n_features = trainset.get_input_dim() if trainset else 0
         self.device = next(self._model.parameters()).device
-
         self._init_buffers()
 
-    def _init_buffers(self, input_data: Optional[BaseDataset] = None):
+    def _init_buffers(self, input_data: Optional[BaseDataset] = None) -> None:
         if input_data:
             self.n_features = input_data.get_input_dim()
 
@@ -103,63 +104,29 @@ class GeneralTrainer(BaseTrainer):
         def make_numpy_buffer(size: int):
             return np.empty((size,), dtype=object)
 
-        self._latentspace_buffer = {
-            "train": make_tensor_buffer(self.n_train, self.latent_dim),
-            "valid": (
-                make_tensor_buffer(self.n_valid, self.latent_dim)
-                if self.n_valid
-                else None
-            ),
-            "test": (
-                make_tensor_buffer(self.n_test, self.latent_dim)
-                if self.n_test
-                else None
-            ),
-        }
-        self._reconstruction_buffer = {
-            "train": make_tensor_buffer(self.n_train, self.n_features),
-            "valid": (
-                make_tensor_buffer(self.n_valid, self.n_features)
-                if self.n_valid
-                else None
-            ),
-            "test": (
-                make_tensor_buffer(self.n_test, self.n_features)
-                if self.n_test
-                else None
-            ),
-        }
-        self._mu_buffer = {
-            "train": make_tensor_buffer(self.n_train, self.latent_dim),
-            "valid": (
-                make_tensor_buffer(self.n_valid, self.latent_dim)
-                if self.n_valid
-                else None
-            ),
-            "test": (
-                make_tensor_buffer(self.n_test, self.latent_dim)
-                if self.n_test
-                else None
-            ),
-        }
-        self._sigma_buffer = {
-            "train": make_tensor_buffer(self.n_train, self.latent_dim),
-            "valid": (
-                make_tensor_buffer(self.n_valid, self.latent_dim)
-                if self.n_valid
-                else None
-            ),
-            "test": (
-                make_tensor_buffer(self.n_test, self.latent_dim)
-                if self.n_test
-                else None
-            ),
-        }
+        # Always create sample ID buffers
         self._sample_ids_buffer = {
             "train": make_numpy_buffer(self.n_train),
             "valid": make_numpy_buffer(self.n_valid) if self.n_valid else None,
             "test": make_numpy_buffer(self.n_test) if self.n_test else None,
         }
+
+        splits = ["test"] if self._config.save_memory else ["train", "valid", "test"]
+
+        def make_split_buffers(dim):
+            return {
+                split: (
+                    make_tensor_buffer(getattr(self, f"n_{split}"), dim)
+                    if getattr(self, f"n_{split}", 0) and (split in splits)
+                    else None
+                )
+                for split in ["train", "valid", "test"]
+            }
+
+        self._latentspace_buffer = make_split_buffers(self.latent_dim)
+        self._reconstruction_buffer = make_split_buffers(self.n_features)
+        self._mu_buffer = make_split_buffers(self.latent_dim)
+        self._sigma_buffer = make_split_buffers(self.latent_dim)
 
     def _apply_post_backward_processing(self):
         pass
@@ -213,8 +180,13 @@ class GeneralTrainer(BaseTrainer):
         """
         total_loss = 0.0
         sub_losses: Dict[str, float] = defaultdict(float)
-
+        current_batch = 0
         for indices, features, sample_ids in self._trainloader:
+            print(
+                f"Processing batch {current_batch + 1}/{len(self._trainloader)}",
+                end="\r",
+            )
+            current_batch += 1
             self._optimizer.zero_grad()
             model_outputs = self._model(features)
             loss, batch_sub_losses = self._loss_fn(
@@ -226,7 +198,6 @@ class GeneralTrainer(BaseTrainer):
                     self._trainloader.dataset
                 ),  # Pass n_samples for disentangled loss calculations
             )
-
             self._fabric.backward(loss)
             self._apply_post_backward_processing()
             self._optimizer.step()
@@ -241,6 +212,14 @@ class GeneralTrainer(BaseTrainer):
             if should_checkpoint:
                 self._capture_dynamics(model_outputs, "train", indices, sample_ids)
 
+        for k, v in sub_losses.items():
+            if "_factor" not in k:
+                sub_losses[k] = v / len(
+                    self._trainloader.dataset
+                )  # Average over all samples
+        total_loss = total_loss / len(
+            self._trainloader.dataset
+        )  # Average over all samples
         return total_loss, sub_losses
 
     def _validate_epoch(
@@ -280,6 +259,14 @@ class GeneralTrainer(BaseTrainer):
                 if should_checkpoint:
                     self._capture_dynamics(model_outputs, "valid", indices, sample_ids)
 
+        for k, v in sub_losses.items():
+            if "_factor" not in k:
+                sub_losses[k] = v / len(
+                    self._validloader.dataset
+                )  # Average over all samples
+        total_loss = total_loss / len(
+            self._validloader.dataset
+        )  # Average over all samples
         return total_loss, sub_losses
 
     def _log_losses(
@@ -293,17 +280,14 @@ class GeneralTrainer(BaseTrainer):
             total_loss: The total loss for the epoch.
             sub_losses: A dictionary of sub-losses for the epoch.
         """
-        dataset_len = len(
-            self._trainloader.dataset if split == "train" else self._validloader.dataset
-        )
-        self._result.losses.add(epoch=epoch, split=split, data=total_loss / dataset_len)
+        # dataset_len = len(
+        #     self._trainloader.dataset if split == "train" else self._validloader.dataset
+        # )
+        self._result.losses.add(epoch=epoch, split=split, data=total_loss)
         self._result.sub_losses.add(
             epoch=epoch,
             split=split,
-            data={
-                k: v / dataset_len if "_factor" not in k else v
-                for k, v in sub_losses.items()
-            },
+            data={k: v if "_factor" not in k else v for k, v in sub_losses.items()},
         )
 
         self._fabric.print(
@@ -320,6 +304,8 @@ class GeneralTrainer(BaseTrainer):
             epoch: The current epoch number.
         """
         self._result.model_checkpoints.add(epoch=epoch, data=self._model.state_dict())
+        if self._config.save_memory:
+            return
         self._dynamics_to_result(epoch, "train")
         if self._validset:
             self._dynamics_to_result(epoch, "valid")
@@ -349,11 +335,20 @@ class GeneralTrainer(BaseTrainer):
         )
 
         self._sample_ids_buffer[split][indices_np] = np.array(sample_ids)
+        if self._config.save_memory and split != "test":
+            return
+        indices_np = (
+            indices.cpu().numpy()
+            if isinstance(indices, torch.Tensor)
+            else np.array(indices)
+        )
+
+        self._sample_ids_buffer[split][indices_np] = np.array(sample_ids)
 
         self._latentspace_buffer[split][indices_np] = model_output.latentspace.detach()
-        self._reconstruction_buffer[split][indices_np] = (
-            model_output.reconstruction.detach()
-        )
+        self._reconstruction_buffer[split][
+            indices_np
+        ] = model_output.reconstruction.detach()
 
         if model_output.latent_logvar is not None:
             self._sigma_buffer[split][indices_np] = model_output.latent_logvar.detach()
@@ -461,3 +456,33 @@ class GeneralTrainer(BaseTrainer):
             The trained model as a torch.nn.Module.
         """
         return self._model
+
+    def purge(self) -> None:
+        """Cleans up any resources used during training, such as cached data or large attributes."""
+
+        attrs_to_delete = [
+            "_trainloader",
+            "_validloader",
+            "_model",
+            "_optimizer",
+            "_latentspace_buffer",
+            "_reconstruction_buffer",
+            "_mu_buffer",
+            "_sigma_buffer",
+            "_sample_ids_buffer",
+            "_trainset",
+            "_loss_fn",
+            "_validset",
+        ]
+
+        for attr in attrs_to_delete:
+            if hasattr(self, attr):
+                value = getattr(self, attr)
+                # Optional: ensure non-None before deletion
+                if value is not None:
+                    delattr(self, attr)
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        gc.collect()

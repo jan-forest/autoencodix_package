@@ -1,5 +1,3 @@
-from typing import List, Union
-
 import anndata as ad  # type: ignore
 import warnings
 import pandas as pd
@@ -31,50 +29,12 @@ class NaNRemover:
         config: DefaultConfig,
     ):
         """Initialize the NaNRemover with configuration settings.
-            Args:
-                config: Configuration object containing settings for data processing.
+        Args:
+            config: Configuration object containing settings for data processing.
 
         """
         self.config = config
         self.relevant_cols = self.config.data_config.annotation_columns
-
-    def _process_sparse_matrix(self, matrix) -> np.ndarray:
-        """Converts sparse matrix to dense NumPy array and ensures float type.
-
-        Args:
-            matrix: The input matrix, which can be a sparse matrix (e.g., from scipy.sparse)
-                or a dense NumPy array.
-
-        Returns
-            A dense NumPy array of float type.
-        """
-        if issparse(matrix):
-            matrix = matrix.toarray()
-        return matrix.astype(float)
-
-    def _remove_nan_from_matrix(
-        self, matrix, name: str = ""
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """Removes NaNs from matrix, returns boolean masks for valid rows and columns.
-
-        Args:
-            matrix: The input matrix (NumPy array or sparse matrix) to process.
-            name: An optional string identifier for the matrix, used for printing
-                (though not currently implemented in the provided code).
-
-        Returns:
-            A tuple containing two boolean NumPy arrays:
-            - valid_rows: A 1D boolean array where True indicates a row without NaNs.
-            - valid_cols: A 1D boolean array where True indicates a column without NaNs.
-        """
-        matrix = self._process_sparse_matrix(matrix)
-        valid_cols = ~np.isnan(matrix).any(axis=0)
-        valid_rows = ~np.isnan(matrix).any(axis=1)
-
-        if not name:
-            name = "matrix"
-
-        return valid_rows, valid_cols
 
     def _process_modality(self, adata: ad.AnnData) -> ad.AnnData:
         """Converts NaN values in AnnData object to zero and metadata NaNs to 'missing'.
@@ -88,8 +48,10 @@ class NaNRemover:
         # Handle X matrix
         if sparse.issparse(adata.X):
             if hasattr(adata.X, "data"):
-                adata.X.data = np.nan_to_num(adata.X.data, nan=0.0) # ty: ignore[invalid-assignment]
-                adata.X.eliminate_zeros()
+                adata.X.data = np.nan_to_num(  # ty:  ignore
+                    adata.X.data, nan=0.0
+                )  # ty: ignore[invalid-assignment]
+                adata.X.eliminate_zeros()  # ty: ignore
         else:
             adata.X = np.nan_to_num(adata.X, nan=0.0)
 
@@ -104,9 +66,14 @@ class NaNRemover:
 
         # Handle obs metadata
         if self.relevant_cols is not None:
+            print(adata.obs.columns)
             for col in self.relevant_cols:
                 if col in adata.obs.columns:
-                    adata.obs[col] = adata.obs[col].astype("category").fillna("missing")
+                    # Fill NaNs with "missing" for non-numeric columns
+                    if not pd.api.types.is_numeric_dtype(adata.obs[col]):
+                        # Add "missing" to categories first, then fill
+                        adata.obs[col] = adata.obs[col].cat.add_categories(["missing"])
+                        adata.obs[col] = adata.obs[col].fillna("missing").astype("category")
         return adata
 
     def remove_nan(self, data: DataPackage) -> DataPackage:
@@ -135,8 +102,10 @@ class NaNRemover:
                     continue
                 if self.relevant_cols is not None:
                     for col in self.relevant_cols:
-                        if col in v.columns:
-                            v.dropna(subset=[col], inplace=True)
+                        # Fill with "missing" if column is not integer or float
+                        if col in v.columns and not pd.api.types.is_numeric_dtype(v[col]):
+                            v.fillna(value={col: "missing"}, inplace=True)
+
                 non_na[k] = v
             data.annotation = non_na  # type: ignore
 

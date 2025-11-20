@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib
 from matplotlib import pyplot as plt
 import seaborn as sns  # type: ignore
+import seaborn.objects as so
 import torch
 import warnings
 
@@ -63,7 +64,9 @@ class BaseVisualizer(abc.ABC):
         if plot_type == "absolute":
             if "loss_absolute" not in self.plots.keys():
                 print("Absolute loss plot not found in the plots dictionary")
-                print("You need to run visualize() method first")
+                print(
+                    "This happens, when you did not run visualize() or if you saved and loaded the model with `save_all=False`"
+                )
             else:
                 fig = self.plots["loss_absolute"]
                 show_figure(fig)
@@ -71,11 +74,15 @@ class BaseVisualizer(abc.ABC):
         if plot_type == "relative":
             if "loss_relative" not in self.plots.keys():
                 print("Relative loss plot not found in the plots dictionary")
-                print("You need to run visualize() method first")
+
+                print(
+                    "This happens, when you did not run visualize() or if you saved and loaded the model with `save_all=False`"
+                )
             else:
                 fig = self.plots["loss_relative"]
-                show_figure(fig)
-                plt.show()
+                fig.show()
+                # show_figure(fig)
+                # plt.show()
 
         if plot_type not in ["absolute", "relative"]:
             print(
@@ -129,7 +136,6 @@ class BaseVisualizer(abc.ABC):
                 show_figure(fig)
                 plt.show()
 
-    ## TODO move to BaseVisualizer?
     def save_plots(
         self, path: str, which: Union[str, list] = "all", format: str = "png"
     ) -> None:
@@ -149,6 +155,9 @@ class BaseVisualizer(abc.ABC):
         Raises:
             ValueError: If the 'which' parameter is not a list or a string.
         """
+        if not os.path.exists(path):
+            os.makedirs(path)
+
         if not isinstance(which, list):
             ## Case when which is a string
             if which == "all":
@@ -172,7 +181,7 @@ class BaseVisualizer(abc.ABC):
                         self.plots[which]
                     ):  # Plot all epochs and splits of type which
                         fig = item[-1]  ## Figure is in last element of the tuple
-                        filename = which + "_" + "_".join(str(x) for x in item[0:-1]) # type: ignore
+                        filename = which + "_" + "_".join(str(x) for x in item[0:-1])  # type: ignore
                         fullpath = os.path.join(path, filename)
                         fig.savefig(f"{fullpath}.{format}")
         else:
@@ -204,7 +213,7 @@ class BaseVisualizer(abc.ABC):
             if not isinstance(loss_values, dict):
                 # If it's not a dict, try to convert it or handle appropriately
                 if hasattr(loss_values, "to_dict"):
-                    loss_values = loss_values.to_dict() # type: ignore
+                    loss_values = loss_values.to_dict()  # type: ignore
                 else:
                     # For non-convertible types, you might need a custom solution
                     # For numpy arrays, you could do something like:
@@ -237,7 +246,7 @@ class BaseVisualizer(abc.ABC):
         loss_values = result.losses.get()
         if not isinstance(loss_values, dict):
             if hasattr(loss_values, "to_dict"):
-                loss_values = loss_values.to_dict() # type: ignore
+                loss_values = loss_values.to_dict()  # type: ignore
             else:
                 if hasattr(loss_values, "shape"):
                     loss_values = {i: val for i, val in enumerate(loss_values)}
@@ -264,7 +273,7 @@ class BaseVisualizer(abc.ABC):
     @staticmethod
     def _make_loss_plot(
         df_plot: pd.DataFrame, plot_type: str
-    ) -> matplotlib.figure.Figure: # type: ignore
+    ) -> matplotlib.figure.Figure:  # type: ignore
         """
         Generates a plot for visualizing loss values from a DataFrame.
 
@@ -328,28 +337,46 @@ class BaseVisualizer(abc.ABC):
                 & (df_plot["Loss Term"].isin(valid_terms))
             )
 
-            fig, axes = plt.subplots(1, 2, figsize=(fig_width_rel, 5), sharey=True)
+            df_plot.loc[exclude, "Relative Loss Value"] = (
+                df_plot[exclude]
+                .groupby(["Split", "Epoch"])["Loss Value"]
+                .transform(lambda x: x / x.sum())
+            )
+            fig = (
+                (
+                    so.Plot(
+                        df_plot[exclude],
+                        "Epoch",
+                        "Relative Loss Value",
+                        color="Loss Term",
+                    ).add(so.Area(alpha=0.7), so.Stack())
+                )
+                .facet("Split")
+                .layout(size=(fig_width_rel, 5))
+            )
 
-            ax = 0
+            # fig, axes = plt.subplots(1, 2, figsize=(fig_width_rel, 5), sharey=True)
 
-            for split in df_plot["Split"].unique():
-                axes[ax] = sns.kdeplot(
-                    data=df_plot[exclude & (df_plot["Split"] == split)],
-                    x="Epoch",
-                    hue="Loss Term",
-                    multiple="fill",
-                    weights="Loss Value",
-                    clip=[0, df_plot["Epoch"].max()],
-                    ax=axes[ax],
-                ).set_title(split)
-                ax += 1
+            # ax = 0
 
-            plt.close()
+            # for split in df_plot["Split"].unique():
+            #     axes[ax] = sns.kdeplot(
+            #         data=df_plot[exclude & (df_plot["Split"] == split)],
+            #         x="Epoch",
+            #         hue="Loss Term",
+            #         multiple="fill",
+            #         weights="Loss Value",
+            #         clip=[0, df_plot["Epoch"].max()],
+            #         ax=axes[ax],
+            #     ).set_title(split)
+            #     ax += 1
+
+            # plt.close()
 
         return fig
 
     @staticmethod
-    def _plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure: # type: ignore
+    def _plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:  # type: ignore
         """
         Visualization of model weights in encoder and decoder layers as heatmap for each layer as subplot.
         Handles non-symmetrical autoencoder architectures.
@@ -430,14 +457,14 @@ class BaseVisualizer(abc.ABC):
                 ).set(title=decoder_names[i])
                 if model.ontologies is not None:
                     axes[1, i].set_xticks(
-                        ticks=range(len(node_names[i])), # type: ignore
-                        labels=node_names[i], # type: ignore
+                        ticks=range(len(node_names[i])),  # type: ignore
+                        labels=node_names[i],  # type: ignore
                         rotation=90,
                         fontsize=8,
                     )
                     axes[1, i].set_yticks(
-                        ticks=range(len(node_names[i + 1])), # type: ignore
-                        labels=node_names[i + 1], # type: ignore
+                        ticks=range(len(node_names[i + 1])),  # type: ignore
+                        labels=node_names[i + 1],  # type: ignore
                         rotation=0,
                         fontsize=8,
                     )
@@ -472,3 +499,71 @@ class BaseVisualizer(abc.ABC):
         fig.suptitle("Model Weights", size=20)
         plt.close()
         return fig
+
+    @staticmethod
+    def _collect_all_metadata(result):
+        all_metadata = pd.DataFrame()
+
+        # 1) collect metadata from results.datasets
+
+        # 1a) iterate over splits [train, valid, test] if they exist
+        for split in ["train", "valid", "test"]:
+
+            if hasattr(result.datasets, split) and result.datasets[split] is not None:
+                if hasattr(result.datasets[split], "metadata"):
+                    split_metadata = result.datasets[split].metadata
+
+                    # 1b) if result.datasets.split is a dictionary, iterate over keys (modalities)
+                    if isinstance(split_metadata, dict):
+                        for modality, modality_data in split_metadata.items():
+                            all_metadata = pd.concat(
+                                [all_metadata, modality_data], axis=0
+                            )
+                    # 1c) if result.datasets.split is a Dataframe, just collect metadata directly
+                    elif isinstance(split_metadata, pd.DataFrame):
+                        all_metadata = pd.concat([all_metadata, split_metadata], axis=0)
+                else:
+                    split_modalities = result.datasets[split].datasets
+                    if isinstance(split_modalities, dict):
+                        for modality, modality_data in split_modalities.items():
+                            if hasattr(modality_data, "metadata"):
+                                modality_metadata = modality_data.metadata
+                                if isinstance(modality_metadata, pd.DataFrame):
+                                    all_metadata = pd.concat(
+                                        [all_metadata, modality_metadata], axis=0
+                                    )
+
+        # 2) collect metadata from results.new_datasets in the same way
+        if hasattr(result, "new_datasets"):
+            for split in ["train", "valid", "test"]:
+                if (
+                    hasattr(result.new_datasets, split)
+                    and result.new_datasets[split] is not None
+                ):
+                    if hasattr(result.new_datasets[split], "metadata"):
+                        split_metadata = result.new_datasets[split].metadata
+
+                        if isinstance(split_metadata, dict):
+                            for modality, modality_data in split_metadata.items():
+                                all_metadata = pd.concat(
+                                    [all_metadata, modality_data], axis=0
+                                )
+                        elif isinstance(split_metadata, pd.DataFrame):
+                            all_metadata = pd.concat(
+                                [all_metadata, split_metadata], axis=0
+                            )
+                    else:
+                        split_modalities = result.new_datasets[split].datasets
+                        if isinstance(split_modalities, dict):
+                            for modality, modality_data in split_modalities.items():
+                                if hasattr(modality_data, "metadata"):
+                                    modality_metadata = modality_data.metadata
+                                    if isinstance(modality_metadata, pd.DataFrame):
+                                        all_metadata = pd.concat(
+                                            [all_metadata, modality_metadata], axis=0
+                                        )
+
+        # Remove duplicate rows if any
+        all_metadata = all_metadata.loc[~all_metadata.index.duplicated(keep="first")]
+
+        return all_metadata

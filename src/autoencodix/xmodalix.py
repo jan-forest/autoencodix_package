@@ -24,42 +24,21 @@ from autoencodix.utils._losses import XModalLoss
 from autoencodix.utils._utils import find_translation_keys
 from autoencodix.visualize._xmodal_visualizer import XModalVisualizer
 
-from mudata import MuData  # type: ignore
+from mudata import MuData
+import torch  # type: ignore
 
 
 class XModalix(BasePipeline):
-    """
+    """XModalix specific version of the BasePipeline class.
 
-    Attributes
-    ----------
-    preprocessed_data : Optional[DatasetContainer]
-        User data if no datafiles in the config are provided. We expect these to be split and processed.
-    raw_user_data : Optional[DataPackage]
-        We give users the option to populate a DataPackage with raw data i.e. pd.DataFrames, MuData.
-        We will process this data as we would do wit raw files specified in the config.
-    config : Optional[Union[None, DefaultConfig]]
-        Configuration object containing customizations for the pipeline
-    _preprocessor : Preprocessor
-        Preprocessor object to preprocess the input data - custom for XModalix
-    _visualizer : Visualizer
-        Visualizer object to visualize the model output - custom for XModalix
-    _trainer : XModalixTrainer
-        Trainer object that trains the model - custom for XModalix
-    _evaluator : XModalixEvaluator
-        Evaluator object that evaluates the model performance or downstream tasks
-    result : Result
-        Result object to store the pipeline results
-    _datasets : Optional[DatasetContainer]
-        Container for train, validation, and test datasets (preprocessed)
-    data_splitter : DataSplitter
-        DataSplitter object to split the data into train, validation, and test sets
+    Inherits preprocess, fit, evaluate, and visualize methods from BasePipeline.
+    Overrides predict
 
-    Methods
-    -------
-    all methods from BasePipeline
+    This class extends BasePipeline. See the parent class for a full list
+    of attributes and methods.
 
-    sample_latent_space(split: str = "test", epoch: int = -1) -> torch.Tensor
-        Samples new latent space points from the learned distribution.
+    Additional Attributes:
+        _default_config: Is set to XModalixConfig here.
 
     """
 
@@ -73,13 +52,14 @@ class XModalix(BasePipeline):
         ] = VarixArchitecture,  # TODO make custom for XModalix
         loss_type: Type[BaseLoss] = XModalLoss,  # TODO make custom for XModalix
         preprocessor_type: Type[BasePreprocessor] = XModalPreprocessor,
-        visualizer: Optional[BaseVisualizer] = XModalVisualizer,
-        evaluator: Optional[XModalixEvaluator] = XModalixEvaluator,
+        visualizer: Optional[Type[BaseVisualizer]] = XModalVisualizer,
+        evaluator: Optional[Type[XModalixEvaluator]] = XModalixEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
         config: Optional[DefaultConfig] = None,
     ) -> None:
+        """See base class for full list of Args."""
         self._default_config = XModalixConfig()
         super().__init__(
             data=data,
@@ -95,19 +75,10 @@ class XModalix(BasePipeline):
             config=config,
             custom_split=custom_splits,
         )
-
-    def fit(self):  # TODO use from base
-        self._trainer = self._trainer_type(
-            trainset=self._datasets.train,
-            validset=self._datasets.valid,
-            result=self.result,
-            config=self.config,
-            model_type=self._model_type,
-            loss_type=self._loss_type,
-            ontologies=self._ontologies,  # Ontix
-        )
-        trainer_result = self._trainer.train()
-        self.result.update(other=trainer_result)
+        if not isinstance(self.config, XModalixConfig):
+            raise TypeError(
+                f"For XModalix Pipeline, we only allow XModalixConfig as type for config, got {type(self.config)}"
+            )
 
     def show_result(self):
         """Displays key visualizations of model results.
@@ -126,18 +97,18 @@ class XModalix(BasePipeline):
         """
         print("Creating plots ...")
 
-        self._visualizer.show_loss(plot_type="absolute")
+        self.visualizer.show_loss(plot_type="absolute")
 
-        self._visualizer.show_latent_space(result=self.result, plot_type="Ridgeline")
+        self.visualizer.show_latent_space(result=self.result, plot_type="Ridgeline")
 
-        self._visualizer.show_latent_space(result=self.result, plot_type="2D-scatter")
+        self.visualizer.show_latent_space(result=self.result, plot_type="2D-scatter")
 
         dm_keys = find_translation_keys(
             config=self.config,
             trained_modalities=self._trainer._modality_dynamics.keys(),
         )
         if "IMG" in dm_keys["to"]:
-            self._visualizer.show_image_translation(
+            self.visualizer.show_image_translation(
                 result=self.result,
                 from_key=dm_keys["from"],
                 to_key=dm_keys["to"],
@@ -147,8 +118,7 @@ class XModalix(BasePipeline):
     def _process_latent_results(
         self, predictor_results: Result, predict_data: DatasetContainer
     ):
-        """
-        Processes latent space results into a single AnnData object for the source modality.
+        """Processes latent space results into a single AnnData object for the source modality.
 
         This method identifies the source ('from') modality used for translation,
         extracts its latent space and sample IDs, and creates a single, informative
@@ -160,6 +130,10 @@ class XModalix(BasePipeline):
         Args:
             predictor_results: The Result object returned by the `predict` method.
             predict_data: The MultiModalDataset used for prediction, to access metadata.
+
+        Raises:
+            TypeError: if predicitonsresults arr no Dicts.
+            ValueError: if no translate direction can be found or no latentspace is stored for the specified modality.
         """
         print("Processing latent space results into a single AnnData object...")
         all_latents = predictor_results.latentspaces.get(epoch=-1, split="test")
@@ -217,10 +191,17 @@ class XModalix(BasePipeline):
         print("Finished processing latent results.")
 
     def _validate_prediction_data(self, predict_data: BaseDataset):
-        """Validate that prediction data has required test split."""
+        """Validate that prediction data has required test split.
+
+        Args:
+            predict_data: Dataset for prediciton
+        Raises:
+            ValueError: if prediciton data is empty.
+
+        """
         if predict_data is None:
             raise ValueError(
-                f"The data for prediction need to be a DatasetContainer with a test "
+                f"The data for prediction need to be a DatasetContainer with a test attribute containing a `BaseDataset` child"
                 f"attribute, got: {predict_data}"
             )
 
@@ -231,7 +212,7 @@ class XModalix(BasePipeline):
         to_key: Optional[str] = None,
         split: Literal["train", "valid", "test"] = "test",
     ):
-        """Generate predictions using the trained model."""
+        """Utility warpper of predict method of the trainer instance"""
         self._validate_prediction_data(predict_data=predict_data)
         return self._trainer.predict(
             data=predict_data,
@@ -243,7 +224,14 @@ class XModalix(BasePipeline):
 
     def predict(
         self,
-        data: Optional[Union[DataPackage, DatasetContainer, ad.AnnData, MuData]] = None,
+        data: Optional[
+            Union[
+                DataPackage,
+                DatasetContainer,
+                ad.AnnData,
+                MuData,  # ty: ignore[invalid-type-form]
+            ]
+        ] = None,
         config: Optional[Union[None, DefaultConfig]] = None,
         from_key: Optional[str] = None,
         to_key: Optional[str] = None,
@@ -259,6 +247,8 @@ class XModalix(BasePipeline):
         Args:
             data: Optional new data for predictions.
             config: Optional custom configuration for prediction.
+            from_key: string indicator of 'from' translation direction.
+            to_key: string indicator of 'to' translation direction.
             **kwargs: Additional configuration parameters as keyword arguments.
 
         Raises:
@@ -310,3 +300,13 @@ class XModalix(BasePipeline):
             self.result.update(other=valid_pred_results)
 
         return self.result
+
+    def sample_latent_space(
+        self,
+        n_samples: int,
+        split: str = "test",
+        epoch: int = -1,
+    ) -> torch.Tensor:
+        raise NotImplementedError(
+            "Sampling latent space is not implemented for XModalix."
+        )

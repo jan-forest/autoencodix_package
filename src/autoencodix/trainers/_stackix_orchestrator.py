@@ -91,9 +91,9 @@ class StackixOrchestrator:
             strategy = config.gpu_strategy
 
         self._fabric = lightning_fabric.Fabric(
-            accelerator=str(config.device)
-            if hasattr(config, "device")
-            else None,  # ty: ignore[invalid-argument-type]
+            accelerator=(
+                str(config.device) if hasattr(config, "device") else None
+            ),  # ty: ignore[invalid-argument-type]
             devices=config.n_gpus if hasattr(config, "n_gpus") else 1,
             precision=(
                 config.float_precision if hasattr(config, "float_precision") else "32"
@@ -290,7 +290,6 @@ class StackixOrchestrator:
             try:
                 latent_space = result.latentspaces.get(split=split, epoch=-1)
                 sample_ids = result.sample_ids.get(split=split, epoch=-1)
-                print(sample_ids)
 
                 if latent_space.shape[0] != len(sample_ids):
                     raise ValueError(

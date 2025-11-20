@@ -103,6 +103,8 @@ class BaseLoss(nn.Module, ABC):
             NotImplementedError: If unsupported loss reduction type is specified.
         """
         true_samples_kernel = self.compute_kernel(x=true_samples, y=true_samples)
+        z_device = z.device
+        true_samples = true_samples.to(z_device)
         z_kernel = self.compute_kernel(z, z)
         ztr_kernel = self.compute_kernel(x=true_samples, y=z)
 
@@ -227,13 +229,15 @@ class BaseLoss(nn.Module, ABC):
             paired_latents_b = latentspaces[mod_b][indices_b]
 
             # 5. Calculate the distance between the aligned latent vectors
-            # L1 distance, averaged over latent dimensions and then over samples
-            distance = torch.abs(paired_latents_a - paired_latents_b).mean(dim=1)
+
+            distance = torch.linalg.norm(paired_latents_a - paired_latents_b, dim=1)
             pair_loss = self.reduction_fn(distance)
             loss_helper.append(pair_loss)
         if not loss_helper:
             return torch.tensor(0.0)
-        return torch.stack(loss_helper).mean()
+        if self.config.loss_reduction == "mean":
+            return torch.stack(loss_helper).mean()
+        return torch.stack(loss_helper).sum()
 
     @staticmethod
     def _compute_log_gauss_dense(

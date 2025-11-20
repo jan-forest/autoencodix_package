@@ -10,7 +10,7 @@ class OntixConfig(DefaultConfig):
     """
 
     # 1. Override the top-level 'scaling' attribute
-    scaling: Literal["MINMAX", "NONE"] = Field(
+    scaling: Literal["MINMAX", "NONE", "NOTSET", "LOG1P"] = Field(
         default="MINMAX",
         description="Global scaling method. For Ontix, only 'MINMAX' and 'NONE' are allowed, because we need positive values only",
     )
@@ -23,7 +23,7 @@ class OntixConfig(DefaultConfig):
         positive-value scaler.
         """
         # Define the set of allowed scaling methods
-        allowed_scalers = {"MINMAX", "NONE"}
+        allowed_scalers = {"MINMAX", "NONE", "NOTSET"}
 
         # Loop through each data modality defined in the data_config
         for modality_name, data_info in self.data_config.data_info.items():

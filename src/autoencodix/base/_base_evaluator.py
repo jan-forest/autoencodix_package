@@ -18,7 +18,7 @@ class BaseEvaluator(abc.ABC):
             Result: The evaluation result.
         """
         pass
-    
+
     @staticmethod
     def _expand_reference_methods(reference_methods: list, result: Result) -> list:
         """

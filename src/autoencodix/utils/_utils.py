@@ -3,45 +3,69 @@ Stores utility functions for the autoencodix package.
 Use of OOP would be overkill for the simple functions in this module.
 """
 
+import zipfile
 import inspect
 import os
 from collections import defaultdict
+from dataclasses import MISSING, fields, is_dataclass
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, no_type_check
+from autoencodix.data._datasetcontainer import DatasetContainer
+from autoencodix.utils._result import Result
 
 import dill as pickle  # type: ignore
 import torch
 from matplotlib import pyplot as plt
 
-from ..configs.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 # only for type hints, to avoid circual import
 class BasePipeline:
+    """Only for type hints in utils, not real BasePipeline class"""
+
     pass
 
 
-def nested_dict():
+def get_dataset(result: Result) -> Optional[DatasetContainer]:
+    """Retrieve the dataset from the Result object, depending on if new_datasets is filled.
+
+    Args:
+        result: The Result object containing the dataset.
+    Returns:
+        The appropriate DatasetContainer object.
+
     """
-    Creates a nested defaultdict.
+    splits = ["train", "valid", "test"]
+    if not result.new_datasets:
+        return result.datasets
+    new_values: List[Any] = [result.new_datasets[split] for split in splits]
+    # check if all new_datasets are None
+    if all(v is None for v in new_values):
+        return result.datasets
+    else:
+        return result.new_datasets
+
+
+def nested_dict():
+    """Creates a nested defaultdict.
 
     This function returns a defaultdict where each value is another defaultdict
     of the same type. This allows for the creation of arbitrarily deep nested
     dictionaries without having to explicitly define each level.
 
     Returns:
-        defaultdict: A nested defaultdict where each value is another nested defaultdict.
+        :A nested defaultdict where each value is another nested defaultdict.
     """
     return defaultdict(nested_dict)
 
 
 def nested_to_tuple(d, base=()):
-    """
-    Recursively converts a nested dictionary into tuples.
+    """Recursively converts a nested dictionary into tuples.
 
-    Parameters:
-        d (dict): The dictionary to convert.
-        base (tuple, optional): The base tuple to start with. Defaults to ().
+    Args:
+        d: The dictionary to convert.
+        base: The base tuple to start with. Defaults to ().
 
     Yields:
         tuple: Tuples representing the nested dictionary structure, where each tuple
@@ -54,15 +78,13 @@ def nested_to_tuple(d, base=()):
             yield base + (k, v)
 
 
+@no_type_check
 def show_figure(fig):
-    """
-    Display a given Matplotlib figure in a new window.
+    """Display a given Matplotlib figure in a new window.
 
-    Parameters:
-    fig (matplotlib.figure.Figure): The figure to be displayed.
+    Args:
+        fig: The figure to be displayed.
 
-    Returns:
-    None
     """
     dummy = plt.figure()
     new_manager = dummy.canvas.manager
@@ -71,25 +93,20 @@ def show_figure(fig):
 
 
 def config_method(valid_params: Optional[set[str]] = None):
-    """
-    Decorator for methods that accept configuration parameters via kwargs
-    or an explicit 'config' object.
+    """Decorator for methods that accept configuration parameters via kwargs or an explicit 'config' object.
 
     It separates kwargs intended for the function's signature from those
     intended as configuration overrides, validates the latter against
     `valid_params`, applies valid overrides to a copy of `self.config`,
     and passes the appropriate arguments to the decorated function.
 
-    Parameters
-    ----------
-    valid_params : set[str], optional
-        Set of valid configuration parameter names that can be overridden
-        via kwargs for this method. If None, all kwargs not matching the
-        function signature are considered potentially valid config overrides.
+    Args:
+        valid_params: Set of valid configuration parameter names that can be overridden
+            via kwargs for this method. If None, all kwargs not matching the
+            function signature are considered potentially valid config overrides.
     """
 
     def decorator(func: Callable) -> Callable:
-        # --- Docstring Modification (outside wrapper) ---
         sig = inspect.signature(func)
 
         param_docs = "\n\nValid configuration parameters (passed via **kwargs):\n"
@@ -161,7 +178,7 @@ def config_method(valid_params: Optional[set[str]] = None):
                     if invalid_config_params:
                         print(
                             f"\nWarning: The following parameters are not valid "
-                            f"configuration overrides for {func.__name__}:"
+                            f"configuration overrides for {func.__name__}:"  # type: ignore
                         )
                         print(
                             f"Invalid config parameters: {', '.join(invalid_config_params)}"
@@ -217,7 +234,7 @@ def config_method(valid_params: Optional[set[str]] = None):
                     print(
                         f"\nWarning: Additional keyword arguments provided "
                         f"({', '.join(potential_config_kwargs.keys())}) "
-                        f"while an explicit 'config' object was also passed to {func.__name__}. "
+                        f"while an explicit 'config' object was also passed to {func.__name__}. "  # type: ignore
                         f"These additional arguments will be ignored as configuration overrides."
                     )
 
@@ -234,31 +251,72 @@ def config_method(valid_params: Optional[set[str]] = None):
 
 
 class Saver:
-    """
-    Handles the saving of BasePipeline objects.
+    """Handles the saving of BasePipeline objects.
+
+    Atrributes:
+        file_path: path to save file.
+        preprocessor_path: path where pickle object of preprocesser should be saved.
+        model_state_path: path where model state dict should be saved.
+        save_all: indicator if all results should be save, or only core pipeline functionalty
+
     """
 
-    def __init__(self, file_path: str):
-        """
-        Initializes the Saver with the base file path.
+    def __init__(self, file_path: str, save_all: bool):
+        """Initializes the Saver with the base file path.
 
         Args:
             file_path: The base file path (without extensions).
         """
-        self.file_path = file_path
+
+        self.save_all = save_all
         self.preprocessor_path = f"{file_path}_preprocessor.pkl"
         self.model_state_path = f"{file_path}_model.pth"
 
+        self.file_path = f"{file_path}.pkl"
+        folder = os.path.dirname(self.file_path)
+        if folder:
+            os.makedirs(folder, exist_ok=True)
+
+    @no_type_check
     def save(self, pipeline: "BasePipeline"):
-        """
-        Saves the BasePipeline object.
+        """Saves the BasePipeline object.
 
         Args:
             pipeline: The BasePipeline object to save.
         """
-        self._save_pipeline_object(pipeline)
+
         self._save_preprocessor(pipeline._preprocessor)  # type: ignore
         self._save_model_state(pipeline)
+        self.pipeline = pipeline
+
+        self.pipeline._trainer.purge()
+
+        if not self.save_all:
+            print("saving memory efficient")
+            self.reset_to_defaults(pipeline.result)  # ty: ignore
+
+            self.pipeline.preprocessed_data = None  # ty: ignore
+            self.pipeline._datasets = None  # ty: ignore
+            self.pipeline.raw_user_data = None  # ty: ignore
+            self.pipeline._datasets = None
+            self.pipeline._preprocessor = type(
+                self.pipeline._preprocessor
+            )(  # ty: ignore
+                config=pipeline.config  # ty: ignore
+            )  # ty: ignore
+            self.pipeline.visualizer = type(self.pipeline.visualizer)()  # ty: ignore
+
+        self._save_pipeline_object(self.pipeline)
+
+        with zipfile.ZipFile(f"{self.file_path}.zip", "w") as archive:
+            archive.write(self.file_path)
+            archive.write(self.preprocessor_path)
+            for model_state_path in self.model_state_paths:
+                archive.write(model_state_path)
+        os.remove(self.file_path)
+        os.remove(self.preprocessor_path)
+        for model_state_path in self.model_state_paths:
+            os.remove(model_state_path)
 
     def _save_pipeline_object(self, pipeline: "BasePipeline"):
         try:
@@ -279,47 +337,106 @@ class Saver:
                 print(f"Error saving preprocessor: {e}")
                 raise e
 
+    @no_type_check
     def _save_model_state(self, pipeline: "BasePipeline"):
+        self.model_state_paths: List[str] = []
         if pipeline.result is not None and pipeline.result.model is not None:  # type: ignore
-            try:
-                torch.save(pipeline.result.model.state_dict(), self.model_state_path)  # type: ignore
-                print("Model state saved successfully.")
-            except (TypeError, OSError) as e:
-                print(f"Error saving model state: {e}")
-                raise e
+            if isinstance(pipeline.result.model, torch.nn.Module):
+                try:
+                    pipeline.result.model.to("cpu")
+                    torch.save(
+                        pipeline.result.model.state_dict(), self.model_state_path
+                    )  # type: ignore
+                    self.model_state_paths.append(self.model_state_path)
+
+                except (TypeError, OSError) as e:
+                    print(f"Error saving model state: {e}")
+                    raise e
+            elif isinstance(pipeline.result.model, dict):
+                for model_name, model in pipeline.result.model.items():
+                    if hasattr(model, "module"):
+                        model = model.module
+                    model.to("cpu")
+                    torch.save(
+                        model.state_dict(), f"{model_name}_{self.model_state_path}.pth"
+                    )  # type: ignore
+                    self.model_state_paths.append(
+                        f"{model_name}_{self.model_state_path}.pth"
+                    )
+            else:
+                raise TypeError(
+                    f"pipeline.result.model is neither a torch.nn.Module nor a dict, got {type(pipeline.result.model)}"
+                )
+
+    @no_type_check
+    def reset_to_defaults(self, obj):
+        if not is_dataclass(obj):
+            raise ValueError("Object must be a dataclass")
+
+        for f in fields(obj):
+            # we keep the adata_latent space as a "core result"
+            if f.name == "adata_latent":
+                continue
+            if f.name == "model":
+                # we need to keep the instantiated class, so we can load the state dict
+                # but we don't want to save the model twice (once via the pipeline object, once as model.pth)
+                # thus, we first save the state_dict, then reiniate the model to free memory
+                if isinstance(obj.model, dict):
+                    empty_models = {}
+                    for model_name, model in obj.model.items():
+                        if hasattr(model, "module"):
+                            model = model.module
+                        empty_models[model_name] = type(model)(**model.init_args)
+                elif isinstance(obj.model, torch.nn.Module):
+                    obj.model.init_args["ontologies"] = self.pipeline.ontologies
+                    obj.model.init_args["feature_order"] = (
+                        self.pipeline._trainer.feature_order
+                    )
+                    obj.model = type(obj.model)(**obj.model.init_args)
+                continue
+            if f.default_factory is not MISSING:
+                setattr(obj, f.name, f.default_factory())
+            elif f.default is not MISSING:
+                setattr(obj, f.name, f.default)
+            else:
+                setattr(obj, f.name, None)
 
 
 class Loader:
-    """
-    Handles the loading of BasePipeline objects.
+    """Handles the loading of BasePipeline objects.
+
+    Atrributes:
+        file_path: path of saved pipeline object.
+        preprocessor_path: path where pickle object of preprocesser should was saved.
+        model_state_path: path where model state dict was saved.
     """
 
     def __init__(self, file_path: str):
-        """
-        Initializes the Loader with the base file path.
+        """Initializes the Loader with the base file path.
 
         Args:
             file_path: The base file path (without extensions).
         """
-        self.file_path = file_path
         self.preprocessor_path = f"{file_path}_preprocessor.pkl"
         self.model_state_path = f"{file_path}_model.pth"
+        self.file_path = f"{file_path}.pkl"
 
     def load(self) -> Any:
-        """
-        Loads the BasePipeline object.
+        """Loads the BasePipeline object.
 
         Returns:
             The loaded BasePipeline object, or None on error.
         """
+        with zipfile.ZipFile(f"{self.file_path}.zip", "r") as archive:
+            archive.extractall()
+
         loaded_obj = self._load_pipeline_object()
         if loaded_obj is None:
-            return None  # Exit if the main object fails to load
+            raise ValueError("Error while loading pipeline object")
 
-        loaded_obj._preprocessor = (
-            self._load_preprocessor()
-        )  # Load even if it doesn't exist
+        loaded_obj._preprocessor = self._load_preprocessor()
         loaded_obj.result.model = self._load_model_state(loaded_obj)
+
         return loaded_obj
 
     def _load_pipeline_object(self) -> Any:
@@ -352,37 +469,54 @@ class Loader:
             print("Preprocessor file not found. Skipping preprocessor load.")
             return None
 
+    @no_type_check
     def _load_model_state(self, loaded_obj: "BasePipeline"):
-        if os.path.exists(self.model_state_path):
-            try:
-                if (
-                    loaded_obj.result is not None  # type: ignore
-                    and loaded_obj.result.model is not None  # type: ignore
-                ):
-                    model_state = torch.load(self.model_state_path)
-                    try:
-                        loaded_obj.result.model.load_state_dict(model_state)  # type: ignore
-
-                        print("Model state loaded successfully.")
-                        return loaded_obj.result.model  # type: ignore
-                    except Exception as e:
-                        print(
-                            f"Error when loading model, filling obj.result.model with None: {e}"
-                        )
-                        return None
-
-                else:
-                    return None
-                    print("Warning: Model not initialized. Skipping model state load.")
-            except (RuntimeError, OSError) as e:
-                print(f"Error loading model state: {e}")
+        if loaded_obj.result is None:  # type: ignore:
+            raise ValueError("Loaded pipeline has no result attribute")
+        if loaded_obj.result.model is None:
+            raise ValueError("Loaded pipeline result has no model attribute")
+        if isinstance(loaded_obj.result.model, dict):
+            for model_name, model in loaded_obj.result.model.items():
+                if hasattr(model, "module"):
+                    model = model.module
+                if not os.path.exists(f"{model_name}_{self.model_state_path}.pth"):
+                    raise FileNotFoundError(
+                        f"Model state file not found at {model_name}_{self.model_state_path}.pth"
+                    )
+                model_state = torch.load(
+                    f"{model_name}_{self.model_state_path}.pth", map_location="cpu"
+                )
+                loaded_obj.result.model[model_name].to("cpu")
+                loaded_obj.result.model[model_name].load_state_dict(  # type: ignore
+                    model_state
+                )
+            return loaded_obj.result.model  # type: ignore
+        elif isinstance(loaded_obj.result.model, torch.nn.Module):
+            if not os.path.exists(self.model_state_path):
+                raise FileNotFoundError(
+                    f"Model state file not found at {self.model_state_path}"
+                )
+            model_state = torch.load(self.model_state_path, map_location="cpu")
+            loaded_obj.result.model.to("cpu")
+            loaded_obj.result.model.load_state_dict(model_state)  # type: ignore
+            return loaded_obj.result.model  # type: ignore
         else:
-            print("Model state file not found. Skipping model state load.")
-            return None
+            raise TypeError(
+                f"Loaded model is neither a dict nor a torch.nn.Module, got {type(loaded_obj.result.model)}"
+            )
 
 
 def flip_labels(labels: torch.Tensor) -> torch.Tensor:
-    """Randomly flip modality labels with probability (1 - 1/n_modalities), vectorized."""
+    """Randomly flip modality labels with probability (1 - 1/n_modalities), vectorized.
+
+    This is mainly used for advers training in multi modal xmodalix.
+
+    Args:
+        labels: tensor of labels
+    Returns:
+        flipped tensor
+
+    """
     device = labels.device
     n_modalities = labels.unique().numel()
     batch_size = labels.size(0)
@@ -415,19 +549,37 @@ def find_translation_keys(
     from_key: Optional[str] = None,
     to_key: Optional[str] = None,
 ) -> Dict[str, str]:  # type: ignore
-    """
-    Finds the 'from' and 'to' modalities for cross-modal prediction.
+    """Find translation source and target modalities.
+
+    Determines which modalities serve as the "from" and "to" directions for
+    cross-modal prediction, either from explicit arguments or from the
+    configuration.
+
+    Args:
+        config: Experiment configuration containing data information.
+        trained_modalities: List of trained modality names.
+        from_key: Optional name of the source modality.
+        to_key: Optional name of the target modality.
+
+    Returns:
+        A dictionary with two entries:
+            - "from": Name of the source modality.
+            - "to": Name of the target modality.
 
     Raises:
-        ValueError: If exactly one 'from' and one 'to' modality are not found.
+        ValueError: If no valid "from" or "to" modality is found, or if
+        multiple conflicting directions are specified.
     """
     from_key_final: Optional[str] = None
     to_key_final: Optional[str] = None
-    simple_names: List[str] = [tm.split(".")[1] for tm in trained_modalities]
+    simple_names: List[str] = [
+        tm.split(".", 1)[1] if "." in tm else tm for tm in trained_modalities
+    ]
 
     if from_key and to_key:
         for name in trained_modalities:
-            simple_name = name.split(".")[1]
+            simple_name = name.split(".", 1)[1] if "." in name else name
+
             if from_key == simple_name or from_key == name:
                 from_key_final = name
             # use if instead of elif to allow for reference prediciton where from_key == to_key
@@ -442,8 +594,7 @@ def find_translation_keys(
 
     data_info = config.data_config.data_info
     for name in trained_modalities:
-        simple_name = name.split(".")[1]
-
+        simple_name = name.split(".", 1)[1] if "." in name else name
         cur_info = data_info.get(simple_name)
         if not cur_info or not hasattr(cur_info, "translate_direction"):
             continue

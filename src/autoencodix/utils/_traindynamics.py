@@ -8,24 +8,10 @@ import numpy as np
 # write tests: done
 @dataclass
 class TrainingDynamics:
-    """
-    A type-safe, structured approach to storing training dynamics in the form
-    epoch -> split -> data.
+    """Structure to store training dynamics in the form epoch -> split -> data.
 
     Attributes:
-    ----------
-    _data : Dict[int, Dict[str, np.ndarray]]
-        A dictionary to store numpy arrays for each epoch and split
-
-    Methods:
-    --------
-    add(epoch: int, data: Optional[Union[float, np.ndarray]], split: str) -> None
-        Add a numpy array for a specific epoch and split.
-    get(epoch: Optional[int] = None, split: Optional[str] = None) -> Union[np.ndarray, Dict[str, np.ndarray], Dict[int, Dict[str, np.ndarray]]]
-        Retrieve stored numpy arrays with flexible filtering, based on epoch and/or split.
-    epochs() -> list
-        Return all recorded epochs.
-
+        _data: A dictionary to store numpy arrays for each epoch and split
     """
 
     _data: Dict[int, Dict[str, Union[np.ndarray, Dict]]] = field(
@@ -101,18 +87,14 @@ class TrainingDynamics:
         Dict[int, Dict[str, np.ndarray]],
         Dict[Any, Any],
     ]:
-        """
-        Retrieve stored numpy arrays with flexible filtering.
+        """Retrieve stored numpy arrays with flexible filtering.
 
-        Parameters:
-            epoch : int, optional
-                Specific epoch to retrieve. If None, returns data for all epochs.
-            split : str, optional
-                Specific split to retrieve (e.g., 'train', 'valid', 'test').
+        Args:
+            epoch: Specific epoch to retrieve. If None, returns data for all epochs.
+            split: Specific split to retrieve (e.g., 'train', 'valid', 'test').
                 If None, returns data for all splits.
 
         Returns:
-            Union[np.ndarray, Dict[str, np.ndarray], Dict[int, Dict[str, np.ndarray]]]
             - If epoch is None and split is None:
                 Returns complete data dictionary {epoch: {split: data}}
             - If epoch is None and split is provided:
@@ -122,26 +104,27 @@ class TrainingDynamics:
             - If both epoch and split are provided:
                 Returns numpy array for specific epoch and split
 
-        Examples
-        --------
-        >>> dynamics = TrainingDynamics()
-        >>> dynamics.add(0, np.array([0.1, 0.2]), "train")
-        >>> dynamics.add(1, np.array([0.2, 0.3]), "train")
-        >>>
-        >>> # Get all data
-        >>> dynamics.get()  # Returns {0: {"train": array([0.1, 0.2])}, 1: {"train": array([0.2, 0.3])}}
-        >>>
-        >>> # Get train split across all epochs
-        >>> dynamics.get(split="train")  # Returns array([[0.1, 0.2], [0.2, 0.3]])
-        >>>
-        >>> # Get specific epoch
-        >>> dynamics.get(epoch=0)  # Returns {"train": array([0.1, 0.2])}
+        Examples:
+            >>> dynamics = TrainingDynamics()
+            >>> dynamics.add(0, np.array([0.1, 0.2]), "train")
+            >>> dynamics.add(1, np.array([0.2, 0.3]), "train")
+            >>>
+            >>> # Get all data
+            >>> dynamics.get()  # Returns {0: {"train": array([0.1, 0.2])}, 1: {"train": array([0.2, 0.3])}}
+            >>>
+            >>> # Get train split across all epochs
+            >>> dynamics.get(split="train")  # Returns array([[0.1, 0.2], [0.2, 0.3]])
+            >>>
+            >>> # Get specific epoch
+            >>> dynamics.get(epoch=0)  # Returns {"train": array([0.1, 0.2])}
         """
         # Case 1: No epoch specified
         if split not in ["train", "valid", "test", None]:
             raise KeyError(
                 f"Invalid split type: {split}, we only support 'train', 'valid', and 'test' splits."
             )
+        if len(self._data.keys()) == 0:
+            return {}
         if epoch is None:
             # Case 1a: Split specified - return array of values across epochs
             if split is not None:
@@ -165,31 +148,31 @@ class TrainingDynamics:
                 if epoch in self._data.keys() and split == "test"
                 else max(self._data.keys()) + (epoch + 1)
             )
-        # Case 2: Epoch specified
-        if epoch > 0 and epoch not in self._data:
+        if epoch >= 0 and epoch not in self._data:
             if split is not None:
                 return np.array([])
             return {}
-        # handle reverse indexing
         epoch_data = self._data[epoch]
 
-        # Case 2a: No split specified - return all splits for epoch
         if split is None:
             return epoch_data
 
-        # Case 2b: Both epoch and split specified
+        # Case: Both epoch and split specified
         return epoch_data.get(split, np.array([]))
 
     def __getitem__(
         self, key: Union[int, slice]
     ) -> Union[np.ndarray, Dict[int, Dict[str, np.ndarray]], Any]:
-        """
-        Allow dictionary-style and slice-based access.
+        """Allow dictionary-style and slice-based access.
+
+        Args:
+            key: int or slice of index to obtain
+        Returns:
+            sliced Trainingdynamic
 
         Examples:
-        ---------
-        dynamics[100]  # Get data for epoch 100.
-        dynamics[50:100]  # Get data for epochs 50-100.
+            dynamics[100]  # Get data for epoch 100.
+            dynamics[50:100]  # Get data for epochs 50-100.
         """
         if isinstance(key, int):
             return self.get(key)
@@ -200,7 +183,5 @@ class TrainingDynamics:
         raise KeyError(f"Invalid key type: {type(key)}")
 
     def epochs(self) -> list:
-        """
-        Return all recorded epochs.
-        """
+        """Return all recorded epochs"""
         return sorted(self._data.keys())

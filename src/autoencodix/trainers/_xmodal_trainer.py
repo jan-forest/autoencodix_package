@@ -1,4 +1,7 @@
 from collections import defaultdict
+
+from lightning_fabric.wrappers import _FabricModule
+import gc
 import os
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
@@ -111,19 +114,22 @@ class XModalTrainer(BaseTrainer):
         self._clf_epoch_loss: float = 0.0
         self._epoch_loss: float = 0.0
         self._epoch_loss_valid: float = 0.0
+        self._all_dynamics: Dict[str, Dict[int, Dict]] = {
+            "test": defaultdict(dict),
+            "train": defaultdict(dict),
+            "valid": defaultdict(dict),
+        }
 
     def _init_model_architecture(self, ontologies: Optional[Tuple] = None):
         """Override parent's model init - we don't use a single model, needs to be there because is abstract in parent."""
         pass
 
-    def _setup_fabric(self):
+    def _setup_fabric(self, old_model=None):
         """Sets up the models, optimizers, and data loaders with Lightning Fabric."""
+
+        self._fabric.launch()
         self._init_adversarial_training()
         self._init_modality_training()
-        for dynamics in self._modality_dynamics.values():
-            dynamics["model"], dynamics["optim"] = self._fabric.setup(
-                dynamics["model"], dynamics["optim"]
-            )
         self._latent_clf, self._clf_optim = self._fabric.setup(
             self._latent_clf, self._clf_optim
         )
@@ -132,12 +138,19 @@ class XModalTrainer(BaseTrainer):
         if self._validloader is not None:
             self._validloader = self._fabric.setup_dataloaders(self._validloader)
 
-        self._fabric.launch()
+        for dynamics in self._modality_dynamics.values():
+            dynamics["model"], dynamics["optim"] = self._fabric.setup(
+                dynamics["model"], dynamics["optim"]
+            )
 
     def _init_loaders(self):
         """Initializes DataLoaders for training and validation datasets."""
-        trainsampler = CoverageEnsuringSampler(multimodal_dataset=self._trainset)
-        validsampler = CoverageEnsuringSampler(multimodal_dataset=self._validset)
+        trainsampler = CoverageEnsuringSampler(
+            multimodal_dataset=self._trainset, batch_size=self._config.batch_size
+        )
+        validsampler = CoverageEnsuringSampler(
+            multimodal_dataset=self._validset, batch_size=self._config.batch_size
+        )
         collate_fn = create_multimodal_collate_fn(multimodal_dataset=self._trainset)
         valid_collate_fn = create_multimodal_collate_fn(
             multimodal_dataset=self._validset
@@ -167,11 +180,14 @@ class XModalTrainer(BaseTrainer):
         data_info = self._config.data_config.data_info
         for mod_name, ds in self._trainset.datasets.items():
             simple_name = mod_name.split(".")[1]
+            local_epochs = data_info[simple_name].pretrain_epochs
+
             pretrain_epochs = (
-                data_info[simple_name].pretrain_epochs
-                if data_info[simple_name].pretrain_epochs
+                local_epochs
+                if local_epochs is not None
                 else self._config.pretrain_epochs
             )
+
             model_type = self.model_map.get(ds.mytype)
             if model_type is None:
                 raise ValueError(
@@ -309,6 +325,7 @@ class XModalTrainer(BaseTrainer):
                         labels=labels,
                         clf_loss_fn=self._clf_loss_fn,
                         is_training=False,
+                        epoch=self._cur_epoch,
                     )
                     self._epoch_loss_valid += batch_loss.item()
                     for k, v in loss_dict.items():
@@ -325,6 +342,12 @@ class XModalTrainer(BaseTrainer):
                         epoch_dynamics.append(batch_capture)
 
         sub_losses["clf_loss"] = total_clf_loss
+        for k, v in sub_losses.items():
+            if "_factor" not in k:
+                sub_losses[k] = v / n_samples_total  # Average over all samples
+        self._epoch_loss_valid = (
+            self._epoch_loss_valid / n_samples_total
+        )  # Average over all samples
         return epoch_dynamics, sub_losses, n_samples_total
 
     def _train_one_epoch(self) -> Tuple[List[Dict], Dict[str, float], int]:
@@ -372,6 +395,7 @@ class XModalTrainer(BaseTrainer):
                     labels=labels,
                     clf_loss_fn=self._clf_loss_fn,
                     is_training=True,
+                    epoch=self._cur_epoch,
                 )
             self._fabric.backward(batch_loss)
             for _, dynamics in self._modality_dynamics.items():
@@ -390,6 +414,12 @@ class XModalTrainer(BaseTrainer):
                 batch_capture = self._capture_dynamics(batch)
                 epoch_dynamics.append(batch_capture)
         sub_losses["clf_loss"] = self._clf_epoch_loss
+        for k, v in sub_losses.items():
+            if "_factor" not in k:
+                sub_losses[k] = v / n_samples_total  # Average over all samples
+        self._epoch_loss = (
+            self._epoch_loss / n_samples_total
+        )  # Average over all samples
 
         return epoch_dynamics, sub_losses, n_samples_total
 
@@ -450,18 +480,6 @@ class XModalTrainer(BaseTrainer):
                     sub_losses=valid_sub_losses,
                     n_samples=n_samples_valid,
                 )
-            if self._config.class_param:
-                self._loss_fn.update_class_means(
-                    epoch_dynamics=train_epoch_dynamics,
-                    device=self._fabric.device,
-                    is_training=True,
-                )
-                if self._validset:
-                    self._loss_fn.update_class_means(
-                        epoch_dynamics=valid_epoch_dynamics,
-                        device=self._fabric.device,
-                        is_training=False,
-                    )
             if self._is_checkpoint_epoch:
                 self._fabric.print(f"Storing checkpoint for epoch {epoch}...")
                 self._store_checkpoint(
@@ -472,7 +490,9 @@ class XModalTrainer(BaseTrainer):
                         split="valid",
                         epoch_dynamics=valid_epoch_dynamics,
                     )
-
+        # save final model
+        self._store_checkpoint(split="train", epoch_dynamics=train_epoch_dynamics)
+        self._store_final_models()
         return self._result
 
     def decode(self, x: torch.Tensor):
@@ -480,19 +500,12 @@ class XModalTrainer(BaseTrainer):
         Args:
             x: Latent representations to decode, shape (n_samples, latent_dim)
         """
-        with self._fabric.autocast(), torch.no_grad():
-            x = self._fabric.to_device(obj=x)
-            if not isinstance(x, torch.Tensor):
-                raise TypeError(
-                    f"Expected input to be a torch.Tensor, got {type(x)} instead."
-                )
-            return self._model.decode(x=x)
+        raise NotImplementedError("General decode step is not implemented for XModalix")
 
     def predict(
         self,
         data: BaseDataset,
-        # split: Literal["train", "valid", "test"] = "test",
-        model: Optional[Any] = None,
+        model: Optional[Dict[str, torch.nn.Module]] = None,
         **kwargs,
     ) -> Result:
         """Performs cross-modal prediction from a specified 'from' modality to a 'to' modality.
@@ -515,6 +528,17 @@ class XModalTrainer(BaseTrainer):
             raise TypeError(
                 f"type of data has to be MultiModalDataset, got: {type(data)}"
             )
+        if model is not None and not hasattr(self, "_modality_dynamics"):
+            self._modality_dynamics = {mod_name: {} for mod_name in model.keys()}
+
+            for mod_name, mod_model in model.items():
+                mod_model.eval()
+                if not isinstance(mod_model, _FabricModule):
+                    mod_model = self._fabric.setup_module(mod_model)
+                mod_model.to(self._fabric.device)
+                self._modality_dynamics[mod_name]["model"] = mod_model
+            # self._setup_fabric(old_model=model)
+
         from_key = kwargs.pop("from_key", None)
         to_key = kwargs.pop("to_key", None)
         predict_keys = find_translation_keys(
@@ -532,7 +556,9 @@ class XModalTrainer(BaseTrainer):
         # drop_last handled in custom sampler
         inference_loader = DataLoader(
             data,
-            batch_sampler=CoverageEnsuringSampler(multimodal_dataset=data),
+            batch_sampler=CoverageEnsuringSampler(
+                multimodal_dataset=data, batch_size=self._config.batch_size
+            ),
             collate_fn=create_multimodal_collate_fn(multimodal_dataset=data),
         )
         inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
@@ -541,9 +567,7 @@ class XModalTrainer(BaseTrainer):
             self._fabric.autocast(),
             torch.inference_mode(),
         ):
-            for batch in (
-                inference_loader
-            ):  ## TODO missing sample ids. reconstructions are shuffled
+            for batch in inference_loader:
                 # needed for visualize later
                 self._get_vis_dynamics(batch=batch)
                 from_z = self._modality_dynamics[from_key]["mp"].latentspace
@@ -614,6 +638,11 @@ class XModalTrainer(BaseTrainer):
             "sample_ids": {},
         }
         for mod_name, dynamics in self._modality_dynamics.items():
+            sample_ids = batch_data[mod_name].get("sample_ids")
+            # get index of
+            if sample_ids is not None:
+                captured_data["sample_ids"][mod_name] = np.array(sample_ids)
+
             model_output = dynamics["mp"]
             captured_data["latentspaces"][mod_name] = (
                 model_output.latentspace.detach().cpu().numpy()
@@ -629,13 +658,16 @@ class XModalTrainer(BaseTrainer):
                 captured_data["sigmas"][mod_name] = (
                     model_output.latent_logvar.detach().cpu().numpy()
                 )
-            sample_ids = batch_data[mod_name].get("sample_ids")
-            if sample_ids is not None:
-                captured_data["sample_ids"][mod_name] = np.array(sample_ids)
+
         return captured_data
 
     def _dynamics_to_result(self, split: str, epoch_dynamics: List[Dict]) -> None:
         """Aggregates and stores epoch dynamics into the Result object.
+
+        Due to our multi modal Traning with unpaired data, we can see sample_ids more than once per epoch.
+        For more consistent downstream analysis, we only keep the first occurence of this sample in the epoch
+        and report the dynamics for this sample
+
         Args:
             split: The data split name (e.g., 'train', 'valid', 'test').
             epoch_dynamics: List of dictionaries capturing dynamics for each batch in the epoch.
@@ -647,37 +679,60 @@ class XModalTrainer(BaseTrainer):
                 for mod_name, data in mod_data.items():
                     final_data[dynamic_type][mod_name].append(data)
 
+        sample_ids: Optional[Dict[str, np.ndarray]] = final_data.get("sample_ids")
+        if sample_ids is None:
+            raise ValueError("No Sample Ids in TrainingDynamics")
+        concat_ids: Dict[str, np.ndarray] = {
+            k: np.concatenate(v) for k, v in sample_ids.items()
+        }
+        unique_idx: Dict[str, np.ndarray] = {
+            k: np.unique(v, return_index=True)[1] for k, v in concat_ids.items()
+        }
+
+        deduplicated_data: Dict[str, Dict[str, np.ndarray]] = defaultdict(dict)
+        # all_dynamics_inner: Dict[str, Any] = {}
+        for dynamic_type, dynamic_data in final_data.items():
+            concat_dynamic: Dict[str, np.ndarray] = {
+                k: np.concatenate(v) for k, v in dynamic_data.items()
+            }
+            # all_dynamics_inner[dynamic_type] = concat_dynamic
+            deduplicated_helper: Dict[str, np.ndarray] = {
+                k: v[unique_idx[k]] for k, v in concat_dynamic.items()
+            }
+            deduplicated_data[dynamic_type] = deduplicated_helper
+            # Store the deduplicated data
+        # self._all_dynamics[split][self._cur_epoch] = all_dynamics_inner
         self._result.latentspaces.add(
             epoch=self._cur_epoch,
             split=split,
-            data={k: np.concatenate(v) for k, v in final_data["latentspaces"].items()},
+            data=deduplicated_data.get("latentspaces", {}),
         )
+
         self._result.reconstructions.add(
             epoch=self._cur_epoch,
             split=split,
-            data={
-                k: np.concatenate(v) for k, v in final_data["reconstructions"].items()
-            },
+            data=deduplicated_data.get("reconstructions", {}),
         )
-        if final_data.get("sample_ids"):
+
+        if deduplicated_data.get("sample_ids"):
             self._result.sample_ids.add(
                 epoch=self._cur_epoch,
                 split=split,
-                data={
-                    k: np.concatenate(v) for k, v in final_data["sample_ids"].items()
-                },
+                data=deduplicated_data["sample_ids"],
             )
-        if final_data.get("mus"):
+
+        if deduplicated_data.get("mus"):
             self._result.mus.add(
                 epoch=self._cur_epoch,
                 split=split,
-                data={k: np.concatenate(v) for k, v in final_data["mus"].items()},
+                data=deduplicated_data["mus"],
             )
-        if final_data.get("sigmas"):
+
+        if deduplicated_data.get("sigmas"):
             self._result.sigmas.add(
                 epoch=self._cur_epoch,
                 split=split,
-                data={k: np.concatenate(v) for k, v in final_data["sigmas"].items()},
+                data=deduplicated_data["sigmas"],
             )
 
     def _log_losses(
@@ -698,20 +753,25 @@ class XModalTrainer(BaseTrainer):
 
         n_samples = max(n_samples, 1)
         print(f"split: {split}, n_samples: {n_samples}")
-        avg_total_loss = total_loss / n_samples
-        self._result.losses.add(epoch=self._cur_epoch, split=split, data=avg_total_loss)
+        # avg_total_loss = total_loss / n_samples ## Now already normalized
+        self._result.losses.add(epoch=self._cur_epoch, split=split, data=total_loss)
 
-        avg_sub_losses = {
-            k: v / n_samples if "_factor" not in k else v for k, v in sub_losses.items()
-        }
+        # avg_sub_losses = {
+        #     k: v / n_samples if "_factor" not in k else v for k, v in sub_losses.items()
+        # }
         self._result.sub_losses.add(
             epoch=self._cur_epoch,
             split=split,
-            data=avg_sub_losses,
+            data=sub_losses,
         )
         self._fabric.print(
-            f"Epoch {self._cur_epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {avg_total_loss:.4f}"
+            f"Epoch {self._cur_epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {total_loss:.4f}"
         )
+        # Detailed sub-loss logging in one line
+        sub_loss_str = ", ".join(
+            [f"{k}: {v:.4f}" for k, v in sub_losses.items() if "_factor" not in k]
+        )
+        self._fabric.print(f"Sub-losses - {sub_loss_str}")
 
     def _store_checkpoint(self, split: str, epoch_dynamics: List[Dict]) -> None:
         """Stores model checkpoints and epoch dynamics into the Result object.
@@ -729,3 +789,55 @@ class XModalTrainer(BaseTrainer):
         state_to_save["latent_clf"] = self._latent_clf.state_dict()
         self._result.model_checkpoints.add(epoch=self._cur_epoch, data=state_to_save)
         self._dynamics_to_result(split=split, epoch_dynamics=epoch_dynamics)
+
+    def _store_final_models(self) -> None:
+        """Stores the final trained models into the Result object."""
+        final_models = {
+            mod_name: dynamics["model"]
+            for mod_name, dynamics in self._modality_dynamics.items()
+        }
+        self._result.model = final_models
+
+    def purge(self) -> None:
+        """
+        Cleans up all instantiated resources used during training, including
+        all modality-specific models/optimizers and the adversarial classifier.
+        """
+
+        if hasattr(self, "_modality_dynamics"):
+            for mod_name, dynamics in self._modality_dynamics.items():
+                if "model" in dynamics and dynamics["model"] is not None:
+                    # Remove the model and its optimizer from the dynamics dict
+                    del dynamics["model"]
+                if "optim" in dynamics and dynamics["optim"] is not None:
+                    del dynamics["optim"]
+            # Delete the container itself after cleaning contents
+            del self._modality_dynamics
+
+        if hasattr(self, "_latent_clf"):
+            del self._latent_clf
+        if hasattr(self, "_clf_optim"):
+            del self._clf_optim
+
+        if hasattr(self, "_trainloader"):
+            del self._trainloader
+        if hasattr(self, "_validloader") and self._validloader is not None:
+            del self._validloader
+        if hasattr(self, "_trainset"):
+            del self._trainset
+        if hasattr(self, "_validset"):
+            del self._validset
+        if hasattr(self, "_loss_fn"):
+            del self._loss_fn
+        if hasattr(self, "sub_loss"):  # Directly accessible sub_loss instance
+            del self.sub_loss
+        if hasattr(self, "_clf_loss_fn"):
+            del self._clf_loss_fn
+
+        if hasattr(self, "_all_dynamics"):
+            del self._all_dynamics
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        gc.collect()

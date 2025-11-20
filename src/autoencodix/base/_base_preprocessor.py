@@ -77,13 +77,13 @@ class BasePreprocessor(abc.ABC):
             DataCase.SINGLE_CELL_TO_SINGLE_CELL: SingleCellDataReader(),
             DataCase.IMG_TO_BULK: {
                 "bulk": BulkDataReader(config=self.config),
-                "img": ImageDataReader(),
+                "img": ImageDataReader(config=self.config),
             },
             DataCase.SINGLE_CELL_TO_IMG: {
                 "sc": SingleCellDataReader(),
-                "img": ImageDataReader(),
+                "img": ImageDataReader(config=self.config),
             },
-            DataCase.IMG_TO_IMG: ImageDataReader(),
+            DataCase.IMG_TO_IMG: ImageDataReader(config=self.config),
         }
 
     @abc.abstractmethod
@@ -181,6 +181,9 @@ class BasePreprocessor(abc.ABC):
             A dictionary containing processed DataPackage objects for each data split.
         """
         if self.predict_new_data:
+            # we get the data modality keys from this structure in postsplit processing
+            # for predict_new data there do not exits real splits, because all is "test" data
+            # but the preprocessing code expects this splits, so we mock them
             # use train, because processing logic expects train split
             mock_split: Dict[str, Dict[str, Union[Any, DataPackage]]] = {
                 "test": {
@@ -188,7 +191,7 @@ class BasePreprocessor(abc.ABC):
                     "indices": {"paired": np.array([])},
                 },
                 "valid": {"data": None, "indices": {"paired": np.array([])}},
-                "train": {"data": None, "indices": {"paired": np.array([])}},
+                "train": {"data": data_package, "indices": {"paired": np.array([])}},
             }
             if self.config.skip_preprocessing:
                 return mock_split
@@ -261,9 +264,6 @@ class BasePreprocessor(abc.ABC):
         else:
             data_package = raw_user_data
         if self.config.requires_paired:
-            print(
-                f"datapackge in process_multi_single_cell {data_package} and multi_sc: {data_package.multi_sc}"
-            )
             common_ids = data_package.get_common_ids()
             if data_package.multi_sc is None:
                 raise ValueError("multi_sc in data_package is None")
@@ -309,7 +309,6 @@ class BasePreprocessor(abc.ABC):
         if raw_user_data is None:
             bulkreader = self.data_readers[DataCase.MULTI_BULK]
             bulk_dfs, annotation = bulkreader.read_data()
-            print(f"bulk_dfs keys in process_multi_bulk: {bulk_dfs.keys()}")
 
             data_package = DataPackage(multi_bulk=bulk_dfs, annotation=annotation)
         else:
@@ -318,11 +317,17 @@ class BasePreprocessor(abc.ABC):
             common_ids = data_package.get_common_ids()
             unpaired_data = data_package.multi_bulk
             unpaired_anno = data_package.annotation
+            if unpaired_anno is None:
+                raise ValueError("annotation attribute of datapackge cannot be None")
+            if unpaired_data is None:
+                raise ValueError("multi_bulk attribute of datapackge cannot be None")
             data_package.multi_bulk = {
                 k: v.loc[common_ids] for k, v in unpaired_data.items()
             }
+
             data_package.annotation = {
-                k: v.loc[common_ids] for k, v in unpaired_anno.items()
+                k: v.loc[common_ids]  # ty: ignore
+                for k, v in unpaired_anno.items()  # ty: ignore
             }
 
         def presplit_processor(
@@ -405,6 +410,10 @@ class BasePreprocessor(abc.ABC):
             print(f"Processing {len(modality_keys)} MuData objects: {modality_keys}")
 
         # Initialize storage for scalers and gene filters for each modality
+        # if we do this for the first time, we need a train split and we dont
+        # fitted any scalers or features to keep yet.
+        # that's why in the predict_new case we can keep the mocksplit for train None
+        # because we never get in this if
         if (
             self.sc_scalers is None
             and self.sc_genes_to_keep is None
@@ -648,6 +657,7 @@ class BasePreprocessor(abc.ABC):
 
             bulk_dfs, annotation_bulk = bulkreader.read_data()
             images, annotation_img = imgreader.read_data(config=self.config)
+
             annotation = {**annotation_bulk, **annotation_img}
 
             data_package = DataPackage(
@@ -809,6 +819,8 @@ class BasePreprocessor(abc.ABC):
                 return filtered
 
             images = data_package.img
+            if images is None:
+                raise ValueError("Images cannot be None")
             data_package.img = {
                 k: filter_imgdata_list(img_list=v, ids=common_ids)
                 for k, v in images.items()
@@ -843,9 +855,7 @@ class BasePreprocessor(abc.ABC):
     def _split_data_package(
         self, data_package: DataPackage
     ) -> Tuple[Dict[str, Optional[Dict[str, Any]]], Dict[str, Any]]:
-        """
-        Splits a data package into train/validation/test sets using a
-        pairing-aware strategy.
+        """Splits a data package into train/validation/test sets.
 
         This method first uses PairedUnpairedSplitter to generate a single,
         synchronized set of indices for all modalities. It then uses
@@ -859,30 +869,16 @@ class BasePreprocessor(abc.ABC):
             1. A dictionary of the split DataPackages.
             2. A dictionary of the synchronized integer indices used for the split.
         """
-        print("--- Running Pairing-Aware Split ---")
-
-        # 1. Instantiate our new pairing-aware splitter with the full data package.
         pairing_splitter = PairedUnpairedSplitter(
             data_package=data_package, config=self.config
         )
-
-        # 2. Generate the single, synchronized dictionary of indices.
-        # This is the exact `split_indices_config` you want to return.
         split_indices_config = pairing_splitter.split()
-        print("Successfully generated synchronized indices for all modalities.")
-
-        # 3. Instantiate your original DataPackageSplitter.
-        # It now receives indices that are guaranteed to be consistent.
         data_package_splitter = DataPackageSplitter(
             data_package=data_package,
             config=self.config,
             indices=split_indices_config,
         )
-
-        # 4. Perform the actual split using the synchronized indices.
         split_datasets = data_package_splitter.split()
-
-        # 5. Return both the split data and the indices used, just like your old method.
         return split_datasets, split_indices_config
 
     def _is_image_data(self, data: Any) -> bool:
@@ -935,7 +931,7 @@ class BasePreprocessor(abc.ABC):
         """
 
         scaling_method = self.config.data_config.data_info[info_key].scaling
-        if scaling_method == "NONE":
+        if scaling_method == "NOTSET":
             scaling_method = self.config.scaling
         processed_images = []
         normalizer = ImageNormalizer()  # Instance created once here
@@ -994,6 +990,6 @@ class BasePreprocessor(abc.ABC):
 
     @abstractmethod
     def format_reconstruction(
-        self, reconstruction: torch.Tensor, result: Optional[Result] = None
+        self, reconstruction: Dict[str, torch.Tensor], result: Optional[Result] = None
     ) -> DataPackage:
         pass

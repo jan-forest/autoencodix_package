@@ -1,3 +1,6 @@
-__pycache__/
 *.pyc
+__pycache__
 .env
+*.pth
+*.pkl
+*.ipynb

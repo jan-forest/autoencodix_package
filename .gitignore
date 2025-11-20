@@ -4,6 +4,7 @@ __pycache__
 data/
 .venv/
 .github/
-notebooks/*/*
+notebooks/*/data/
+notebooks/*/alicia/
 *.pth
 *.pkl

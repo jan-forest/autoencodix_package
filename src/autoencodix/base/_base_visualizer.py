@@ -170,7 +170,10 @@ class BaseVisualizer(abc.ABC):
                         fig = item[-1]  ## Figure is in last element of the tuple
                         filename = "_".join(str(x) for x in item[0:-1])
                         fullpath = os.path.join(path, filename)
-                        fig.savefig(f"{fullpath}.{format}")
+                        if hasattr(fig, "savefig"):
+                            fig.savefig(f"{fullpath}.{format}")
+                        elif hasattr(fig, "save"):  # for seaborn objects plots
+                            fig.save(f"{fullpath}.{format}")
             else:
                 ## Case when a single plot is provided as string
                 if which not in self.plots.keys():
@@ -183,7 +186,10 @@ class BaseVisualizer(abc.ABC):
                         fig = item[-1]  ## Figure is in last element of the tuple
                         filename = which + "_" + "_".join(str(x) for x in item[0:-1])  # type: ignore
                         fullpath = os.path.join(path, filename)
-                        fig.savefig(f"{fullpath}.{format}")
+                        if hasattr(fig, "savefig"):
+                            fig.savefig(f"{fullpath}.{format}")
+                        elif hasattr(fig, "save"):  # for seaborn objects plots
+                            fig.save(f"{fullpath}.{format}")
         else:
             ## Case when which is a list of plot specified as strings
             for key in which:
@@ -198,7 +204,10 @@ class BaseVisualizer(abc.ABC):
                         fig = item[-1]  ## Figure is in last element of the tuple
                         filename = key + "_" + "_".join(str(x) for x in item[0:-1])
                         fullpath = os.path.join(path, filename)
-                        fig.savefig(f"{fullpath}.{format}")
+                        if hasattr(fig, "savefig"):
+                            fig.savefig(f"{fullpath}.{format}")
+                        elif hasattr(fig, "save"):  # for seaborn objects plots
+                            fig.save(f"{fullpath}.{format}")
 
     ### Utilities ###
 

@@ -128,7 +128,7 @@ class GeneralTrainer(BaseTrainer):
         self._mu_buffer = make_split_buffers(self.latent_dim)
         self._sigma_buffer = make_split_buffers(self.latent_dim)
 
-    def _apply_post_backward_processing(self):
+    def _ontix_hook(self):
         pass
 
     def train(self, epochs_overwrite=None) -> Result:
@@ -166,6 +166,10 @@ class GeneralTrainer(BaseTrainer):
         self._result.model = next(self._model.children())
         return self._result
 
+    def _maskix_hook(self, X: torch.Tensor):
+        """Only active when override from MaskixTrainer is used"""
+        return X
+
     def _train_epoch(
         self, should_checkpoint: bool, epoch: int
     ) -> Tuple[float, Dict[str, float]]:
@@ -182,24 +186,21 @@ class GeneralTrainer(BaseTrainer):
         sub_losses: Dict[str, float] = defaultdict(float)
         current_batch = 0
         for indices, features, sample_ids in self._trainloader:
-            print(
-                f"Processing batch {current_batch + 1}/{len(self._trainloader)}",
-                end="\r",
-            )
             current_batch += 1
             self._optimizer.zero_grad()
-            model_outputs = self._model(features)
+            X: torch.Tensor = self._maskix_hook(features)
+            model_outputs = self._model(X)
             loss, batch_sub_losses = self._loss_fn(
-                # model_output=model_outputs, targets=features, epoch=epoch
                 model_output=model_outputs,
                 targets=features,
+                corrupted_input=X,  # only relevant for MaskixLoss
                 epoch=epoch,
                 n_samples=len(
                     self._trainloader.dataset
                 ),  # Pass n_samples for disentangled loss calculations
             )
             self._fabric.backward(loss)
-            self._apply_post_backward_processing()
+            self._ontix_hook()
             self._optimizer.step()
 
             total_loss += loss.item()
@@ -240,11 +241,12 @@ class GeneralTrainer(BaseTrainer):
 
         with torch.no_grad():
             for indices, features, sample_ids in self._validloader:
-                model_outputs = self._model(features)
+                X: torch.Tensor = self._maskix_hook(features)
+                model_outputs = self._model(X)
                 loss, batch_sub_losses = self._loss_fn(
-                    # model_output=model_outputs, targets=features, epoch=epoch
                     model_output=model_outputs,
                     targets=features,
+                    corrupted_input=X,
                     epoch=epoch,
                     n_samples=len(
                         self._validloader.dataset
@@ -346,9 +348,9 @@ class GeneralTrainer(BaseTrainer):
         self._sample_ids_buffer[split][indices_np] = np.array(sample_ids)
 
         self._latentspace_buffer[split][indices_np] = model_output.latentspace.detach()
-        self._reconstruction_buffer[split][
-            indices_np
-        ] = model_output.reconstruction.detach()
+        self._reconstruction_buffer[split][indices_np] = (
+            model_output.reconstruction.detach()
+        )
 
         if model_output.latent_logvar is not None:
             self._sigma_buffer[split][indices_np] = model_output.latent_logvar.detach()

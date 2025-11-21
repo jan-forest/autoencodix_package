@@ -51,7 +51,7 @@ class OntixTrainer(GeneralTrainer):
             ontologies=ontologies,
         )
 
-    def _apply_post_backward_processing(self):
+    def _ontix_hook(self):
         """Apply ontology-specific processing after backward pass."""
         # Apply positive weight constraint to decoder
         self._model._decoder.apply(self._model._positive_dec)

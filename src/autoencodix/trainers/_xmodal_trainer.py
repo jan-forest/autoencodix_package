@@ -367,7 +367,9 @@ class XModalTrainer(BaseTrainer):
         self._epoch_loss = 0
         epoch_dynamics: List[Dict] = []
         sub_losses: Dict[str, float] = defaultdict(float)
-        n_samples_total: int = 0  # because of unpaired training we need to sum the samples instead of using len(dataset)
+        n_samples_total: int = (
+            0  # because of unpaired training we need to sum the samples instead of using len(dataset)
+        )
 
         for batch in self._trainloader:
             with self._fabric.autocast():
@@ -581,13 +583,13 @@ class XModalTrainer(BaseTrainer):
                 translation_key = "translation"
 
                 reference_key = f"reference_{to_key}_to_{to_key}"
-                batch_capture["reconstructions"][translation_key] = (
-                    translated.cpu().numpy()
-                )
+                batch_capture["reconstructions"][
+                    translation_key
+                ] = translated.cpu().numpy()
 
-                batch_capture["reconstructions"][reference_key] = (
-                    to_to_reference.cpu().numpy()
-                )
+                batch_capture["reconstructions"][
+                    reference_key
+                ] = to_to_reference.cpu().numpy()
 
                 if "sample_ids" in batch[from_key]:
                     batch_capture["sample_ids"][translation_key] = np.array(

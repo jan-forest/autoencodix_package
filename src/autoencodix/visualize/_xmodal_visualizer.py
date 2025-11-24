@@ -195,7 +195,9 @@ class XModalVisualizer(BaseVisualizer):
                 raise ValueError(f"param: should be converted to list, got: {param}")
             for p in param:
                 if p in clin_data.columns:
-                    labels: List = clin_data.loc[latent_data["sample_ids"], p].tolist()  # ty: ignore
+                    labels: List = clin_data.loc[
+                        latent_data["sample_ids"], p
+                    ].tolist()  # ty: ignore
                 else:
                     if clin_data.shape[0] == len(labels):  # ty: ignore
                         clin_data[p] = labels
@@ -205,7 +207,9 @@ class XModalVisualizer(BaseVisualizer):
                 if plot_type == "2D-scatter":
                     ## Make 2D Embedding with UMAP
                     if (
-                        latent_data.drop(columns=["sample_ids", "modality"]).shape[  # ty: ignore
+                        latent_data.drop(
+                            columns=["sample_ids", "modality"]
+                        ).shape[  # ty: ignore
                             1
                         ]  # ty: ignore
                         > 2
@@ -213,7 +217,9 @@ class XModalVisualizer(BaseVisualizer):
                         reducer = UMAP(n_components=2)
                         embedding = pd.DataFrame(
                             reducer.fit_transform(
-                                latent_data.drop(columns=["sample_ids", "modality"])  # ty: ignore
+                                latent_data.drop(
+                                    columns=["sample_ids", "modality"]
+                                )  # ty: ignore
                             )
                         )
                         embedding.columns = ["DIM1", "DIM2"]
@@ -258,7 +264,9 @@ class XModalVisualizer(BaseVisualizer):
 
                     self.plots["Ridgeline"][epoch][split][p] = (
                         self._plot_latent_ridge_multi(
-                            lat_space=latent_data.drop(columns=["sample_ids"]),  # ty: ignore
+                            lat_space=latent_data.drop(
+                                columns=["sample_ids"]
+                            ),  # ty: ignore
                             labels=labels,
                             modality="modality",
                             param=p,
@@ -547,7 +555,9 @@ class XModalVisualizer(BaseVisualizer):
         # )
 
         labels = (
-            list(result.datasets.test.datasets[translated_modality].metadata[param])  # ty: ignore
+            list(
+                result.datasets.test.datasets[translated_modality].metadata[param]
+            )  # ty: ignore
             * 2
         )
         df_red_comb[param] = (

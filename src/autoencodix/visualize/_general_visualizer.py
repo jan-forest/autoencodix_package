@@ -335,7 +335,7 @@ class GeneralVisualizer(BaseVisualizer):
                         embedding=embedding,
                         labels=labels,
                         param=p,
-                        layer=f"2D latent space (epoch {epoch})",
+                        layer=f"2D latent space (epoch {epoch+1})", # we start counting epochs at 0, so add 1 for display
                         figsize=(12, 8),
                         center=True,
                     )

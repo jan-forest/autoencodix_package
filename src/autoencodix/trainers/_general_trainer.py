@@ -348,9 +348,9 @@ class GeneralTrainer(BaseTrainer):
         self._sample_ids_buffer[split][indices_np] = np.array(sample_ids)
 
         self._latentspace_buffer[split][indices_np] = model_output.latentspace.detach()
-        self._reconstruction_buffer[split][indices_np] = (
-            model_output.reconstruction.detach()
-        )
+        self._reconstruction_buffer[split][
+            indices_np
+        ] = model_output.reconstruction.detach()
 
         if model_output.latent_logvar is not None:
             self._sigma_buffer[split][indices_np] = model_output.latent_logvar.detach()

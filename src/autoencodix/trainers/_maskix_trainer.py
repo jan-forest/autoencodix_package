@@ -24,6 +24,7 @@ class MaskixTrainer(GeneralTrainer):
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
+        ontologies: Optional[Union[Tuple, List]] = None,
     ):
         """Initializes the OntixTrainer with the given datasets, model, and configuration.
 
@@ -43,6 +44,7 @@ class MaskixTrainer(GeneralTrainer):
             config=config,
             model_type=model_type,
             loss_type=loss_type,
+            ontologies=ontologies,
         )
         mask_probas_list: List[float] = [
             self._config.maskix_swap_prob
@@ -68,6 +70,7 @@ class MaskixTrainer(GeneralTrainer):
     def _maskix_hook(
         self, X: torch.Tensor
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        # expand probablities for bernoulli sampling to match input shape
         probs = self._mask_probas.expand(X.shape)
 
         # Create the Boolean Mask (1 = Swap, 0 = Keep)
@@ -76,7 +79,6 @@ class MaskixTrainer(GeneralTrainer):
         # COLUMN-WISE SHUFFLING
         # We generate a random float matrix and argsort it along dim=0.
         # This gives us independent random indices for every column.
-        # efficiently simulating randperm for every feature.
         rand_indices = torch.rand(X.shape, device=X.device).argsort(dim=0)
 
         # Use gather to reorder X based on these random indices

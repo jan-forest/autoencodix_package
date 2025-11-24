@@ -226,7 +226,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         description="The Maskix implementation follows https://doi.org/10.1093/bioinformatics/btae020. The authors use a hidden dimension 0f 256 for their neural network, so we set this as default",
     )
     maskix_swap_prob: float = Field(
-        defualt=0.4,
+        default=0.4,
         ge=0,
         description="For the Maskix input_data masinkg, we sample a probablity if samples within one gene should be swapt. This is done with a Bernoulli distribution, maskix_swap_prob is the probablity passed to the bernoulli distribution ",
     )

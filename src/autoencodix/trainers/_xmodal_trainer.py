@@ -360,7 +360,6 @@ class XModalTrainer(BaseTrainer):
                         labels=labels,
                         clf_loss_fn=self._clf_loss_fn,
                         is_training=False,
-                        epoch=self._cur_epoch,
                     )
                     self._epoch_loss_valid += batch_loss.item()
                     for k, v in loss_dict.items():
@@ -408,9 +407,10 @@ class XModalTrainer(BaseTrainer):
         n_samples_total: int = (
             0  # because of unpaired training we need to sum the samples instead of using len(dataset)
         )
-        n_batches = 0
+ 
         for batch in self._trainloader:
-            n_batches += 1
+         
+      
             with self._fabric.autocast():
                 # --- Stage 1: forward for each data modality ---
                 self._modalities_forward(batch=batch)
@@ -436,7 +436,6 @@ class XModalTrainer(BaseTrainer):
                     labels=labels,
                     clf_loss_fn=self._clf_loss_fn,
                     is_training=True,
-                    epoch=self._cur_epoch,
                 )
             self._fabric.backward(batch_loss)
             for _, dynamics in self._modality_dynamics.items():
@@ -522,6 +521,18 @@ class XModalTrainer(BaseTrainer):
                     sub_losses=valid_sub_losses,
                     n_samples=n_samples_valid,
                 )
+            if self._config.class_param:
+                self._loss_fn.update_class_means(
+                    epoch_dynamics=train_epoch_dynamics,
+                    device=self._fabric.device,
+                    is_training=True,
+                )
+                if self._validset:
+                    self._loss_fn.update_class_means(
+                        epoch_dynamics=valid_epoch_dynamics,
+                        device=self._fabric.device,
+                        is_training=False,
+                    )
             if self._is_checkpoint_epoch:
                 self._fabric.print(f"Storing checkpoint for epoch {epoch}...")
                 self._store_checkpoint(
@@ -547,6 +558,7 @@ class XModalTrainer(BaseTrainer):
     def predict(
         self,
         data: BaseDataset,
+        # split: Literal["train", "valid", "test"] = "test",
         model: Optional[Dict[str, torch.nn.Module]] = None,
         **kwargs,
     ) -> Result:

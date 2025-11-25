@@ -116,7 +116,7 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         default=False, description="Whether to apply log1p transformation"
     )
     k_filter: Optional[int] = Field(
-        default=20,
+        default=None,
         description="Don't set this gets calculated dynamically, based on k_filter in general config ",
     )
     # image specific ------------------------------
@@ -135,6 +135,19 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     def validate_selected_layers(cls, v):
         if "X" not in v:
             raise ValueError('"X" must always be a part of the selected_layers list')
+        return v
+
+    @field_validator("k_filter", mode="before")
+    @classmethod
+    def _forbid_user_k_filter(cls, v: Any, info: ValidationInfo) -> Any:
+        """
+        'before'  -> runs only when the value comes from user input.
+        After instantiation we can still do  data_info.k_filter = xx
+        """
+        if v is not None:
+            raise ValueError(
+                "k_filter is computed automatically for each data modality, based on global k_filter – remove it from your DataInfo configuration."
+            )
         return v
 
     # # add validation to only allow quadratic image resizing

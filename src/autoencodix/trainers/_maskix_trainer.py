@@ -51,20 +51,12 @@ class MaskixTrainer(GeneralTrainer):
         ] * self._model.input_dim
         self._mask_probas = torch.tensor(mask_probas_list).to(self._model.device)
 
-    def _maskix_hook(self, X: torch.Tensor) -> torch.Tensor:
+    def _maskix_hook_paper_code(self, X: torch.Tensor) -> torch.Tensor:
+        """From the code of the publication, does not do column-wise shuffling, but the publication describes our _maskix_hook."""
         should_swap = torch.bernoulli(
             self._mask_probas.to(X.device) * torch.ones((X.shape)).to(X.device)
         )
         corrupted_X = torch.where(should_swap == 1, X[torch.randperm(X.shape[0])], X)
-        return corrupted_X
-
-    def _maskix_hook(self, X: torch.Tensor) -> torch.Tensor:
-        probs = self._mask_probas.expand(X.shape)
-        should_swap = torch.bernoulli(probs)
-
-        shuffled_indices = torch.randperm(X.shape[0], device=X.device)
-        corrupted_X = torch.where(should_swap == 1, X[shuffled_indices], X)
-
         return corrupted_X
 
     def _maskix_hook(

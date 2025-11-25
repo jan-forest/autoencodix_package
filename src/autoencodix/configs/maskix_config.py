@@ -35,5 +35,5 @@ class MaskixConfig(DefaultConfig):
         ge=0.0,
         description="For the Maskix: if >0.5 this gives more weight for the correct reconstruction of corrupted input",
     )
- 
+
     # TODO find sensible defaults for Maskix

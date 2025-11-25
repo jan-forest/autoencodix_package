@@ -9,7 +9,7 @@ from sklearn.preprocessing import (
     RobustScaler,
     MaxAbsScaler,
 )
-from autoencodix.configs.default_config import DataInfo, DefaultConfig
+from autoencodix.configs.default_config import DataInfo, DefaultConfig, DataConfig
 from autoencodix.data._filter import DataFilter, FilterMethod
 
 
@@ -42,16 +42,17 @@ def test_filter_methods(
     sample_df, df_with_zero_variance, method, k_filter, expected_cols
 ):
     df = df_with_zero_variance if method == "NONZEROVAR" else sample_df
-    data_info = DataInfo(filtering=method, k_filter=k_filter, scaling="NONE")
-    config = DefaultConfig()
+    data_info = DataInfo(filtering=method, scaling="NONE")
+    config = DefaultConfig(k_filter=k_filter, data_config=DataConfig(data_info={"df":data_info}))
+    config.data_config.data_info["df"].k_filter = k_filter
     dfilt = DataFilter(data_info, config=config)
     filtered_df, _ = dfilt.filter(df)
     assert filtered_df.shape[1] == expected_cols
 
 
 def test_filter_with_genes_to_keep(sample_df):
-    data_info = DataInfo(filtering="VAR", k_filter=5, scaling="NONE")
-    config = DefaultConfig()
+    data_info = DataInfo(filtering="VAR", scaling="NONE")
+    config = DefaultConfig(k_filter=5)
     dfilt = DataFilter(data_info, config=config)
 
     genes = sample_df.columns[:3].tolist()
@@ -60,8 +61,8 @@ def test_filter_with_genes_to_keep(sample_df):
 
 
 def test_filter_with_missing_genes_raises_keyerror(sample_df):
-    data_info = DataInfo(filtering="VAR", k_filter=5, scaling="NONE")
-    config = DefaultConfig()
+    data_info = DataInfo(filtering="VAR", scaling="NONE")
+    config = DefaultConfig(k_filter=5)
     dfilt = DataFilter(data_info, config=config)
 
     with pytest.raises(KeyError):
@@ -79,8 +80,8 @@ def test_filter_with_missing_genes_raises_keyerror(sample_df):
     ],
 )
 def test_scaler_initialization(sample_df, scaling_method, expected_type):
-    data_info = DataInfo(filtering="NOFILT", k_filter=None, scaling=scaling_method)
-    config = DefaultConfig()
+    data_info = DataInfo(filtering="NOFILT", scaling=scaling_method)
+    config = DefaultConfig(k_filter=None)
     dfilt = DataFilter(data_info, config=config)
 
     scaler = dfilt.fit_scaler(sample_df)
@@ -92,8 +93,8 @@ def test_scaler_initialization(sample_df, scaling_method, expected_type):
 
 
 def test_scale_applies_scaler(sample_df):
-    data_info = DataInfo(filtering="NOFILT", k_filter=None, scaling="MINMAX")
-    config = DefaultConfig()
+    data_info = DataInfo(filtering="NOFILT", scaling="MINMAX")
+    config = DefaultConfig(k_filter=None)
     dfilt = DataFilter(data_info, config=config)
 
     scaler = dfilt.fit_scaler(sample_df)
@@ -103,8 +104,8 @@ def test_scale_applies_scaler(sample_df):
 
 def test_available_methods_matches_enum():
     methods = DataFilter(
-        DataInfo(filtering="NOFILT", k_filter=None, scaling="NONE"),
-        config=DefaultConfig(),
+        DataInfo(filtering="NOFILT", scaling="NONE"),
+        config=DefaultConfig(k_filter=None),
     ).available_methods
     enum_values = [e.value for e in FilterMethod]
     assert set(methods) == set(enum_values)

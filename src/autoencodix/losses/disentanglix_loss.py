@@ -37,6 +37,7 @@ class DisentanglixLoss(BaseLoss):
         targets: torch.Tensor,
         epoch: int,
         n_samples: int,
+        **kwargs,
     ) -> Tuple[torch.Tensor, dict]:
         """Calls forward_impl method.
 

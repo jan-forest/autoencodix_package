@@ -14,7 +14,6 @@ from autoencodix.base._base_visualizer import BaseVisualizer
 from autoencodix.utils._result import Result
 from autoencodix.utils._utils import nested_dict, show_figure
 from autoencodix.configs.default_config import DefaultConfig
-from autoencodix.data import DatasetContainer
 
 
 class XModalVisualizer(BaseVisualizer):
@@ -159,10 +158,6 @@ class XModalVisualizer(BaseVisualizer):
                 modality = list(result.model.keys())[
                     0
                 ]  # Take the first since configs are same for all sub-VAEs
-                if not isinstance(result.model, dict):
-                    raise TypeError(
-                        f"For XModalix the model attribute of the result object needs to be a dict, got {type(result.model)}"
-                    )
                 param = result.model[modality].config.data_config.annotation_columns
 
             if labels is None and param is None:
@@ -312,6 +307,7 @@ class XModalVisualizer(BaseVisualizer):
                 "Image translation grid visualization is only possible for translation to IMG data type."
             )
         else:
+
             split = "test"  # Currently only test split is supported
             ## Get n samples per class
             if split == "test":

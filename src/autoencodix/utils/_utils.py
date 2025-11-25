@@ -71,11 +71,15 @@ def nested_to_tuple(d, base=()):
         tuple: Tuples representing the nested dictionary structure, where each tuple
                contains the keys leading to a value and the value itself.
     """
-    for k, v in d.items():
-        if isinstance(v, dict):
-            yield from nested_to_tuple(v, base + (k,))
-        else:
-            yield base + (k, v)
+    if not isinstance(d, dict):
+        yield base + (d,)
+    
+    else:
+        for k, v in d.items():
+            if isinstance(v, dict):
+                yield from nested_to_tuple(v, base + (k,))
+            else:
+                yield base + (k, v)
 
 
 @no_type_check

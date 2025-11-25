@@ -54,7 +54,7 @@ class XModalixEvaluator(GeneralEvaluator):
                 - DataFrame: Long-format DataFrame containing MSE values and associated metadata for each sample and model.
         """
 
-        if "IMG" not in to_key:
+        if "img" not in to_key:
             raise NotImplementedError(
                 "Comparison is currently only implemented for the image case."
             )

@@ -55,6 +55,7 @@ class GeneralTrainer(BaseTrainer):
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
         ontologies: Optional[Union[Tuple, List]] = None,
+        **kwargs,
     ):
         """Initializes the GeneralTrainer.
 
@@ -166,7 +167,7 @@ class GeneralTrainer(BaseTrainer):
         self._result.model = next(self._model.children())
         return self._result
 
-    def _maskix_hook(self, X: torch.Tensor):
+    def maskix_hook(self, X: torch.Tensor):
         """Only active when override from MaskixTrainer is used"""
         return X
 
@@ -188,7 +189,7 @@ class GeneralTrainer(BaseTrainer):
         for indices, features, sample_ids in self._trainloader:
             current_batch += 1
             self._optimizer.zero_grad()
-            X: torch.Tensor = self._maskix_hook(features)
+            X: torch.Tensor = self.maskix_hook(features)
             model_outputs = self._model(X)
             loss, batch_sub_losses = self._loss_fn(
                 model_output=model_outputs,
@@ -241,7 +242,7 @@ class GeneralTrainer(BaseTrainer):
 
         with torch.no_grad():
             for indices, features, sample_ids in self._validloader:
-                X: torch.Tensor = self._maskix_hook(features)
+                X: torch.Tensor = self.maskix_hook(features)
                 model_outputs = self._model(X)
                 loss, batch_sub_losses = self._loss_fn(
                     model_output=model_outputs,

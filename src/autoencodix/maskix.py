@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Type, Union
+from typing import Dict, Optional, Type, Union, Callable, Any
 import numpy as np
 
 from autoencodix.base._base_dataset import BaseDataset
@@ -52,6 +52,9 @@ class Maskix(BasePipeline):
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
         config: Optional[DefaultConfig] = None,
+        masking_fn: Optional[Callable] = None,
+        masking_fn_kwargs: Dict[str, Any] = {},
+        **kwargs: dict,
     ) -> None:
         """Initialize Maskix pipeline with customizable components.
 
@@ -79,4 +82,7 @@ class Maskix(BasePipeline):
             datasplitter_type=datasplitter_type,
             config=config,
             custom_split=custom_splits,
+            masking_fn=masking_fn,
+            masking_fn_kwargs=masking_fn_kwargs,
+            **kwargs,
         )

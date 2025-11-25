@@ -51,9 +51,6 @@ class GeneralPreprocessor(BasePreprocessor):
         ].selected_layers
         for layer_name in selected_layers:
             if layer_name == "X":
-                x = modality_data.X
-                typex = type(x)
-                print(f"type of x in combine layers: {typex}")
                 layer_list.append(modality_data.X)
             elif layer_name in modality_data.layers:
                 layer_list.append(modality_data.layers[layer_name])

@@ -116,7 +116,7 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         default=False, description="Whether to apply log1p transformation"
     )
     k_filter: Optional[int] = Field(
-        default=20,
+        default=None,
         description="Don't set this gets calculated dynamically, based on k_filter in general config ",
     )
     # image specific ------------------------------
@@ -135,6 +135,19 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     def validate_selected_layers(cls, v):
         if "X" not in v:
             raise ValueError('"X" must always be a part of the selected_layers list')
+        return v
+
+    @field_validator("k_filter", mode="before")
+    @classmethod
+    def _forbid_user_k_filter(cls, v: Any, info: ValidationInfo) -> Any:
+        """
+        'before'  -> runs only when the value comes from user input.
+        After instantiation we can still do  data_info.k_filter = xx
+        """
+        if v is not None:
+            raise ValueError(
+                "k_filter is computed automatically for each data modality, based on global k_filter – remove it from your DataInfo configuration."
+            )
         return v
 
     # # add validation to only allow quadratic image resizing
@@ -220,7 +233,16 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     enc_factor: float = Field(
         default=4, gt=0, description="Scaling factor for encoder dimensions"
     )
-    input_dim: int = Field(default=10000, ge=1, description="Input dimension")
+    maskix_hidden_dim: int = Field(
+        default=256,
+        ge=8,
+        description="The Maskix implementation follows https://doi.org/10.1093/bioinformatics/btae020. The authors use a hidden dimension 0f 256 for their neural network, so we set this as default",
+    )
+    maskix_swap_prob: float = Field(
+        default=0.4,
+        ge=0,
+        description="For the Maskix input_data masinkg, we sample a probablity if samples within one gene should be swapt. This is done with a Bernoulli distribution, maskix_swap_prob is the probablity passed to the bernoulli distribution ",
+    )
     drop_p: float = Field(
         default=0.1, ge=0.0, le=1.0, description="Dropout probability"
     )
@@ -287,6 +309,16 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=5.0,
         ge=0,
         description="Delta weighting factor for class loss term in XModalix Training",
+    )
+    delta_mask_predictor: float = Field(
+        default=0.7,
+        ge=0.0,
+        description="Delt weighting factor of the mask predictin loss term for the Maskix",
+    )
+    delta_mask_corrupted: float = Field(
+        default=0.75,
+        ge=0.0,
+        description="For the Maskix: if >0.5 this gives more weight for the correct reconstruction of corrupted input",
     )
     min_samples_per_split: int = Field(
         default=1, ge=1, description="Minimum number of samples per split"

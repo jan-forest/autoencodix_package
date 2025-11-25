@@ -199,7 +199,6 @@ class ImageVAEArchitecture(BaseAutoencoder):
                 padding=1,
                 bias=False,
             ),
-            nn.Sigmoid(),
         )
 
     def _get_spatial_dim(self) -> int:

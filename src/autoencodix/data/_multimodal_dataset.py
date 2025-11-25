@@ -1,7 +1,7 @@
 import torch
 import warnings
 import pandas as pd
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.configs.default_config import DefaultConfig
 
@@ -33,6 +33,7 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
             config: Configuration object.
         """
         self.datasets = datasets
+        self.modalities = list(datasets.keys())
         self.n_modalities = len(self.datasets.keys())
         self.sample_to_modalities = self._build_sample_map()
         self.sample_ids: List[Any] = list(self.sample_to_modalities.keys())
@@ -74,7 +75,6 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
                 df = pd.DataFrame(
                     ds.data.numpy(), columns=ds.feature_ids, index=ds.sample_ids
                 )
-            # TODO: note Max: I think this is hardcoded and our image data modality is not always named IMG
             elif isinstance(ds.data, list):
                 # Handle image modality
                 # Get the list of tensors
@@ -128,16 +128,22 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
     def __len__(self):
         return len(self.paired_sample_ids)
 
-    def __getitem__(self, sample_id: str):
-        sample = {"sample_id": sample_id, "dtype": ""}
-        for mod, ds in self.datasets.items():
-            if sample_id not in self._id_to_idx[mod]:
-                sample[mod] = None
+    def __getitem__(self, idx: Union[int, str]):
+        sid = self.paired_sample_ids[idx] if isinstance(idx, int) else idx
+        out = {"sample_id": sid}
+        for mod in self.modalities:
+            if sid not in self._id_to_idx[mod]:  # missing modality
+                out[mod] = None
                 continue
-            idx = self._id_to_idx[mod][sample_id]
-            _, data, _ = ds[idx]
-            sample[mod] = data
-        return sample
+            _, data, _ = self.datasets[mod][self._id_to_idx[mod][sid]]
+            out[mod] = data
+        return out
+
+    @property
+    def is_fully_paired(self) -> bool:
+        """Returns True if all samples are fully paired across all modalities (no unpaired samples)."""
+
+        return len(self.unpaired_sample_ids) == 0
 
 
 class CoverageEnsuringSampler(torch.utils.data.Sampler):  # type: ignore

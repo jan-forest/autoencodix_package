@@ -37,6 +37,7 @@ class DisentanglixLoss(BaseLoss):
         targets: torch.Tensor,
         epoch: int,
         n_samples: int,
+        **kwargs,
     ) -> Tuple[torch.Tensor, dict]:
         """Calls forward_impl method.
 
@@ -104,7 +105,9 @@ class DisentanglixLoss(BaseLoss):
         )  # Dim [batch_size]
         log_prior = self._compute_log_gauss_dense(
             z, torch.zeros_like(z), torch.zeros_like(z)
-        ).sum(dim=1)  # Dim [batch_size]
+        ).sum(
+            dim=1
+        )  # Dim [batch_size]
 
         log_q_batch_perm = self._compute_log_gauss_dense(
             z.reshape(z.shape[0], 1, -1),
@@ -123,14 +126,18 @@ class DisentanglixLoss(BaseLoss):
             log_product_q_z = torch.logsumexp(
                 logiw_mat.reshape(z.shape[0], z.shape[0], -1) + log_q_batch_perm,
                 dim=1,
-            ).sum(dim=-1)  # Dim [batch_size]
+            ).sum(
+                dim=-1
+            )  # Dim [batch_size]
         else:
             log_q_z = torch.logsumexp(log_q_batch_perm.sum(dim=-1), dim=-1) - torch.log(
                 torch.tensor([z.shape[0] * n_samples]).to(z.device)
             )  # Dim [batch_size]
             log_product_q_z = torch.logsumexp(log_q_batch_perm, dim=1) - torch.log(
                 torch.tensor([z.shape[0] * n_samples]).to(z.device)
-            ).sum(dim=-1)  # Dim [batch_size]
+            ).sum(
+                dim=-1
+            )  # Dim [batch_size]
 
         mut_info_loss = self.reduction_fn(
             log_q_z_given_x - log_q_z

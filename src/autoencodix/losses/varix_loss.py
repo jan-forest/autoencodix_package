@@ -18,7 +18,7 @@ class VarixLoss(BaseLoss):
             config: Configuraion object.Any
             annealing_scheduler: Enables passing a custom annealer class, defaults to our implementation of an annealer
         """
-        super().__init__(config)
+        super().__init__(config, annealing_scheduler=annealing_scheduler)
 
     def _compute_losses(
         self, model_output: ModelOutput, targets: torch.Tensor

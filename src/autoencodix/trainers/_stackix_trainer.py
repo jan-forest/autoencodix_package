@@ -56,6 +56,7 @@ class StackixTrainer(GeneralTrainer):
         trainer_type: Type[BaseTrainer] = GeneralTrainer,
         workdir: str = "./stackix_work",
         ontologies: Optional[Tuple] = None,
+        **kwargs,
     ) -> None:
         """Initialize the StackixTrainer with datasets and configuration.
 

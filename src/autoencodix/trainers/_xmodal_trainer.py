@@ -377,9 +377,7 @@ class XModalTrainer(BaseTrainer):
                         epoch_dynamics.append(batch_capture)
 
         sub_losses["clf_loss"] = total_clf_loss
-        n_samples_total /= (
-            self._n_train_modalities
-        )  # n_modalities because each sample is counted once per modality and n_modalites is the same for train and valid
+        n_samples_total /= self._n_train_modalities  # n_modalities because each sample is counted once per modality and n_modalites is the same for train and valid
         for k, v in sub_losses.items():
             if "_factor" not in k:
                 sub_losses[k] = v / n_samples_total  # Average over all samples
@@ -405,13 +403,9 @@ class XModalTrainer(BaseTrainer):
         self._epoch_loss = 0
         epoch_dynamics: List[Dict] = []
         sub_losses: Dict[str, float] = defaultdict(float)
-        n_samples_total: int = (
-            0  # because of unpaired training we need to sum the samples instead of using len(dataset)
-        )
- 
+        n_samples_total: int = 0  # because of unpaired training we need to sum the samples instead of using len(dataset)
+
         for batch in self._trainloader:
-         
-      
             with self._fabric.autocast():
                 # --- Stage 1: forward for each data modality ---
                 self._modalities_forward(batch=batch)
@@ -522,18 +516,6 @@ class XModalTrainer(BaseTrainer):
                     sub_losses=valid_sub_losses,
                     n_samples=n_samples_valid,
                 )
-            if self._config.class_param:
-                self._loss_fn.update_class_means(
-                    epoch_dynamics=train_epoch_dynamics,
-                    device=self._fabric.device,
-                    is_training=True,
-                )
-                if self._validset:
-                    self._loss_fn.update_class_means(
-                        epoch_dynamics=valid_epoch_dynamics,
-                        device=self._fabric.device,
-                        is_training=False,
-                    )
             if self._is_checkpoint_epoch:
                 self._fabric.print(f"Storing checkpoint for epoch {epoch}...")
                 self._store_checkpoint(
@@ -559,7 +541,6 @@ class XModalTrainer(BaseTrainer):
     def predict(
         self,
         data: BaseDataset,
-        # split: Literal["train", "valid", "test"] = "test",
         model: Optional[Dict[str, torch.nn.Module]] = None,
         **kwargs,
     ) -> Result:
@@ -636,13 +617,13 @@ class XModalTrainer(BaseTrainer):
                 translation_key = "translation"
 
                 reference_key = f"reference_{to_key}_to_{to_key}"
-                batch_capture["reconstructions"][
-                    translation_key
-                ] = translated.cpu().numpy()
+                batch_capture["reconstructions"][translation_key] = (
+                    translated.cpu().numpy()
+                )
 
-                batch_capture["reconstructions"][
-                    reference_key
-                ] = to_to_reference.cpu().numpy()
+                batch_capture["reconstructions"][reference_key] = (
+                    to_to_reference.cpu().numpy()
+                )
 
                 if "sample_ids" in batch[from_key]:
                     batch_capture["sample_ids"][translation_key] = np.array(

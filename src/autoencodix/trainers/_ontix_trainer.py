@@ -28,6 +28,7 @@ class OntixTrainer(GeneralTrainer):
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
         ontologies: Optional[Union[Tuple, Dict[Any, Any]]],
+        **kwargs,
     ):
         """Initializes the OntixTrainer with the given datasets, model, and configuration.
 

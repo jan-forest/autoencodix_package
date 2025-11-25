@@ -25,6 +25,9 @@ class MaskixTrainer(GeneralTrainer):
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
         ontologies: Optional[Union[Tuple, List]] = None,
+        masking_fn: Optional[Any] = None,
+        masking_fn_kwargs: Optional[Dict[str, Any]] = {},
+        **kwargs,
     ):
         """Initializes the OntixTrainer with the given datasets, model, and configuration.
 
@@ -50,14 +53,47 @@ class MaskixTrainer(GeneralTrainer):
             self._config.maskix_swap_prob
         ] * self._model.input_dim
         self._mask_probas = torch.tensor(mask_probas_list).to(self._model.device)
+        self.masking_fn = masking_fn
+        self.masking_fn_kwargs = masking_fn_kwargs
+        if self.masking_fn is not None:
+            self._validate_masking_fn()
 
-    def _maskix_hook_paper_code(self, X: torch.Tensor) -> torch.Tensor:
-        """From the code of the publication, does not do column-wise shuffling, but the publication describes our _maskix_hook."""
-        should_swap = torch.bernoulli(
-            self._mask_probas.to(X.device) * torch.ones((X.shape)).to(X.device)
-        )
-        corrupted_X = torch.where(should_swap == 1, X[torch.randperm(X.shape[0])], X)
-        return corrupted_X
+    def _validate_masking_fn(self):
+        """Test that user provided masking function accepts a torch.Tensor as input and returns a torch.Tensor."""
+        import inspect
+
+        sig = inspect.signature(self.masking_fn)
+        if len(sig.parameters) < 1:
+            raise ValueError(
+                "The provided masking function must accept at least one argument (the input tensor)."
+            )
+
+        test_input = torch.randn(100, 30)
+        test_output = self.masking_fn(test_input, **self.masking_fn_kwargs)
+        if not isinstance(test_output, torch.Tensor):
+            raise ValueError(
+                "The provided masking function must return a torch.Tensor as output."
+            )
+        if test_output.shape != test_input.shape:
+            raise ValueError(
+                "The output shape of the masking function must match the input shape."
+            )
+
+    def maskix_hook(self, X: torch.Tensor) -> torch.Tensor:
+        """Applies the Maskix corruption mechanism to the input data X.
+
+        For each feature in X, with a probability defined in self._mask_probas,
+        the feature value is replaced by a value from another randomly selected sample.
+        This creates a corrupted version of the input data.
+
+        Args:
+            X: Input data tensor of shape (batch_size, num_features).
+        Returns:
+            A corrupted version of the input data tensor.
+        """
+        if self.masking_fn is None:
+            return self._maskix_hook(X)
+        return self.masking_fn(X, **self.masking_fn_kwargs)
 
     def _maskix_hook(
         self, X: torch.Tensor

@@ -49,6 +49,7 @@ class BaseTrainer(abc.ABC):
         ontologies: Optional[
             Union[Tuple, List]
         ] = None,  # Addition to Varix, mandotory for Ontix
+        **kwargs,
     ):
         self._trainset = trainset
         self._model_type = model_type

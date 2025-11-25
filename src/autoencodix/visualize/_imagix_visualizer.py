@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from typing import Any, Dict, no_type_check
 from autoencodix.visualize._general_visualizer import GeneralVisualizer
 from autoencodix.utils._result import Result
-from autoencodix.utils._utils import nested_dict
+from autoencodix.utils._utils import nested_dict, get_dataset
 from autoencodix.configs.default_config import DefaultConfig
 
 

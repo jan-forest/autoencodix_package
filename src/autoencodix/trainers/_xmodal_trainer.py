@@ -76,6 +76,7 @@ class XModalTrainer(BaseTrainer):
             DataSetTypes.IMG: ImageVAEArchitecture,
         },
         ontologies: Optional[Union[Tuple, List]] = None,
+        **kwargs,
     ):
         """Initializes the XModalTrainer with datasets and configuration.
 

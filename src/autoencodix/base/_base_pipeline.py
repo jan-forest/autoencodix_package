@@ -1,7 +1,6 @@
 import abc
-from typing import Dict, Optional, Tuple, Type, Union, Any, Literal, List
+from typing import Dict, Optional, Tuple, Type, Union, Any, Literal, List, Callable
 
-from unittest import result
 import warnings
 import anndata as ad  # type: ignore
 import numpy as np
@@ -81,6 +80,8 @@ class BasePipeline(abc.ABC):
         config: Optional[DefaultConfig] = None,
         custom_split: Optional[Dict[str, np.ndarray]] = None,
         ontologies: Optional[Union[Tuple, Dict[Any, Any]]] = None,
+        masking_fn: Optional[Callable] = None,
+        masking_fn_kwargs: Dict[str, Any] = {},
         **kwargs: dict,
     ) -> None:  # ty: ignore[call-non-callable]
         """Initializes the pipeline with components and configuration.
@@ -120,6 +121,8 @@ class BasePipeline(abc.ABC):
 
         self._validate_config(config=config)
         self._validate_user_input(data=data)
+        self.masking_fn = masking_fn
+        self.masking_fn_kwargs = masking_fn_kwargs
         processed_data = data if isinstance(data, DatasetContainer) else None
         raw_user_data = (
             data
@@ -472,6 +475,10 @@ class BasePipeline(abc.ABC):
             model_type=self._model_type,
             loss_type=self._loss_type,
             ontologies=self.ontologies,  # Ontix
+            masking_fn=self.masking_fn if hasattr(self, "masking_fn") else None,
+            masking_fn_kwargs=(
+                self.masking_fn_kwargs if hasattr(self, "masking_fn_kwargs") else None
+            ),
         )
 
         trainer_result: Result = self._trainer.train()
@@ -530,7 +537,7 @@ class BasePipeline(abc.ABC):
             original_input=original_input,
             predict_data=predict_data,
         )
-
+        self.result.update(predictor_results)
         return self.result
 
     def _validate_prediction_requirements(self):

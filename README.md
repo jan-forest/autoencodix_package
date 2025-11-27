@@ -47,11 +47,14 @@ result = vanillix.run()
 ## Getting Started
 We provide extensive tutorials for all of our use cases. The best place to start is the `Vanillix Tutorial`. Here, we explain the design and features of our pipeline, which applies to other pipelines. From there, you can explore the tutorials for the more specialized architectures (`Varix`, `Ontix`, etc). We also provide tutorials for each pipeline, but the `Vanillix Tutorial` explains the general concepts, while the other tutorials go into the specifics of the corresponding pipeline. For even more details on extra functionality, such as visualizing or customizing we provide deep dive tutorials for these topics. You can find the tutorials here:
 
-- Best to get started: [Vanillix Tutorial](https://github.com/jan-forest/autoencodix_package/main/Tutorials/PipelineTutorials/Vanillix.ipynb)
-- Tutorials for each specific pipeline (more advanced, do Vanillix first): [Pipeline Tutorials](https://github.com/jan-forest/autoencodix_package/main/PipelineTutorials)
-- Tutorials for specific extra functionality, see [Deep Dives](https://github.com/jan-forest/autoencodix_package/main/Tutorials/DeepDives)
+- Best to get started: [Vanillix Tutorial](https://github.com/jan-forest/autoencodix_package/blob/main/Tutorials/PipelineTutorials/Vanillix.ipynb)
+- Tutorials for each specific pipeline (more advanced, do Vanillix first): [Pipeline Tutorials](https://github.com/jan-forest/autoencodix_package/tree/main/Tutorials/PipelineTutorials)
+- Tutorials for specific extra functionality, see [Deep Dives](https://github.com/jan-forest/autoencodix_package/tree/main/Tutorials/DeepDives)
 ## Contributing
-Whether you have a feature request, found a bug, or have any other idea, we're always happy. For more details, refer to our [[CONTRIBUTING.md](https://github.com/jan-forest/autoencodix/blob/main/CONTRIBUTING.m](https://github.com/jan-forest/autoencodix_package/main/DEVELOPER.md)d).  
+Whether you have a feature request, found a bug, or have any other idea, we're always happy. For more details, refer to our [Guide](https://github.com/jan-forest/autoencodix_package/blob/main/DEVELOPER.md)
+
+## Read The Docs
+You can find our documentation [here](https://jan-forest.github.io/autoencodix_package/).
 
 ## Cite
 TODO

@@ -1,7 +1,7 @@
 
 # Documentation
-You can find our code documentation [here](api/index.md)
-For a general overview, refer to our `README` below
+You can find our code documentation in our `API Reference` (see navbar on the right).
+For a general overview, refer to our `README` below.
 
 # README
 Autoencoders are deep-learning-based networks for dimension reduction and embedding by a combination of a compressing encoder and decoder structure for non-linear and multi-modal data integration, with promising applications to complex biological data from large-scale omics measurements. Current ongoing research and publications provide many exciting architectures and implementations of autoencoders. However, there is a lack of easy-to-use and unified implementations covering the whole pipeline of autoencoder applications.

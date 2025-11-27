@@ -1,6 +1,6 @@
 
 # Documentation
-You can find our code documentation [here](api/index.md)
+You can find our code documentation [here](api/)
 For a general overview, refer to our `README` below
 
 # README

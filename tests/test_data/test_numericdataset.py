@@ -1,7 +1,7 @@
 import pytest
 import torch
 from autoencodix.data._numeric_dataset import NumericDataset
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class TestNumericDataset:
@@ -18,7 +18,7 @@ class TestNumericDataset:
     @pytest.fixture
     def dataset(self, dummy_data, default_config):
         data, labels = dummy_data
-        return NumericDataset(data=data, config=default_config, ids=labels)
+        return NumericDataset(data=data, config=default_config, sample_ids=labels)
 
     def test_dataset_length(self, dataset, dummy_data):
         data, _ = dummy_data
@@ -29,7 +29,7 @@ class TestNumericDataset:
     def test_float_precision(self, dummy_data, default_config):
         data, labels = dummy_data
         default_config.float_precision = "float32"
-        dataset = NumericDataset(data=data, config=default_config, ids=labels)
+        dataset = NumericDataset(data=data, config=default_config, sample_ids=labels)
         assert (
             dataset.data.dtype == torch.float32
         ), "Data should be converted to float32 when provided as config parameter."

@@ -1,4 +1,4 @@
-from .evaluate import Evaluator
+from ._general_evaluator import GeneralEvaluator
+from ._xmodalix_evaluator import XModalixEvaluator
 
-__all__ = ["Evaluator"]
-# test for V0 not applicable
+__all__ = ["GeneralEvaluator", "XModalixEvaluator"]

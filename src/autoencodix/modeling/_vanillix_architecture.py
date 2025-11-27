@@ -1,11 +1,11 @@
-from typing import Optional, Union
+from typing import Optional, Union, Tuple, Dict
 
 import torch
 import torch.nn as nn
 
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.utils._model_output import ModelOutput
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 from ._layer_factory import LayerFactory
 
@@ -13,44 +13,30 @@ from ._layer_factory import LayerFactory
 # internal check done
 # write tests: done
 class VanillixArchitecture(BaseAutoencoder):
-    """
-    Vanilla Autoencoder implementation with separate encoder and decoder construction.
+    """Vanilla Autoencoder implementation with separate encoder and decoder construction.
 
-    Attributes
-    ----------
-    self.input_dim : int
-        number of input features
-    self.config: DefaultConfig
-        Configuration object containing model architecture parameters
-    self._encoder: nn.Module
-        Encoder network of the autoencoder
-    self._decoder: nn.Module
-        Decoder network of the autoencoder
-
-    Methods
-    -------
-    _build_network()
-        Construct the encoder and decoder networks via the LayerFactory
-    encode(x: torch.Tensor) -> torch.Tensor
-        Encode the input tensor x
-    decode(x: torch.Tensor) -> torch.Tensor
-        Decode the latent tensor x
-    forward(x: torch.Tensor) -> ModelOutput
-        Forward pass of the model, fills in the reconstruction and latentspace attributes of ModelOutput class.
+    Attributes:
+        input_dim: number of input features
+        config: Configuration object containing model architecture parameters
+        encoder: Encoder network of the autoencoder
+        decoder: Decoder network of the autoencoder
 
     """
 
     def __init__(
-        self, config: Optional[Union[None, DefaultConfig]], input_dim: int
+        self,
+        config: Optional[Union[None, DefaultConfig]],
+        input_dim: int,
+        ontologies: Optional[Union[Tuple, Dict]] = None,
+        feature_order: Optional[Union[Tuple, Dict]] = None,
     ) -> None:
-        """
-        Initialize the Vanilla Autoencoder with the given configuration.
+        """Initialize the Vanilla Autoencoder with the given configuration.
 
-        Parameters
-        ----------
-        config : Optional[Union[None, DefaultConfig]]
-            Configuration object containing model parameters.
+        Args:
+            config: Configuration object containing model parameters.
+            input_dim: Number of input features.
         """
+
         if config is None:
             config = DefaultConfig()
         self._config = config
@@ -62,14 +48,7 @@ class VanillixArchitecture(BaseAutoencoder):
         self.apply(self._init_weights)
 
     def _build_network(self) -> None:
-        """
-        Construct the encoder with linear layers.
-
-        Returns
-        -------
-        nn.Sequential
-            Encoder model.
-        """
+        """Construct the encoder with linear layers."""
         # Calculate layer dimensions
         enc_dim = LayerFactory.get_layer_dimensions(
             feature_dim=self.input_dim,
@@ -106,23 +85,32 @@ class VanillixArchitecture(BaseAutoencoder):
         self._decoder = nn.Sequential(*decoder_layers)
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Encodes the input data.
+        """Encodes the input data.
 
-        Parameters:
-            x : torch.Tensor
+        Args:
+            x: input Tensor
         Returns:
             torch.Tensor
 
         """
         return self._encoder(x)
 
-    def decode(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Decodes the latent representation.
+    def get_latent_space(self, x: torch.Tensor) -> torch.Tensor:
+        """Returns the latent space representation of the input data.
 
-        Parameters:
-            x : torch.Tensor
+        Args:
+            x: input Tensor
+        Returns:
+            torch.Tensor
+
+        """
+        return self.encode(x)
+
+    def decode(self, x: torch.Tensor) -> torch.Tensor:
+        """Decodes the latent representation.
+
+        Args:
+            x: input Tensor
         Returns:
             torch.Tensor
 
@@ -130,11 +118,10 @@ class VanillixArchitecture(BaseAutoencoder):
         return self._decoder(x)
 
     def forward(self, x: torch.Tensor) -> ModelOutput:
-        """
-        Forward pass of the model.
+        """Forward pass of the model.
 
-        Parameters:
-            x : torch.Tensor
+        Args:
+            x: input Tensor
         Returns:
             ModelOutput
 

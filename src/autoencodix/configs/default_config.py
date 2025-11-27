@@ -1,0 +1,607 @@
+from enum import Enum
+from typing import Any, Dict, Literal, Optional, List, Union
+
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator,
+    model_validator,
+    ConfigDict,
+    ValidationInfo,
+)
+
+
+class SchemaPrinterMixin:
+    """Mixin class that adds schema printing functionality to Pydantic models."""
+
+    @classmethod
+    def get_params(cls) -> Dict[str, Dict[str, Any]]:
+        """
+        Get detailed information about all config fields including types and default values.
+
+        Returns
+        -------
+        Dict[str, Dict[str, Any]]
+            Dictionary containing field name, type, default value, and description if available
+        """
+        fields_info = {}
+        for name, field in cls.model_fields.items():  # type: ignore
+            fields_info[name] = {
+                "type": str(field.annotation),
+                "default": field.default,
+                "description": field.description or "No description available",
+            }
+        return fields_info
+
+    @classmethod
+    def print_schema(cls, filter_params: Optional[List[str]] = None) -> None:
+        """
+        Print a human-readable schema of all config parameters.
+
+        Args:
+            filter_params: If provided, only print information for these parameters
+        """
+        if filter_params:
+            print("Valid Keyword Arguments:")
+            print("-" * 50)
+        else:
+            print(f"\n{cls.__name__} Configuration Parameters:")
+            print("-" * 50)
+
+        for name, info in cls.get_params().items():
+            if filter_params and name not in filter_params:
+                continue
+            print(f"\n{name}:")
+            print(f"  Type: {info['type']}")
+            print(f"  Default: {info['default']}")
+            print(f"  Description: {info['description']}")
+
+
+class DataCase(str, Enum):
+    MULTI_SINGLE_CELL = "Multi Single Cell"
+    MULTI_BULK = "Multi Bulk"
+    BULK_TO_BULK = "Bulk<->Bulk"
+    IMG_TO_BULK = "IMG<->Bulk"
+    SINGLE_CELL_TO_SINGLE_CELL = "Single Cell<->Single Cell"
+    SINGLE_CELL_TO_IMG = "Single Cell<->IMG"
+    IMG_TO_IMG = "IMG<->IMG"
+
+
+class ConfigValidationError(Exception):
+    pass
+
+
+class DataInfo(BaseModel, SchemaPrinterMixin):
+    # general -------------------------------------
+    file_path: str = Field(default="", description="Path to raw data file")
+    data_type: Literal["NUMERIC", "CATEGORICAL", "IMG", "ANNOTATION"] = Field(
+        default="NUMERIC"
+    )
+    scaling: Literal[
+        "STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE", "NOTSET", "LOG1P"
+    ] = Field(
+        default="NOTSET",
+        description="Setting the scaling here in DataInfo overrides the globally set scaling method for the specific data modality",
+    )  # can also be set globally, for all data modalities.
+
+    filtering: Literal["VAR", "MAD", "CORR", "VARCORR", "NOFILT", "NONZEROVAR"] = Field(
+        default="VAR"
+    )
+    sep: Union[str, None] = Field(default=None)  # for pandas read_csv
+    extra_anno_file: Union[str, None] = Field(default=None)
+
+    # single cell specific -------------------------
+    is_single_cell: bool = Field(default=False)
+
+    min_cells: float = Field(
+        default=0.05,
+        ge=0,
+        le=1,
+        description="Minimum fraction of cells a gene must be expressed in to be kept. Genes expressed in fewer cells will be filtered out.",
+    )  # Controls gene filtering based on expression prevalence
+
+    min_genes: float = Field(
+        default=0.02,
+        ge=0,
+        le=1,
+        description="Minimum fraction of genes a cell must express to be kept. Cells expressing fewer genes will be filtered out.",
+    )  # Controls cell quality filtering
+    selected_layers: List[str] = Field(default=["X"])
+
+    is_X: bool = Field(default=False)  # only for single cell data
+    normalize_counts: bool = Field(
+        default=True, description="Whether to normalize by total counts"
+    )
+    log_transform: bool = Field(
+        default=False, description="Whether to apply log1p transformation"
+    )
+    k_filter: Optional[int] = Field(
+        default=None,
+        description="Don't set this gets calculated dynamically, based on k_filter in general config ",
+    )
+    # image specific ------------------------------
+    img_width_resize: Union[int, None] = Field(default=64)
+    img_height_resize: Union[int, None] = Field(default=64)
+    # annotation specific -------------------------
+    # xmodalix specific -------------------------
+    translate_direction: Union[Literal["from", "to"], None] = Field(default=None)
+    pretrain_epochs: Optional[int] = Field(
+        default=None,
+        description="Number of pretraining epochs. This overwrites the global 'pretraining_epochs' in DefaultConfig class to have different number of pretraining epochs for each data modality",
+    )
+
+    @field_validator("selected_layers")
+    @classmethod
+    def validate_selected_layers(cls, v):
+        if "X" not in v:
+            raise ValueError('"X" must always be a part of the selected_layers list')
+        return v
+
+    @field_validator("k_filter", mode="before")
+    @classmethod
+    def _forbid_user_k_filter(cls, v: Any, info: ValidationInfo) -> Any:
+        """
+        'before'  -> runs only when the value comes from user input.
+        After instantiation we can still do  data_info.k_filter = xx
+        """
+        if v is not None:
+            raise ValueError(
+                "k_filter is computed automatically for each data modality, based on global k_filter – remove it from your DataInfo configuration."
+            )
+        return v
+
+    # # add validation to only allow quadratic image resizing
+    # @field_validator("img_width_resize", "img_height_resize")
+    # @classmethod
+    # def validate_image_resize(cls, v, values):
+    #     if v is not None and v <= 0:
+    #         raise ValueError("Image resize dimensions must be positive integers")
+    #     if "img_width_resize" in values and "img_height_resize" in values:
+    #         if values["img_width_resize"] != values["img_height_resize"]:
+    #             raise ValueError("Image width and height must be the same for resizing")
+    #     return v
+
+    @field_validator("img_width_resize", "img_height_resize")
+    @classmethod
+    def validate_image_resize(cls, v, info: ValidationInfo):
+        if v is not None and v <= 0:
+            raise ValueError("Image resize dimensions must be positive integers")
+
+        # Access other field values through info.data
+        data = info.data
+        if "img_width_resize" in data and "img_height_resize" in data:
+            if data["img_width_resize"] != data["img_height_resize"]:
+                raise ValueError("Image width and height must be the same for resizing")
+        return v
+
+
+class DataConfig(BaseModel, SchemaPrinterMixin):
+    data_info: Dict[str, DataInfo]
+    require_common_cells: Optional[bool] = Field(default=False)
+    annotation_columns: Optional[List[str]] = Field(default=None)
+
+
+# write tests: done
+class DefaultConfig(BaseModel, SchemaPrinterMixin):
+    """Complete configuration for model, training, hardware, and data handling."""
+
+    # Input validation
+    model_config = ConfigDict(extra="forbid")
+    # Datasets configuration --------------------------------------------------
+    data_config: DataConfig = DataConfig(data_info={})
+    img_path_col: str = Field(
+        default="img_paths",
+        description="When working with images, we except a column in your annotation file that specifies the path of the image for a particular sample. Here you can define the name of this column",
+    )
+    requires_paired: Union[bool, None] = Field(
+        default_factory=lambda: True,
+        description="Indicator if the samples for the xmodalix are paired, based on some sample id",
+    )
+
+    data_case: Union[DataCase, None] = Field(
+        default_factory=lambda: None,
+        description="Data case for the model, will be determined automatically",
+    )
+    k_filter: Union[int, None] = Field(
+        default=20, description="Number of features to keep"
+    )
+    scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE", "LOG1P"] = Field(
+        default="STANDARD",
+        description="Setting the scaling here for all data modalities, can per overruled by setting scaling at data modality level per data modality",
+    )
+
+    skip_preprocessing: bool = Field(
+        default=False, description="If set don't scale, filter or clean the input data."
+    )
+
+    class_param: Optional[str] = Field(default=None)
+
+    # Model configuration -----------------------------------------------------
+    latent_dim: int = Field(
+        default=16, ge=1, description="Dimension of the latent space"
+    )
+    hidden_dim: int = Field(
+        default=16,
+        ge=1,
+        description="Hidden dimension of image_vae, applies only to image_vae",
+    )
+    n_layers: int = Field(
+        default=3,
+        ge=0,
+        description="Number of layers in encoder/decoder, without latent layer. If 0, is only the latent layer.",
+    )
+    enc_factor: float = Field(
+        default=4, gt=0, description="Scaling factor for encoder dimensions"
+    )
+    maskix_hidden_dim: int = Field(
+        default=256,
+        ge=8,
+        description="The Maskix implementation follows https://doi.org/10.1093/bioinformatics/btae020. The authors use a hidden dimension 0f 256 for their neural network, so we set this as default",
+    )
+    maskix_swap_prob: float = Field(
+        default=0.4,
+        ge=0,
+        description="For the Maskix input_data masinkg, we sample a probablity if samples within one gene should be swapt. This is done with a Bernoulli distribution, maskix_swap_prob is the probablity passed to the bernoulli distribution ",
+    )
+    drop_p: float = Field(
+        default=0.1, ge=0.0, le=1.0, description="Dropout probability"
+    )
+
+    # Training configuration --------------------------------------------------
+    save_memory: bool = Field(
+        default=False, description="If set to True we don't store TrainingDynamics"
+    )
+    learning_rate: float = Field(
+        default=0.001, gt=0, description="Learning rate for optimization"
+    )
+    batch_size: int = Field(
+        default=32,
+        ge=2,
+        description="Number of samples per batch, has to be > 1, because we use BatchNorm() Layer",
+    )
+    epochs: int = Field(default=3, ge=1, description="Number of training epochs")
+    weight_decay: float = Field(
+        default=0.01, ge=0, description="L2 regularization factor"
+    )
+    reconstruction_loss: Literal["mse", "bce"] = Field(
+        default="mse", description="Type of reconstruction loss"
+    )
+    default_vae_loss: Literal["kl", "mmd"] = Field(
+        default="kl", description="Type of VAE loss"
+    )
+    loss_reduction: Literal["sum", "mean"] = Field(
+        default="sum",
+        description="Loss reduction in PyTorch i.e in torch.nn.functional.binary_cross_entropy_with_logits(reduction=loss_reduction)",
+    )
+    beta: float = Field(
+        default=1, ge=0, description="Beta weighting factor for VAE loss"
+    )
+    beta_mi: float = Field(
+        default=1,
+        ge=0,
+        description="Beta weighting factor for mutual information term in disentangled VAE loss",
+    )
+    beta_tc: float = Field(
+        default=1,
+        ge=0,
+        description="Beta weighting factor for total correlation term in disentangled VAE loss",
+    )
+    beta_dimKL: float = Field(
+        default=1,
+        ge=0,
+        description="Beta weighting factor for dimension-wise KL in disentangled VAE loss",
+    )
+    use_mss: bool = Field(
+        default=True,
+        description="Using minibatch stratified sampling for disentangled VAE loss calculation (faster estimation)",
+    )
+    gamma: float = Field(
+        default=10.0,
+        ge=0,
+        description="Gamma weighting factor for Adversial Loss Term i.e. for XModalix Classfier training",
+    )
+    delta_pair: float = Field(
+        default=5.0,
+        ge=0,
+        description="Delta weighting factor for paired loss term in XModalix Training",
+    )
+    delta_class: float = Field(
+        default=5.0,
+        ge=0,
+        description="Delta weighting factor for class loss term in XModalix Training",
+    )
+    delta_mask_predictor: float = Field(
+        default=0.7,
+        ge=0.0,
+        description="Delt weighting factor of the mask predictin loss term for the Maskix",
+    )
+    delta_mask_corrupted: float = Field(
+        default=0.75,
+        ge=0.0,
+        description="For the Maskix: if >0.5 this gives more weight for the correct reconstruction of corrupted input",
+    )
+    min_samples_per_split: int = Field(
+        default=1, ge=1, description="Minimum number of samples per split"
+    )
+    anneal_function: Literal[
+        "5phase-constant",
+        "3phase-linear",
+        "3phase-log",
+        "logistic-mid",
+        "logistic-early",
+        "logistic-late",
+        "no-annealing",
+    ] = Field(
+        default="logistic-mid",
+        description="Annealing function strategy for VAE loss scheduling",
+    )
+    pretrain_epochs: int = Field(
+        default=0,
+        ge=0,
+        description="Number of pretraining epochs, can be overwritten in DataInfo to have different number of pretraining epochs for each data modality",
+    )
+
+    # Hardware configuration --------------------------------------------------
+    device: Literal["cpu", "cuda", "gpu", "tpu", "mps", "auto"] = Field(
+        default="auto", description="Device to use"
+    )
+    # 0 uses cpu and not gpu
+    n_gpus: int = Field(default=1, ge=1, description="Number of GPUs to use")
+    checkpoint_interval: int = Field(
+        default=10, ge=1, description="Interval for saving checkpoints"
+    )
+    float_precision: Literal[
+        "transformer-engine",
+        "transformer-engine-float16",
+        "16-true",
+        "16-mixed",
+        "bf16-true",
+        "bf16-mixed",
+        "32-true",
+        "64-true",
+        "64",
+        "32",
+        "16",
+        "bf16",
+    ] = Field(default="32", description="Floating point precision")
+    gpu_strategy: Literal[
+        "auto",
+        "dp",
+        "ddp",
+        "ddp_spawn",
+        "ddp_find_unused_parameters_true",
+        "xla",
+        "deepspeed",
+        "fsdp",
+    ] = Field(default="auto", description="GPU parallelization strategy")
+
+    # Data handling configuration ---------------------------------------------
+    train_ratio: float = Field(
+        default=0.7, ge=0, lt=1, description="Ratio of data for training"
+    )
+    test_ratio: float = Field(
+        default=0.2, ge=0, lt=1, description="Ratio of data for testing"
+    )
+    valid_ratio: float = Field(
+        default=0.1, ge=0, lt=1, description="Ratio of data for validation"
+    )
+
+    # General configuration ---------------------------------------------------
+    reproducible: bool = Field(
+        default=False, description="Whether to ensure reproducibility"
+    )
+    global_seed: int = Field(default=1, ge=0, description="Global random seed")
+
+    ##### VALIDATION ##### -----------------------------------------------------
+    ##### ----------------- -----------------------------------------------------
+    @field_validator("data_config")
+    @classmethod
+    def validate_data_config(cls, data_config: DataConfig):
+        """Main validation logic for dataset consistency and translation."""
+        data_info = data_config.data_info
+
+        numeric_count = sum(
+            1 for info in data_info.values() if info.data_type == "NUMERIC"
+        )
+        img_count = sum(1 for info in data_info.values() if info.data_type == "IMG")
+
+        if numeric_count == 0 and img_count == 0:
+            raise ConfigValidationError("At least one NUMERIC dataset is required.")
+
+        numeric_datasets = [
+            info for info in data_info.values() if info.data_type == "NUMERIC"
+        ]
+        if numeric_datasets:
+            is_single_cell = numeric_datasets[0].is_single_cell
+            if any(info.is_single_cell != is_single_cell for info in numeric_datasets):
+                raise ConfigValidationError(
+                    "All numeric datasets must be either single cell or bulk."
+                )
+
+        from_dataset = next(
+            (
+                (name, info)
+                for name, info in data_info.items()
+                if info.translate_direction == "from"
+            ),
+            None,
+        )
+        to_dataset = next(
+            (
+                (name, info)
+                for name, info in data_info.items()
+                if info.translate_direction == "to"
+            ),
+            None,
+        )
+
+        if bool(from_dataset) != bool(to_dataset):
+            raise ConfigValidationError(
+                "Translation requires exactly one 'from' and one 'to' dataset."
+            )
+
+        if from_dataset and to_dataset:
+            from_info, to_info = from_dataset[1], to_dataset[1]
+            if from_info.data_type == "NUMERIC" and to_info.data_type == "NUMERIC":
+                if from_info.is_single_cell != to_info.is_single_cell:
+                    raise ConfigValidationError(
+                        "Cannot translate between single cell and bulk data."
+                    )
+
+        return data_config
+
+    @model_validator(mode="after")
+    def determine_case(self) -> "DefaultConfig":
+        """Assign the correct DataCase after model validation."""
+        data_info = self.data_config.data_info
+
+        # Handle empty data_info case
+        if not data_info:
+            return self
+
+        # Find 'from' and 'to' datasets
+        from_dataset = next(
+            (
+                (name, info)
+                for name, info in data_info.items()
+                if info.translate_direction == "from"
+            ),
+            None,
+        )
+        to_dataset = next(
+            (
+                (name, info)
+                for name, info in data_info.items()
+                if info.translate_direction == "to"
+            ),
+            None,
+        )
+
+        if from_dataset and to_dataset:
+            from_info, to_info = from_dataset[1], to_dataset[1]
+            if from_info.data_type == "NUMERIC" and to_info.data_type == "NUMERIC":
+                self.data_case = (
+                    DataCase.SINGLE_CELL_TO_SINGLE_CELL
+                    if from_info.is_single_cell
+                    else DataCase.BULK_TO_BULK
+                )
+            elif "IMG" in {from_info.data_type, to_info.data_type}:
+                numeric_dataset = (
+                    from_info if from_info.data_type == "NUMERIC" else to_info
+                )
+                # check for IMG_IMG
+                if from_info.data_type == "IMG" and to_info.data_type == "IMG":
+                    self.data_case = DataCase.IMG_TO_IMG
+                else:
+                    self.data_case = (
+                        DataCase.SINGLE_CELL_TO_IMG
+                        if numeric_dataset.is_single_cell
+                        else DataCase.IMG_TO_BULK
+                    )
+        else:
+            img_ds = [info for info in data_info.values() if info.data_type == "IMG"]
+            if img_ds:
+                self.data_case = DataCase.IMG_TO_IMG
+
+            numeric_datasets = [
+                info for info in data_info.values() if info.data_type == "NUMERIC"
+            ]
+
+            if numeric_datasets:
+                numeric_dataset = numeric_datasets[0]
+                self.data_case = (
+                    DataCase.MULTI_SINGLE_CELL
+                    if numeric_dataset.is_single_cell
+                    else DataCase.MULTI_BULK
+                )
+            if self.data_case is None:
+                import warnings
+
+                warnings.warn(message="Could not determine data_case")
+
+        return self
+
+    @field_validator("test_ratio", "valid_ratio")
+    def validate_ratios(cls, v, values):
+        total = (
+            sum(
+                values.data.get(key, 0)
+                for key in ["train_ratio", "test_ratio", "valid_ratio"]
+            )
+            + v
+        )
+        if total > 1.0:
+            raise ValueError(f"Data split ratios must sum to 1.0 or less (got {total})")
+        return v
+
+    # TODO test if other float precisions work with MPS
+    @field_validator("float_precision")
+    def validate_float_precision(cls, v, values):
+        """Validate float precision based on device type."""
+        device = values.data["device"]
+        if device == "mps" and v != "32":
+            raise ValueError("MPS backend only supports float precision '32'")
+        return v
+
+    # gpu strategy needs to be auto for mps # TODO test if other strategies work
+    @field_validator("gpu_strategy")
+    def validate_gpu_strategy(cls, v, values):
+        device = values.data.get("device")
+        if device == "mps" and v != "auto":
+            raise ValueError("MPS backend only supports GPU strategy 'auto'")
+
+    @model_validator(mode="after")
+    def validate_k_filter_with_nonzero_var(self):
+        k_filter = self.k_filter
+
+        data_info = self.data_config.data_info
+
+        for info in data_info.values():
+            if info.filtering == "NONZEROVAR" and k_filter is not None:
+                raise ValueError(
+                    "k_filter cannot be combined with DataInfo that has scaling set to 'NONZEROVAR'"
+                )
+
+        return self
+
+    #### END VALIDATION #### --------------------------------------------------
+
+    #### READIBILITY #### ------------------------------------------------------
+    #### ------------ #### ------------------------------------------------------
+    @classmethod
+    def get_params(cls) -> Dict[str, Dict[str, Any]]:
+        """
+        Get detailed information about all config fields including types and default values.
+
+        Returns:
+            Dictionary containing field name, type, default value, and description if available
+        """
+        fields_info = {}
+        for name, field in cls.model_fields.items():
+            fields_info[name] = {
+                "type": str(field.annotation),
+                "default": field.default,
+                "description": field.description or "No description available",
+            }
+        return fields_info
+
+    @classmethod
+    def print_schema(cls, filter_params: Optional[None] = None) -> None:  # type: ignore
+        """
+        Print a human-readable schema of all config parameters.
+        """
+        if filter_params:
+            filter_params = list(filter_params)
+            print("Valid Keyword Arguments:")
+            print("-" * 50)
+        else:
+            print(f"\n{cls.__name__} Configuration Parameters:")
+            print("-" * 50)
+
+        for name, info in cls.get_params().items():
+            if filter_params and name not in filter_params:
+                continue
+            print(f"\n{name}:")
+            print(f"  Type: {info['type']}")
+            print(f"  Default: {info['default']}")  # type: ignore
+            print(f"  Description: {info['description']}")

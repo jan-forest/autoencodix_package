@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 class TestDefaultConfig:

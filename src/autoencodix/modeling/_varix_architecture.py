@@ -1,69 +1,56 @@
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Tuple, Dict
 
 import torch
 import torch.nn as nn
 
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.utils._model_output import ModelOutput
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 from ._layer_factory import LayerFactory
 
 
 class VarixArchitecture(BaseAutoencoder):
-    """
-    Vanilla Autoencoder implementation with separate encoder and decoder construction.
+    """Variational Autoencoder implementation with separate encoder and decoder construction.
 
-    Attributes
-    ----------
-    self.input_dim : int
-        number of input features
-    self.config: DefaultConfig
-        Configuration object containing model architecture parameters
-    self._encoder: nn.Module
-        Encoder network of the autoencoder
-    self._decoder: nn.Module
-        Decoder network of the autoencoder
+    Attributes:
+        input_dim: number of input features
+        config: Configuration object containing model architecture parameters
+        encoder: Encoder network of the autoencoder
+        decoder: Decoder network of the autoencoder
+        mu: Linear layer to compute the mean of the latent distribution
+    logvar: Linear layer to compute the log-variance of the latent distribution
 
-    Methods
-    -------
-    _build_network()
-        Construct the encoder and decoder networks via the LayerFactory
-    encode(x: torch.Tensor) -> torch.Tensor
-        Encode the input tensor x
-    decode(x: torch.Tensor) -> torch.Tensor
-        Decode the latent tensor x
-    forward(x: torch.Tensor) -> ModelOutput
-        Forward pass of the model, fills in the reconstruction and latentspace attributes of ModelOutput class.
-    reparametrize(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor
-        Reparameterization trick for VAE
     """
 
     def __init__(
-        self, config: Optional[Union[None, DefaultConfig]], input_dim: int
+        self,
+        config: Optional[Union[None, DefaultConfig]],
+        input_dim: int,
+        ontologies: Optional[Union[Tuple, Dict]] = None,
+        feature_order: Optional[Union[Tuple, Dict]] = None,
     ) -> None:
-        """
-        Initialize the Vanilla Autoencoder with the given configuration.
+        """Initialize the Vanilla Autoencoder with the given configuration.
 
-        Parameters
-        ----------
-        config : Optional[Union[None, DefaultConfig]]
-            Configuration object containing model parameters.
+        Args:
+            config: Configuration object containing model parameters.
+            input_dim: Number of input features.
         """
+
         if config is None:
             config = DefaultConfig()
-        self._config = config
-        super().__init__(config, input_dim)
-        self.input_dim = input_dim
+        self._config: DefaultConfig = config
+        super().__init__(config=config, input_dim=input_dim)
+        self.input_dim: int = input_dim
         self._mu: nn.Module
         self._logvar: nn.Module
 
         # populate self.encoder and self.decoder
         self._build_network()
+        self.apply(self._init_weights)
 
     def _build_network(self) -> None:
-        """
-        Construct the encoder and decoder networks.
+        """Construct the encoder and decoder networks.
 
         Handles cases where `n_layers=0` by skipping the encoder and using only mu/logvar.
         """
@@ -83,7 +70,7 @@ class VarixArchitecture(BaseAutoencoder):
         # Case 2: At Least One Hidden Layer
         if self._config.n_layers > 0:
             encoder_layers = []
-            print(enc_dim)
+            # print(enc_dim)
             for i, (in_features, out_features) in enumerate(
                 zip(enc_dim[:-1], enc_dim[1:])
             ):
@@ -120,20 +107,16 @@ class VarixArchitecture(BaseAutoencoder):
         self._decoder = nn.Sequential(*decoder_layers)
 
     def encode(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Encode the input tensor x
+        """Encode the input tensor x.
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Input tensor
+        Args:
+            x: Input tensor
 
-        Returns
-        -------
-        torch.Tensor
+        Returns:
             Encoded tensor
 
         """
+
         latent = x  # for case where n_layers=0
         if len(self._encoder) > 0:
             latent = self._encoder(x)
@@ -144,13 +127,12 @@ class VarixArchitecture(BaseAutoencoder):
         mu = torch.where(mu < 0.0000001, torch.zeros_like(mu), mu)
         return mu, logvar
 
-    def reparametrize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-        """
-        Reparameterization trick for VAE
+    def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+        """Reparameterization trick for VAE
 
-        Parameters:
-            mu : torch.Tensor
-            logvar : torch.Tensor
+        Args:
+            mu: torch.Tensor
+            logvar: torch.Tensor
 
         Returns:
             torch.Tensor
@@ -160,40 +142,44 @@ class VarixArchitecture(BaseAutoencoder):
         eps = torch.randn_like(std)
         return mu + eps * std
 
+    def get_latent_space(self, x: torch.Tensor) -> torch.Tensor:
+        """Returns the latent space representation of the input.
+
+        Args:
+            x: Input tensor
+
+        Returns:
+            Latent space representation
+
+        """
+        mu, logvar = self.encode(x)
+        z = self.reparameterize(mu, logvar)
+        return z
+
     def decode(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Decode the latent tensor x
+        """Decode the latent tensor x
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Latent tensor
+        Args:
+            x: Latent tensor
 
-        Returns
-        -------
-        torch.Tensor
+        Returns:
             Decoded tensor
-
         """
+
         return self._decoder(x)
 
     def forward(self, x: torch.Tensor) -> ModelOutput:
-        """
-        Forward pass of the model, fill
+        """Forward pass of the model, fill
 
-        Parameters
-        ----------
-        x : torch.Tensor
-            Input tensor
+        Args:
+            x: Input tensor
 
-        Returns
-        -------
-        ModelOutput
+        Returns:
             ModelOutput object containing the reconstructed tensor and latent tensor
 
         """
         mu, logvar = self.encode(x)
-        z = self.reparametrize(mu, logvar)
+        z = self.reparameterize(mu, logvar)
         x_hat = self.decode(z)
         return ModelOutput(
             reconstruction=x_hat,

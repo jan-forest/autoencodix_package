@@ -1,11 +1,13 @@
 import itertools
-from typing import Dict, Optional, Union
+import pandas as pd
+from typing import Dict, Optional, Any, Set, List, Sequence, Tuple
 
 import numpy as np
-import torch
 from sklearn.model_selection import train_test_split  # type: ignore
 
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
+from autoencodix.data.datapackage import DataPackage
+from collections import defaultdict
 
 
 # internal check done
@@ -13,6 +15,7 @@ from autoencodix.utils.default_config import DefaultConfig
 class DataSplitter:
     """
     Splits data into train, validation, and test sets. And validates the splits.
+
     Also allows for custom splits to be provided.
     Here we allow empty splits (e.g. test_ratio=0), this might raise an error later
     in the pipeline, when this split is expected to be non-empty. However, this allows
@@ -25,25 +28,11 @@ class DataSplitter:
     4. Custom splits must contain 'train', 'valid', and 'test' keys and non-overlapping indices
 
     Attributes:
-    -----------
-    _config : DefaultConfig
-        Configuration object containing split ratios
+        _config: Configuration object containing split ratios
 
-    _custom_splits : Optional[Dict[str, np.ndarray]]
-    _test_ratio : float
-    _valid_ratio : float
-
-    Methods:
-    --------
-    _validate_ratios(test_ratio: float, valid_ratio: float) -> None
-        Validate that the splitting ratios meet required constraints.
-    _validate_split_sizes(n_samples: int) -> None
-        Validate that each non-empty split will have sufficient samples.
-    _validate_custom_splits(splits: Dict[str, np.ndarray]) -> None
-        Validate custom splits for correctness.
-    split(X: Union[torch.Tensor, np.ndarray]) -> Dict[str, np.ndarray]
-        Split data into train, validation, and test sets. Returns indices for each split.
-        and None for empty splits.
+        _custom_splits: Optional pre-defined split indices
+        _test_ratio
+        _valid_ratio
 
     """
 
@@ -55,12 +44,9 @@ class DataSplitter:
         """
         Initialize DataSplitter with configuration and optional custom splits.
 
-        Parameters:
+        Args:
             config (DefaultConfig): Configuration object containing split ratios
             custom_splits (Optional[Dict[str, np.ndarray]]): Pre-defined split indices
-
-        Raises:
-            ValueError: If ratios violate constraints or custom splits are malformed
         """
         self._config = config
         self._test_ratio = self._config.test_ratio
@@ -83,7 +69,6 @@ class DataSplitter:
 
         """
         if not 0 <= self._test_ratio <= 1:
-
             raise ValueError(
                 f"Test ratio must be between 0 and 1, got {self._test_ratio}"
             )
@@ -103,15 +88,14 @@ class DataSplitter:
         """
         Validate that each non-empty split will have sufficient samples.
 
-        Parameters:
-            n_samples (int): Total number of samples in dataset
+        Args:
+            n_samples: Total number of samples in dataset
         Returns:
             None
         Raises:
             ValueError: If any non-empty split would have too few samples
 
         """
-
         # Calculate expected sizes
         n_train = int(n_samples * (1 - self._test_ratio - self._valid_ratio))
         n_valid = int(n_samples * self._valid_ratio) if self._valid_ratio > 0 else 0
@@ -139,8 +123,8 @@ class DataSplitter:
         """
         Validate custom splits for correctness.
 
-        Parameters:
-            splits (Dict[str, np.ndarray]): Custom split indices
+        Args:
+            splits: Custom split indices
         Returns:
             None
         Raises:
@@ -183,27 +167,25 @@ class DataSplitter:
 
     def split(
         self,
-        X: Union[torch.Tensor, np.ndarray],
+        n_samples: int,
     ) -> Dict[str, np.ndarray]:
         """
         Split data into train, validation, and test sets.
 
-        Parameters:
-            X: Input data to split (torch.Tensor or np.ndarray)
+        Args:
+            n_samples: Total number of samples in the dataset
 
         Returns:
-            Dict[str, np.ndarray]: Dictionary containing indices for each split,
-                                 with empty arrays for splits with ratio=0
+            Dictionary containing indices for each split, with empty arrays for splits with ratio=0
 
         Raises:
             ValueError: If resulting splits would violate size constraints
         """
-        if isinstance(X, torch.Tensor):
-            X = X.numpy()
+        self._validate_split_sizes(n_samples)
+        indices = np.arange(n_samples)
 
         if self._custom_splits:
-            # check if indices are out of range
-            max_index = X.shape[0] - 1
+            max_index = n_samples - 1
             for split in self._custom_splits.values():
                 if len(split) > 0:
                     if np.max(split) > max_index:
@@ -215,10 +197,6 @@ class DataSplitter:
                             f"Custom split indices must be within range [0, {max_index}]"
                         )
             return self._custom_splits
-
-        n_samples = len(X)
-        self._validate_split_sizes(n_samples)
-        indices = np.arange(n_samples)
 
         # all three 0 case already handled in _validate_ratios (sum to 1)
         if self._test_ratio == 0 and self._valid_ratio == 0:
@@ -240,7 +218,6 @@ class DataSplitter:
                 "test": np.array([], dtype=int),
             }
 
-        # this case does not make to much sense, but maybe the user has some specific use case
         if self._train_ratio == 0:
             valid_indices, test_indices = train_test_split(
                 indices,
@@ -289,3 +266,207 @@ class DataSplitter:
         )
 
         return {"train": train_indices, "valid": valid_indices, "test": test_indices}
+
+
+class PairedUnpairedSplitter:
+    """Performs pairing-aware data splitting across multiple modalities.
+
+    Handles any number of data modalities and automatically identifies
+    fully paired and partially paired samples. Each sample is assigned
+    to exactly one split (train, valid, or test). If a sample appears in
+    multiple modalities, it is guaranteed to appear in the same split
+    across all of them.
+
+    Each modality can have a corresponding annotation file. Samples in modalities
+    that are not in their corresponding annotation file are dropped.
+
+    Attributes:
+        data_package: The input data package containing modalities and annotations.
+        config: Configuration object with split ratios and random seed.
+        annotation_ids_per_modality: Mapping from modality keys to their valid sample IDs.
+        modalities: Mapping of modality keys to their data objects.
+        membership_groups: Mapping of modality combinations to the set of
+            sample IDs belonging to each combination (e.g., RNA+Protein pairs).
+    """
+
+    def __init__(self, data_package, config):
+        """Initializes the splitter and computes modality membership groups.
+
+        Args:
+            data_package: The full data package to split. Must implement
+                `_get_sample_ids` and iterable access yielding (key, object) pairs.
+            config: Split configuration object defining ratios and random seed.
+
+        Raises:
+            TypeError: If `data_package` is not a valid DataPackage instance.
+        """
+        if not hasattr(data_package, "_get_sample_ids"):
+            raise TypeError("data_package must be an instance of DataPackage.")
+
+        self.datapackage = data_package
+        self.config = config
+        self.membership_groups: Dict[Tuple[str, ...], Set[str]] = (
+            self._compute_membership_groups()
+        )
+
+    def _compute_membership_groups(self) -> Dict[Tuple[str, ...], Set[str]]:
+        """Groups samples by the set of modalities in which they appear.
+
+        Returns:
+            A mapping from modality combinations (tuples of modality keys)
+            to the set of sample IDs belonging to each combination.
+
+        Examples:
+            This mapping could look like:
+            {("multi_bulk.rna", "multi_bulk.cna"): {"id1", id3", ...},
+              ()"multi_bulk.rna, "img.img"): {"id2", "id4 ,...}
+            }
+        """
+        sample_to_modalities: Dict[str, Set[str]] = defaultdict(set)
+        for modality_key, obj in self.datapackage:
+            if "annotation" in modality_key:
+                continue
+            ids: List[str] = self.datapackage._get_sample_ids(obj)
+
+            for sid in ids:
+                sample_to_modalities[sid].add(modality_key)
+
+        # Group samples by identical modality membership
+        groups: Dict[Tuple[str, ...], Set[str]] = defaultdict(set)
+        for sid, mods in sample_to_modalities.items():
+            groups[tuple(sorted(mods))].add(sid)
+        return groups
+
+    def _split_group(self, ids: Sequence[str]) -> Dict[str, np.ndarray]:
+        """Splits a homogeneous group of sample IDs into train, valid, and test subsets.
+
+        Args:
+            ids: Collection of sample IDs belonging to the same modality group.
+
+        Returns:
+            A mapping with keys ``train``, ``valid``, and ``test``, where each value
+            is an array of sample IDs assigned to that split.
+        """
+        ids = list(ids)
+        rng = np.random.default_rng(self.config.global_seed)
+        ids = rng.permutation(ids)
+        n = len(ids)
+        n_train = int(n * self.config.train_ratio)
+        n_valid = int(n * self.config.valid_ratio)
+        return {
+            "train": np.array(ids[:n_train], dtype=object),
+            "valid": np.array(ids[n_train : n_train + n_valid], dtype=object),
+            "test": np.array(ids[n_train + n_valid :], dtype=object),
+        }
+
+    def split(self) -> Dict[str, Dict[str, Dict[str, np.ndarray]]]:
+        """Performs the complete pairing-aware split across modalities and annotations.
+
+        Ensures that:
+        - Each sample appears in exactly one split across all modalities it belongs to.
+        - Fully paired samples are synchronized across modalities.
+        - Each annotation table is split consistently with its corresponding modality.
+
+        Returns:
+            Nested mapping of ``{parent_key -> {child_key -> {split_name -> np.ndarray(indices)}}}``,
+            suitable for use with ``DataPackageSplitter``. Includes splits for both
+            modalities and their corresponding annotation files.
+        """
+        # Sort groups by descending number of modalities (most-paired first)
+        # This ensures fully-paired samples are assigned before partially-paired ones
+        sorted_groups = sorted(
+            self.membership_groups.items(), key=lambda kv: -len(kv[0])
+        )
+        assigned_ids: Set[str] = set()
+
+        # Initialize split storage for each modality
+        per_modality_splits: Dict[str, Dict[str, Set[str]]] = {
+            mod: {"train": set(), "valid": set(), "test": set()}
+            for mod, _ in self.datapackage
+        }
+
+        # Assign each membership group to splits
+        for mods_tuple, sids in sorted_groups:
+            sids_to_assign = [sid for sid in sids if sid not in assigned_ids]
+            if not sids_to_assign:
+                continue
+
+            group_splits = self._split_group(sids_to_assign)
+            for split_name, split_ids in group_splits.items():
+                for mod in mods_tuple:
+                    per_modality_splits[mod][split_name].update(split_ids)
+                assigned_ids.update(split_ids)
+
+        final_indices: Dict[str, Dict[str, Dict[str, np.ndarray]]] = {}
+        for full_key, data_obj in self.datapackage:
+            parent_key, child_key = full_key.split(".")
+            if parent_key == "annotation":
+                continue  # Handle annotations separately below
+            original_ids = self.datapackage._get_sample_ids(data_obj)
+
+            id_to_pos = {sid: i for i, sid in enumerate(original_ids)}
+            final_indices.setdefault(parent_key, {})[child_key] = {}
+
+            for split_name in ["train", "valid", "test"]:
+                split_ids_for_mod = per_modality_splits.get(full_key, {}).get(
+                    split_name, set()
+                )
+                final_indices[parent_key][child_key][split_name] = np.array(
+                    sorted([id_to_pos[sid] for sid in split_ids_for_mod]), dtype=int
+                )
+
+        if self.datapackage.annotation:
+            for anno_key, anno_df in self.datapackage.annotation.items():
+                print(f"anno key: {anno_key}")
+                anno_id_to_pos = {sid: i for i, sid in enumerate(anno_df.index)}
+                final_indices.setdefault("annotation", {})[anno_key] = {}
+                if (
+                    len(self.datapackage.annotation) == 1
+                    and self.config.requires_paired
+                ) or (anno_key == "paired" and self.config.requires_paired):
+                    # For each split, take the union of all sample IDs across modalities
+                    for split_name in ["train", "valid", "test"]:
+                        split_ids_union = set().union(
+                            *[
+                                splits[split_name]
+                                for splits in per_modality_splits.values()
+                            ]
+                        )
+                        anno_indices = sorted(
+                            [
+                                anno_id_to_pos[sid]
+                                for sid in split_ids_union
+                                if sid in anno_id_to_pos
+                            ]
+                        )
+                        final_indices["annotation"][anno_key][split_name] = np.array(
+                            anno_indices, dtype=int
+                        )
+
+                    continue  # Skip normal annotation handling for "paired"
+
+                for split_name in ["train", "valid", "test"]:
+                    for mod_name in per_modality_splits:
+                        parent_key, child_key = mod_name.split(".")
+                        # in per_modality_splits are no annotation ids
+                        # thats what we do here, so we need to skip annotation
+                        # to not get empty arrays in final_indices
+                        if parent_key == "annotation":
+                            continue
+                        if child_key == anno_key:
+                            # Take split IDs from the corresponding modality only
+                            split_ids = per_modality_splits.get(mod_name, {}).get(
+                                split_name, set()
+                            )
+                            anno_indices = sorted(
+                                [
+                                    anno_id_to_pos[sid]
+                                    for sid in split_ids
+                                    if sid in anno_id_to_pos
+                                ]
+                            )
+                            final_indices["annotation"][anno_key][split_name] = (
+                                np.array(anno_indices, dtype=int)
+                            )
+
+        return final_indices

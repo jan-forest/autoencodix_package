@@ -1,6 +1,6 @@
 from autoencodix.utils._utils import config_method
 from typing import Optional, Union
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 import pytest
 
 

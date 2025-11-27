@@ -1,7 +1,10 @@
-from typing import Optional, Union, Type, List
-from collections import defaultdict
-
 import torch
+
+import gc
+import os
+import numpy as np
+from typing import Optional, Type, Union, Tuple, Any, Dict, List
+from collections import defaultdict
 from torch.utils.data import DataLoader
 
 from autoencodix.base._base_dataset import BaseDataset
@@ -9,210 +12,480 @@ from autoencodix.base._base_loss import BaseLoss
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.base._base_trainer import BaseTrainer
 from autoencodix.utils._result import Result
-from autoencodix.utils.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._model_output import ModelOutput
 
 
 class GeneralTrainer(BaseTrainer):
-    """
-    Handles model training process for the Vanilla Autoencoder model.
+    """Handles general training logic for autoencoder models.
 
-    Attributes
-    ----------
-    trainset : BaseDataset
-        Training dataset
-    validset : BaseDataset
-
-    result : Result
-        Result object to store the training results
-    config : DefaultConfig
-        Configuration object containing model parameters
-    loss_type : Type[BaseLoss] which loss function to use
-
-    Methods
-    -------
-    train()
-        Train the model standard PyTorch training loop
-        Populates the result object with training dynamics and model checkpoints
-    _capture_dynamics(epoch, model_output)
-        Capture the model dynamics at each epoch (latentspace and reconstruction)
+    Attributes:
+         _trainset: The dataset used for training.
+         _validset: The dataset used for validation, if provided.
+         _result: An object to store and manage training results.
+         _config: Configuration object containing training hyperparameters and settings.
+         _model_type: The autoencoder model class to be trained.
+         _loss_fn: Instantiated loss function specific to the model.
+         _trainloader: DataLoader for the training dataset.
+         _validloader: DataLoader for the validation dataset, if provided.
+         _model: The instantiated model architecture.
+         _optimizer: The optimizer used for training.
+         _fabric: Lightning Fabric wrapper for device and precision management.
+         n_train: Number of training samples.
+         n_valid: Number of validation samples.
+         n_test: Number of test samples (set during prediction).
+         n_features: Number of input features.
+         latent_dim: Dimensionality of the latent space.
+         device: Device on which the model is located.
+         _n_cpus: Number of CPU cores available.
+         _reconstruction_buffer: Buffer to store reconstructions during training/validation/testing.
+         _latentspace_buffer: Buffer to store latent representations during training/validation/testing.
+         _mu_buffer: Buffer to store latent means (for VAE) during training/validation
+         _sigma_buffer: Buffer to store latent log-variances (for VAE) during training/validation/testing.
+         _sample_ids_buffer: Buffer to store sample IDs during training/validation/testing.
 
     """
 
     def __init__(
         self,
         trainset: Optional[BaseDataset],
-        validset: Optional[Union[BaseDataset, None]],
+        validset: Optional[BaseDataset],
         result: Result,
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
+        ontologies: Optional[Union[Tuple, List]] = None,
+        **kwargs,
     ):
+        """Initializes the GeneralTrainer.
+
+        Args:
+                trainset: The dataset used for training.
+                validset: The dataset used for validation, if provided.
+                result: An object to store and manage training results.
+                config: Configuration object containing training hyperparameters and settings.
+                model_type: The autoencoder model class to be trained.
+                loss_type: The loss function class to be used for training.
+                ontologies: Ontology information, if provided for Ontix
+        """
+        self._n_cpus = os.cpu_count()
+        if self._n_cpus is None:
+            self._n_cpus = 0
+
         super().__init__(
-            trainset=trainset,
-            validset=validset,
-            result=result,
-            config=config,
-            model_type=model_type,
-            loss_type=loss_type,
+            trainset, validset, result, config, model_type, loss_type, ontologies
         )
 
-    def train(self) -> Result:
+        self.latent_dim = config.latent_dim
+        if ontologies is not None:
+            if not hasattr(self._model, "latent_dim"):
+                raise ValueError(
+                    "Model must have a 'latent_dim' attribute when ontologies are provided."
+                )
+            self.latent_dim = self._model.latent_dim
+
+        # we will set this later, in the predict method
+        self.n_test: Optional[int] = None
+        self.n_train = len(trainset) if trainset else 0
+        self.n_valid = len(validset) if validset else 0
+        self.n_features = trainset.get_input_dim() if trainset else 0
+        self.device = next(self._model.parameters()).device
+        self._init_buffers()
+
+    def _init_buffers(self, input_data: Optional[BaseDataset] = None) -> None:
+        if input_data:
+            self.n_features = input_data.get_input_dim()
+
+        def make_tensor_buffer(size: int, dim: Union[int, Tuple[int, ...]]):
+            if isinstance(dim, int):
+                return torch.zeros((size, dim), device=self.device)
+            else:
+                return torch.zeros((size, *dim), device=self.device)
+
+        def make_numpy_buffer(size: int):
+            return np.empty((size,), dtype=object)
+
+        # Always create sample ID buffers
+        self._sample_ids_buffer = {
+            "train": make_numpy_buffer(self.n_train),
+            "valid": make_numpy_buffer(self.n_valid) if self.n_valid else None,
+            "test": make_numpy_buffer(self.n_test) if self.n_test else None,
+        }
+
+        splits = ["test"] if self._config.save_memory else ["train", "valid", "test"]
+
+        def make_split_buffers(dim):
+            return {
+                split: (
+                    make_tensor_buffer(getattr(self, f"n_{split}"), dim)
+                    if getattr(self, f"n_{split}", 0) and (split in splits)
+                    else None
+                )
+                for split in ["train", "valid", "test"]
+            }
+
+        self._latentspace_buffer = make_split_buffers(self.latent_dim)
+        self._reconstruction_buffer = make_split_buffers(self.n_features)
+        self._mu_buffer = make_split_buffers(self.latent_dim)
+        self._sigma_buffer = make_split_buffers(self.latent_dim)
+
+    def _ontix_hook(self):
+        pass
+
+    def train(self, epochs_overwrite=None) -> Result:
+        """Orchestrates training over multiple epochs, including training and validation phases.
+
+        Args:
+            epochs_overwrite: If provided, overrides the number of epochs specified in the config.
+                This is only there so we can use the train method for pretraining.Any
+        Returns:
+            Result object containing training results and dynamics like latent spaces and reconstructions.
+        """
+        epochs = self._config.epochs
+        if epochs_overwrite:
+            epochs = epochs_overwrite
         with self._fabric.autocast():
-            for epoch in range(self._config.epochs):
-                train_outputs = []
-                valid_outputs = []
+            for epoch in range(epochs):
+                self._init_buffers()
+                should_checkpoint: bool = self._should_checkpoint(epoch)
                 self._model.train()
-                epoch_loss = 0.0
-                epoch_sub_losses: defaultdict[str, float] = defaultdict(lambda: 0.0)
-                valid_epoch_sub_losses: defaultdict[str, float] = defaultdict(
-                    lambda: 0.0
+
+                epoch_loss, epoch_sub_losses = self._train_epoch(
+                    should_checkpoint=should_checkpoint, epoch=epoch
                 )
-                for _, (features, _) in enumerate(self._trainloader):
-                    self._optimizer.zero_grad()
-                    model_outputs = self._model(features)
-                    loss, sub_losses = self._loss_fn(
-                        model_output=model_outputs, targets=features
-                    )
-                    self._fabric.backward(loss)
-                    self._optimizer.step()
-                    epoch_loss += loss.item()
-                    train_outputs.append(model_outputs)
-                    for k, v in sub_losses.items():
-                        epoch_sub_losses[k] += v.item()
-                # loss per epoch savving -----------------------------------
-                self._result.losses.add(
-                    epoch=epoch, split="train", data=epoch_loss / len(self._trainloader)
-                )
-                self._result.sub_losses.add(
-                    epoch=epoch,
-                    split="train",
-                    data={
-                        k: v / len(self._trainloader)
-                        for k, v in epoch_sub_losses.items()
-                    },
-                )
-                # validation loss per epoch ---------------------------------
+                self._log_losses(epoch, "train", epoch_loss, epoch_sub_losses)
+
                 if self._validset:
-                    self._model.eval()
-                    with torch.no_grad():
-                        valid_loss = 0.0
-                        for _, (features, _) in enumerate(self._validloader):
-                            valid_model_outputs = self._model(features)
-                            loss, sub_losses = self._loss_fn(
-                                model_output=valid_model_outputs, targets=features
-                            )
-                            valid_loss += loss.item()
-                            valid_outputs.append(valid_model_outputs)
-                            for k, v in sub_losses.items():
-                                valid_epoch_sub_losses[k] += v.item()
-                    self._result.losses.add(
-                        epoch=epoch,
-                        split="valid",
-                        data=valid_loss / len(self._validloader),
+                    valid_loss, valid_sub_losses = self._validate_epoch(
+                        should_checkpoint=should_checkpoint, epoch=epoch
                     )
-                    self._result.sub_losses.add(
-                        epoch=epoch,
-                        split="valid",
-                        data={
-                            k: v / len(self._validloader)
-                            for k, v in valid_epoch_sub_losses.items()
-                        },
-                    )
+                    self._log_losses(epoch, "valid", valid_loss, valid_sub_losses)
 
-                if not (epoch + 1) % self._config.checkpoint_interval:
-                    self._result.model_checkpoints.add(
-                        epoch=epoch, data=self._model.state_dict()
-                    )
-                    print(f"Epoch: {epoch}, Loss: {epoch_loss}")
-                    self._capture_dynamics(
-                        epoch=epoch, model_outputs=train_outputs, split="train"
-                    )
-                    if self._validset:
-                        self._capture_dynamics(
-                            epoch=epoch,
-                            model_outputs=valid_outputs,
-                            split="valid",
-                        )
+                if should_checkpoint:
+                    self._store_checkpoint(epoch)
 
-            self._result.model = self._model
-            return self._result
+        self._result.model = next(self._model.children())
+        return self._result
+
+    def maskix_hook(self, X: torch.Tensor):
+        """Only active when override from MaskixTrainer is used"""
+        return X
+
+    def _train_epoch(
+        self, should_checkpoint: bool, epoch: int
+    ) -> Tuple[float, Dict[str, float]]:
+        """Handles loss computation, backwards pass and checkpointing for one epoch.
+
+        Args:
+            should_checkpoint: Whether to checkpoint this epoch.
+            epoch: The current epoch number.
+        Returns:
+            total_loss: The total loss for the epoch.
+            sub_losses: A dictionary of sub-losses accumulated over the epoch.
+        """
+        total_loss = 0.0
+        sub_losses: Dict[str, float] = defaultdict(float)
+        current_batch = 0
+        for indices, features, sample_ids in self._trainloader:
+            current_batch += 1
+            self._optimizer.zero_grad()
+            X: torch.Tensor = self.maskix_hook(features)
+            model_outputs = self._model(X)
+            loss, batch_sub_losses = self._loss_fn(
+                model_output=model_outputs,
+                targets=features,
+                corrupted_input=X,  # only relevant for MaskixLoss
+                epoch=epoch,
+                n_samples=len(
+                    self._trainloader.dataset
+                ),  # Pass n_samples for disentangled loss calculations
+            )
+            self._fabric.backward(loss)
+            self._ontix_hook()
+            self._optimizer.step()
+
+            total_loss += loss.item()
+            for k, v in batch_sub_losses.items():
+                if "_factor" not in k:  # Skip factor losses
+                    sub_losses[k] += v.item()
+                else:
+                    sub_losses[k] = v.item()
+
+            if should_checkpoint:
+                self._capture_dynamics(model_outputs, "train", indices, sample_ids)
+
+        for k, v in sub_losses.items():
+            if "_factor" not in k:
+                sub_losses[k] = v / len(
+                    self._trainloader.dataset
+                )  # Average over all samples
+        total_loss = total_loss / len(
+            self._trainloader.dataset
+        )  # Average over all samples
+        return total_loss, sub_losses
+
+    def _validate_epoch(
+        self, should_checkpoint: bool, epoch: int
+    ) -> Tuple[float, Dict[str, float]]:
+        """Handles validation for one epoch.
+
+        Args:
+            should_checkpoint: Whether to checkpoint this epoch.
+            epoch: The current epoch number.
+        Returns:
+            total_loss: The total loss for the epoch.
+            sub_losses: A dictionary of sub-losses accumulated over the epoch.
+        """
+        total_loss = 0.0
+        sub_losses: Dict[str, float] = defaultdict(float)
+        self._model.eval()
+
+        with torch.no_grad():
+            for indices, features, sample_ids in self._validloader:
+                X: torch.Tensor = self.maskix_hook(features)
+                model_outputs = self._model(X)
+                loss, batch_sub_losses = self._loss_fn(
+                    model_output=model_outputs,
+                    targets=features,
+                    corrupted_input=X,
+                    epoch=epoch,
+                    n_samples=len(
+                        self._validloader.dataset
+                    ),  # Pass n_samples for disentangled loss calculations
+                )
+                total_loss += loss.item()
+                for k, v in batch_sub_losses.items():
+                    if "_factor" not in k:  # Skip factor losses
+                        sub_losses[k] += v.item()
+                    else:
+                        sub_losses[k] = v.item()
+                if should_checkpoint:
+                    self._capture_dynamics(model_outputs, "valid", indices, sample_ids)
+
+        for k, v in sub_losses.items():
+            if "_factor" not in k:
+                sub_losses[k] = v / len(
+                    self._validloader.dataset
+                )  # Average over all samples
+        total_loss = total_loss / len(
+            self._validloader.dataset
+        )  # Average over all samples
+        return total_loss, sub_losses
+
+    def _log_losses(
+        self, epoch: int, split: str, total_loss: float, sub_losses: Dict[str, float]
+    ) -> None:
+        """Logs the total and sub-losses for an epoch and stores them in the Result object.
+
+        Args:
+            epoch: The current epoch number.
+            split: The data split ("train" or "valid").
+            total_loss: The total loss for the epoch.
+            sub_losses: A dictionary of sub-losses for the epoch.
+        """
+        # dataset_len = len(
+        #     self._trainloader.dataset if split == "train" else self._validloader.dataset
+        # )
+        self._result.losses.add(epoch=epoch, split=split, data=total_loss)
+        self._result.sub_losses.add(
+            epoch=epoch,
+            split=split,
+            data={k: v if "_factor" not in k else v for k, v in sub_losses.items()},
+        )
+
+        self._fabric.print(
+            f"Epoch {epoch + 1} - {split.capitalize()} Loss: {total_loss:.4f}"
+        )
+        self._fabric.print(
+            f"Sub-losses: {', '.join([f'{k}: {v:.4f}' for k, v in sub_losses.items()])}"
+        )
+
+    def _store_checkpoint(self, epoch: int) -> None:
+        """Stores model checkpoints and training dynamics to result object.
+
+        Args:
+            epoch: The current epoch number.
+        """
+        self._result.model_checkpoints.add(epoch=epoch, data=self._model.state_dict())
+        if self._config.save_memory:
+            return
+        self._dynamics_to_result(epoch, "train")
+        if self._validset:
+            self._dynamics_to_result(epoch, "valid")
 
     def _capture_dynamics(
-        self, epoch: int, model_outputs: List[ModelOutput], split: str
-    ):
-        # Concatenate tensors from all model outputs
-        latentspaces = torch.cat(
-            [output.latentspace for output in model_outputs], dim=0
+        self,
+        model_output: Union[ModelOutput, Any],
+        split: str,
+        indices: torch.Tensor,
+        sample_ids: Any,
+        **kwargs,
+    ) -> None:
+        """Writes model dynamics (latent space, reconstructions, etc.) to buffers.
+
+        Args:
+            model_output: The output from the model containing dynamics information.
+            split: The data split ("train", "valid", or "test").
+            indices: The indices of the samples in the current batch.
+            sample_ids: The sample IDs corresponding to the current batch.
+            **kwargs: Additional arguments (not used here).
+
+        """
+        indices_np = (
+            indices.cpu().numpy()
+            if isinstance(indices, torch.Tensor)
+            else np.array(indices)
         )
-        reconstructions = torch.cat(
-            [output.reconstruction for output in model_outputs], dim=0
+
+        self._sample_ids_buffer[split][indices_np] = np.array(sample_ids)
+        if self._config.save_memory and split != "test":
+            return
+        indices_np = (
+            indices.cpu().numpy()
+            if isinstance(indices, torch.Tensor)
+            else np.array(indices)
         )
+
+        self._sample_ids_buffer[split][indices_np] = np.array(sample_ids)
+
+        self._latentspace_buffer[split][indices_np] = model_output.latentspace.detach()
+        self._reconstruction_buffer[split][
+            indices_np
+        ] = model_output.reconstruction.detach()
+
+        if model_output.latent_logvar is not None:
+            self._sigma_buffer[split][indices_np] = model_output.latent_logvar.detach()
+
+        if model_output.latent_mean is not None:
+            self._mu_buffer[split][indices_np] = model_output.latent_mean.detach()
+
+    def _dynamics_to_result(self, epoch: int, split: str) -> None:
+        """Transfers buffered dynamics to the Result object.
+
+        Args:
+            epoch: The current epoch number.
+            split: The data split ("train", "valid", or "test").
+        """
+
+        def maybe_add(buffer, target):
+            if buffer[split] is not None and buffer[split].sum() != 0:
+                target.add(
+                    epoch=epoch, split=split, data=buffer[split].cpu().detach().numpy()
+                )
 
         self._result.latentspaces.add(
             epoch=epoch,
             split=split,
-            data=latentspaces.cpu().detach().numpy(),
+            data=self._latentspace_buffer[split].cpu().detach().numpy(),
         )
         self._result.reconstructions.add(
             epoch=epoch,
             split=split,
-            data=reconstructions.cpu().detach().numpy(),
+            data=self._reconstruction_buffer[split].cpu().detach().numpy(),
         )
-        logvars = [
-            output.latent_logvar
-            for output in model_outputs
-            if output.latent_logvar is not None
-        ]
-        if logvars:
-            sigmas = torch.cat(
-                logvars,
-                dim=0,
-            )
-            self._result.sigmas.add(
-                epoch=epoch, split=split, data=sigmas.cpu().detach().numpy()
-            )
-        mus = [
-            output.latent_mean
-            for output in model_outputs
-            if output.latent_mean is not None
-        ]
-        if mus:
-            means = torch.cat(
-                mus,
-                dim=0,
-            )
-            self._result.mus.add(
-                epoch=epoch, split=split, data=means.cpu().detach().numpy()
-            )
+        self._result.sample_ids.add(
+            epoch=epoch, split=split, data=self._sample_ids_buffer[split]
+        )
+        maybe_add(self._mu_buffer, self._result.mus)
+        maybe_add(self._sigma_buffer, self._result.sigmas)
 
-    def predict(self, data: BaseDataset, model: torch.nn.Module) -> Result:
-        """
-        Decided to add predict method to the trainer class.
+    def predict(
+        self, data: BaseDataset, model: Optional[torch.nn.Module] = None, **kwargs
+    ) -> Result:
+        """Decided to add predict method to the trainer class.
+
         This violates SRP, but the trainer class has a lot of attributes and methods
         that are needed for prediction. So this way we don't need to write so much duplicate code
 
-        Parameters:
+        Args:
             data: BaseDataset unseen data to run inference on
             model: torch.nn.Module model to run inference with
+            **kwargs: Additional arguments (not used here).
 
         Returns:
             self._result: Result object containing the inference results
 
         """
+        if model is None:
+            model: torch.nn.Module = self._model
+            import warnings
+
+            warnings.warn(
+                "No model provided for prediction, using the trained model from the trainer."
+            )
         model.eval()
         inference_loader = DataLoader(
             data,
             batch_size=self._config.batch_size,
             shuffle=False,
-            num_workers=self._config.n_workers,
         )
+        self.n_test = len(data)
+        self._init_buffers(input_data=data)
         inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
-        with self._fabric.autocast(), torch.no_grad():
-            outputs = []
-            for _, (data, _) in enumerate(inference_loader):
+        with self._fabric.autocast(), torch.inference_mode():
+            for idx, data, sample_ids in inference_loader:
                 model_output = model(data)
-                outputs.append(model_output)
-            self._capture_dynamics(epoch=-1, model_outputs=outputs, split="test")
+                self._capture_dynamics(
+                    model_output=model_output,
+                    split="test",
+                    sample_ids=sample_ids,
+                    indices=idx,
+                )
+        self._dynamics_to_result(epoch=-1, split="test")
 
         return self._result
+
+    def decode(self, x: torch.Tensor):
+        """Decodes the input tensor x using the trained model.
+
+        Args:
+            x: Input tensor to be decoded.
+        Returns:
+            Decoded tensor.
+        """
+        with self._fabric.autocast(), torch.no_grad():
+            x = self._fabric.to_device(obj=x)
+            if not isinstance(x, torch.Tensor):
+                raise TypeError(
+                    f"Expected input to be a torch.Tensor, got {type(x)} instead."
+                )
+            return self._model.decode(x=x)
+
+    def get_model(self) -> torch.nn.Module:
+        """Getter method for the trained model.
+
+        Returns:
+
+            The trained model as a torch.nn.Module.
+        """
+        return self._model
+
+    def purge(self) -> None:
+        """Cleans up any resources used during training, such as cached data or large attributes."""
+
+        attrs_to_delete = [
+            "_trainloader",
+            "_validloader",
+            "_model",
+            "_optimizer",
+            "_latentspace_buffer",
+            "_reconstruction_buffer",
+            "_mu_buffer",
+            "_sigma_buffer",
+            "_sample_ids_buffer",
+            "_trainset",
+            "_loss_fn",
+            "_validset",
+        ]
+
+        for attr in attrs_to_delete:
+            if hasattr(self, attr):
+                value = getattr(self, attr)
+                # Optional: ensure non-None before deletion
+                if value is not None:
+                    delattr(self, attr)
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        gc.collect()

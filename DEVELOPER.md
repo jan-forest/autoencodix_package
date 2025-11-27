@@ -1,5 +1,5 @@
 # Contributing to Autoencodix Package
-We're happy about all kinds of contributions and feedback to Autoencodix. For feedback, you can use the [issue board](https://github.com/jan-forest/autoencodix/issues) or send us an [mail](mailto:jan.ewald@uni-leipzig.de). If you want to contribute with code, please open a pull request to either work on your own idea or tackle an exisiting [issue](https://github.com/jan-forest/autoencodix/issues) is a good starting point. If you are unsure or confused about something, please just open an [issue](https://github.com/jan-forest/autoencodix/issues/new/choose), and we will try to address it.
+We're happy about all kinds of contributions and feedback to Autoencodix. For feedback, you can use the [issue board](https://github.com/jan-forest/autoencodix_package/issues) or send us an [mail](mailto:jan.ewald@uni-leipzig.de). If you want to contribute with code, please open a pull request to either work on your own idea or tackle an exisiting [issue](https://github.com/jan-forest/autoencodix_package/issues) is a good starting point. If you are unsure or confused about something, please just open an [issue](https://github.com/jan-forest/autoencodix_package/issues/new/choose), and we will try to address it.
 We also value non-code contributions in the form of a feature request or bug report.
 
 ## Feature Request

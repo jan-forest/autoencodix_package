@@ -5,7 +5,6 @@ theme:
 nav:
 - Home: index.md
 - API Reference:
-  - Overview: api/index.md
   - Base: api/base.md
   - Configs: api/configs.md
   - Data: api/data.md

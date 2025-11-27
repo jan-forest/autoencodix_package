@@ -57,7 +57,7 @@ If you are a developer and you want to contribute code, please refer to the foll
 - We run automatic tests with our GitHub Actions workflow after pushes to main or pull requests
 
 ## Notebooks
-- We provide a detailed [guide](https://github.com/jan-forest/autoencodix_package/main/Tutorials/DevGuide.ipynb) on how to add a new architecture to our framework. Additionally, we have tutorial notebooks for every pipeline (Varix, Ontix, etc), see [here](https://github.com/jan-forest/autoencodix_package/tree/main/Tutorials). If you implement a new pipeline, it would be great, if you provided a similar notebook, which will greatly foster adoption of your pipeline.
+- We provide a detailed [guide](https://github.com/jan-forest/autoencodix_package/blob/main/Tutorials/DevGuide.ipynb) on how to add a new architecture to our framework. Additionally, we have tutorial notebooks for every pipeline (Varix, Ontix, etc), see [here](https://github.com/jan-forest/autoencodix_package/tree/main/Tutorials). If you implement a new pipeline, it would be great, if you provided a similar notebook, which will greatly foster adoption of your pipeline.
 ## General contribution workflow.
 - We mainly work with pull requests, but feature branches are also ok in some cases.
 

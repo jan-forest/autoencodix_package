@@ -52,6 +52,9 @@ dev = [
     # "cellxgene-census>=1.17.0",
     # "syne-tune>=0.14.2",
     "pympler>=1.1",
+    "mkdocs-gen-files>=0.6.0",
+    "mkdocs-literate-nav>=0.6.2",
+    "mkdocs-section-index>=0.3.10",
 ]
 
 [build-system]

@@ -31,3 +31,6 @@ plugins:
         options:
           extra:
             members_order: alphabetic
+- gen-files:
+    scripts:
+    - gen_api_index.py

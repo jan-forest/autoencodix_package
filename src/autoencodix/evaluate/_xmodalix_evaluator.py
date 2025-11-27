@@ -284,7 +284,10 @@ class XModalixEvaluator(GeneralEvaluator):
         Returns:
             list: A list of expanded reference method names, each suffixed with a key from the latent space.
         """
-
+        if not isinstance(result.latentspaces.get(epoch=-1, split="train"), dict):
+            raise NotImplementedError(
+                "This evaluate feature does not support .save(save_all=False) results."
+            )
         reference_methods = [
             f"{method}_$_{key}"
             for method in reference_methods

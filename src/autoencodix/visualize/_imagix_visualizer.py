@@ -93,9 +93,7 @@ class ImagixVisualizer(GeneralVisualizer):
             for c in range(n_samples):
                 if r == 0:
                     ## Original image
-                    axes[r, c].imshow(
-                        dataset.test.raw_data[indices[c]].img.squeeze()
-                    )
+                    axes[r, c].imshow(dataset.test.raw_data[indices[c]].img.squeeze())
                     axes[r, c].set_title(f"Original: {sample_ids[c]}")
                     axes[r, c].axis("off")
                 if r == 1:

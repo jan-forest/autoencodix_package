@@ -16,7 +16,7 @@ Consequently, we present `AUTOENCODIX` with the following features:
 - uv or another package manager (we recommend uv)
 - git or gh
 ## Installation
-- `gh repo clone MaxJoas/autoencodix_package`
+- `gh repo clone jan-forest/autoencodix_package`
 - `cd autoencodix_package`
 - `uv venv --python 3.10`
 - `source .venv/bin/activate`

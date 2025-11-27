@@ -14,6 +14,7 @@ from autoencodix.base._base_visualizer import BaseVisualizer
 from autoencodix.utils._result import Result
 from autoencodix.utils._utils import nested_dict, show_figure
 from autoencodix.configs.default_config import DefaultConfig
+from autoencodix.data._datasetcontainer import DatasetContainer
 
 
 class XModalVisualizer(BaseVisualizer):
@@ -48,7 +49,13 @@ class XModalVisualizer(BaseVisualizer):
                 tuple(result.datasets.train.datasets.keys())
             )
         ]
+        if not result.losses._data:
+            import warnings
 
+            warnings.warn(
+                "No loss data: This usually happens if you try to visualize after saving and loading the pipeline object with `save_all=False`. This memory-efficient saving mode does not retain past training loss data."
+            )
+            return result
         ## Make plot loss absolute
         self.plots["loss_absolute"] = self._make_loss_plot(
             df_plot=loss_df_melt, plot_type="absolute"
@@ -158,7 +165,12 @@ class XModalVisualizer(BaseVisualizer):
                 modality = list(result.model.keys())[
                     0
                 ]  # Take the first since configs are same for all sub-VAEs
-                param = result.model[modality].config.data_config.annotation_columns
+                model = result.model.get(modality, None)
+                if model is None:
+                    raise ValueError(
+                        f"Model for modality {modality} not found in result.model"
+                    )
+                param = model.config.data_config.annotation_columns
 
             if labels is None and param is None:
                 labels = ["all"] * latent_data["sample_ids"].unique().shape[0]
@@ -307,7 +319,6 @@ class XModalVisualizer(BaseVisualizer):
                 "Image translation grid visualization is only possible for translation to IMG data type."
             )
         else:
-
             split = "test"  # Currently only test split is supported
             ## Get n samples per class
             if split == "test":

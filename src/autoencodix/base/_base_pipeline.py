@@ -859,7 +859,7 @@ class BasePipeline(abc.ABC):
             # Check size compatibility
             expected_latent_dim = self.config.latent_dim
             if not latent.shape[1] == expected_latent_dim:
-                if self._trainer._model._mu.in_features == latent.shape[1]:
+                if self._trainer._model._mu.out_features == latent.shape[1]:
                     warnings.warn(
                         f"latent_prior has latent dimension {latent.shape[1]}, "
                         "which matches the input feature dimension of the model. Did you "
@@ -870,7 +870,7 @@ class BasePipeline(abc.ABC):
                 else:
                     raise ValueError(
                         f"latent_prior has incompatible latent dimension {latent.shape[1]}, "
-                        f"expected {self.config.latent_dim}."
+                        f"expected {self.config.latent_dim}. or {self._trainer._model._mu.out_features}."
                     )
 
             latent_tensor = latent
@@ -1171,7 +1171,7 @@ class BasePipeline(abc.ABC):
                 f"latent_prior must be numpy.ndarray or torch.Tensor, got {type(latent_prior)}."
             )
         if not latent_prior.shape[1] == self.config.latent_dim:
-            if self._trainer._model._mu.in_features == latent_prior.shape[1]:
+            if self._trainer._model._mu.out_features == latent_prior.shape[1]:
                 warnings.warn(
                     f"latent_prior has latent dimension {latent_prior.shape[1]}, "
                     "which matches the input feature dimension of the model. Did you "

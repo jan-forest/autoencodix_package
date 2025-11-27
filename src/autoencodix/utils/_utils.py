@@ -3,6 +3,7 @@ Stores utility functions for the autoencodix package.
 Use of OOP would be overkill for the simple functions in this module.
 """
 
+from pathlib import Path
 import zipfile
 import inspect
 import os
@@ -73,7 +74,7 @@ def nested_to_tuple(d, base=()):
     """
     if not isinstance(d, dict):
         yield base + (d,)
-    
+
     else:
         for k, v in d.items():
             if isinstance(v, dict):
@@ -273,13 +274,18 @@ class Saver:
         """
 
         self.save_all = save_all
-        self.preprocessor_path = f"{file_path}_preprocessor.pkl"
-        self.model_state_path = f"{file_path}_model.pth"
+        self.file_stem: str = Path(file_path).stem
+        self.file_name: str = Path(file_path).name
+        self.folder: str = Path(file_path).parent.as_posix()
 
-        self.file_path = f"{file_path}.pkl"
-        folder = os.path.dirname(self.file_path)
-        if folder:
-            os.makedirs(folder, exist_ok=True)
+        self.preprocessor_path: str = os.path.join(
+            self.folder, f"{self.file_stem}_preprocessor.pkl"
+        )
+        self.model_state_path: str = os.path.join(
+            self.folder, f"{self.file_stem}_model.pth"
+        )
+        self.file_path: str = os.path.join(self.folder, self.file_name)
+        os.makedirs(self.folder, exist_ok=True)
 
     @no_type_check
     def save(self, pipeline: "BasePipeline"):
@@ -312,7 +318,9 @@ class Saver:
 
         self._save_pipeline_object(self.pipeline)
 
-        with zipfile.ZipFile(f"{self.file_path}.zip", "w") as archive:
+        with zipfile.ZipFile(
+            os.path.join(self.folder, f"{self.file_stem}.zip"), "w"
+        ) as archive:
             archive.write(self.file_path)
             archive.write(self.preprocessor_path)
             for model_state_path in self.model_state_paths:
@@ -361,12 +369,11 @@ class Saver:
                     if hasattr(model, "module"):
                         model = model.module
                     model.to("cpu")
-                    torch.save(
-                        model.state_dict(), f"{model_name}_{self.model_state_path}.pth"
-                    )  # type: ignore
-                    self.model_state_paths.append(
-                        f"{model_name}_{self.model_state_path}.pth"
+                    cur_path: str = os.path.join(
+                        self.folder, f"{model_name}_{self.file_stem}_model.pth"
                     )
+                    torch.save(model.state_dict(), cur_path)  # type: ignore
+                    self.model_state_paths.append(cur_path)
             else:
                 raise TypeError(
                     f"pipeline.result.model is neither a torch.nn.Module nor a dict, got {type(pipeline.result.model)}"
@@ -421,9 +428,18 @@ class Loader:
         Args:
             file_path: The base file path (without extensions).
         """
-        self.preprocessor_path = f"{file_path}_preprocessor.pkl"
-        self.model_state_path = f"{file_path}_model.pth"
-        self.file_path = f"{file_path}.pkl"
+
+        self.file_stem: str = Path(file_path).stem
+        self.file_name: str = Path(file_path).name
+        self.folder: str = Path(file_path).parent.as_posix()
+
+        self.preprocessor_path: str = os.path.join(
+            self.folder, f"{self.file_stem}_preprocessor.pkl"
+        )
+        self.model_state_path: str = os.path.join(
+            self.folder, f"{self.file_stem}_model.pth"
+        )
+        self.file_path: str = os.path.join(self.folder, self.file_name)
 
     def load(self) -> Any:
         """Loads the BasePipeline object.
@@ -431,7 +447,9 @@ class Loader:
         Returns:
             The loaded BasePipeline object, or None on error.
         """
-        with zipfile.ZipFile(f"{self.file_path}.zip", "r") as archive:
+        with zipfile.ZipFile(
+            os.path.join(self.folder, f"{self.file_stem}.zip"), "r"
+        ) as archive:
             archive.extractall()
 
         loaded_obj = self._load_pipeline_object()
@@ -483,13 +501,12 @@ class Loader:
             for model_name, model in loaded_obj.result.model.items():
                 if hasattr(model, "module"):
                     model = model.module
-                if not os.path.exists(f"{model_name}_{self.model_state_path}.pth"):
-                    raise FileNotFoundError(
-                        f"Model state file not found at {model_name}_{self.model_state_path}.pth"
-                    )
-                model_state = torch.load(
-                    f"{model_name}_{self.model_state_path}.pth", map_location="cpu"
+                cur_path: str = os.path.join(
+                    self.folder, f"{model_name}_{self.file_stem}_model.pth"
                 )
+                if not os.path.exists(cur_path):
+                    raise FileNotFoundError(f"Model state file not found at {cur_path}")
+                model_state = torch.load(cur_path, map_location="cpu")
                 loaded_obj.result.model[model_name].to("cpu")
                 loaded_obj.result.model[model_name].load_state_dict(  # type: ignore
                     model_state

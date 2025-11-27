@@ -39,7 +39,7 @@ If you are a developer and you want to contribute code, please refer to the foll
 - `source .venv/bin/activate`
 - `uv pip install -e '.[dev]'`
 
-## Style guidlines
+## Style guidelines
 - We use black formatting style
   - `uv run black .`
 - We use typed Python

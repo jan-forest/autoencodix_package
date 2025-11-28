@@ -3,19 +3,21 @@
 You can find our code documentation in our `API Reference` (see navbar on the right).
 For a general overview, refer to our `README` below.
 
+
 # README
 Autoencoders are deep-learning-based networks for dimension reduction and embedding by a combination of a compressing encoder and decoder structure for non-linear and multi-modal data integration, with promising applications to complex biological data from large-scale omics measurements. Current ongoing research and publications provide many exciting architectures and implementations of autoencoders. However, there is a lack of easy-to-use and unified implementations covering the whole pipeline of autoencoder applications.
 Consequently, we present `AUTOENCODIX` with the following features:
-1. Multi-modal data integration for any numerical or categorical data
-2. Different autoencoder architectures:
-  + vanilla `vanillix`
-  + variational `varix`
-  + hierarchical/stacked `stackix`
-  + ontology-based `ontix`
-  + masking `maskix`
-  + Image VAE (2D) `imagix`
-  + cross-modal autoencoder (translation between different data modalities) `x-modalix` (works for multiple modalities paired and unpaired)
-3. A Python package with a scikit-learn-like interface
+  
+1. Multi-modal data integration for any numerical or categorical data  
+2. Different autoencoder architectures:  
+   + vanilla `vanillix`  
+   + variational `varix` 
+   + hierarchical/stacked `stackix`  
+   + ontology-based `ontix`  
+   + masking `maskix`  
+   + Image VAE (2D) `imagix`  
+   + cross-modal autoencoder (translation between different data modalities) `x-modalix` (works for multiple modalities paired and unpaired)  
+3. A Python package with a scikit-learn-like interface 
 
 ## Requirements
 - Python>=3.8 <3.13

@@ -320,6 +320,12 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         ge=0.0,
         description="For the Maskix: if >0.5 this gives more weight for the correct reconstruction of corrupted input",
     )
+    maskix_architecture: Literal["scMAE", "custom"] = Field(
+        default="scMAE",
+        description="If you want to customize your maskix architecture \
+                    via 'n_layers' or 'enc_factor, you need to set this to 'custom'. \
+                    Otherwise, the architecture for the scMAE from  https://doi.org/10.1093/bioinformatics/btae020 is used",
+    )
     min_samples_per_split: int = Field(
         default=1, ge=1, description="Minimum number of samples per split"
     )

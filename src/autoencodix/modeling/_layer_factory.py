@@ -59,3 +59,13 @@ class LayerFactory:
             nn.Dropout(dropout_p),
             nn.ReLU(),
         ]
+
+    @staticmethod
+    def create_maskix_layer(in_features: int, out_features: int, last_layer: bool):
+        if last_layer:
+            return [nn.Linear(in_features, out_features)]
+        return [
+            nn.Linear(in_features, out_features),
+            nn.LayerNorm(out_features),
+            nn.Mish(inplace=True),
+        ]

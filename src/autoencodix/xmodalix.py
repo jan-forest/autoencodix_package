@@ -24,7 +24,8 @@ from autoencodix.utils._losses import XModalLoss
 from autoencodix.utils._utils import find_translation_keys
 from autoencodix.visualize._xmodal_visualizer import XModalVisualizer
 
-from mudata import MuData  # type: ignore
+from mudata import MuData
+import torch  # type: ignore
 
 
 class XModalix(BasePipeline):
@@ -96,18 +97,18 @@ class XModalix(BasePipeline):
         """
         print("Creating plots ...")
 
-        self._visualizer.show_loss(plot_type="absolute")
+        self.visualizer.show_loss(plot_type="absolute")
 
-        self._visualizer.show_latent_space(result=self.result, plot_type="Ridgeline")
+        self.visualizer.show_latent_space(result=self.result, plot_type="Ridgeline")
 
-        self._visualizer.show_latent_space(result=self.result, plot_type="2D-scatter")
+        self.visualizer.show_latent_space(result=self.result, plot_type="2D-scatter")
 
         dm_keys = find_translation_keys(
             config=self.config,
             trained_modalities=self._trainer._modality_dynamics.keys(),
         )
         if "IMG" in dm_keys["to"]:
-            self._visualizer.show_image_translation(
+            self.visualizer.show_image_translation(
                 result=self.result,
                 from_key=dm_keys["from"],
                 to_key=dm_keys["to"],
@@ -299,3 +300,13 @@ class XModalix(BasePipeline):
             self.result.update(other=valid_pred_results)
 
         return self.result
+
+    def sample_latent_space(
+        self,
+        n_samples: int,
+        split: str = "test",
+        epoch: int = -1,
+    ) -> torch.Tensor:
+        raise NotImplementedError(
+            "Sampling latent space is not implemented for XModalix."
+        )

@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 import seaborn as sns
 
+import sklearn
 from sklearn.decomposition import PCA
 from umap import UMAP
 from sklearn.manifold import TSNE
@@ -17,6 +18,8 @@ from sklearn.base import ClassifierMixin, RegressorMixin
 from autoencodix.utils._result import Result
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.evaluate._general_evaluator import GeneralEvaluator
+
+sklearn.set_config(enable_metadata_routing=True)
 
 
 class XModalixEvaluator(GeneralEvaluator):
@@ -51,7 +54,7 @@ class XModalixEvaluator(GeneralEvaluator):
                 - DataFrame: Long-format DataFrame containing MSE values and associated metadata for each sample and model.
         """
 
-        if "IMG" not in to_key:
+        if "img" not in to_key:
             raise NotImplementedError(
                 "Comparison is currently only implemented for the image case."
             )
@@ -281,7 +284,10 @@ class XModalixEvaluator(GeneralEvaluator):
         Returns:
             list: A list of expanded reference method names, each suffixed with a key from the latent space.
         """
-
+        if not isinstance(result.latentspaces.get(epoch=-1, split="train"), dict):
+            raise NotImplementedError(
+                "This evaluate feature does not support .save(save_all=False) results."
+            )
         reference_methods = [
             f"{method}_$_{key}"
             for method in reference_methods

@@ -3,6 +3,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn import linear_model
 from sklearn.model_selection import cross_validate
 from sklearn.decomposition import PCA
@@ -16,6 +17,9 @@ from sklearn.base import ClassifierMixin, RegressorMixin
 from autoencodix.utils._result import Result
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.base._base_evaluator import BaseEvaluator
+from autoencodix.base._base_visualizer import BaseVisualizer
+
+sklearn.set_config(enable_metadata_routing=True)
 
 
 class GeneralEvaluator(BaseEvaluator):
@@ -28,7 +32,9 @@ class GeneralEvaluator(BaseEvaluator):
         self,
         datasets: DatasetContainer,
         result: Result,
-        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(),  # Default is sklearn LogisticRegression
+        ml_model_class: ClassifierMixin = linear_model.LogisticRegression(
+            max_iter=1000
+        ),  # Default is sklearn LogisticRegression
         ml_model_regression: RegressorMixin = linear_model.LinearRegression(),  # Default is sklearn LinearRegression
         params: Union[
             list, str
@@ -37,7 +43,9 @@ class GeneralEvaluator(BaseEvaluator):
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
         split_type: str = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
-        n_downsample: Union[int, None] = 10000,  # Default is 10000, if provided downsample to this number of samples for faster evaluation. Set to None to disable downsampling.
+        n_downsample: Union[
+            int, None
+        ] = 10000,  # Default is 10000, if provided downsample to this number of samples for faster evaluation. Set to None to disable downsampling.
     ) -> Result:
         """Evaluates the performance of machine learning models on various feature representations and clinical parameters.
 
@@ -71,27 +79,38 @@ class GeneralEvaluator(BaseEvaluator):
 
         reference_methods.append("Latent")
 
-        # ## TODO when x-modalix is ready, check how to adjust evaluation of both latent spaces
-        # is_modalix = False # TODO Remove and implement individual Evaluators later
-
-        # if type(result.latentspaces.get(epoch=-1,split="train")) == dict:
-        #     # For X-Modalix and others with multiple VAE Latentspaces
-        #     reference_methods = [f"{method}_$_{key}" for method in reference_methods for key in result.latentspaces.get(epoch=-1,split="train").keys()]
-        #     is_modalix = True
         reference_methods = self._expand_reference_methods(
             reference_methods=reference_methods, result=result
         )
 
+        ## Overwrite original datasets with new_datasets if available after predict with other data
+        if datasets is None:
+            datasets = DatasetContainer()
+
+        if bool(result.new_datasets.test):
+            datasets.test = result.new_datasets.test
+
+        if not bool(datasets.train or datasets.valid or datasets.test):
+            raise ValueError(
+                "No datasets found in result object. Please run predict with new data or save/load with all datasets by using save_all=True."
+            )
+        elif split_type == "use-split" and not bool(datasets.train):
+            warnings.warn(
+                "Warning: No train split found in result datasets for 'use-split' evaluation. ML model cannot be trained without a train split. Switch to cross-validation (CV-5) instead."
+            )
+            split_type = "CV-5"
+
         for task in reference_methods:
             print(f"Perform ML task with feature df: {task}")
 
-            clin_data = self._get_clin_data(datasets)
+            # clin_data = self._get_clin_data(datasets)
+            clin_data = BaseVisualizer._collect_all_metadata(result=result)
 
             if split_type == "use-split":
                 # Pandas dataframe with sample_ids and split information
                 sample_split = pd.DataFrame(columns=["SAMPLE_ID", "SPLIT"])
 
-                if hasattr(datasets, "train"):
+                if datasets.train is not None:
                     if hasattr(datasets.train, "paired_sample_ids"):
                         if datasets.train.paired_sample_ids is not None:
                             sample_ids = datasets.train.paired_sample_ids
@@ -109,11 +128,11 @@ class GeneralEvaluator(BaseEvaluator):
                         axis=0,
                         ignore_index=True,
                     )
-                else:
-                    raise ValueError(
-                        "No training data found. Please provide a valid training dataset."
-                    )
-                if hasattr(datasets, "valid"):
+                # else:
+                #     raise ValueError(
+                #         "No training data found. Please provide a valid training dataset."
+                #     )
+                if datasets.valid is not None:
                     if hasattr(datasets.valid, "paired_sample_ids"):
                         if datasets.valid.paired_sample_ids is not None:
                             sample_ids = datasets.valid.paired_sample_ids
@@ -131,7 +150,7 @@ class GeneralEvaluator(BaseEvaluator):
                         axis=0,
                         ignore_index=True,
                     )
-                if hasattr(datasets, "test"):
+                if datasets.test is not None:
                     if hasattr(datasets.test, "paired_sample_ids"):
                         if datasets.test.paired_sample_ids is not None:
                             sample_ids = datasets.test.paired_sample_ids
@@ -194,10 +213,12 @@ class GeneralEvaluator(BaseEvaluator):
                                 samples_nonna.intersection(sample_split.index), :
                             ]
                         # print(sample_split)
-                    
+
                     if n_downsample is not None:
                         if df.shape[0] > n_downsample:
-                            sample_idx = np.random.choice(df.shape[0], n_downsample, replace=False)
+                            sample_idx = np.random.choice(
+                                df.shape[0], n_downsample, replace=False
+                            )
                             df = df.iloc[sample_idx]
                             if split_type == "use-split":
                                 sample_split = sample_split.loc[df.index, :]
@@ -211,6 +232,10 @@ class GeneralEvaluator(BaseEvaluator):
                         sklearn_ml = ml_model_regression
 
                     if split_type == "use-split":
+                        # print("Sample Split:")
+                        # print(sample_split)
+                        # print("Latent:")
+                        # print(df)
                         results = self._single_ml_presplit(
                             sample_split=sample_split,
                             df=df,
@@ -332,106 +357,6 @@ class GeneralEvaluator(BaseEvaluator):
 
         return pd.DataFrame(score_df)
 
-    @staticmethod
-    def _get_clin_data(datasets) -> Union[pd.DataFrame, pd.Series]:
-        """Retrieves the clinical annotation DataFrame (clin_data) from the provided datasets.
-
-        Handles both standard and XModalix dataset structures.
-        """
-        if hasattr(datasets.train, "metadata"):
-            # Check if metadata is a dictionary and contains 'paired'
-            if isinstance(datasets.train.metadata, dict):
-                if "paired" in datasets.train.metadata:
-                    clin_data = datasets.train.metadata["paired"]
-                    if hasattr(datasets, "test"):
-                        clin_data = pd.concat(
-                            [clin_data, datasets.test.metadata["paired"]],
-                            axis=0,
-                        )
-                    if hasattr(datasets, "valid"):
-                        clin_data = pd.concat(
-                            [clin_data, datasets.valid.metadata["paired"]],
-                            axis=0,
-                        )
-                else:
-                    # Iterate over all splits and keys, concatenate if DataFrame
-                    clin_data = pd.DataFrame()
-                    for split_name in ["train", "test", "valid"]:
-                        split_temp = getattr(datasets, split_name, None)
-                        if split_temp is not None and hasattr(split_temp, "metadata"):
-                            for key in split_temp.metadata.keys():
-                                if isinstance(split_temp.metadata[key], pd.DataFrame):
-                                    clin_data = pd.concat(
-                                        [
-                                            clin_data,
-                                            split_temp.metadata[key],
-                                        ],
-                                        axis=0,
-                                    )
-                    # remove duplicate rows
-                    clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
-                    # Raise error no annotation given
-                    raise ValueError(
-                        "Please provide paired annotation data with key 'paired' in metadata dictionary."
-                    )
-            elif isinstance(datasets.train.metadata, pd.DataFrame):
-                clin_data = datasets.train.metadata
-                if hasattr(datasets, "test"):
-                    clin_data = pd.concat(
-                        [clin_data, datasets.test.metadata],
-                        axis=0,
-                    )
-                if hasattr(datasets, "valid"):
-                    clin_data = pd.concat(
-                        [clin_data, datasets.valid.metadata],
-                        axis=0,
-                    )
-            else:
-                # Raise error no annotation given
-                raise ValueError(
-                    "Metadata is not a dictionary or DataFrame. Please provide a valid annotation data type."
-                )
-        # elif hasattr(datasets.train, "datasets"):
-        #     # XModalix-Case
-        #     clin_data = pd.DataFrame()
-        #     splits = [
-        #         datasets.train, datasets.valid, datasets.test
-        #     ]
-
-        #     for s in splits:
-        #         for k in s.datasets.keys():
-        #             print(f"Processing dataset: {k}")
-        #             # Merge metadata by overlapping columns
-        #             overlap = clin_data.columns.intersection(s.datasets[k].metadata.columns)
-        #             if overlap.empty:
-        #                 overlap = s.datasets[k].metadata.columns
-        #             clin_data = pd.concat([clin_data, s.datasets[k].metadata[overlap]], axis=0)
-
-        #     # Remove duplicate rows
-        #     clin_data = clin_data[~clin_data.index.duplicated(keep='first')]
-        else:
-            # Iterate over all splits and keys, concatenate if DataFrame
-            clin_data = pd.DataFrame()
-            for split_name in ["train", "test", "valid"]:
-                split_temp = getattr(datasets, split_name, None)
-                if split_temp is not None:
-                    for key in split_temp.datasets.keys():
-                        if isinstance(split_temp.datasets[key].metadata, pd.DataFrame):
-                            clin_data = pd.concat(
-                                [
-                                    clin_data,
-                                    split_temp.datasets[key].metadata,
-                                ],
-                                axis=0,
-                            )
-            # remove duplicate rows
-            clin_data = clin_data[~clin_data.index.duplicated(keep="first")]
-        # Raise error no annotation given
-        # raise ValueError(
-        #     "No annotation data found. Please provide a valid annotation data type."
-        # )
-        return clin_data
-
     def _enrich_results(
         self,
         results: pd.DataFrame,
@@ -505,6 +430,9 @@ class GeneralEvaluator(BaseEvaluator):
                 X = df.loc[
                     sample_split.loc[sample_split.SPLIT == split, "SAMPLE_ID"], :
                 ]
+                if X.shape[0] == 0:
+                    # No samples in this split, skip
+                    continue
                 samples = [s for s in X.index]
                 Y = clin_data.loc[samples, task_param]
 
@@ -538,8 +466,16 @@ class GeneralEvaluator(BaseEvaluator):
                         # Adjust X as well
                         X = X.loc[Y.index, :]
 
-
-                score_temp = sklearn_scorer(sklearn_ml, X, Y, labels=np.sort(Y_train.unique()))
+                if ml_type == "classification":
+                    score_temp = sklearn_scorer(
+                        sklearn_ml, X, Y, labels=np.sort(Y_train.unique())
+                    )
+                elif ml_type == "regression":
+                    score_temp = sklearn_scorer(sklearn_ml, X, Y)
+                else:
+                    raise ValueError(
+                        f"Your ML type {ml_type} is not supported. Please use 'classification' or 'regression'."
+                    )
                 score_df["value"].append(score_temp)
         else:
             ## Warning that there is only one class in the training data

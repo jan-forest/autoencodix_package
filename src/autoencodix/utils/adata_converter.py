@@ -1,4 +1,4 @@
-from typing import Literal, Dict
+from typing import Literal, Dict, Optional
 from autoencodix.data._multimodal_dataset import MultiModalDataset
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data._datasetcontainer import DatasetContainer
@@ -23,11 +23,15 @@ class AnnDataConverter:
             raise ValueError(
                 f"metadata needs to be pd.DataFrame, got {type(ds.metadata)}"
             )
+        metadata = ds.metadata.copy()
+        metadata.index = metadata.index.astype(str)
+
+        var = pd.DataFrame(index=pd.Index(ds.feature_ids, dtype=str))
         return {
             "global": ad.AnnData(
                 X=ds.data.detach().cpu().numpy(),
-                var=pd.DataFrame(ds.feature_ids),
-                obs=ds.metadata,
+                var=var,
+                obs=metadata,
             )
         }
 
@@ -57,7 +61,7 @@ class AnnDataConverter:
     def dataset_to_adata(
         datasetcontainer: DatasetContainer,
         split: Literal["train", "valid", "test"] = "train",
-    ) -> Dict[str, ad.AnnData]:
+    ) -> Optional[Dict[str, ad.AnnData]]:
         """Convert a DatasetContainer split to an AnnData or multimodal AnnData dictionary.
 
         Args:
@@ -82,6 +86,12 @@ class AnnDataConverter:
             return AnnDataConverter._parse_multimodal(ds)
         elif isinstance(ds, NumericDataset):
             return AnnDataConverter._numeric_ds_to_adata(ds)
+        elif ds is None:
+            import warnings
+
+            warnings.warn(f"No dataset found for split: {split}, returning None")
+            return None
+
         else:
             raise NotImplementedError(
                 f"Conversion not implemented for type: {type(ds)}"

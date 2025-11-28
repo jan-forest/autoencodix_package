@@ -10,7 +10,7 @@ class OntixConfig(DefaultConfig):
     """
 
     # 1. Override the top-level 'scaling' attribute
-    scaling: Literal["MINMAX", "NONE"] = Field(
+    scaling: Literal["MINMAX", "NONE", "NOTSET", "LOG1P"] = Field(
         default="MINMAX",
         description="Global scaling method. For Ontix, only 'MINMAX' and 'NONE' are allowed, because we need positive values only",
     )

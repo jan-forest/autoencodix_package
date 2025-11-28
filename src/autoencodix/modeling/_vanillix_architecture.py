@@ -16,10 +16,10 @@ class VanillixArchitecture(BaseAutoencoder):
     """Vanilla Autoencoder implementation with separate encoder and decoder construction.
 
     Attributes:
-    input_dim: number of input features
-    config: Configuration object containing model architecture parameters
-    encoder: Encoder network of the autoencoder
-    decoder: Decoder network of the autoencoder
+        input_dim: number of input features
+        config: Configuration object containing model architecture parameters
+        encoder: Encoder network of the autoencoder
+        decoder: Decoder network of the autoencoder
 
     """
 

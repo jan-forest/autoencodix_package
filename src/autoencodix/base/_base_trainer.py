@@ -1,4 +1,6 @@
 import abc
+import random
+import numpy as np
 import os
 import warnings
 from typing import Optional, Type, List, cast, Tuple, Union
@@ -47,6 +49,7 @@ class BaseTrainer(abc.ABC):
         ontologies: Optional[
             Union[Tuple, List]
         ] = None,  # Addition to Varix, mandotory for Ontix
+        **kwargs,
     ):
         self._trainset = trainset
         self._model_type = model_type
@@ -61,10 +64,10 @@ class BaseTrainer(abc.ABC):
         if old_model is None:
             self._input_validation()
             self._init_loaders()
-        self._handle_reproducibility()
 
         self._loss_fn = self._loss_type(config=self._config)
 
+        self._handle_reproducibility()
         # Internal data handling
         self._model: BaseAutoencoder
         self._fabric = Fabric(
@@ -74,9 +77,9 @@ class BaseTrainer(abc.ABC):
             strategy=self._config.gpu_strategy,
         )
 
-        self._init_loaders()
         self._fabric.launch()
         self._setup_fabric(old_model=old_model)
+
         self._n_cpus = os.cpu_count()
         if self._n_cpus is None:
             self._n_cpus = 0
@@ -103,6 +106,8 @@ class BaseTrainer(abc.ABC):
 
     def _init_loaders(self):
         """Initializes the DataLoaders for training and validation datasets."""
+        # g = torch.Generator()
+        # g.manual_seed(self._config.global_seed)
         last_batch_is_one_sample = len(self._trainset) % self._config.batch_size == 1
         corrected_bs = (
             self._config.batch_size + 1
@@ -118,6 +123,8 @@ class BaseTrainer(abc.ABC):
             cast(BaseDataset, self._trainset),
             shuffle=True,
             batch_size=corrected_bs,
+            worker_init_fn=self._seed_worker,
+            # generator=g,
         )
         if self._validset:
             last_batch_is_one_sample = (
@@ -168,17 +175,31 @@ class BaseTrainer(abc.ABC):
         if self._config.reproducible:
             torch.use_deterministic_algorithms(True)
             torch.manual_seed(seed=self._config.global_seed)
-            if self._config.device == "cuda":
+            random.seed(self._config.global_seed)
+            np.random.seed(self._config.global_seed)
+            if torch.cuda.is_available():
                 torch.cuda.manual_seed(seed=self._config.global_seed)
                 torch.cuda.manual_seed_all(seed=self._config.global_seed)
                 torch.backends.cudnn.deterministic = True
                 torch.backends.cudnn.benchmark = False
-            elif self._config.device == "mps":
-                raise NotImplementedError(
-                    "MPS backend does not support reproducibility settings."
+            if torch.backends.mps.is_available():
+                torch.mps.manual_seed(seed=self._config.global_seed)
+
+                # torch.use_deterministic_algorithms(True, warn_only=True)
+
+                print(
+                    "Warning: MPS backend has limited support for deterministic algorithms. "
+                    "Seeding is active, but full reproducibility is not guaranteed."
                 )
             else:
-                print("cpu not relevant here")
+                print(
+                    f"Reproducibility settings for device {self._config.device} are not implemented or necessary i.e. for cpu."
+                )
+
+    def _seed_worker(self, worker_id):
+        worker_seed = self._config.global_seed + worker_id
+        np.random.seed(worker_seed)
+        random.seed(worker_seed)
 
     def _init_model_architecture(self, ontologies: tuple, old_model=None) -> None:
         """Initializes the model architecture, based on the model type and input dimension."""

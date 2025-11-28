@@ -28,6 +28,7 @@ class OntixTrainer(GeneralTrainer):
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
         ontologies: Optional[Union[Tuple, Dict[Any, Any]]],
+        **kwargs,
     ):
         """Initializes the OntixTrainer with the given datasets, model, and configuration.
 
@@ -51,7 +52,7 @@ class OntixTrainer(GeneralTrainer):
             ontologies=ontologies,
         )
 
-    def _apply_post_backward_processing(self):
+    def _ontix_hook(self):
         """Apply ontology-specific processing after backward pass."""
         # Apply positive weight constraint to decoder
         self._model._decoder.apply(self._model._positive_dec)

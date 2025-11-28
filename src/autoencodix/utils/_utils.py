@@ -3,6 +3,7 @@ Stores utility functions for the autoencodix package.
 Use of OOP would be overkill for the simple functions in this module.
 """
 
+from pathlib import Path
 import zipfile
 import inspect
 import os
@@ -10,12 +11,14 @@ from collections import defaultdict
 from dataclasses import MISSING, fields, is_dataclass
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, no_type_check
+from autoencodix.data._datasetcontainer import DatasetContainer
+from autoencodix.utils._result import Result
 
 import dill as pickle  # type: ignore
 import torch
 from matplotlib import pyplot as plt
 
-from ..configs.default_config import DefaultConfig
+from autoencodix.configs.default_config import DefaultConfig
 
 
 # only for type hints, to avoid circual import
@@ -23,6 +26,26 @@ class BasePipeline:
     """Only for type hints in utils, not real BasePipeline class"""
 
     pass
+
+
+def get_dataset(result: Result) -> Optional[DatasetContainer]:
+    """Retrieve the dataset from the Result object, depending on if new_datasets is filled.
+
+    Args:
+        result: The Result object containing the dataset.
+    Returns:
+        The appropriate DatasetContainer object.
+
+    """
+    splits = ["train", "valid", "test"]
+    if not result.new_datasets:
+        return result.datasets
+    new_values: List[Any] = [result.new_datasets[split] for split in splits]
+    # check if all new_datasets are None
+    if all(v is None for v in new_values):
+        return result.datasets
+    else:
+        return result.new_datasets
 
 
 def nested_dict():
@@ -49,11 +72,15 @@ def nested_to_tuple(d, base=()):
         tuple: Tuples representing the nested dictionary structure, where each tuple
                contains the keys leading to a value and the value itself.
     """
-    for k, v in d.items():
-        if isinstance(v, dict):
-            yield from nested_to_tuple(v, base + (k,))
-        else:
-            yield base + (k, v)
+    if not isinstance(d, dict):
+        yield base + (d,)
+
+    else:
+        for k, v in d.items():
+            if isinstance(v, dict):
+                yield from nested_to_tuple(v, base + (k,))
+            else:
+                yield base + (k, v)
 
 
 @no_type_check
@@ -247,13 +274,18 @@ class Saver:
         """
 
         self.save_all = save_all
-        self.preprocessor_path = f"{file_path}_preprocessor.pkl"
-        self.model_state_path = f"{file_path}_model.pth"
+        self.file_stem: str = Path(file_path).stem
+        self.file_name: str = Path(file_path).name
+        self.folder: str = Path(file_path).parent.as_posix()
 
-        self.file_path = f"{file_path}.pkl"
-        folder = os.path.dirname(self.file_path)
-        if folder:
-            os.makedirs(folder, exist_ok=True)
+        self.preprocessor_path: str = os.path.join(
+            self.folder, f"{self.file_stem}_preprocessor.pkl"
+        )
+        self.model_state_path: str = os.path.join(
+            self.folder, f"{self.file_stem}_model.pth"
+        )
+        self.file_path: str = os.path.join(self.folder, self.file_name)
+        os.makedirs(self.folder, exist_ok=True)
 
     @no_type_check
     def save(self, pipeline: "BasePipeline"):
@@ -267,23 +299,28 @@ class Saver:
         self._save_model_state(pipeline)
         self.pipeline = pipeline
 
+        self.pipeline._trainer.purge()
+
         if not self.save_all:
             print("saving memory efficient")
             self.reset_to_defaults(pipeline.result)  # ty: ignore
-            pipeline._trainer.purge()
 
-            pipeline.preprocessed_data = None  # ty: ignore
-            pipeline._datasets = None  # ty: ignore
-            pipeline.raw_user_data = None  # ty: ignore
-            pipeline._datasets = None
-            pipeline._preprocessor = type(pipeline._preprocessor)(  # ty: ignore
+            self.pipeline.preprocessed_data = None  # ty: ignore
+            self.pipeline._datasets = None  # ty: ignore
+            self.pipeline.raw_user_data = None  # ty: ignore
+            self.pipeline._datasets = None
+            self.pipeline._preprocessor = type(
+                self.pipeline._preprocessor
+            )(  # ty: ignore
                 config=pipeline.config  # ty: ignore
             )  # ty: ignore
-            pipeline._visualizer = type(pipeline._visualizer)()  # ty: ignore
+            self.pipeline.visualizer = type(self.pipeline.visualizer)()  # ty: ignore
 
-        self._save_pipeline_object(pipeline)
+        self._save_pipeline_object(self.pipeline)
 
-        with zipfile.ZipFile(f"{self.file_path}.zip", "w") as archive:
+        with zipfile.ZipFile(
+            os.path.join(self.folder, f"{self.file_stem}.zip"), "w"
+        ) as archive:
             archive.write(self.file_path)
             archive.write(self.preprocessor_path)
             for model_state_path in self.model_state_paths:
@@ -332,12 +369,11 @@ class Saver:
                     if hasattr(model, "module"):
                         model = model.module
                     model.to("cpu")
-                    torch.save(
-                        model.state_dict(), f"{model_name}_{self.model_state_path}.pth"
-                    )  # type: ignore
-                    self.model_state_paths.append(
-                        f"{model_name}_{self.model_state_path}.pth"
+                    cur_path: str = os.path.join(
+                        self.folder, f"{model_name}_{self.file_stem}_model.pth"
                     )
+                    torch.save(model.state_dict(), cur_path)  # type: ignore
+                    self.model_state_paths.append(cur_path)
             else:
                 raise TypeError(
                     f"pipeline.result.model is neither a torch.nn.Module nor a dict, got {type(pipeline.result.model)}"
@@ -392,9 +428,18 @@ class Loader:
         Args:
             file_path: The base file path (without extensions).
         """
-        self.preprocessor_path = f"{file_path}_preprocessor.pkl"
-        self.model_state_path = f"{file_path}_model.pth"
-        self.file_path = f"{file_path}.pkl"
+
+        self.file_stem: str = Path(file_path).stem
+        self.file_name: str = Path(file_path).name
+        self.folder: str = Path(file_path).parent.as_posix()
+
+        self.preprocessor_path: str = os.path.join(
+            self.folder, f"{self.file_stem}_preprocessor.pkl"
+        )
+        self.model_state_path: str = os.path.join(
+            self.folder, f"{self.file_stem}_model.pth"
+        )
+        self.file_path: str = os.path.join(self.folder, self.file_name)
 
     def load(self) -> Any:
         """Loads the BasePipeline object.
@@ -402,7 +447,9 @@ class Loader:
         Returns:
             The loaded BasePipeline object, or None on error.
         """
-        with zipfile.ZipFile(f"{self.file_path}.zip", "r") as archive:
+        with zipfile.ZipFile(
+            os.path.join(self.folder, f"{self.file_stem}.zip"), "r"
+        ) as archive:
             archive.extractall()
 
         loaded_obj = self._load_pipeline_object()
@@ -454,13 +501,12 @@ class Loader:
             for model_name, model in loaded_obj.result.model.items():
                 if hasattr(model, "module"):
                     model = model.module
-                if not os.path.exists(f"{model_name}_{self.model_state_path}.pth"):
-                    raise FileNotFoundError(
-                        f"Model state file not found at {model_name}_{self.model_state_path}.pth"
-                    )
-                model_state = torch.load(
-                    f"{model_name}_{self.model_state_path}.pth", map_location="cpu"
+                cur_path: str = os.path.join(
+                    self.folder, f"{model_name}_{self.file_stem}_model.pth"
                 )
+                if not os.path.exists(cur_path):
+                    raise FileNotFoundError(f"Model state file not found at {cur_path}")
+                model_state = torch.load(cur_path, map_location="cpu")
                 loaded_obj.result.model[model_name].to("cpu")
                 loaded_obj.result.model[model_name].load_state_dict(  # type: ignore
                     model_state

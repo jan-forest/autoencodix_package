@@ -4,7 +4,6 @@ theme:
 
 nav:
 - Home: index.md
-- Tutorials: tutorials.md
 - API Reference:
   - Base: api/base.md
   - Configs: api/configs.md

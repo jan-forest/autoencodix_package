@@ -76,6 +76,7 @@ class XModalTrainer(BaseTrainer):
             DataSetTypes.IMG: ImageVAEArchitecture,
         },
         ontologies: Optional[Union[Tuple, List]] = None,
+        **kwargs,
     ):
         """Initializes the XModalTrainer with datasets and configuration.
 
@@ -143,29 +144,66 @@ class XModalTrainer(BaseTrainer):
                 dynamics["model"], dynamics["optim"]
             )
 
+    # def _init_loaders(self):
+    #     """Initializes DataLoaders for training and validation datasets."""
+    #     trainsampler = CoverageEnsuringSampler(
+    #         datasets=self._trainset, batch_size=self._config.batch_size
+    #     )
+    #     validsampler = CoverageEnsuringSampler(
+    #         datasets=self._validset, batch_size=self._config.batch_size
+    #     )
+    #     collate_fn = create_multimodal_collate_fn(datasets=self._trainset)
+    #     valid_collate_fn = create_multimodal_collate_fn(
+    #         datasets=self._validset
+    #     )
+    #     # drop_last handled in custom sampler
+    #     self._trainloader = DataLoader(
+    #         self._trainset,
+    #         batch_sampler=trainsampler,
+    #         collate_fn=collate_fn,
+    #     )
+    #     self._validloader = DataLoader(
+    #         self._validset,
+    #         batch_sampler=validsampler,
+    #         collate_fn=valid_collate_fn,
+    #     )
+
     def _init_loaders(self):
-        """Initializes DataLoaders for training and validation datasets."""
-        trainsampler = CoverageEnsuringSampler(
-            multimodal_dataset=self._trainset, batch_size=self._config.batch_size
-        )
-        validsampler = CoverageEnsuringSampler(
-            multimodal_dataset=self._validset, batch_size=self._config.batch_size
-        )
-        collate_fn = create_multimodal_collate_fn(multimodal_dataset=self._trainset)
-        valid_collate_fn = create_multimodal_collate_fn(
-            multimodal_dataset=self._validset
-        )
-        # drop_last handled in custom sampler
-        self._trainloader = DataLoader(
-            self._trainset,
-            batch_sampler=trainsampler,
-            collate_fn=collate_fn,
-        )
-        self._validloader = DataLoader(
-            self._validset,
-            batch_sampler=validsampler,
-            collate_fn=valid_collate_fn,
-        )
+        """Initializes DataLoaders with smart sampler selection based on pairing."""
+
+        def _build_loader(dataset: MultiModalDataset, is_train: bool):
+            batch_size = self._config.batch_size
+            collate_fn = create_multimodal_collate_fn(multimodal_dataset=dataset)
+
+            if dataset.is_fully_paired:
+                return DataLoader(
+                    dataset,
+                    batch_size=batch_size,
+                    shuffle=is_train,
+                    drop_last=is_train,
+                    collate_fn=collate_fn,
+                )
+            else:
+                print(
+                    f"Dataset has UNPAIRED samples → using CoverageEnsuringSampler "
+                    f"({len(dataset.paired_sample_ids)} paired + {len(dataset.unpaired_sample_ids)} unpaired)"
+                )
+                sampler = CoverageEnsuringSampler(
+                    multimodal_dataset=dataset,
+                    batch_size=batch_size,
+                )
+                return DataLoader(
+                    dataset,
+                    batch_sampler=sampler,  # note: batch_sampler, not sampler
+                    collate_fn=collate_fn,
+                )
+
+        # Build train and validation loaders
+        self._trainloader = _build_loader(self._trainset, is_train=True)
+        self._validloader = _build_loader(self._validset, is_train=False)
+
+        # Optional: expose for logging
+        self._train_is_fully_paired = len(self._trainset.unpaired_sample_ids) == 0
 
     def _init_modality_training(self):
         """Initializes models, optimizers, and training state for each modality."""
@@ -180,11 +218,14 @@ class XModalTrainer(BaseTrainer):
         data_info = self._config.data_config.data_info
         for mod_name, ds in self._trainset.datasets.items():
             simple_name = mod_name.split(".")[1]
+            local_epochs = data_info[simple_name].pretrain_epochs
+
             pretrain_epochs = (
-                data_info[simple_name].pretrain_epochs
-                if data_info[simple_name].pretrain_epochs
+                local_epochs
+                if local_epochs is not None
                 else self._config.pretrain_epochs
             )
+
             model_type = self.model_map.get(ds.mytype)
             if model_type is None:
                 raise ValueError(
@@ -301,11 +342,9 @@ class XModalTrainer(BaseTrainer):
 
         self._epoch_loss_valid = 0.0
         total_clf_loss = 0.0
-
+        n_samples_total: int = 0
         epoch_dynamics: List[Dict] = []
         sub_losses: Dict[str, float] = defaultdict(float)
-        # we calc this manually because of unpaired data case
-        n_samples_total = 0
 
         with torch.no_grad():
             for batch in self._validloader:
@@ -338,13 +377,16 @@ class XModalTrainer(BaseTrainer):
                         epoch_dynamics.append(batch_capture)
 
         sub_losses["clf_loss"] = total_clf_loss
+        n_samples_total /= (
+            self._n_train_modalities
+        )  # n_modalities because each sample is counted once per modality and n_modalites is the same for train and valid
         for k, v in sub_losses.items():
             if "_factor" not in k:
                 sub_losses[k] = v / n_samples_total  # Average over all samples
-        self._epoch_loss = (
-            self._epoch_loss / n_samples_total
+        self._epoch_loss_valid = (
+            self._epoch_loss_valid / n_samples_total
         )  # Average over all samples
-        return epoch_dynamics, sub_losses, n_samples_total
+        return epoch_dynamics, sub_losses, len(self._validset)
 
     def _train_one_epoch(self) -> Tuple[List[Dict], Dict[str, float], int]:
         """Runs the training loop with corrected adversarial logic.
@@ -374,7 +416,7 @@ class XModalTrainer(BaseTrainer):
 
                 # --- Stage 2: Train the Classifier ---
                 latents, labels = self._prep_adver_training()
-                n_samples_total += len(labels)
+                n_samples_total += latents.size(0)
                 self._train_clf(latents=latents, labels=labels)
 
                 # --- Stage 3: Train the Autoencoders ---
@@ -410,6 +452,7 @@ class XModalTrainer(BaseTrainer):
             if self._is_checkpoint_epoch:
                 batch_capture = self._capture_dynamics(batch)
                 epoch_dynamics.append(batch_capture)
+        n_samples_total /= self._n_train_modalities
         sub_losses["clf_loss"] = self._clf_epoch_loss
         for k, v in sub_losses.items():
             if "_factor" not in k:
@@ -477,18 +520,6 @@ class XModalTrainer(BaseTrainer):
                     sub_losses=valid_sub_losses,
                     n_samples=n_samples_valid,
                 )
-            if self._config.class_param:
-                self._loss_fn.update_class_means(
-                    epoch_dynamics=train_epoch_dynamics,
-                    device=self._fabric.device,
-                    is_training=True,
-                )
-                if self._validset:
-                    self._loss_fn.update_class_means(
-                        epoch_dynamics=valid_epoch_dynamics,
-                        device=self._fabric.device,
-                        is_training=False,
-                    )
             if self._is_checkpoint_epoch:
                 self._fabric.print(f"Storing checkpoint for epoch {epoch}...")
                 self._store_checkpoint(
@@ -514,7 +545,6 @@ class XModalTrainer(BaseTrainer):
     def predict(
         self,
         data: BaseDataset,
-        # split: Literal["train", "valid", "test"] = "test",
         model: Optional[Dict[str, torch.nn.Module]] = None,
         **kwargs,
     ) -> Result:

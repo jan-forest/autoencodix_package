@@ -667,6 +667,31 @@ class BasePreprocessor(abc.ABC):
         else:
             data_package = raw_user_data
 
+        if self.config.requires_paired:
+            common_ids = data_package.get_common_ids()
+
+            images = data_package.img
+            if images is None:
+                raise ValueError("Images cannot be None")
+            data_package.img = {
+                k: self.filter_imgdata_list(img_list=v, ids=common_ids)
+                for k, v in images.items()
+            }
+            unpaired_data = data_package.multi_bulk
+            unpaired_anno = data_package.annotation
+            if unpaired_anno is None:
+                raise ValueError("annotation attribute of datapackge cannot be None")
+            if unpaired_data is None:
+                raise ValueError("multi_bulk attribute of datapackge cannot be None")
+            data_package.multi_bulk = {
+                k: v.loc[common_ids] for k, v in unpaired_data.items()
+            }
+
+            data_package.annotation = {
+                k: v.loc[common_ids]  # ty: ignore
+                for k, v in unpaired_anno.items()  # ty: ignore
+            }
+
         def presplit_processor(
             modality_data: Dict[str, Union[pd.DataFrame, List[ImgData]]],
         ) -> Dict[str, Union[pd.DataFrame, List[ImgData]]]:
@@ -735,6 +760,20 @@ class BasePreprocessor(abc.ABC):
             )
         else:
             data_package = raw_user_data
+        if self.config.requires_paired:
+            common_ids = data_package.get_common_ids()
+            if data_package.multi_sc is None:
+                raise ValueError("multi_sc in data_package is None")
+            data_package.multi_sc = {
+                "multi_sc": data_package.multi_sc["multi_sc"][common_ids]
+            }
+            images = data_package.img
+            if images is None:
+                raise ValueError("Images cannot be None")
+            data_package.img = {
+                k: self.filter_imgdata_list(img_list=v, ids=common_ids)
+                for k, v in images.items()
+            }
 
         def presplit_processor(
             modality_data: Dict[str, Union[Any, List[ImgData]]],
@@ -811,18 +850,11 @@ class BasePreprocessor(abc.ABC):
         if self.config.requires_paired:
             common_ids = data_package.get_common_ids()
 
-            def filter_imgdata_list(img_list, ids):
-                filtered = []
-                for imgdata in img_list:
-                    if imgdata.sample_id in ids:
-                        filtered.append(imgdata)
-                return filtered
-
             images = data_package.img
             if images is None:
                 raise ValueError("Images cannot be None")
             data_package.img = {
-                k: filter_imgdata_list(img_list=v, ids=common_ids)
+                k: self.filter_imgdata_list(img_list=v, ids=common_ids)
                 for k, v in images.items()
             }
 
@@ -931,7 +963,7 @@ class BasePreprocessor(abc.ABC):
         """
 
         scaling_method = self.config.data_config.data_info[info_key].scaling
-        if scaling_method == "NONE":
+        if scaling_method == "NOTSET":
             scaling_method = self.config.scaling
         processed_images = []
         normalizer = ImageNormalizer()  # Instance created once here
@@ -993,3 +1025,10 @@ class BasePreprocessor(abc.ABC):
         self, reconstruction: Dict[str, torch.Tensor], result: Optional[Result] = None
     ) -> DataPackage:
         pass
+
+    def filter_imgdata_list(self, img_list, ids):
+        filtered = []
+        for imgdata in img_list:
+            if imgdata.sample_id in ids:
+                filtered.append(imgdata)
+        return filtered

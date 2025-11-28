@@ -69,10 +69,13 @@ class NaNRemover:
             print(adata.obs.columns)
             for col in self.relevant_cols:
                 if col in adata.obs.columns:
-                    if isinstance(adata.obs[col].dtype, pd.CategoricalDtype):
+                    # Fill NaNs with "missing" for non-numeric columns
+                    if not pd.api.types.is_numeric_dtype(adata.obs[col]):
                         # Add "missing" to categories first, then fill
                         adata.obs[col] = adata.obs[col].cat.add_categories(["missing"])
-                    adata.obs[col] = adata.obs[col].fillna("missing").astype("category")
+                        adata.obs[col] = (
+                            adata.obs[col].fillna("missing").astype("category")
+                        )
         return adata
 
     def remove_nan(self, data: DataPackage) -> DataPackage:
@@ -101,7 +104,10 @@ class NaNRemover:
                     continue
                 if self.relevant_cols is not None:
                     for col in self.relevant_cols:
-                        if col in v.columns:
+                        # Fill with "missing" if column is not integer or float
+                        if col in v.columns and not pd.api.types.is_numeric_dtype(
+                            v[col]
+                        ):
                             v.fillna(value={col: "missing"}, inplace=True)
 
                 non_na[k] = v

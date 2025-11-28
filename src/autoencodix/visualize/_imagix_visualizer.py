@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from typing import Any, Dict, no_type_check
 from autoencodix.visualize._general_visualizer import GeneralVisualizer
 from autoencodix.utils._result import Result
-from autoencodix.utils._utils import nested_dict
+from autoencodix.utils._utils import nested_dict, get_dataset
 from autoencodix.configs.default_config import DefaultConfig
 
 
@@ -61,14 +61,22 @@ class ImagixVisualizer(GeneralVisualizer):
 
     @no_type_check
     def show_image_recon_grid(self, result: Result, n_samples: int = 3) -> None:
-        if not hasattr(result.datasets, "test"):
-            raise ValueError("No test set found in datasets, has no attribute test")
-        if result.datasets.test is None:
-            raise ValueError("test set is None")
-        meta = result.datasets.test.metadata
+        ## TODO add similar labels/param logic from other visualizations
+        dataset = result.datasets
+
+        ## Overwrite original datasets with new_datasets if available after predict with other data
+        if dataset is None:
+            dataset = DatasetContainer()
+
+        if bool(result.new_datasets.test):
+            dataset.test = result.new_datasets.test
+
+        if dataset.test is None:
+            raise ValueError("test of dataset is None")
+        meta = dataset.test.metadata
         sample_ids = meta.sample(n=n_samples, random_state=42).index
 
-        all_sample_order = result.datasets.test.sample_ids
+        all_sample_order = dataset.test.sample_ids
         indices = [
             all_sample_order.index(sid)
             for sid in sample_ids
@@ -85,9 +93,7 @@ class ImagixVisualizer(GeneralVisualizer):
             for c in range(n_samples):
                 if r == 0:
                     ## Original image
-                    axes[r, c].imshow(
-                        result.datasets.test.raw_data[indices[c]].img.squeeze()
-                    )
+                    axes[r, c].imshow(dataset.test.raw_data[indices[c]].img.squeeze())
                     axes[r, c].set_title(f"Original: {sample_ids[c]}")
                     axes[r, c].axis("off")
                 if r == 1:

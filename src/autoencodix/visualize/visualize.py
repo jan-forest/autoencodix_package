@@ -337,7 +337,7 @@ class Visualizer(BaseVisualizer):
                         embedding=embedding,
                         labels=labels,
                         param=p,
-                        layer=f"2D latent space (epoch {epoch})",
+                        layer=f"2D latent space (epoch {epoch + 1})",  # we start counting epochs at 0, so add 1 for display
                         figsize=(12, 8),
                         center=True,
                     )
@@ -704,6 +704,10 @@ class Visualizer(BaseVisualizer):
                     print(
                         "The provided label column is numeric and converted to categories."
                     )
+                    # Change non-float labels to NaN
+                    labels = [
+                        x if isinstance(x, float) else float("nan") for x in labels
+                    ]
                     labels = (
                         pd.qcut(
                             x=pd.Series(labels),
@@ -830,6 +834,8 @@ class Visualizer(BaseVisualizer):
         # print(labels[0])
         if not isinstance(labels[0], str):
             if len(np.unique(labels)) > 3:
+                # Change non-float labels to NaN
+                labels = [x if isinstance(x, float) else float("nan") for x in labels]
                 labels = pd.qcut(
                     x=pd.Series(labels),
                     q=4,

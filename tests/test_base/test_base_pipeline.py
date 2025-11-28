@@ -153,7 +153,7 @@ class TestBasePipeline:
             minimal_pipeline.predict(data=mock_dataset_container)
 
     def test_visualize_without_visualizer_raises_error(self, minimal_pipeline):
-        minimal_pipeline._visualizer = None
+        minimal_pipeline.visualizer = None
         with pytest.raises(NotImplementedError):
             minimal_pipeline.visualize()
 

@@ -1,12 +1,9 @@
 data_config:
   data_info:
-   RNA:
-     file_path: "data/raw/mini/bulk/rna_sample_data.csv"
-     k_filter: 100
-     sep: ","
-   METHYLATION:
-     file_path: "data/raw/mini/bulk/meth_sample_data.tsv"
-     sep: "\t"
-   CLINICAL:
-     file_path: "data/raw/mini/bulk/clinical_sample_data.parquet"
-     data_type: "ANNOTATION"
+    RNA:
+      file_path: "data/raw/combined_rnaseq_formatted.parquet"
+    METHYLATION:
+      file_path: "data/raw/combined_meth_formatted.parquet"
+    CLINICAL:
+      file_path: "data/raw/combined_clin_formatted.parquet"
+      data_type: "ANNOTATION"

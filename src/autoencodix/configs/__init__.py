@@ -5,6 +5,7 @@ from .stackix_config import StackixConfig
 from .vanillix_config import VanillixConfig
 from .varix_config import VarixConfig
 from .xmodalix_config import XModalixConfig
+from .maskix_config import MaskixConfig
 
 __all__ = [
     "DataCase",
@@ -16,4 +17,5 @@ __all__ = [
     "VanillixConfig",
     "VarixConfig",
     "XModalixConfig",
+    "MaskixConfig",
 ]

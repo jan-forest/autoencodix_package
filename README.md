@@ -8,6 +8,7 @@ Consequently, we present `AUTOENCODIX` with the following features:
   - hierarchical/stacked `stackix`
   - ontology-based `ontix`
   - masking `maskix`
+  - Image VAE (2D) `imagix`
   - cross-modal autoencoder (translation between different data modalities) `x-modalix` (works for multiple modalities paired and unpaired)
 - A Python package with a scikit-learn-like interface
 

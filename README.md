@@ -5,6 +5,7 @@ Consequently, we present `AUTOENCODIX` with the following features:
 - Different autoencoder architectures:
   - vanilla `vanillix`
   - variational `varix`
+  - disentangled variational `disentanglix`
   - hierarchical/stacked `stackix`
   - ontology-based `ontix`
   - masking `maskix`

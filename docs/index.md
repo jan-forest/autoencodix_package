@@ -11,7 +11,8 @@ Consequently, we present `AUTOENCODIX` with the following features:
 1. Multi-modal data integration for any numerical or categorical data  
 2. Different autoencoder architectures:  
    + vanilla `vanillix`  
-   + variational `varix` 
+   + variational `varix`
+   + disentangled variational `disentanglix` 
    + hierarchical/stacked `stackix`  
    + ontology-based `ontix`  
    + masking `maskix`  

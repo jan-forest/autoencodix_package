@@ -203,7 +203,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         description="Data case for the model, will be determined automatically",
     )
     k_filter: Union[int, None] = Field(
-        default=20, description="Number of features to keep"
+        default=None, description="Number of features to keep"
     )
     scaling: Literal["STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE", "LOG1P"] = Field(
         default="STANDARD",

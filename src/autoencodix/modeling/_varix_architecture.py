@@ -44,6 +44,8 @@ class VarixArchitecture(BaseAutoencoder):
         self.input_dim: int = input_dim
         self._mu: nn.Module
         self._logvar: nn.Module
+        self._encoder: nn.Module
+        self._decoder: nn.Module
 
         # populate self.encoder and self.decoder
         self._build_network()
@@ -118,7 +120,7 @@ class VarixArchitecture(BaseAutoencoder):
         """
 
         latent = x  # for case where n_layers=0
-        if len(self._encoder) > 0:
+        if self._config.n_layers > 0:
             latent = self._encoder(x)
         mu = self._mu(latent)
         logvar = self._logvar(latent)

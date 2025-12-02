@@ -41,6 +41,8 @@ class MaskixArchitectureVanilla(BaseAutoencoder):
         self.latent_dim: int = self._config.latent_dim
 
         # populate self.encoder and self.decoder
+        self._encoder: nn.Module
+        self._decoder: nn.Module
         self._build_network()
         self.apply(self._init_weights)
 
@@ -85,12 +87,39 @@ class MaskixArchitectureVanilla(BaseAutoencoder):
 
         self._encoder = nn.Sequential(first_layer, *encoder_layers)
 
-        dec_dimensions = enc_dim[::-1]  # Reverse the dimensions and copy
+        # dec_dimensions = enc_dim[::-1]  # Reverse the dimensions and copy
+        # decoder_layers: List[nn.Module] = []
+        # for i, (in_features, out_features) in enumerate(
+        #     zip(dec_dimensions[:-1], dec_dimensions[1:])
+        # ):
+        #     last_layer = i == len(dec_dimensions) - 2
+        #     decoder_layers.extend(
+        #         LayerFactory.create_maskix_layer(
+        #             in_features=in_features,
+        #             out_features=out_features,
+        #             last_layer=last_layer,
+        #         )
+        #     )
+
+        # latent_layer = nn.Linear(
+        #     in_features=self.latent_dim + self.input_dim,  # ty: ignore
+        #     out_features=dec_dimensions[0],
+        # )  # ty: ignore
+        # self._decoder = nn.Sequential(latent_layer, *decoder_layers)
+
+
+
+        dec_start: int = self.latent_dim + self.input_dim  # ty: ignore
+        dec_end: int = self.input_dim  # ty: ignore
+        dec_dim = LayerFactory.get_layer_dimensions(
+            feature_dim=dec_start,
+            latent_dim=dec_end,  # Repurpose 'latent_dim' param as target dim
+            n_layers=self._config.n_layers,
+            enc_factor=self._config.enc_factor,
+        )
         decoder_layers: List[nn.Module] = []
-        for i, (in_features, out_features) in enumerate(
-            zip(dec_dimensions[:-1], dec_dimensions[1:])
-        ):
-            last_layer = i == len(dec_dimensions) - 2
+        for i, (in_features, out_features) in enumerate(zip(dec_dim[:-1], dec_dim[1:])):
+            last_layer = i == len(dec_dim) - 2
             decoder_layers.extend(
                 LayerFactory.create_maskix_layer(
                     in_features=in_features,
@@ -98,12 +127,7 @@ class MaskixArchitectureVanilla(BaseAutoencoder):
                     last_layer=last_layer,
                 )
             )
-
-        latent_layer = nn.Linear(
-            in_features=self.latent_dim + self.input_dim,  # ty: ignore
-            out_features=dec_dimensions[0],
-        )  # ty: ignore
-        self._decoder = nn.Sequential(latent_layer, *decoder_layers)
+        self._decoder = nn.Sequential(*decoder_layers)
 
     def _build_scMAE(self):
         self._encoder = nn.Sequential(

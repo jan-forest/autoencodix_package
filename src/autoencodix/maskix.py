@@ -1,5 +1,6 @@
 from typing import Dict, Optional, Type, Union, Callable, Any
 import numpy as np
+import torch
 
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_loss import BaseLoss
@@ -23,6 +24,7 @@ from autoencodix.utils._losses import MaskixLoss
 from autoencodix.modeling._maskix_architecture import MaskixArchitectureVanilla
 from autoencodix.trainers._maskix_trainer import MaskixTrainer
 from autoencodix.visualize._general_visualizer import GeneralVisualizer
+from autoencodix.utils._model_output import ModelOutput
 
 
 class Maskix(BasePipeline):
@@ -86,3 +88,23 @@ class Maskix(BasePipeline):
             masking_fn_kwargs=masking_fn_kwargs,
             **kwargs,
         )
+
+    def impute(self, corrupted_tensor: torch.Tensor) -> ModelOutput:
+        """Impute missing values in the corrupted tensor using the trained Maskix model.
+
+        Args:
+            corrupted_tensor: A tensor with missing values to be imputed.
+        Returns:
+            model_output: A tensor with imputed values.
+        """
+        if self._trainer is None:
+            raise ValueError(
+                "Model needs to be trained before imputation., Run fit() first."
+            )
+        self._trainer._model.eval()
+        with torch.no_grad(), self._trainer._fabric.autocast():
+            corrupted_tensor = corrupted_tensor.to(
+                self._trainer._model.device
+            )
+            model_output = self._trainer._model(corrupted_tensor)
+        return model_output

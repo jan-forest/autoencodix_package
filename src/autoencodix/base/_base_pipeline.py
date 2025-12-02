@@ -74,8 +74,8 @@ class BasePipeline(abc.ABC):
         data: Optional[
             Union[DataPackage, DatasetContainer, ad.AnnData, MuData, pd.DataFrame, dict]  # type: ignore[invalid-type-form]
         ],
-        visualizer: Optional[BaseVisualizer] = None,
-        evaluator: Optional[BaseEvaluator] = None,
+        visualizer: Optional[Type[BaseVisualizer]] = None,
+        evaluator: Optional[Type[BaseEvaluator]] = None,
         result: Optional[Result] = None,
         config: Optional[DefaultConfig] = None,
         custom_split: Optional[Dict[str, np.ndarray]] = None,
@@ -1245,3 +1245,6 @@ class BasePipeline(abc.ABC):
             print("LLM Explanation:")
             print(explanation)
             return explanation
+
+    def impute(self, corrupted_tensor: torch.Tensor):
+        raise NotImplementedError("Impute method only implemented for Maskix pipeline.")

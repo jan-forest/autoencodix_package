@@ -73,6 +73,10 @@ class TensorAwareDataset(BaseDataset):
             return pd.DataFrame(
                 self.data.numpy(), columns=self.feature_ids, index=self.sample_ids
             )
+        elif issparse(self.data):
+            return pd.DataFrame(
+                self.data.toarray(), columns=self.feature_ids, index=self.sample_ids
+            )
         elif isinstance(self.data, list) and all(
             isinstance(item, torch.Tensor) for item in self.data
         ):

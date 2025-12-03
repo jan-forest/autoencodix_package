@@ -1,9 +1,15 @@
 #### STEP 0 - Definitions #####
 import os
 import sys
-data_folder = "./census_chunks/"
-data_final_folder = "./notebooks/large_sc_data/"
-llm_ontology_folder = "./notebooks/llm_ontologies/"
+import scanpy
+import anndata
+data_folder = "./data/census_chunks/"
+data_final_folder = "./data/large_sc_data/"
+# create data_final_folder if it doesn't exist
+if not os.path.exists(data_final_folder):
+	os.makedirs(data_final_folder)
+llm_ontology_folder = "./data/llm_ontologies/"
+mock_config_file = "./data/large-ontix.yaml"
 
 step_from_cli = sys.argv[1]  # "step1", "step2", "..."
 fraction_for_tuning = 0.05
@@ -17,10 +23,8 @@ def load_rename_adata(file_path: str) -> anndata.AnnData:
 	return adata
 
 #### STEP 1 - Combine and split census chunks #####
-print("STEP 1 - Combine and split census chunks")
 if step_from_cli == "step1":
-	import scanpy
-	import anndata
+	print("STEP 1 - Combine and split census chunks")
 	import glob 
 	import numpy as np
 
@@ -52,8 +56,8 @@ if step_from_cli == "step1":
 	scanpy.write(os.path.join(data_final_folder, "census_holdout_split.h5ad"), adata[holdout_names])	
 
 #### STEP 2 - Prepare each split for large Ontix training #####
-print("STEP 2 - Prepare each split for large Ontix training")
 if step_from_cli == "step2":
+	print("STEP 2 - Prepare each split for large Ontix training")
 	split_from_cli = sys.argv[2]  # "train", "tune", "holdout"
 	import scanpy as sc
 	# import pandas as pd
@@ -100,7 +104,7 @@ if step_from_cli == "step2":
 		test_split[test_idx] = True 
 
 		scconfig = OntixConfig.model_validate(
-			yaml.safe_load(Path(os.path.join(data_final_folder, "large-ontix.yaml")).read_text())
+			yaml.safe_load(Path(mock_config_file).read_text())
 		)
 
 
@@ -152,7 +156,7 @@ if step_from_cli == "step2":
 		test_split = np.ones(n_samples, dtype=bool)  # All samples in holdout are for testing
 
 		scconfig = OntixConfig.model_validate(
-			yaml.safe_load(Path(os.path.join(data_final_folder, "large-ontix.yaml")).read_text())
+			yaml.safe_load(Path(mock_config_file).read_text())
 		)
 
 		test_dataset = NumericDataset(

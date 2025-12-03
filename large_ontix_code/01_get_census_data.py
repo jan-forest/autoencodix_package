@@ -1,12 +1,14 @@
 ##### STEP 0 - Definitions #####
 import sys
 
-data_folder = "./census_chunks/"
-llm_ontology_folder = "./notebooks/llm_ontologies/"
+data_folder = "./data/census_chunks/"
+llm_ontology_folder = "./data/llm_ontologies/"
 max_chunk_size = 1000 # Downsample chunks larger than this size
 perc_genes = 0.05 # Filter cells with lower than this percentage of genes expressed
 
 step_from_cli = sys.argv[1]  # "step1", "step2", "..."
+
+test_mode = sys.argv[3] if len(sys.argv) > 3 else "no"
 
 # Create folder if it doesn't exist
 import os
@@ -89,8 +91,12 @@ if step_from_cli == "step2":
 		part = 0
 	
 	total_parts = 12
-	# all_chunks = human_meta_counts.index[::-1][:]  # Change [0:5] to [:] for all chunks in production
-	all_chunks = human_meta_counts.index[0:11]  # Change [0:5] to [:] for all chunks in production
+	
+	if test_mode == "test":
+		print("Test mode: only process last 24 chunks")
+		all_chunks = human_meta_counts.index[::-1][0:24] # Last 24 chunks for testing  
+	else:
+		all_chunks = human_meta_counts.index[:]
 	num_chunks = len(all_chunks)
 	chunks_per_part = math.ceil(num_chunks / total_parts)
 	start_idx = part * chunks_per_part

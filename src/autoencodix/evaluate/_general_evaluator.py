@@ -365,7 +365,7 @@ class GeneralEvaluator(BaseEvaluator):
         task: str,
         sub: str,
     ) -> pd.DataFrame:
-        res_ml_alg = [str(sklearn_ml) for x in range(0, results.shape[0])]
+        res_ml_alg = [str(sklearn_ml).split("(")[0] for x in range(0, results.shape[0])]
         res_ml_type = [ml_type for x in range(0, results.shape[0])]
         res_ml_task = [task for x in range(0, results.shape[0])]
         res_ml_subtask = [sub for x in range(0, results.shape[0])]

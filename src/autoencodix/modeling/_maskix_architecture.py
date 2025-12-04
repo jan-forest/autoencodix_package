@@ -107,8 +107,6 @@ class MaskixArchitectureVanilla(BaseAutoencoder):
         # )  # ty: ignore
         # self._decoder = nn.Sequential(latent_layer, *decoder_layers)
 
-
-
         dec_start: int = self.latent_dim + self.input_dim  # ty: ignore
         dec_end: int = self.input_dim  # ty: ignore
         dec_dim = LayerFactory.get_layer_dimensions(

@@ -103,8 +103,6 @@ class Maskix(BasePipeline):
             )
         self._trainer._model.eval()
         with torch.no_grad(), self._trainer._fabric.autocast():
-            corrupted_tensor = corrupted_tensor.to(
-                self._trainer._model.device
-            )
+            corrupted_tensor = corrupted_tensor.to(self._trainer._model.device)
             model_output = self._trainer._model(corrupted_tensor)
         return model_output

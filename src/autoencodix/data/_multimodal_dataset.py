@@ -3,6 +3,7 @@ import warnings
 import pandas as pd
 from typing import List, Dict, Any, Optional, Union
 from autoencodix.base._base_dataset import BaseDataset
+from torch.profiler import record_function
 from autoencodix.configs.default_config import DefaultConfig
 
 import numpy as np
@@ -220,57 +221,6 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):  # type: ignore
                 )
                 yield batch
 
-    # def _generate_coverage_batches(self):
-    #     """Generate batches that ensure all samples are covered
-
-    #     Returns:
-    #        List of batches ensuring coverage of all samples
-    #     """
-    #     coverage_batches = []
-
-    #     covered = {mod: set() for mod in self.modality_samples.keys()}
-
-    #     while not all(
-    #         len(covered[mod]) == len(self.modality_samples[mod])
-    #         for mod in self.modality_samples.keys()
-    #     ):
-    #         batch = []
-
-    #         for modality in self.modality_samples.keys():
-    #             uncovered = [
-    #                 s
-    #                 for s in self.modality_samples[modality]
-    #                 if s not in covered[modality]
-    #             ]
-
-    #             if uncovered:
-    #                 take = min(
-    #                     len(uncovered), self.batch_size // len(self.modality_samples)
-    #                 )
-    #                 selected = np.random.choice(uncovered, size=take, replace=False)
-    #                 batch.extend(selected)
-    #                 covered[modality].update(selected)
-
-    #         # Fill remaining batch slots with random samples
-    #         while len(batch) < self.batch_size:
-    #             if len(batch) < self.batch_size * self.paired_ratio and self.paired_ids:
-    #                 sample = np.random.choice(self.paired_ids)
-    #                 batch.append(sample)
-    #             elif self.unpaired_ids:
-    #                 sample = np.random.choice(self.unpaired_ids)
-    #                 batch.append(sample)
-    #             else:
-    #                 break
-
-    #         batch = list(set(batch))
-    #         if len(batch) > self.batch_size:
-    #             batch = batch[: self.batch_size]
-
-    #         if batch:
-    #             coverage_batches.append(batch)
-
-    #     return coverage_batches
-
     def _generate_coverage_batches(self):
         """Generate batches that ensure all samples are covered
 
@@ -397,60 +347,112 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):  # type: ignore
         return max(total_samples // self.batch_size, len(self.modality_samples))
 
 
+# def create_multimodal_collate_fn(multimodal_dataset: MultiModalDataset):
+#     """
+#     Factory function to create a collate function with access to the dataset.
+#     This allows us to get metadata and original indices.
+
+#     Args:
+#         multimodal_dataset: The multimodal dataset
+
+#     Returns:
+#         A collate function for DataLoader
+#     """
+
+#     def collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Dict[str, List]]:
+#         if not batch:
+#             return {}
+
+#         result = {}
+#         modalities = list(multimodal_dataset.datasets.keys())
+
+#         class_col = multimodal_dataset.config.class_param
+
+#         for modality in modalities:
+#             result[modality] = {
+#                 "data": [],
+#                 "metadata": [],
+#                 "sample_ids": [],
+#                 "sampled_index": [],
+#                 "dtype": [],
+#             }
+
+#             dataset = multimodal_dataset.datasets[modality]
+#             for sample in batch:
+#                 sample_id = sample["sample_id"]
+
+#                 if sample.get(modality) is not None:
+#                     result[modality]["data"].append(sample[modality])
+#                     result[modality]["sample_ids"].append(sample_id)
+
+#                     if sample_id in multimodal_dataset._id_to_idx[modality]:
+#                         original_idx = multimodal_dataset._id_to_idx[modality][
+#                             sample_id
+#                         ]
+#                         result[modality]["sampled_index"].append(original_idx)
+#                     else:
+#                         result[modality]["sampled_index"].append(None)
+#                 if class_col and hasattr(dataset, 'metadata'):
+#                     # specific scalar lookup
+#                     label = dataset.metadata.at[sample_id, class_col]
+#                     result[modality]["class_labels"].append(label)
+#                 else:
+#                     result[modality]["class_labels"].append(None)
+#         for modality, modality_data in result.items():
+#             if not modality_data["data"]:
+#                 raise ValueError(f"Modality {modality} has no data")
+#             modality_data["data"] = torch.stack(modality_data["data"])
+
+#         return result
+
+#     return collate_fn
+
+
 def create_multimodal_collate_fn(multimodal_dataset: MultiModalDataset):
     """
     Factory function to create a collate function with access to the dataset.
     This allows us to get metadata and original indices.
-
     Args:
         multimodal_dataset: The multimodal dataset
-
     Returns:
         A collate function for DataLoader
     """
 
-    def collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Dict[str, List]]:
+    def collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         if not batch:
             return {}
-
         result = {}
         modalities = list(multimodal_dataset.datasets.keys())
-
+        class_col = multimodal_dataset.config.class_param
         for modality in modalities:
-            result[modality] = {
-                "data": [],
-                "metadata": [],
-                "sample_ids": [],
-                "sampled_index": [],
-                "dtype": [],
-            }
-
             dataset = multimodal_dataset.datasets[modality]
+            has_metadata = class_col and hasattr(dataset, "metadata")
 
-            for sample in batch:
-                sample_id = sample["sample_id"]
+            # Collect only for samples with this modality
+            relevant_samples = [s for s in batch if s.get(modality) is not None]
+            if not relevant_samples:
+                raise ValueError(f"Modality {modality} has no data in batch")
 
-                cur_metadata = None
-                if sample.get(modality) is not None:
-                    result[modality]["data"].append(sample[modality])
-                    result[modality]["sample_ids"].append(sample_id)
+            data_list = [s[modality] for s in relevant_samples]
+            sample_ids = [s["sample_id"] for s in relevant_samples]
+            sampled_index = [
+                multimodal_dataset._id_to_idx[modality].get(s["sample_id"], None)
+                for s in relevant_samples
+            ]
+            if has_metadata:
+                class_labels:List[str] = [
+                    dataset.metadata.at[s["sample_id"], class_col]
+                    for s in relevant_samples
+                ]
+            else:
+                class_labels = [None] * len(relevant_samples)
 
-                    if sample_id in multimodal_dataset._id_to_idx[modality]:
-                        original_idx = multimodal_dataset._id_to_idx[modality][
-                            sample_id
-                        ]
-                        result[modality]["sampled_index"].append(original_idx)
-                    else:
-                        result[modality]["sampled_index"].append(None)
-
-                    cur_metadata = dataset.metadata.loc[sample_id]  # type: ignore
-
-                    result[modality]["metadata"].append(cur_metadata)
-
-            result[modality]["data"] = torch.stack(result[modality]["data"])
-            result[modality]["metadata"] = pd.concat(
-                result[modality]["metadata"], axis=1
-            ).T  # type: ignore
+            result[modality] = {
+                "data": torch.stack(data_list),
+                "sample_ids": sample_ids,
+                "sampled_index": sampled_index,
+                "class_labels": class_labels,  # List; convert to tensor if needed for loss
+            }
         return result
 
     return collate_fn

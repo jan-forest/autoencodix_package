@@ -130,16 +130,22 @@ class XModalLoss(BaseLoss):
         start = 0
 
         for mod_name, mod_data in batch.items():
-            metadata_df = mod_data.get("metadata")
-            if metadata_df is None:
+            sample_ids: Optional[List[str]] = mod_data.get("sample_ids")
+            mod_labels: Optional[List[str]] = mod_data.get("class_labels")
+            if not sample_ids or not mod_labels:
+                import warnings
+
+                warnings.warn(f"No metadata for modality {mod_name}")
                 continue
             self.sample_to_class_map.update(
-                metadata_df[self.config.class_param].to_dict()
+                {
+                    sample_id: mod_label
+                    for sample_id, mod_label in zip(sample_ids, mod_labels)
+                }
             )
             latents = modality_dynamics[mod_name]["mp"].latentspace  # (N_mod, D)
             n_mod = latents.shape[0]
 
-            mod_labels = metadata_df[self.config.class_param].tolist()
 
             if len(mod_labels) != n_mod:
                 raise ValueError(

@@ -35,7 +35,7 @@ You may use any model served by Mistral, for example:
 * `mistral-medium-latest`
 * `mistral-large-latest`
 
-Make sure the `model_name` you pass to `.expalain` matches an available Mistral model.
+Make sure the `model_name` you pass to `.explain` matches an available Mistral model.
 
 ---
 

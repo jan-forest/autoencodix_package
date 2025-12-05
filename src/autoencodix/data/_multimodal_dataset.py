@@ -440,7 +440,7 @@ def create_multimodal_collate_fn(multimodal_dataset: MultiModalDataset):
                 for s in relevant_samples
             ]
             if has_metadata:
-                class_labels:List[str] = [
+                class_labels: List[str] = [
                     dataset.metadata.at[s["sample_id"], class_col]
                     for s in relevant_samples
                 ]

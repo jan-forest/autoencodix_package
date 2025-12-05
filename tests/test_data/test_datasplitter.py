@@ -348,9 +348,9 @@ def test_split_consistency(data_package, config):
                         sample_splits.append(split_name)
                         break
         # All found splits should be the same
-        assert len(set(sample_splits)) == 1, (
-            f"Sample {sample} in different splits: {sample_splits}"
-        )
+        assert (
+            len(set(sample_splits)) == 1
+        ), f"Sample {sample} in different splits: {sample_splits}"
 
 
 def test_split_exclusivity(data_package, config):
@@ -372,9 +372,9 @@ def test_split_exclusivity(data_package, config):
             assert all_split_ids.isdisjoint(split_ids), f"Overlap in {mod} splits"
             all_split_ids.update(split_ids)
         # All samples covered
-        assert all_split_ids == set(data_package.multi_bulk[mod].index), (
-            f"Not all samples assigned in {mod}"
-        )
+        assert all_split_ids == set(
+            data_package.multi_bulk[mod].index
+        ), f"Not all samples assigned in {mod}"
 
 
 def test_split_ratios(data_package, config):

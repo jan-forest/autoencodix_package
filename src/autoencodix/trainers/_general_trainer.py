@@ -418,6 +418,7 @@ class GeneralTrainer(BaseTrainer):
             data,
             batch_size=self._config.batch_size,
             shuffle=False,
+            pin_memory=self._config.pin_memory,
         )
         self.n_test = len(data)
         self._init_buffers(input_data=data)

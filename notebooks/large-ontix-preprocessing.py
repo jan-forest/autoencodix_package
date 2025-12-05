@@ -21,8 +21,8 @@ tsv_files = glob.glob("./notebooks/llm_ontologies/*_level2.tsv")
 # Read only the first column (gene names) from each file and collect unique gene names
 gene_names = set()
 for file in tsv_files:
-	df = pd.read_csv(file, sep='\t', usecols=[0])
-	gene_names.update(df.iloc[:, 0].dropna().unique())
+    df = pd.read_csv(file, sep="\t", usecols=[0])
+    gene_names.update(df.iloc[:, 0].dropna().unique())
 
 print(f"Total unique gene names: {len(gene_names)}")
 
@@ -41,20 +41,21 @@ print(adata)
 
 from sklearn.model_selection import train_test_split  # type: ignore
 import numpy as np
+
 n_samples = adata.n_obs
 random_seed = 42  # For reproducibility
 valid_proportion = 0.5
-first_test_size = 0.01 
+first_test_size = 0.01
 
 train_idx, temp_idx = train_test_split(
-	np.arange(n_samples),
-	test_size=first_test_size,
-	random_state=random_seed,
+    np.arange(n_samples),
+    test_size=first_test_size,
+    random_state=random_seed,
 )
 val_idx, test_idx = train_test_split(
-	temp_idx,
-	test_size=(1 - valid_proportion),  # Remaining proportion goes to test
-	random_state=random_seed,
+    temp_idx,
+    test_size=(1 - valid_proportion),  # Remaining proportion goes to test
+    random_state=random_seed,
 )
 
 # Create split indicators as numpy arrays
@@ -83,47 +84,51 @@ scconfig = OntixConfig.model_validate(
 
 
 train_dataset = NumericDataset(
-	# data=torch.from_numpy(adata.X[train_idx].toarray()),
-	data=adata.X[train_idx],
-	config=scconfig,
-	sample_ids=adata.obs.index[train_idx],
-	metadata=adata.obs.loc[adata.obs.index[train_idx],:],
-	split_indices=train_split,
-	feature_ids=adata.var.index,
+    # data=torch.from_numpy(adata.X[train_idx].toarray()),
+    data=adata.X[train_idx],
+    config=scconfig,
+    sample_ids=adata.obs.index[train_idx],
+    metadata=adata.obs.loc[adata.obs.index[train_idx], :],
+    split_indices=train_split,
+    feature_ids=adata.var.index,
 )
 print("train ready")
 test_dataset = NumericDataset(
-	# data=torch.from_numpy(adata.X[test_idx].toarray()),
-	data=adata.X[test_idx],
-	config=scconfig,
-	sample_ids=adata.obs.index[test_idx],
-	metadata=adata.obs.loc[adata.obs.index[test_idx],:],
-	split_indices=test_split,
-	feature_ids=adata.var.index,
+    # data=torch.from_numpy(adata.X[test_idx].toarray()),
+    data=adata.X[test_idx],
+    config=scconfig,
+    sample_ids=adata.obs.index[test_idx],
+    metadata=adata.obs.loc[adata.obs.index[test_idx], :],
+    split_indices=test_split,
+    feature_ids=adata.var.index,
 )
 print("test ready")
 
 val_dataset = NumericDataset(
-	# data=torch.from_numpy(adata.X[val_idx].toarray()),
-	data=adata.X[val_idx],
-	config=scconfig,
-	sample_ids=adata.obs.index[val_idx],
-	metadata=adata.obs.loc[adata.obs.index[val_idx],:],
-	split_indices=val_split,
-	feature_ids=adata.var.index,
+    # data=torch.from_numpy(adata.X[val_idx].toarray()),
+    data=adata.X[val_idx],
+    config=scconfig,
+    sample_ids=adata.obs.index[val_idx],
+    metadata=adata.obs.loc[adata.obs.index[val_idx], :],
+    split_indices=val_split,
+    feature_ids=adata.var.index,
 )
 print("val ready")
 del adata  # Free up memory
 print("adata deleted")
-processed_data = DatasetContainer(train=train_dataset, valid=val_dataset, test=test_dataset)
+processed_data = DatasetContainer(
+    train=train_dataset, valid=val_dataset, test=test_dataset
+)
 print("DatasetContainer ready")
 del train_dataset, val_dataset, test_dataset  # Free up memory
 print("individual datasets deleted")
 ## Save the processed data as pickle file
 import pickle
+
 # with open("./notebooks/large_sc_data/census-processed-chatgpt.pkl", "wb") as f:
-with open("./notebooks/large_sc_data/census-finaltrain-processed-chatgpt.pkl", "wb") as f:
-	pickle.dump(processed_data, f)
+with open(
+    "./notebooks/large_sc_data/census-finaltrain-processed-chatgpt.pkl", "wb"
+) as f:
+    pickle.dump(processed_data, f)
 
 print("processed data saved")
-

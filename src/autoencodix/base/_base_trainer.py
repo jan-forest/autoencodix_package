@@ -97,12 +97,37 @@ class BaseTrainer(abc.ABC):
             lr=self._config.learning_rate,
             weight_decay=self._config.weight_decay,
         )
-
-        self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
         if old_model is None:
             self._trainloader = self._fabric.setup_dataloaders(self._trainloader)  # type: ignore
             if self._validloader is not None:
                 self._validloader = self._fabric.setup_dataloaders(self._validloader)  # type: ignore
+
+        if torch.__version__ >= "2.0" and old_model is None:  # dont compile twice
+            import copy
+
+            uncompiled_model = copy.deepcopy(self._model)
+            try:
+                self._model.to(self._fabric.device.type)
+                self._model = torch.compile(self._model)
+
+                input_size: List[int] = [self._config.batch_size]
+                input_dim = self._trainloader.dataset.get_input_dim()
+                if isinstance(input_dim, int):
+                    input_size.append(input_dim)
+                else:
+                    input_size.extend(input_dim)
+                dummy_input = torch.randn(
+                    input_size,
+                    device=self._fabric.device.type,
+                )
+                print(self._model)
+                _ = self._model(dummy_input)
+
+            except Exception as e:
+                self._model = uncompiled_model
+                warnings.warn(f"Could not compile model. Original error message: {e}")
+
+        self._model, self._optimizer = self._fabric.setup(self._model, self._optimizer)
 
     def _init_loaders(self):
         """Initializes the DataLoaders for training and validation datasets."""
@@ -124,6 +149,7 @@ class BaseTrainer(abc.ABC):
             shuffle=True,
             batch_size=corrected_bs,
             worker_init_fn=self._seed_worker,
+            pin_memory=self._config.pin_memory,
             # generator=g,
         )
         if self._validset:
@@ -144,6 +170,7 @@ class BaseTrainer(abc.ABC):
                 dataset=self._validset,
                 batch_size=self._config.batch_size,
                 shuffle=False,
+                pin_memory=self._config.pin_memory,
             )
         else:
             self._validloader = None  # type: ignore
@@ -224,9 +251,8 @@ class BaseTrainer(abc.ABC):
 
     def _should_checkpoint(self, epoch: int) -> bool:
         return (
-            (epoch + 1) % self._config.checkpoint_interval == 0
-            or epoch == self._config.epochs - 1
-        )
+            epoch + 1
+        ) % self._config.checkpoint_interval == 0 or epoch == self._config.epochs - 1
 
     @abc.abstractmethod
     def train(self, epochs_overwrite: Optional[int] = None) -> Result:

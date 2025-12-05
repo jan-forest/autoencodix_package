@@ -294,4 +294,3 @@ class ImageVAEArchitecture(BaseAutoencoder):
             latent_logvar=logvar,
             additional_info=None,
         )
-

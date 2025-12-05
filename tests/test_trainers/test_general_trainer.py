@@ -62,12 +62,12 @@ class TestGeneralTrainerIntegration:
     def test_result_not_overwritten(self, general_trainer, filled_result):
         before_preprocessed_data = filled_result.preprocessed_data
         result = general_trainer.train()
-        assert result.preprocessed_data is not None, (
-            "Preprocessed data should not overwrite."
-        )
-        assert result.preprocessed_data is before_preprocessed_data, (
-            "Preprocessed data should not overwrite."
-        )
+        assert (
+            result.preprocessed_data is not None
+        ), "Preprocessed data should not overwrite."
+        assert (
+            result.preprocessed_data is before_preprocessed_data
+        ), "Preprocessed data should not overwrite."
 
     @pytest.mark.parametrize("device", ["cpu", "cuda", "mps"])
     def test_reproducible(self, device, train_dataset, valid_dataset):
@@ -75,7 +75,7 @@ class TestGeneralTrainerIntegration:
         if not torch.cuda.is_available() and device == "cuda":
             pytest.skip("CUDA not available.")
         if torch.backends.mps.is_available and device == "mps":
-                # For MPS we cannot gurantee full reproducibility
+            # For MPS we cannot gurantee full reproducibility
             pytest.skip("MPS not available.")
         config = DefaultConfig(
             device=device, epochs=3, checkpoint_interval=1, reproducible=True
@@ -105,11 +105,11 @@ class TestGeneralTrainerIntegration:
         print(f"device: {device}")
         print("train_loss1, train_losses2")
         print(train_loss1, train_losses2)
-        assert np.array_equal(train_loss1, train_losses2), (
-            "Training should be reproducible."
-        )
+        assert np.array_equal(
+            train_loss1, train_losses2
+        ), "Training should be reproducible."
         print("reconstructed_data1, reconstructed_data2")
         print(reconstructed_data1, reconstructed_data2)
-        assert np.array_equal(reconstructed_data1, reconstructed_data2), (
-            "Reconstruction should be reproducible."
-        )
+        assert np.array_equal(
+            reconstructed_data1, reconstructed_data2
+        ), "Reconstruction should be reproducible."

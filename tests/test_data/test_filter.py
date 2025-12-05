@@ -43,7 +43,9 @@ def test_filter_methods(
 ):
     df = df_with_zero_variance if method == "NONZEROVAR" else sample_df
     data_info = DataInfo(filtering=method, scaling="NONE")
-    config = DefaultConfig(k_filter=k_filter, data_config=DataConfig(data_info={"df":data_info}))
+    config = DefaultConfig(
+        k_filter=k_filter, data_config=DataConfig(data_info={"df": data_info})
+    )
     config.data_config.data_info["df"].k_filter = k_filter
     dfilt = DataFilter(data_info, config=config)
     filtered_df, _ = dfilt.filter(df)

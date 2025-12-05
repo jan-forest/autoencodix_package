@@ -146,7 +146,6 @@ class XModalLoss(BaseLoss):
             latents = modality_dynamics[mod_name]["mp"].latentspace  # (N_mod, D)
             n_mod = latents.shape[0]
 
-
             if len(mod_labels) != n_mod:
                 raise ValueError(
                     f"Mismatch between number of latents ({n_mod}) and labels ({len(mod_labels)}) for modality {mod_name}"

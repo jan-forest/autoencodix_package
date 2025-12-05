@@ -86,7 +86,7 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
 
     filtering: Literal["VAR", "MAD", "CORR", "VARCORR", "NOFILT", "NONZEROVAR"] = Field(
         default="VAR"
-    )
+         )
     sep: Union[str, None] = Field(default=None)  # for pandas read_csv
     extra_anno_file: Union[str, None] = Field(default=None)
 
@@ -253,6 +253,9 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     )
     learning_rate: float = Field(
         default=0.001, gt=0, description="Learning rate for optimization"
+    )
+    pin_memory: bool = Field(
+        default=True, description="Pin memory for faster data transfer"
     )
     batch_size: int = Field(
         default=32,

@@ -144,30 +144,6 @@ class XModalTrainer(BaseTrainer):
                 dynamics["model"], dynamics["optim"]
             )
 
-    # def _init_loaders(self):
-    #     """Initializes DataLoaders for training and validation datasets."""
-    #     trainsampler = CoverageEnsuringSampler(
-    #         datasets=self._trainset, batch_size=self._config.batch_size
-    #     )
-    #     validsampler = CoverageEnsuringSampler(
-    #         datasets=self._validset, batch_size=self._config.batch_size
-    #     )
-    #     collate_fn = create_multimodal_collate_fn(datasets=self._trainset)
-    #     valid_collate_fn = create_multimodal_collate_fn(
-    #         datasets=self._validset
-    #     )
-    #     # drop_last handled in custom sampler
-    #     self._trainloader = DataLoader(
-    #         self._trainset,
-    #         batch_sampler=trainsampler,
-    #         collate_fn=collate_fn,
-    #     )
-    #     self._validloader = DataLoader(
-    #         self._validset,
-    #         batch_sampler=validsampler,
-    #         collate_fn=valid_collate_fn,
-    #     )
-
     def _init_loaders(self):
         """Initializes DataLoaders with smart sampler selection based on pairing."""
 
@@ -182,6 +158,7 @@ class XModalTrainer(BaseTrainer):
                     shuffle=is_train,
                     drop_last=is_train,
                     collate_fn=collate_fn,
+                    pin_memory=self._config.pin_memory,
                 )
             else:
                 print(
@@ -196,6 +173,7 @@ class XModalTrainer(BaseTrainer):
                     dataset,
                     batch_sampler=sampler,  # note: batch_sampler, not sampler
                     collate_fn=collate_fn,
+                    pin_memory=self._config.pin_memory,
                 )
 
         # Build train and validation loaders
@@ -475,7 +453,7 @@ class XModalTrainer(BaseTrainer):
                 continue
             model_type = self.model_map.get(mytype)
             pretrainer_type = self.model_trainer_map.get(model_type)
-            print(f"Starting Pretraining for: {mod_name} with {pretrainer_type}")
+            print(f"starting pretraining for: {mod_name} with {pretrainer_type}")
             trainset = self._trainset.datasets.get(mod_name)
             validset = self._validset.datasets.get(mod_name)
             pretrainer = pretrainer_type(

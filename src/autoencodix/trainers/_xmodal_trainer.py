@@ -1,4 +1,5 @@
 from collections import defaultdict
+from torch.profiler import profile, record_function, ProfilerActivity
 
 from lightning_fabric.wrappers import _FabricModule
 import gc
@@ -477,6 +478,8 @@ class XModalTrainer(BaseTrainer):
             self._cur_epoch = epoch
             self._is_checkpoint_epoch = self._should_checkpoint(epoch=epoch)
             self._fabric.print(f"--- Epoch {epoch + 1}/{self._config.epochs} ---")
+            if epoch ==0 and self._config.profiling:
+                self._train_one_epoch_with_profiling()
             train_epoch_dynamics, train_sub_losses, n_samples_train = (
                 self._train_one_epoch()
             )
@@ -663,18 +666,18 @@ class XModalTrainer(BaseTrainer):
 
             model_output = dynamics["mp"]
             captured_data["latentspaces"][mod_name] = (
-                model_output.latentspace.detach().cpu().numpy()
+                model_output.latentspace.detach()
             )
             captured_data["reconstructions"][mod_name] = (
-                model_output.reconstruction.detach().cpu().numpy()
+                model_output.reconstruction.detach()
             )
             if model_output.latent_mean is not None:
                 captured_data["mus"][mod_name] = (
-                    model_output.latent_mean.detach().cpu().numpy()
+                    model_output.latent_mean.detach()
                 )
             if model_output.latent_logvar is not None:
                 captured_data["sigmas"][mod_name] = (
-                    model_output.latent_logvar.detach().cpu().numpy()
+                    model_output.latent_logvar.detach()
                 )
 
         return captured_data
@@ -695,6 +698,8 @@ class XModalTrainer(BaseTrainer):
         for batch_data in epoch_dynamics:
             for dynamic_type, mod_data in batch_data.items():
                 for mod_name, data in mod_data.items():
+                    if isinstance(data,torch.Tensor):
+                        data=data.cpu().numpy()
                     final_data[dynamic_type][mod_name].append(data)
 
         sample_ids: Optional[Dict[str, np.ndarray]] = final_data.get("sample_ids")
@@ -859,3 +864,113 @@ class XModalTrainer(BaseTrainer):
             torch.cuda.empty_cache()
 
         gc.collect()
+
+
+    def _train_one_epoch_with_profiling(self) -> Tuple[List[Dict], Dict[str, float], int]:
+        """Training loop with torch.profiler integration."""
+        for dynamics in self._modality_dynamics.values():
+            dynamics["model"].train()
+        self._latent_clf.train()
+
+        self._clf_epoch_loss = 0
+        self._epoch_loss = 0
+        epoch_dynamics: List[Dict] = []
+        sub_losses: Dict[str, float] = defaultdict(float)
+        n_samples_total: int = 0
+
+        # Configure profiler
+        with profile(
+            activities=[
+                ProfilerActivity.CPU,
+                ProfilerActivity.CUDA,
+            ],
+            record_shapes=True,  # Record tensor shapes
+            profile_memory=True,  # Track memory usage
+            with_stack=True,     # Include stack traces
+            # Schedule: skip first 5 batches (warmup), profile next 5, repeat
+            schedule=torch.profiler.schedule(
+                wait=1,      # Skip first batch (warmup)
+                warmup=1,    # Warmup for 1 batch
+                active=3,    # Profile 3 batches
+                repeat=1     # Do this once
+            ),
+            on_trace_ready=torch.profiler.tensorboard_trace_handler('./profiler_logs'),
+        ) as prof:
+            train_iter = iter(self._trainloader)
+            for batch_idx, batch in enumerate(self._trainloader):
+                with record_function("dataloader"):
+                    batch = next(train_iter)
+                with record_function("total_batch"):
+                    with self._fabric.autocast():
+                        # --- Stage 1: Forward for each modality ---
+                        with record_function("modalities_forward"):
+                            self._modalities_forward(batch=batch)
+
+                        # --- Stage 2: Prepare adversarial training ---
+                        with record_function("prep_adver_training"):
+                            latents, labels = self._prep_adver_training()
+                            n_samples_total += latents.size(0)
+
+                        # --- Stage 3: Train Classifier ---
+                        with record_function("train_classifier"):
+                            self._train_clf(latents=latents, labels=labels)
+
+                        # --- Stage 4: Train Autoencoders ---
+                        with record_function("train_autoencoders"):
+                            for _, dynamics in self._modality_dynamics.items():
+                                dynamics["optim"].zero_grad()
+
+                            clf_scores_for_adv = self._latent_clf(latents)
+
+                            batch_loss, loss_dict = self._loss_fn(
+                                batch=batch,
+                                modality_dynamics=self._modality_dynamics,
+                                clf_scores=clf_scores_for_adv,
+                                labels=labels,
+                                clf_loss_fn=self._clf_loss_fn,
+                                is_training=True,
+                            )
+                    
+                    with record_function("backward_pass"):
+                        self._fabric.backward(batch_loss)
+                    
+                    with record_function("optimizer_step"):
+                        for _, dynamics in self._modality_dynamics.items():
+                            dynamics["optim"].step()
+
+                    # --- Logging and Capturing ---
+                    self._epoch_loss += batch_loss.item()
+                    for k, v in loss_dict.items():
+                        value_to_add = v.item() if hasattr(v, "item") else v
+                        if "_factor" not in k:
+                            sub_losses[k] += value_to_add
+                        else:
+                            sub_losses[k] = value_to_add
+
+                    if self._is_checkpoint_epoch:
+                        with record_function("capture_dynamics"):
+                            batch_capture = self._capture_dynamics(batch)
+                            epoch_dynamics.append(batch_capture)
+                
+                # Step the profiler
+                prof.step()
+                
+                # Stop profiling after a few batches to avoid huge logs
+                if batch_idx >= 5:
+                    break
+            # Print summary to console
+        print("\n" + "="*80)
+        print("PROFILER SUMMARY - Top Operations by CPU Time")
+        print("="*80)
+        print(prof.key_averages().table(
+            sort_by="cpu_time_total", 
+            row_limit=20
+        ))
+        
+        print("\n" + "="*80)
+        print("PROFILER SUMMARY - Top Operations by CUDA Time")
+        print("="*80)
+        print(prof.key_averages().table(
+            sort_by="cuda_time_total", 
+            row_limit=20
+        ))

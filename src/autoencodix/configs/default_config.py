@@ -400,6 +400,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=False, description="Whether to ensure reproducibility"
     )
     global_seed: int = Field(default=1, ge=0, description="Global random seed")
+    profiling: bool = Field(default=False, description="Internal Only: if set to true runs torch.profiler on xmodalix trainer")
 
     ##### VALIDATION ##### -----------------------------------------------------
     ##### ----------------- -----------------------------------------------------

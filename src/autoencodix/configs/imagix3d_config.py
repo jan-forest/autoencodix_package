@@ -25,6 +25,7 @@ class Imagix3DConfig(DefaultConfig):
         "pad_to_multiple",
         "crop_to_multiple",
         "crop_or_pad_to_shape",
+        "crop_or_pad_to_multiple",
     ] = Field(
         default="pad_to_multiple",
         description="Policy for making input volumes spatially compatible with the 3D CNN."
@@ -64,6 +65,45 @@ class Imagix3DConfig(DefaultConfig):
             raise ValueError(
                 f"'target_multiple' ({self.target_multiple}) must be divisible by 2^{self.n_conv_layers_3d}"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def check_target_shape_3d(self) -> "Imagix3DConfig":
+        """
+        Ensures that the fixed 3D target image dimensions (if provided) are compatible with the number of CNN layers.
+        """
+        if self.target_shape_3d is not None:
+            if not all(x % 2 ** self.n_conv_layers_3d == 0 for x in self.target_shape_3d):
+                raise ValueError(
+                    f"All dimensions in 'target_shape_3d' ({self.target_shape_3d}) must be divisible by 2^{self.n_conv_layers_3d}"
+                )
+            if len(self.target_shape_3d) != 3:
+                raise ValueError(
+                    "'target_shape_3d' must receive exactly 3 integer values."
+                    f"You have only provided {len(self.target_shape_3d)}"
+                )
+        return self
+    
+    @model_validator(mode="after")
+    def validate_spatial_shape_settings(self):
+        if self.spatial_shape_policy in {
+            "pad_to_multiple", 
+            "crop_to_multiple",
+            "crop_or_pad_to_multiple"
+        }: 
+            if self.target_shape_3d is not None:
+                raise ValueError(
+                "'target_shape_3d' must be None when spatial_shape_policy is "
+                "'pad_to_multiple' or 'crop_to_multiple'."
+            )
+
+        if self.spatial_shape_policy == "crop_or_pad_to_shape":
+            if self.target_shape_3d is None:
+                raise ValueError(
+                    "'target_shape_3d' must be provided when spatial_shape_policy "
+                    "is 'crop_or_pad_to_shape'."
+                )
+
         return self
 
     # TODO (maybe): find more sensible defaults for IMagix3DConfig

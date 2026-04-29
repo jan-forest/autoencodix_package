@@ -3,7 +3,7 @@ import re
 import json
 import ollama
 from dotenv import find_dotenv, load_dotenv
-from mistralai import Mistral
+from mistralai.client import Mistral
 from typing import List, Dict, Any
 
 

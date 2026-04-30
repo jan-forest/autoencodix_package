@@ -337,7 +337,9 @@ class VolumeNormalizer:
 
     @staticmethod
     def normalize_volume(
-        image: np.ndarray, method: Literal["STANDARD", "MINMAX", "ROBUST", "NONE"]
+        image: np.ndarray, 
+        method: Literal["STANDARD", "MINMAX", "ROBUST", "NONE"],
+        normalize_nonzero_only: bool
     ) -> np.ndarray:
         """Performs 3D Image (Volume) Normalization.
 
@@ -350,6 +352,9 @@ class VolumeNormalizer:
         Args:
             image: input image as array.
             method: indicator string of which method to use
+            normalize_nonzero_only: if True, compute normalization statistics
+                only on nonzero voxels and leave zero voxels unchanged.
+            
         Returns:
             The normalized images as np.ndarray
         Raises:
@@ -359,9 +364,45 @@ class VolumeNormalizer:
             if method == "NONE":
                 return image
             
-            image = image.astype(np.float32)
+            image = image.astype(np.float32, copy=True)
             eps = np.finfo(np.float32).eps # machine epsilon for that data type
-           
+            
+            # Only non-zero voxels will get scaled
+            if normalize_nonzero_only:
+                for c in range(image.shape[0]): # relevant in case there is more than 1 channel
+                    channel = image[c]
+                    mask = channel != 0
+
+                    # no nonzero voxels -> leave channel unchanged
+                    if not np.any(mask):
+                        continue
+
+                    vals = channel[mask]
+
+                    if method == "MINMAX":
+                        vmin = np.min(vals)
+                        vmax = np.max(vals)
+                        channel[mask] = (vals - vmin) / ((vmax - vmin) + eps)
+
+                    elif method == "STANDARD":
+                        mean = np.mean(vals)
+                        std = np.std(vals)
+                        channel[mask] = (vals - mean) / (std + eps)
+
+                    elif method == "ROBUST":
+                        median = np.median(vals)
+                        q75, q25 = np.percentile(vals, [75, 25])
+                        iqr = q75 - q25
+                        channel[mask] = (vals - median) / (iqr + eps)
+                    
+                    else:
+                        raise ValueError(f"Unsupported normalization method: {method}")
+                    
+                    image[c] = channel
+                    
+                return image
+            
+            # Scaling is applied to all voxels (zero-value voxels included)   
             if method == "MINMAX":
                 minimum = np.min(image, axis=(1, 2, 3), keepdims=True)
                 maximum = np.max(image, axis=(1, 2, 3), keepdims=True)

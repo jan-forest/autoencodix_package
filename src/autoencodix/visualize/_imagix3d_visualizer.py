@@ -82,7 +82,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
             all_slices = orig_slices + recon_slices
 
             for r in range(6):
-                axes[r, c].imshow(all_slices[r], cmap="gray")
+                axes[r, c].imshow(all_slices[r], cmap="gray", origin="lower")
                 axes[r, c].axis("off")
 
                 # title only on top row
@@ -91,7 +91,16 @@ class Imagix3DVisualizer(ImagixVisualizer):
 
                 # row label only on first column
                 if c == 0:
-                    axes[r, c].set_ylabel(row_labels[r], rotation=0, labelpad=40, va="center")
+                    #axes[r, c].set_ylabel(row_labels[r], rotation=0, labelpad=40, va="center")
+                    axes[r, c].annotate(
+                        row_labels[r],
+                        xy=(-0.15, 0.5),
+                        xycoords="axes fraction",
+                        va="center",
+                        ha="right",
+                        fontsize=11,
+                        rotation=0,
+                    )
 
         self.plots["Image_recon_grid"] = fig
         # show_figure(fig)

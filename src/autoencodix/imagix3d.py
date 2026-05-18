@@ -23,7 +23,7 @@ from autoencodix.visualize._imagix3d_visualizer import Imagix3DVisualizer
 
 
 class Imagix3D(BasePipeline):
-    """Imagix specific version of the BasePipeline class.
+    """Imagix3D specific version of the BasePipeline class.
 
     This class extends BasePipeline. See the parent class for a full list
     of attributes and methods.

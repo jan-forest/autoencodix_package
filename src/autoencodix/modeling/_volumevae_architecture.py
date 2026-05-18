@@ -7,24 +7,35 @@ from autoencodix.base._base_autoencoder import BaseAutoencoder
 
 
 class VolumeVAEArchitecture(BaseAutoencoder):
-    ## TODO rework the docstring
-    """This class defines a VAE, based on a CNN for images
+    ## TODO consider alternative architectures for the 3D case
+    """This class defines a VAE, based on a CNN for three-dimensional images
 
     It takes as input a 3D image of shape (C, D, H, W) and reconstructs it.
     We ensure to have a latent space of shape <batchsize,1,LatentDim> and img_in.shape = img_out.shape
     We have a fixed kernel_size=4, padding=1 and stride=2 (given from https://github.com/uhlerlab/cross-modal-auto_encoders/tree/master)
 
-    So we need to calculate how the image dimension changes after each Convolution (we assume W=H)
-    Applying the formular:
-        W_out = (((W - kernel_size + 2 padding)/stride) + 1)
-    We get:
-        W_out = (((W-4+2*1)/2)+1) =
-        = (W-2/2)+1 =
-        = (2(0.5W-1)/2) +1 # factor 2 out
-        = 0.5W - 1 + 1
-        W_out = 0.5W
-    So in this configuration the output shape halfs after every convolutional step (assuming W=H)
+    We need to calculate how the volume dimensions change after each 3D convolution.
+    In the 3D case, depth (D), height (H), and width (W) are treated separately,
+    because they do not have to be equal.
 
+    For a Conv3d layer, the output size along each spatial axis is:
+        X_out = (((X_in - kernel_size + 2 * padding) / stride) + 1)
+    where X can be D, H, or W.
+
+    Thus, for each axis:
+        X_out = ((X - 4 + 2 * 1) / 2) + 1
+              = ((X - 2) / 2) + 1
+              = X / 2
+
+    So in this configuration, each convolutional step halves every spatial dimension independently.
+    
+    Example:
+        input shape:  (D, H, W) = (64, 96, 32)
+        after 1 conv: (32, 48, 16)
+        after 2 conv: (16, 24,  8)
+        after 3 conv: ( 8, 12,  4)
+        after 4 conv: ( 4,  6,  2)
+        after 5 conv: ( 2,  3,  1)
 
     Attributes:
         input_dim: (C, D, H, W) the input image shape
@@ -33,6 +44,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         _decoder: Decoder network of the autoencoder
         latent_dim: Dimension of the latent space
         nc: number of channels in the input image
+        d: depth of the input image
         h: height of the input image
         w: width of the input image
         img_shape: (C, D, H, W), the input image shape
@@ -47,7 +59,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         feature_order: Optional[Union[Tuple, Dict]] = None,
         # the input_dim is the number of channels in the image, e.g. 4
     ):
-        """Initialize the ImageVAEArchitecture with the given configuration.
+        """Initialize the VolumeVAEArchitecture with the given configuration.
 
         Args:
             input_dim: (C, D, H, W) the input image shape
@@ -140,12 +152,16 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         self.reduced_h = self.h // (2**self.num__encoder_layers)
         self.reduced_w = self.w // (2**self.num__encoder_layers)
         
-        # In the Linear mu and logvar layer we need to flatten the 3D output to a 2D matrix
-        # Therefore we need to multiply the size of every out diemension of the input layer to the Linear layers
-        # This is hidden_dim * 8 (the number of filter/channel layer) * spatial dim (the widht of the image) * spatial diem (the height of the image)
-        # assuimg width = height
-        # The original paper had a fixed spatial dimension of 2, which only worked for images with 64x64 shape
-        
+        # The encoder output is a 5D tensor of shape:
+        #   (batch_size, hidden_dim * 8, reduced_d, reduced_h, reduced_w)
+        #
+        # The subsequent mu and logvar layers are linear layers, so this encoder output
+        # must first be flattened per sample into a 2D tensor of shape:
+        #   (batch_size, hidden_dim * 8 * reduced_d * reduced_h * reduced_w)
+        #
+        # Therefore, the input size of the linear mu and logvar layers is:
+        #   hidden_dim * 8 * reduced_d * reduced_h * reduced_w
+          
         self.mu = nn.Linear(
             self.hidden_dim * 8 * self.reduced_d * self.reduced_h * self.reduced_w, self.latent_dim
         )
@@ -153,10 +169,14 @@ class VolumeVAEArchitecture(BaseAutoencoder):
             self.hidden_dim * 8 * self.reduced_d * self.reduced_h * self.reduced_w, self.latent_dim
         )
 
-        # the same logic goes for the first _decoder layer, which takes the latent_dim as inshape
-        # which is the outshape of the previous mu/logvar layer
-        # and the shape of the first ConvTranspose2D layer is the last outpus shape of the _encoder layer
-        # This the same multiplication as above
+        # The same logic applies at the start of the decoder:
+        # the latent vector of size latent_dim is first mapped back to
+        #     hidden_dim * 8 * reduced_d * reduced_h * reduced_w
+        # via a Linear layer.
+        #
+        # This reshaped tensor corresponds to the final spatial output shape of the encoder
+        # and serves as the input to the first ConvTranspose3d layer.
+        
         self.d1 = nn.Sequential(
             nn.Linear(
                 self.latent_dim,
@@ -229,13 +249,12 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         """
         h = self._encoder(x) # type: ignore
         # this makes sure we get the <batchsize, 1, latent_dim> shape for our latent space in the next step
-        # because we put all dimensionaltiy in the second dimension of the output shape.
+        # because we put all dimensionality in the second dimension of the output shape.
         # By covering all dimensionality here, we are sure that the rest is
         h = h.view(-1, self.hidden_dim * 8 * self.reduced_d * self.reduced_h * self.reduced_w)
         logvar = self.logvar(h)
         mu = self.mu(h)
-        # prevent  mu and logvar from being too close to zero, this increased
-        # numerical stability
+        # prevent  mu and logvar from being too close to zero, this increases numerical stability
         logvar = torch.clamp(logvar, 0.1, 20)
         # replace mu when mu < 0.00000001 with 0.1
         mu = torch.where(mu < 0.000001, torch.zeros_like(mu), mu)
@@ -248,7 +267,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
              mu: mean of the latent distribution
              logvar: log-variance of the latent distribution
         Returns:
-                z: sampled latent vector
+             z: sampled latent vector
         """
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
@@ -277,7 +296,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         # here we do a similar thing as in the _encoder,
         # but instead of ensuring the correct dimension for the latent space,
         # we ensure the correct dimension for the first Conv3DTranspose layer
-        # so we make sure that the last 4 dimension are (n_filters, reduced_img_dim, reduced_img_dim)
+        # so we make sure that the last 4 dimensions are (n_filters, reduced_d, reduced_h, reduced_w)
         h = h.view(-1, self.hidden_dim * 8, self.reduced_d, self.reduced_h, self.reduced_w)
         return self._decoder(h) # type: ignore
 

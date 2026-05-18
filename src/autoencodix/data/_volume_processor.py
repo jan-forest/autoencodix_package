@@ -8,8 +8,7 @@ from autoencodix.configs import DataCase, Imagix3DConfig
 
 class VolumePreprocessor(ImagePreprocessor):
     """
-    Preprocessor for cross-modal data, handling multiple data types and their transformations.
-
+    Preprocessor for 3D image data
 
     Attributes:
         data_config: Configuration specific to data handling and preprocessing.
@@ -20,7 +19,9 @@ class VolumePreprocessor(ImagePreprocessor):
     """
 
     def __init__(
-        self, config: Imagix3DConfig, ontologies: Optional[Union[Tuple, Dict]] = None
+        self, 
+        config: Imagix3DConfig, 
+        ontologies: Optional[Union[Tuple, Dict]] = None
     ):
         super().__init__(config=config, ontologies=ontologies)
         self.data_config = config.data_config

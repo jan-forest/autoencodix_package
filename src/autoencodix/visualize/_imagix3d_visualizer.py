@@ -1,7 +1,6 @@
-
 import matplotlib.pyplot as plt
-
 from typing import no_type_check
+
 from autoencodix.visualize._imagix_visualizer import ImagixVisualizer
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.utils._result import Result
@@ -64,6 +63,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
             # reconstructed volume
             recon = recons[idx].squeeze()
 
+            # index for the middle slice of every dimension
             d_mid, h_mid, w_mid = [s // 2 for s in orig.shape]
                                
             # extract slices
@@ -91,7 +91,6 @@ class Imagix3DVisualizer(ImagixVisualizer):
 
                 # row label only on first column
                 if c == 0:
-                    #axes[r, c].set_ylabel(row_labels[r], rotation=0, labelpad=40, va="center")
                     axes[r, c].annotate(
                         row_labels[r],
                         xy=(-0.15, 0.5),
@@ -103,5 +102,6 @@ class Imagix3DVisualizer(ImagixVisualizer):
                     )
 
         self.plots["Image_recon_grid"] = fig
+        
         # show_figure(fig)
         plt.show()

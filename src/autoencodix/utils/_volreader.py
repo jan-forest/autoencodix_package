@@ -1,10 +1,11 @@
 import os
-from pathlib import Path
-from typing import List, Literal, Union, Dict, Tuple
-
 import numpy as np
 import pandas as pd
 import torchio as tio
+from pathlib import Path
+from typing import no_type_check
+from typing import List, Literal, Union, Dict, Tuple
+
 from autoencodix.configs import Imagix3DConfig, DataInfo
 from autoencodix.data._imgdataclass import ImgData
 
@@ -17,18 +18,16 @@ class ImageProcessingError(Exception):
 class VolumeSizeFinder:
     """Finds 3D image dimensions that are dividable by 2^number_of_layers
 
-    Nearest quadratic image size is based on the given image size in the config file.
-
     Attributes:
      config: Configuration object
-     dim_to_multiple: The size by which the side of a dimension must be a multiple
+     dim_to_multiple: The size by which a dimension must be a multiple of
      vol_shape: the exact spatial dimensions that the 3D image should have
      shape_policy: how to pad and/or crop 3D images
 
     """
 
     def __init__(self, config: Imagix3DConfig, dims: Tuple[int, int, int]):
-        """Inits the ImageSizeFinder
+        """Inits the VolumeSizeFinder
 
         Args:
             config: Configuration object.
@@ -47,57 +46,53 @@ class VolumeSizeFinder:
         
         self.n_conv_layers = config.n_conv_layers_3d
 
-
-    def get_volume_image_dimensions(self) -> Tuple[int, int, int]: 
-        """Finds nearest quadratic image size that is dividable by 2^number_of_layers
-
-        Nearest quadratic image size is based on the given image size in the config file.
+    @no_type_check
+    def get_volume_dimensions(self) -> Tuple[int, int, int]: 
+        """Finds 3D image dimensions that are dividable by 2^number_of_layers
 
         Returns:
-            Tuple of ints width and height with widht=height.
-        Raies:
-            ValueError: if not allowed image size can be found.
+            Tuple of ints of width, height and depth of a 3D image (volume).
         """
        
         mult = self.dim_to_multiple
-        dist2target_1 = (self.dim_1 % mult) #type: ignore
-        dist2target_2 = (self.dim_2 % mult) #type: ignore
-        dist2target_3 = (self.dim_3 % mult) #type: ignore
+        dist2target_1 = (self.dim_1 % mult)
+        dist2target_2 = (self.dim_2 % mult)
+        dist2target_3 = (self.dim_3 % mult)
         
         if self.shape_policy == "pad_to_multiple":
-            self.dim_1 += (mult - dist2target_1) % mult #type: ignore
-            self.dim_2 += (mult - dist2target_2) % mult #type: ignore
-            self.dim_3 += (mult - dist2target_3) % mult #type: ignore
+            self.dim_1 += (mult - dist2target_1) % mult
+            self.dim_2 += (mult - dist2target_2) % mult
+            self.dim_3 += (mult - dist2target_3) % mult
             
         elif self.shape_policy == "crop_to_multiple":
-            self.dim_1 -= dist2target_1 #type: ignore
-            self.dim_2 -= dist2target_2 #type: ignore
-            self.dim_3 -= dist2target_3 #type: ignore
+            self.dim_1 -= dist2target_1
+            self.dim_2 -= dist2target_2
+            self.dim_3 -= dist2target_3
         
         elif self.shape_policy == "crop_or_pad_to_multiple":
-            if mult - dist2target_1 < dist2target_1: #type: ignore
-                self.dim_1 += mult - dist2target_1 #type: ignore
+            if mult - dist2target_1 < dist2target_1:
+                self.dim_1 += mult - dist2target_1
             else:
-                self.dim_1 -= dist2target_1 #type: ignore
+                self.dim_1 -= dist2target_1
                 
-            if mult - dist2target_2 < dist2target_2: #type: ignore
-                self.dim_2 += mult - dist2target_2 #type: ignore
+            if mult - dist2target_2 < dist2target_2:
+                self.dim_2 += mult - dist2target_2
             else:
-                self.dim_2 -= dist2target_2 #type: ignore
+                self.dim_2 -= dist2target_2
                 
-            if mult - dist2target_3 < dist2target_3: #type: ignore
-                self.dim_3 += mult - dist2target_3 #type: ignore
+            if mult - dist2target_3 < dist2target_3:
+                self.dim_3 += mult - dist2target_3
             else:
-                self.dim_3 -= dist2target_3 #type: ignore
+                self.dim_3 -= dist2target_3
         
         elif self.shape_policy == "crop_or_pad_to_shape":
-            self.dim_1, self.dim_2, self.dim_3 = self.vol_shape #type: ignore
+            self.dim_1, self.dim_2, self.dim_3 = self.vol_shape
 
         return self.dim_1, self.dim_2, self.dim_3
 
 
 class VolumeDataReader:
-    """Reads and processes image data.
+    """Reads and processes 3D image data.
 
     Reads all 3D images (volumes) from the specified directory, processes them,
     and returns a list of ImgData objects.
@@ -124,11 +119,12 @@ class VolumeDataReader:
             and path.name.lower().endswith(SUPPORTED_EXTENSIONS)
         )
 
-    def parse_image_to_array( # parse_image_to_tensor
+    def parse_image_to_array(
         self,
         image_path: Union[str, Path]
     ) -> np.ndarray:
-        """Reads an image from the given path, optionally crops or pads it, and converts it to a numpy array.
+        """Reads a 3D image from the given path, optionally crops or pads it, 
+           and converts it to a numpy array.
 
         Args:
             image_path: The path to the image file.
@@ -164,7 +160,7 @@ class VolumeDataReader:
             dims = tuple(tensor.shape[1:])  # spatial dims only
             
             img_size_finder: VolumeSizeFinder = VolumeSizeFinder(self.config, dims) #type: ignore
-            to_d1, to_d2, to_d3 = img_size_finder.get_volume_image_dimensions()
+            to_d1, to_d2, to_d3 = img_size_finder.get_volume_dimensions()
             padding_mode = self.config.padding_mode_3d
             
             image = tio.transforms.CropOrPad((to_d1, to_d2, to_d3), padding_mode=padding_mode)(image)
@@ -256,7 +252,7 @@ class VolumeDataReader:
     def read_data(
         self, config: Imagix3DConfig
     ) -> Tuple[Dict[str, List[ImgData]], Dict[str, pd.DataFrame]]:
-        """Read image data from the specified directory based on configuration.
+        """Read 3D image data from the specified directory based on configuration.
 
         Args:
             config: The configuration object containing the data configuration.
@@ -351,7 +347,7 @@ class VolumeNormalizer:
 
         Args:
             image: input image as array.
-            method: indicator string of which method to use
+            method: indicator string of which method to use.
             normalize_nonzero_only: if True, compute normalization statistics
                 only on nonzero voxels and leave zero voxels unchanged.
             

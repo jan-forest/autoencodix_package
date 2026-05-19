@@ -53,7 +53,7 @@ class Imagix3DConfig(DefaultConfig):
     
     volume_scaling_strategy: Literal["per_volume", "train_global"] = Field(
         default = "per_volume",
-        description="Whether volumes are scaled individually, or on train/valid/test - set level")
+        description="Whether volumes are scaled individually, or on train/valid/test - set level.")
     
     ## Validation
     @model_validator(mode="after")

@@ -15,6 +15,7 @@ from ._image_dataset import ImageDataset
 from ._multimodal_dataset import MultiModalDataset
 from ._image_processor import ImagePreprocessor
 from ._sampler import BalancedBatchSampler
+from ._global_vol_norm import GlobalVolumeNormalizer
 
 
 __all__ = [
@@ -36,4 +37,5 @@ __all__ = [
     "MultiModalDataset",
     "ImagePreprocessor",
     "BalancedBatchSampler",
+    "GlobalVolumeNormalizer",
 ]

@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -616,6 +616,17 @@
     <span class="md-ellipsis">
       
         evaluate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#autoencodix.base.BasePipeline.explain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        explain
       
     </span>
   </a>
@@ -1543,6 +1554,17 @@
     <span class="md-ellipsis">
       
         evaluate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#autoencodix.base.BasePipeline.explain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        explain
       
     </span>
   </a>
@@ -3062,7 +3084,7 @@ method, or the reparameterization method for VAE.</p>
                 <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">&quot;List data is not of type ImgData, cannot determine input dimension.&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;List data is not of type ImgData, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">}</span><span class="s2">, cannot determine input dimension.&quot;</span>
                 <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unsupported data type for input dimension retrieval.&quot;</span><span class="p">)</span>
@@ -3410,7 +3432,7 @@ method, or the reparameterization method for VAE.</p>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;List data is not of type ImgData, cannot determine input dimension.&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;List data is not of type ImgData, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">}</span><span class="s2">, cannot determine input dimension.&quot;</span>
             <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unsupported data type for input dimension retrieval.&quot;</span><span class="p">)</span>
@@ -5659,8 +5681,7 @@ First item in list or tuple will be treated as first layer (after latent space) 
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/autoencodix/base/_base_pipeline.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">  37</span>
-<span class="normal">  38</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">  38</span>
 <span class="normal">  39</span>
 <span class="normal">  40</span>
 <span class="normal">  41</span>
@@ -6869,7 +6890,115 @@ First item in list or tuple will be treated as first layer (after latent space) 
 <span class="normal">1244</span>
 <span class="normal">1245</span>
 <span class="normal">1246</span>
-<span class="normal">1247</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BasePipeline</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
+<span class="normal">1247</span>
+<span class="normal">1248</span>
+<span class="normal">1249</span>
+<span class="normal">1250</span>
+<span class="normal">1251</span>
+<span class="normal">1252</span>
+<span class="normal">1253</span>
+<span class="normal">1254</span>
+<span class="normal">1255</span>
+<span class="normal">1256</span>
+<span class="normal">1257</span>
+<span class="normal">1258</span>
+<span class="normal">1259</span>
+<span class="normal">1260</span>
+<span class="normal">1261</span>
+<span class="normal">1262</span>
+<span class="normal">1263</span>
+<span class="normal">1264</span>
+<span class="normal">1265</span>
+<span class="normal">1266</span>
+<span class="normal">1267</span>
+<span class="normal">1268</span>
+<span class="normal">1269</span>
+<span class="normal">1270</span>
+<span class="normal">1271</span>
+<span class="normal">1272</span>
+<span class="normal">1273</span>
+<span class="normal">1274</span>
+<span class="normal">1275</span>
+<span class="normal">1276</span>
+<span class="normal">1277</span>
+<span class="normal">1278</span>
+<span class="normal">1279</span>
+<span class="normal">1280</span>
+<span class="normal">1281</span>
+<span class="normal">1282</span>
+<span class="normal">1283</span>
+<span class="normal">1284</span>
+<span class="normal">1285</span>
+<span class="normal">1286</span>
+<span class="normal">1287</span>
+<span class="normal">1288</span>
+<span class="normal">1289</span>
+<span class="normal">1290</span>
+<span class="normal">1291</span>
+<span class="normal">1292</span>
+<span class="normal">1293</span>
+<span class="normal">1294</span>
+<span class="normal">1295</span>
+<span class="normal">1296</span>
+<span class="normal">1297</span>
+<span class="normal">1298</span>
+<span class="normal">1299</span>
+<span class="normal">1300</span>
+<span class="normal">1301</span>
+<span class="normal">1302</span>
+<span class="normal">1303</span>
+<span class="normal">1304</span>
+<span class="normal">1305</span>
+<span class="normal">1306</span>
+<span class="normal">1307</span>
+<span class="normal">1308</span>
+<span class="normal">1309</span>
+<span class="normal">1310</span>
+<span class="normal">1311</span>
+<span class="normal">1312</span>
+<span class="normal">1313</span>
+<span class="normal">1314</span>
+<span class="normal">1315</span>
+<span class="normal">1316</span>
+<span class="normal">1317</span>
+<span class="normal">1318</span>
+<span class="normal">1319</span>
+<span class="normal">1320</span>
+<span class="normal">1321</span>
+<span class="normal">1322</span>
+<span class="normal">1323</span>
+<span class="normal">1324</span>
+<span class="normal">1325</span>
+<span class="normal">1326</span>
+<span class="normal">1327</span>
+<span class="normal">1328</span>
+<span class="normal">1329</span>
+<span class="normal">1330</span>
+<span class="normal">1331</span>
+<span class="normal">1332</span>
+<span class="normal">1333</span>
+<span class="normal">1334</span>
+<span class="normal">1335</span>
+<span class="normal">1336</span>
+<span class="normal">1337</span>
+<span class="normal">1338</span>
+<span class="normal">1339</span>
+<span class="normal">1340</span>
+<span class="normal">1341</span>
+<span class="normal">1342</span>
+<span class="normal">1343</span>
+<span class="normal">1344</span>
+<span class="normal">1345</span>
+<span class="normal">1346</span>
+<span class="normal">1347</span>
+<span class="normal">1348</span>
+<span class="normal">1349</span>
+<span class="normal">1350</span>
+<span class="normal">1351</span>
+<span class="normal">1352</span>
+<span class="normal">1353</span>
+<span class="normal">1354</span>
+<span class="normal">1355</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BasePipeline</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Provides a standardized interface for building model pipelines.</span>
 
 <span class="sd">    Implements methods for preprocessing data, training models, making predictions,</span>
@@ -6909,8 +7038,8 @@ First item in list or tuple will be treated as first layer (after latent space) 
         <span class="n">data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
             <span class="n">Union</span><span class="p">[</span><span class="n">DataPackage</span><span class="p">,</span> <span class="n">DatasetContainer</span><span class="p">,</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span> <span class="n">MuData</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span>  <span class="c1"># type: ignore[invalid-type-form]</span>
         <span class="p">],</span>
-        <span class="n">visualizer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">BaseVisualizer</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">evaluator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">BaseEvaluator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">visualizer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="n">BaseVisualizer</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">evaluator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="n">BaseEvaluator</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">result</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Result</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DefaultConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">custom_split</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -6940,20 +7069,18 @@ First item in list or tuple will be treated as first layer (after latent space) 
 <span class="sd">            TypeError: If inputs have incorrect types.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_default_config&quot;</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<span class="w">                </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">                            The _default_config attribute has not been specified in your pipeline class.</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                            The _default_config attribute has not been specified in your pipeline class.</span>
 
-<span class="sd">                            Example:</span>
-<span class="sd">                            self._default_config = XModalixConfig()</span>
+<span class="s2">                            Example:</span>
+<span class="s2">                            self._default_config = XModalixConfig()</span>
 
-<span class="sd">                            This error typically occurs when a new architecture is added without setting the</span>
-<span class="sd">                            _default_config in its corresponding pipeline class.</span>
+<span class="s2">                            This error typically occurs when a new architecture is added without setting the</span>
+<span class="s2">                            _default_config in its corresponding pipeline class.</span>
 
-<span class="sd">                            For more details, please refer to the &#39;how to add a new architecture&#39; section in our documentation.</span>
-<span class="sd">                            &quot;&quot;&quot;</span>
-            <span class="p">)</span>
-
+<span class="s2">                            For more details, please refer to the &#39;how to add a new architecture&#39; section in our documentation.</span>
+<span class="s2">                            &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_map</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model_map&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_validate_config</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_validate_user_input</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">masking_fn</span> <span class="o">=</span> <span class="n">masking_fn</span>
@@ -7314,6 +7441,7 @@ First item in list or tuple will be treated as first layer (after latent space) 
             <span class="n">masking_fn_kwargs</span><span class="o">=</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">masking_fn_kwargs</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;masking_fn_kwargs&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
             <span class="p">),</span>
+            <span class="n">model_map</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model_map</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="n">trainer_result</span><span class="p">:</span> <span class="n">Result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
@@ -7727,10 +7855,15 @@ First item in list or tuple will be treated as first layer (after latent space) 
         <span class="n">metric_class</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;roc_auc_ovo&quot;</span><span class="p">,</span>  <span class="c1"># Default is &#39;roc_auc_ovo&#39; via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names</span>
         <span class="n">metric_regression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;r2&quot;</span><span class="p">,</span>  <span class="c1"># Default is &#39;r2&#39;</span>
         <span class="n">reference_methods</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[],</span>  <span class="c1"># Default [], Options are &quot;PCA&quot;, &quot;UMAP&quot;, &quot;TSNE&quot;, &quot;RandomFeature&quot;</span>
+        <span class="n">reference_reducer</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>  <span class="c1"># Option to provide pre-fitted reducer objects for PCA, UMAP or TSNE, e.g. {&quot;PCA&quot;: pca_reducer, &quot;UMAP&quot;: umap_reducer, &quot;TSNE&quot;: tsne_reducer}</span>
         <span class="n">split_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span>
             <span class="s2">&quot;use-split&quot;</span><span class="p">,</span> <span class="s2">&quot;CV-5&quot;</span><span class="p">,</span> <span class="s2">&quot;LOOC&quot;</span>
         <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;use-split&quot;</span><span class="p">,</span>  <span class="c1"># Default is &quot;use-split&quot;, other options: &quot;CV-5&quot;, ... &quot;LOOCV&quot;?</span>
         <span class="n">n_downsample</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">,</span>
+        <span class="n">top_k_classes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+        <span class="n">exclude_classes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span>
+            <span class="nb">list</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># Default is None, if provided exclude these classes from evaluation</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;TODO&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluator</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -7784,8 +7917,11 @@ First item in list or tuple will be treated as first layer (after latent space) 
             <span class="n">metric_class</span><span class="o">=</span><span class="n">metric_class</span><span class="p">,</span>
             <span class="n">metric_regression</span><span class="o">=</span><span class="n">metric_regression</span><span class="p">,</span>
             <span class="n">reference_methods</span><span class="o">=</span><span class="n">reference_methods</span><span class="p">,</span>
+            <span class="n">reference_reducer</span><span class="o">=</span><span class="n">reference_reducer</span><span class="p">,</span>
             <span class="n">split_type</span><span class="o">=</span><span class="n">split_type</span><span class="p">,</span>
             <span class="n">n_downsample</span><span class="o">=</span><span class="n">n_downsample</span><span class="p">,</span>
+            <span class="n">top_k_classes</span><span class="o">=</span><span class="n">top_k_classes</span><span class="p">,</span>
+            <span class="n">exclude_classes</span><span class="o">=</span><span class="n">exclude_classes</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="n">_</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">visualizer</span><span class="o">.</span><span class="n">_plot_evaluation</span><span class="p">(</span><span class="n">result</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
@@ -7985,6 +8121,8 @@ First item in list or tuple will be treated as first layer (after latent space) 
 <span class="sd">                prior has incompatible dimensions.</span>
 <span class="sd">            TypeError: If latent_prior is not a numpy array or tensor.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span><span class="o">.</span><span class="n">setup_trainer</span><span class="p">(</span><span class="n">old_model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">n_samples</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">latent_prior</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -8026,13 +8164,45 @@ First item in list or tuple will be treated as first layer (after latent space) 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">explain</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">explainer</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
-        <span class="n">baseline_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;mean&quot;</span><span class="p">,</span> <span class="s2">&quot;random_sample&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;mean&quot;</span><span class="p">,</span>
+        <span class="n">method</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;DeepLiftShap&quot;</span><span class="p">,</span> <span class="s2">&quot;IntegratedGradients&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;DeepLiftShap&quot;</span><span class="p">,</span>
+        <span class="n">sel_latent_dim</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">input_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;random&quot;</span><span class="p">,</span> <span class="s2">&quot;grouped&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;grouped&quot;</span><span class="p">,</span>
+        <span class="n">input_group</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">baseline_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;mean&quot;</span><span class="p">,</span> <span class="s2">&quot;random&quot;</span><span class="p">,</span> <span class="s2">&quot;grouped&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;mean&quot;</span><span class="p">,</span>
+        <span class="n">baseline_group</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
+        <span class="n">anno_col</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">n_subset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+        <span class="n">seed_int</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">12</span><span class="p">,</span>
+        <span class="n">split</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">,</span> <span class="s2">&quot;valid&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span>
         <span class="n">llm_explain</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">llm_client</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;ollama&quot;</span><span class="p">,</span> <span class="s2">&quot;mistral&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;mistral&quot;</span><span class="p">,</span>
-        <span class="n">llm_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mistral-medium-latest&quot;</span><span class="p">,</span>
-    <span class="p">):</span>  <span class="c1"># TODO Vincent: add return type</span>
+        <span class="n">llm_client</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;ollama&quot;</span><span class="p">,</span> <span class="s2">&quot;mistral&quot;</span><span class="p">,</span> <span class="s2">&quot;openrouter&quot;</span><span class="p">,</span> <span class="s2">&quot;scads-llm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;mistral&quot;</span><span class="p">,</span>
+        <span class="n">llm_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mistral-large-latest&quot;</span><span class="p">,</span>
+        <span class="n">top_n_genes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">40</span><span class="p">,</span>
+        <span class="n">prompt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">PROMPT</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Runs the feature-importance explainer and returns gene-by-latent-dimension attribution scores.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            method:  Specifies which attribution algorithm to use for explaining the model.</span>
+<span class="sd">            sel_latent_dim: Specifies which latent dimension(s) to explain. If None, all dimensions will be explained.</span>
+<span class="sd">            input_type: Specifies whether the feature-importance algorithm should use &#39;random&#39; samples or &#39;grouped&#39; samples (see input_group) as input for the attribution computation.</span>
+<span class="sd">            input_group: If input_type is &#39;grouped&#39;, this specifies which subset in anno_col to filter for to use as input for the attribution computation.</span>
+<span class="sd">            baseline_type: Specifies whether the feature-importance algorithm should use the &#39;mean&#39; baseline, a &#39;random&#39;-sample baseline, or samples from a &#39;grouped&#39; baseline (see baseline_group).</span>
+<span class="sd">            baseline_group: Specifies whether the baseline is computed using all data (default) or which subset in anno_col to filter for.</span>
+<span class="sd">            anno_col: If baseline_group is not &#39;all&#39;, this specifies the annotation column used to filter the baseline data.</span>
+<span class="sd">            n_subset: Specifies the number of cells to use when subsampling for the attribution computation.</span>
+<span class="sd">            seed_int: Defines the random seed used for reproducible subsampling and attribution calculations.</span>
+<span class="sd">            split: The split to use for feature importance calculation (train, valid, test), default is train.</span>
+<span class="sd">            llm_explain: Whether to use LLM explainers for feature importance calculation.</span>
+<span class="sd">            llm_client: The LLM client to use for feature importance calculation.</span>
+<span class="sd">            llm_model: The LLM model to use for feature importance calculation.</span>
+<span class="sd">            top_n_genes: How many top (contribution to embedding) genes to consider for LLM explanation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: The generated samples in the input space.</span>
+<span class="sd">                A DataFrame of attribution scores with genes as the index and latent dimensions as columns.</span>
+<span class="sd">                Each entry represents the contribution of a given gene to a specific latent dimension.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">my_converter</span> <span class="o">=</span> <span class="n">AnnDataConverter</span><span class="p">()</span>
         <span class="n">dataset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DatasetContainer</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">dataset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -8041,15 +8211,13 @@ First item in list or tuple will be treated as first layer (after latent space) 
                 <span class="s2">&quot;This happens if you used .save and .load, and did not run .predict before.&quot;</span>
                 <span class="s2">&quot;This can also happen if you run .explain before .preprocess or .fit.&quot;</span>
             <span class="p">)</span>
-        <span class="n">adata_train</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]]</span> <span class="o">=</span> <span class="n">my_converter</span><span class="o">.</span><span class="n">dataset_to_adata</span><span class="p">(</span>
-            <span class="n">dataset</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">&quot;train&quot;</span>
+        <span class="n">adata</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]]</span> <span class="o">=</span> <span class="n">my_converter</span><span class="o">.</span><span class="n">dataset_to_adata</span><span class="p">(</span>
+            <span class="n">dataset</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="n">split</span>
         <span class="p">)</span>
-        <span class="n">adata_test</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]]</span> <span class="o">=</span> <span class="n">my_converter</span><span class="o">.</span><span class="n">dataset_to_adata</span><span class="p">(</span>
-            <span class="n">dataset</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">&quot;test&quot;</span>
-        <span class="p">)</span>
-        <span class="n">adata_valid</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]]</span> <span class="o">=</span> <span class="n">my_converter</span><span class="o">.</span><span class="n">dataset_to_adata</span><span class="p">(</span>
-            <span class="n">dataset</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">&quot;valid&quot;</span>
-        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">adata</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;There has been an error converting the dataset to AnnData.&quot;</span>
+            <span class="p">)</span>
         <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">model</span>
         <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -8057,29 +8225,97 @@ First item in list or tuple will be treated as first layer (after latent space) 
                 <span class="s2">&quot;This happens if you used .save and .load, and did not run .fit before.&quot;</span>
                 <span class="s2">&quot;This can also happen if you run .explain before .fit.&quot;</span>
             <span class="p">)</span>
-        <span class="c1"># TODO Vincent: Implement feature importance explanation</span>
-        <span class="c1"># Best with Explainer class that gets initialized here and has a method</span>
-        <span class="c1"># Maybe like:</span>
-        <span class="c1"># explainer = FeatureImportanceExplainer(adata_train, adata_test, model, explainer, ...)</span>
-        <span class="c1"># output = explainer.explain()</span>
-        <span class="c1"># also note tha adata_&lt;split&gt; can be None, if the split is not available</span>
-        <span class="c1"># so best to check this before concatenating or using them</span>
+        <span class="c1"># Validate sel_latent_dim and convert from string to int if necessary</span>
+        <span class="k">if</span> <span class="n">sel_latent_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sel_latent_dim</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s2">&quot;sel_latent_dim is a string, but no ontologies are available in the pipeline. Please provide ontologies in the config or set sel_latent_dim to an int or list of ints.&quot;</span>
+                    <span class="p">)</span>
+                <span class="k">if</span> <span class="n">sel_latent_dim</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;sel_latent_dim is set to &#39;</span><span class="si">{</span><span class="n">sel_latent_dim</span><span class="si">}</span><span class="s2">&#39;, but this is not a key in the available ontologies: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">. Please provide a valid ontology key or set sel_latent_dim to an int or list of ints.&quot;</span>
+                    <span class="p">)</span>
+                <span class="n">sel_latent_dim</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">sel_latent_dim</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sel_latent_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">sel_latent_dim</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">sel_latent_dim</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;sel_latent_dim is set to </span><span class="si">{</span><span class="n">sel_latent_dim</span><span class="si">}</span><span class="s2">, but this is out of bounds for the latent dimension size of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="si">}</span><span class="s2">. Please provide a valid integer index or set sel_latent_dim to None to explain all dimensions.&quot;</span>
+                    <span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sel_latent_dim</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="c1"># Check if entries are strings or integers and validate accordingly</span>
+                <span class="n">sel_latent_dim_validated</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">sel_latent_dim</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                                <span class="s2">&quot;sel_latent_dim is a list of strings, but no ontologies are available in the pipeline. Please provide ontologies in the config or set sel_latent_dim to a list of ints.&quot;</span>
+                            <span class="p">)</span>
+                        <span class="k">if</span> <span class="n">dim</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;sel_latent_dim contains &#39;</span><span class="si">{</span><span class="n">dim</span><span class="si">}</span><span class="s2">&#39;, but this is not a key in the available ontologies: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">. Please provide valid ontology keys or set sel_latent_dim to a list of ints.&quot;</span>
+                            <span class="p">)</span>
+                        <span class="n">sel_latent_dim_validated</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+                        <span class="p">)</span>
+                    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="n">dim</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">dim</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;sel_latent_dim contains </span><span class="si">{</span><span class="n">dim</span><span class="si">}</span><span class="s2">, but this is out of bounds for the latent dimension size of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="si">}</span><span class="s2">. Please provide valid integer indices or set sel_latent_dim to None to explain all dimensions.&quot;</span>
+                            <span class="p">)</span>
+                        <span class="n">sel_latent_dim_validated</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;sel_latent_dim list contains entries of type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span><span class="si">}</span><span class="s2">, but only str and int are allowed. Please ensure all entries are either strings corresponding to ontology keys or integers corresponding to latent dimension indices.&quot;</span>
+                        <span class="p">)</span>
+                <span class="n">sel_latent_dim</span> <span class="o">=</span> <span class="n">sel_latent_dim_validated</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;sel_latent_dim must be either an int, a str, a list of ints or a list of strs, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">sel_latent_dim</span><span class="p">)</span><span class="si">}</span><span class="s2">. Please provide a valid type for sel_latent_dim.&quot;</span>
+                <span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Start feature attribution calculation&quot;</span><span class="p">)</span>
+        <span class="n">explainer</span> <span class="o">=</span> <span class="n">FeatureImportanceExplainer</span><span class="p">(</span>
+            <span class="n">adata</span><span class="o">=</span><span class="n">adata</span><span class="p">[</span><span class="s2">&quot;global&quot;</span><span class="p">],</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">n_subset</span><span class="o">=</span><span class="n">n_subset</span><span class="p">,</span>
+            <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span>
+            <span class="n">sel_latent_dim</span><span class="o">=</span><span class="n">sel_latent_dim</span><span class="p">,</span>
+            <span class="n">input_type</span><span class="o">=</span><span class="n">input_type</span><span class="p">,</span>
+            <span class="n">input_group</span><span class="o">=</span><span class="n">input_group</span><span class="p">,</span>
+            <span class="n">baseline_type</span><span class="o">=</span><span class="n">baseline_type</span><span class="p">,</span>
+            <span class="n">baseline_group</span><span class="o">=</span><span class="n">baseline_group</span><span class="p">,</span>
+            <span class="n">anno_col</span><span class="o">=</span><span class="n">anno_col</span><span class="p">,</span>
+            <span class="n">seed_int</span><span class="o">=</span><span class="n">seed_int</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">df_attributions</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">explain</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="n">llm_explain</span><span class="p">:</span>
-            <span class="c1"># TODO Vincent:</span>
-            <span class="c1"># Je nachdem wie die Gene Liste aussieht, müsstet du noch in src/autoencodix/utils/_llm_explainer.py</span>
-            <span class="c1"># in _init_prompt anpassen, wie der prompt gebaut wird. Ich gehe jetzt von einer Liste aus String aus, aber</span>
-            <span class="c1"># ich wusste nicht genau was dein return Typ ist.</span>
+            <span class="n">gene_attributions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">]</span> <span class="o">=</span> <span class="n">preprocess_explanations</span><span class="p">(</span>
+                <span class="n">df</span><span class="o">=</span><span class="n">df_attributions</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">top_n_genes</span><span class="p">,</span> <span class="n">max_dims</span><span class="o">=</span><span class="mi">8</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_attributions</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">8</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                    <span class="s2">&quot;You requested LLM-generated explanations for each latent dimension. &quot;</span>
+                    <span class="s2">&quot;However, more than eight latent dimensions were provided. To avoid excessively long &quot;</span>
+                    <span class="s2">&quot;and computationally intensive output, only the eight most informative latent &quot;</span>
+                    <span class="s2">&quot;dimensions will be analyzed.&quot;</span>
+                <span class="p">)</span>
 
             <span class="n">llm_explainer</span> <span class="o">=</span> <span class="n">LLMExplainer</span><span class="p">(</span>
                 <span class="n">client_name</span><span class="o">=</span><span class="n">llm_client</span><span class="p">,</span>
                 <span class="n">model_name</span><span class="o">=</span><span class="n">llm_model</span><span class="p">,</span>
-                <span class="n">gene_list</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;GeneA&quot;</span><span class="p">,</span> <span class="s2">&quot;GeneB&quot;</span><span class="p">,</span> <span class="s2">&quot;GeneC&quot;</span><span class="p">],</span>  <span class="c1"># Example gene list</span>
+                <span class="n">genes_to_latent</span><span class="o">=</span><span class="n">gene_attributions</span><span class="p">,</span>  <span class="c1"># Example gene list</span>
+                <span class="n">prompt</span><span class="o">=</span><span class="n">prompt</span><span class="p">,</span>
             <span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Start LLM explanation generation&quot;</span><span class="p">)</span>
             <span class="n">explanation</span> <span class="o">=</span> <span class="n">llm_explainer</span><span class="o">.</span><span class="n">explain</span><span class="p">()</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;LLM Explanation:&quot;</span><span class="p">)</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">explanation</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">explanation</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">embedding_explanations</span> <span class="o">=</span> <span class="n">explanation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">embedding_attributions</span> <span class="o">=</span> <span class="n">df_attributions</span>
+        <span class="k">return</span> <span class="n">df_attributions</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">impute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">corrupted_tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Impute method only implemented for Maskix pipeline.&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -8222,7 +8458,7 @@ First item in list or tuple will be treated as first layer (after latent space) 
                 <code>visualizer</code>
             </td>
             <td>
-                  <code><span title="typing.Optional">Optional</span>[<a class="autorefs autorefs-internal" title="BaseVisualizer (autoencodix.base._base_visualizer.BaseVisualizer)" href="#autoencodix.base.BaseVisualizer">BaseVisualizer</a>]</code>
+                  <code><span title="typing.Optional">Optional</span>[<span title="typing.Type">Type</span>[<a class="autorefs autorefs-internal" title="BaseVisualizer (autoencodix.base._base_visualizer.BaseVisualizer)" href="#autoencodix.base.BaseVisualizer">BaseVisualizer</a>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -8264,7 +8500,7 @@ First item in list or tuple will be treated as first layer (after latent space) 
                 <code>evaluator</code>
             </td>
             <td>
-                  <code><span title="typing.Optional">Optional</span>[<a class="autorefs autorefs-internal" title="BaseEvaluator (autoencodix.base._base_evaluator.BaseEvaluator)" href="#autoencodix.base.BaseEvaluator">BaseEvaluator</a>]</code>
+                  <code><span title="typing.Optional">Optional</span>[<span title="typing.Type">Type</span>[<a class="autorefs autorefs-internal" title="BaseEvaluator (autoencodix.base._base_evaluator.BaseEvaluator)" href="#autoencodix.base.BaseEvaluator">BaseEvaluator</a>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -8373,8 +8609,7 @@ First item in list or tuple will be treated as first layer (after latent space) 
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/base/_base_pipeline.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 66</span>
-<span class="normal"> 67</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 67</span>
 <span class="normal"> 68</span>
 <span class="normal"> 69</span>
 <span class="normal"> 70</span>
@@ -8484,8 +8719,7 @@ First item in list or tuple will be treated as first layer (after latent space) 
 <span class="normal">174</span>
 <span class="normal">175</span>
 <span class="normal">176</span>
-<span class="normal">177</span>
-<span class="normal">178</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">177</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">dataset_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">BaseDataset</span><span class="p">],</span>
     <span class="n">trainer_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">BaseTrainer</span><span class="p">],</span>
@@ -8496,8 +8730,8 @@ First item in list or tuple will be treated as first layer (after latent space) 
     <span class="n">data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
         <span class="n">Union</span><span class="p">[</span><span class="n">DataPackage</span><span class="p">,</span> <span class="n">DatasetContainer</span><span class="p">,</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span> <span class="n">MuData</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span>  <span class="c1"># type: ignore[invalid-type-form]</span>
     <span class="p">],</span>
-    <span class="n">visualizer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">BaseVisualizer</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">evaluator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">BaseEvaluator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">visualizer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="n">BaseVisualizer</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">evaluator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="n">BaseEvaluator</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">result</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Result</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DefaultConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">custom_split</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -8527,20 +8761,18 @@ First item in list or tuple will be treated as first layer (after latent space) 
 <span class="sd">        TypeError: If inputs have incorrect types.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_default_config&quot;</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">                        The _default_config attribute has not been specified in your pipeline class.</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                        The _default_config attribute has not been specified in your pipeline class.</span>
 
-<span class="sd">                        Example:</span>
-<span class="sd">                        self._default_config = XModalixConfig()</span>
+<span class="s2">                        Example:</span>
+<span class="s2">                        self._default_config = XModalixConfig()</span>
 
-<span class="sd">                        This error typically occurs when a new architecture is added without setting the</span>
-<span class="sd">                        _default_config in its corresponding pipeline class.</span>
+<span class="s2">                        This error typically occurs when a new architecture is added without setting the</span>
+<span class="s2">                        _default_config in its corresponding pipeline class.</span>
 
-<span class="sd">                        For more details, please refer to the &#39;how to add a new architecture&#39; section in our documentation.</span>
-<span class="sd">                        &quot;&quot;&quot;</span>
-        <span class="p">)</span>
-
+<span class="s2">                        For more details, please refer to the &#39;how to add a new architecture&#39; section in our documentation.</span>
+<span class="s2">                        &quot;&quot;&quot;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">model_map</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;model_map&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_validate_config</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_validate_user_input</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">masking_fn</span> <span class="o">=</span> <span class="n">masking_fn</span>
@@ -8902,7 +9134,7 @@ returns the decoded data in a matching format.</p>
 
 
 <h3 id="autoencodix.base.BasePipeline.evaluate" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">evaluate</span><span class="p">(</span><span class="n">ml_model_class</span><span class="o">=</span><span class="n">linear_model</span><span class="o">.</span><span class="n">LogisticRegression</span><span class="p">(),</span> <span class="n">ml_model_regression</span><span class="o">=</span><span class="n">linear_model</span><span class="o">.</span><span class="n">LinearRegression</span><span class="p">(),</span> <span class="n">params</span><span class="o">=</span><span class="p">[],</span> <span class="n">metric_class</span><span class="o">=</span><span class="s1">&#39;roc_auc_ovo&#39;</span><span class="p">,</span> <span class="n">metric_regression</span><span class="o">=</span><span class="s1">&#39;r2&#39;</span><span class="p">,</span> <span class="n">reference_methods</span><span class="o">=</span><span class="p">[],</span> <span class="n">split_type</span><span class="o">=</span><span class="s1">&#39;use-split&#39;</span><span class="p">,</span> <span class="n">n_downsample</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">evaluate</span><span class="p">(</span><span class="n">ml_model_class</span><span class="o">=</span><span class="n">linear_model</span><span class="o">.</span><span class="n">LogisticRegression</span><span class="p">(),</span> <span class="n">ml_model_regression</span><span class="o">=</span><span class="n">linear_model</span><span class="o">.</span><span class="n">LinearRegression</span><span class="p">(),</span> <span class="n">params</span><span class="o">=</span><span class="p">[],</span> <span class="n">metric_class</span><span class="o">=</span><span class="s1">&#39;roc_auc_ovo&#39;</span><span class="p">,</span> <span class="n">metric_regression</span><span class="o">=</span><span class="s1">&#39;r2&#39;</span><span class="p">,</span> <span class="n">reference_methods</span><span class="o">=</span><span class="p">[],</span> <span class="n">reference_reducer</span><span class="o">=</span><span class="p">{},</span> <span class="n">split_type</span><span class="o">=</span><span class="s1">&#39;use-split&#39;</span><span class="p">,</span> <span class="n">n_downsample</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="n">top_k_classes</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">exclude_classes</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h3>
 
@@ -8987,7 +9219,15 @@ returns the decoded data in a matching format.</p>
 <span class="normal">955</span>
 <span class="normal">956</span>
 <span class="normal">957</span>
-<span class="normal">958</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span>
+<span class="normal">958</span>
+<span class="normal">959</span>
+<span class="normal">960</span>
+<span class="normal">961</span>
+<span class="normal">962</span>
+<span class="normal">963</span>
+<span class="normal">964</span>
+<span class="normal">965</span>
+<span class="normal">966</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">ml_model_class</span><span class="p">:</span> <span class="n">ClassifierMixin</span> <span class="o">=</span> <span class="n">linear_model</span><span class="o">.</span><span class="n">LogisticRegression</span><span class="p">(),</span>
     <span class="n">ml_model_regression</span><span class="p">:</span> <span class="n">RegressorMixin</span> <span class="o">=</span> <span class="n">linear_model</span><span class="o">.</span><span class="n">LinearRegression</span><span class="p">(),</span>
@@ -8997,10 +9237,15 @@ returns the decoded data in a matching format.</p>
     <span class="n">metric_class</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;roc_auc_ovo&quot;</span><span class="p">,</span>  <span class="c1"># Default is &#39;roc_auc_ovo&#39; via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names</span>
     <span class="n">metric_regression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;r2&quot;</span><span class="p">,</span>  <span class="c1"># Default is &#39;r2&#39;</span>
     <span class="n">reference_methods</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[],</span>  <span class="c1"># Default [], Options are &quot;PCA&quot;, &quot;UMAP&quot;, &quot;TSNE&quot;, &quot;RandomFeature&quot;</span>
+    <span class="n">reference_reducer</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>  <span class="c1"># Option to provide pre-fitted reducer objects for PCA, UMAP or TSNE, e.g. {&quot;PCA&quot;: pca_reducer, &quot;UMAP&quot;: umap_reducer, &quot;TSNE&quot;: tsne_reducer}</span>
     <span class="n">split_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span>
         <span class="s2">&quot;use-split&quot;</span><span class="p">,</span> <span class="s2">&quot;CV-5&quot;</span><span class="p">,</span> <span class="s2">&quot;LOOC&quot;</span>
     <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;use-split&quot;</span><span class="p">,</span>  <span class="c1"># Default is &quot;use-split&quot;, other options: &quot;CV-5&quot;, ... &quot;LOOCV&quot;?</span>
     <span class="n">n_downsample</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">,</span>
+    <span class="n">top_k_classes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+    <span class="n">exclude_classes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span>
+        <span class="nb">list</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># Default is None, if provided exclude these classes from evaluation</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;TODO&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluator</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -9054,13 +9299,603 @@ returns the decoded data in a matching format.</p>
         <span class="n">metric_class</span><span class="o">=</span><span class="n">metric_class</span><span class="p">,</span>
         <span class="n">metric_regression</span><span class="o">=</span><span class="n">metric_regression</span><span class="p">,</span>
         <span class="n">reference_methods</span><span class="o">=</span><span class="n">reference_methods</span><span class="p">,</span>
+        <span class="n">reference_reducer</span><span class="o">=</span><span class="n">reference_reducer</span><span class="p">,</span>
         <span class="n">split_type</span><span class="o">=</span><span class="n">split_type</span><span class="p">,</span>
         <span class="n">n_downsample</span><span class="o">=</span><span class="n">n_downsample</span><span class="p">,</span>
+        <span class="n">top_k_classes</span><span class="o">=</span><span class="n">top_k_classes</span><span class="p">,</span>
+        <span class="n">exclude_classes</span><span class="o">=</span><span class="n">exclude_classes</span><span class="p">,</span>
     <span class="p">)</span>
 
     <span class="n">_</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">visualizer</span><span class="o">.</span><span class="n">_plot_evaluation</span><span class="p">(</span><span class="n">result</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="autoencodix.base.BasePipeline.explain" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">explain</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;DeepLiftShap&#39;</span><span class="p">,</span> <span class="n">sel_latent_dim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">input_type</span><span class="o">=</span><span class="s1">&#39;grouped&#39;</span><span class="p">,</span> <span class="n">input_group</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">baseline_type</span><span class="o">=</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span> <span class="n">baseline_group</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="n">anno_col</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_subset</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">seed_int</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s1">&#39;train&#39;</span><span class="p">,</span> <span class="n">llm_explain</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">llm_client</span><span class="o">=</span><span class="s1">&#39;mistral&#39;</span><span class="p">,</span> <span class="n">llm_model</span><span class="o">=</span><span class="s1">&#39;mistral-large-latest&#39;</span><span class="p">,</span> <span class="n">top_n_genes</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="n">PROMPT</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Runs the feature-importance explainer and returns gene-by-latent-dimension attribution scores.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>method</code>
+            </td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;DeepLiftShap&#39;, &#39;IntegratedGradients&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Specifies which attribution algorithm to use for explaining the model.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;DeepLiftShap&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>sel_latent_dim</code>
+            </td>
+            <td>
+                  <code><span title="typing.Union">Union</span>[<span title="list">list</span>, <span title="int">int</span>, <span title="str">str</span>, None]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Specifies which latent dimension(s) to explain. If None, all dimensions will be explained.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>input_type</code>
+            </td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;random&#39;, &#39;grouped&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Specifies whether the feature-importance algorithm should use 'random' samples or 'grouped' samples (see input_group) as input for the attribution computation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;grouped&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>input_group</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If input_type is 'grouped', this specifies which subset in anno_col to filter for to use as input for the attribution computation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>baseline_type</code>
+            </td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;mean&#39;, &#39;random&#39;, &#39;grouped&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Specifies whether the feature-importance algorithm should use the 'mean' baseline, a 'random'-sample baseline, or samples from a 'grouped' baseline (see baseline_group).</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;mean&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>baseline_group</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Specifies whether the baseline is computed using all data (default) or which subset in anno_col to filter for.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;all&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>anno_col</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If baseline_group is not 'all', this specifies the annotation column used to filter the baseline data.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>n_subset</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Specifies the number of cells to use when subsampling for the attribution computation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>100</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>seed_int</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Defines the random seed used for reproducible subsampling and attribution calculations.</p>
+              </div>
+            </td>
+            <td>
+                  <code>12</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>split</code>
+            </td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;train&#39;, &#39;test&#39;, &#39;valid&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The split to use for feature importance calculation (train, valid, test), default is train.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;train&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>llm_explain</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to use LLM explainers for feature importance calculation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>llm_client</code>
+            </td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;ollama&#39;, &#39;mistral&#39;, &#39;openrouter&#39;, &#39;scads-llm&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The LLM client to use for feature importance calculation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;mistral&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>llm_model</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The LLM model to use for feature importance calculation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;mistral-large-latest&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>top_n_genes</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>How many top (contribution to embedding) genes to consider for LLM explanation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>40</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>pd.DataFrame: The generated samples in the input space.
+A DataFrame of attribution scores with genes as the index and latent dimensions as columns.
+Each entry represents the contribution of a given gene to a specific latent dimension.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/autoencodix/base/_base_pipeline.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1202</span>
+<span class="normal">1203</span>
+<span class="normal">1204</span>
+<span class="normal">1205</span>
+<span class="normal">1206</span>
+<span class="normal">1207</span>
+<span class="normal">1208</span>
+<span class="normal">1209</span>
+<span class="normal">1210</span>
+<span class="normal">1211</span>
+<span class="normal">1212</span>
+<span class="normal">1213</span>
+<span class="normal">1214</span>
+<span class="normal">1215</span>
+<span class="normal">1216</span>
+<span class="normal">1217</span>
+<span class="normal">1218</span>
+<span class="normal">1219</span>
+<span class="normal">1220</span>
+<span class="normal">1221</span>
+<span class="normal">1222</span>
+<span class="normal">1223</span>
+<span class="normal">1224</span>
+<span class="normal">1225</span>
+<span class="normal">1226</span>
+<span class="normal">1227</span>
+<span class="normal">1228</span>
+<span class="normal">1229</span>
+<span class="normal">1230</span>
+<span class="normal">1231</span>
+<span class="normal">1232</span>
+<span class="normal">1233</span>
+<span class="normal">1234</span>
+<span class="normal">1235</span>
+<span class="normal">1236</span>
+<span class="normal">1237</span>
+<span class="normal">1238</span>
+<span class="normal">1239</span>
+<span class="normal">1240</span>
+<span class="normal">1241</span>
+<span class="normal">1242</span>
+<span class="normal">1243</span>
+<span class="normal">1244</span>
+<span class="normal">1245</span>
+<span class="normal">1246</span>
+<span class="normal">1247</span>
+<span class="normal">1248</span>
+<span class="normal">1249</span>
+<span class="normal">1250</span>
+<span class="normal">1251</span>
+<span class="normal">1252</span>
+<span class="normal">1253</span>
+<span class="normal">1254</span>
+<span class="normal">1255</span>
+<span class="normal">1256</span>
+<span class="normal">1257</span>
+<span class="normal">1258</span>
+<span class="normal">1259</span>
+<span class="normal">1260</span>
+<span class="normal">1261</span>
+<span class="normal">1262</span>
+<span class="normal">1263</span>
+<span class="normal">1264</span>
+<span class="normal">1265</span>
+<span class="normal">1266</span>
+<span class="normal">1267</span>
+<span class="normal">1268</span>
+<span class="normal">1269</span>
+<span class="normal">1270</span>
+<span class="normal">1271</span>
+<span class="normal">1272</span>
+<span class="normal">1273</span>
+<span class="normal">1274</span>
+<span class="normal">1275</span>
+<span class="normal">1276</span>
+<span class="normal">1277</span>
+<span class="normal">1278</span>
+<span class="normal">1279</span>
+<span class="normal">1280</span>
+<span class="normal">1281</span>
+<span class="normal">1282</span>
+<span class="normal">1283</span>
+<span class="normal">1284</span>
+<span class="normal">1285</span>
+<span class="normal">1286</span>
+<span class="normal">1287</span>
+<span class="normal">1288</span>
+<span class="normal">1289</span>
+<span class="normal">1290</span>
+<span class="normal">1291</span>
+<span class="normal">1292</span>
+<span class="normal">1293</span>
+<span class="normal">1294</span>
+<span class="normal">1295</span>
+<span class="normal">1296</span>
+<span class="normal">1297</span>
+<span class="normal">1298</span>
+<span class="normal">1299</span>
+<span class="normal">1300</span>
+<span class="normal">1301</span>
+<span class="normal">1302</span>
+<span class="normal">1303</span>
+<span class="normal">1304</span>
+<span class="normal">1305</span>
+<span class="normal">1306</span>
+<span class="normal">1307</span>
+<span class="normal">1308</span>
+<span class="normal">1309</span>
+<span class="normal">1310</span>
+<span class="normal">1311</span>
+<span class="normal">1312</span>
+<span class="normal">1313</span>
+<span class="normal">1314</span>
+<span class="normal">1315</span>
+<span class="normal">1316</span>
+<span class="normal">1317</span>
+<span class="normal">1318</span>
+<span class="normal">1319</span>
+<span class="normal">1320</span>
+<span class="normal">1321</span>
+<span class="normal">1322</span>
+<span class="normal">1323</span>
+<span class="normal">1324</span>
+<span class="normal">1325</span>
+<span class="normal">1326</span>
+<span class="normal">1327</span>
+<span class="normal">1328</span>
+<span class="normal">1329</span>
+<span class="normal">1330</span>
+<span class="normal">1331</span>
+<span class="normal">1332</span>
+<span class="normal">1333</span>
+<span class="normal">1334</span>
+<span class="normal">1335</span>
+<span class="normal">1336</span>
+<span class="normal">1337</span>
+<span class="normal">1338</span>
+<span class="normal">1339</span>
+<span class="normal">1340</span>
+<span class="normal">1341</span>
+<span class="normal">1342</span>
+<span class="normal">1343</span>
+<span class="normal">1344</span>
+<span class="normal">1345</span>
+<span class="normal">1346</span>
+<span class="normal">1347</span>
+<span class="normal">1348</span>
+<span class="normal">1349</span>
+<span class="normal">1350</span>
+<span class="normal">1351</span>
+<span class="normal">1352</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">explain</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">method</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;DeepLiftShap&quot;</span><span class="p">,</span> <span class="s2">&quot;IntegratedGradients&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;DeepLiftShap&quot;</span><span class="p">,</span>
+    <span class="n">sel_latent_dim</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">input_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;random&quot;</span><span class="p">,</span> <span class="s2">&quot;grouped&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;grouped&quot;</span><span class="p">,</span>
+    <span class="n">input_group</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">baseline_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;mean&quot;</span><span class="p">,</span> <span class="s2">&quot;random&quot;</span><span class="p">,</span> <span class="s2">&quot;grouped&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;mean&quot;</span><span class="p">,</span>
+    <span class="n">baseline_group</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
+    <span class="n">anno_col</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">n_subset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+    <span class="n">seed_int</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">12</span><span class="p">,</span>
+    <span class="n">split</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">,</span> <span class="s2">&quot;valid&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span>
+    <span class="n">llm_explain</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">llm_client</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;ollama&quot;</span><span class="p">,</span> <span class="s2">&quot;mistral&quot;</span><span class="p">,</span> <span class="s2">&quot;openrouter&quot;</span><span class="p">,</span> <span class="s2">&quot;scads-llm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;mistral&quot;</span><span class="p">,</span>
+    <span class="n">llm_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mistral-large-latest&quot;</span><span class="p">,</span>
+    <span class="n">top_n_genes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">40</span><span class="p">,</span>
+    <span class="n">prompt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">PROMPT</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Runs the feature-importance explainer and returns gene-by-latent-dimension attribution scores.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        method:  Specifies which attribution algorithm to use for explaining the model.</span>
+<span class="sd">        sel_latent_dim: Specifies which latent dimension(s) to explain. If None, all dimensions will be explained.</span>
+<span class="sd">        input_type: Specifies whether the feature-importance algorithm should use &#39;random&#39; samples or &#39;grouped&#39; samples (see input_group) as input for the attribution computation.</span>
+<span class="sd">        input_group: If input_type is &#39;grouped&#39;, this specifies which subset in anno_col to filter for to use as input for the attribution computation.</span>
+<span class="sd">        baseline_type: Specifies whether the feature-importance algorithm should use the &#39;mean&#39; baseline, a &#39;random&#39;-sample baseline, or samples from a &#39;grouped&#39; baseline (see baseline_group).</span>
+<span class="sd">        baseline_group: Specifies whether the baseline is computed using all data (default) or which subset in anno_col to filter for.</span>
+<span class="sd">        anno_col: If baseline_group is not &#39;all&#39;, this specifies the annotation column used to filter the baseline data.</span>
+<span class="sd">        n_subset: Specifies the number of cells to use when subsampling for the attribution computation.</span>
+<span class="sd">        seed_int: Defines the random seed used for reproducible subsampling and attribution calculations.</span>
+<span class="sd">        split: The split to use for feature importance calculation (train, valid, test), default is train.</span>
+<span class="sd">        llm_explain: Whether to use LLM explainers for feature importance calculation.</span>
+<span class="sd">        llm_client: The LLM client to use for feature importance calculation.</span>
+<span class="sd">        llm_model: The LLM model to use for feature importance calculation.</span>
+<span class="sd">        top_n_genes: How many top (contribution to embedding) genes to consider for LLM explanation.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pd.DataFrame: The generated samples in the input space.</span>
+<span class="sd">            A DataFrame of attribution scores with genes as the index and latent dimensions as columns.</span>
+<span class="sd">            Each entry represents the contribution of a given gene to a specific latent dimension.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">my_converter</span> <span class="o">=</span> <span class="n">AnnDataConverter</span><span class="p">()</span>
+    <span class="n">dataset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DatasetContainer</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">dataset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;No dataset available for explanation.&quot;</span>
+            <span class="s2">&quot;This happens if you used .save and .load, and did not run .predict before.&quot;</span>
+            <span class="s2">&quot;This can also happen if you run .explain before .preprocess or .fit.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">adata</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">]]</span> <span class="o">=</span> <span class="n">my_converter</span><span class="o">.</span><span class="n">dataset_to_adata</span><span class="p">(</span>
+        <span class="n">dataset</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="n">split</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">adata</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;There has been an error converting the dataset to AnnData.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">model</span>
+    <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;No model available for explanation.&quot;</span>
+            <span class="s2">&quot;This happens if you used .save and .load, and did not run .fit before.&quot;</span>
+            <span class="s2">&quot;This can also happen if you run .explain before .fit.&quot;</span>
+        <span class="p">)</span>
+    <span class="c1"># Validate sel_latent_dim and convert from string to int if necessary</span>
+    <span class="k">if</span> <span class="n">sel_latent_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sel_latent_dim</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;sel_latent_dim is a string, but no ontologies are available in the pipeline. Please provide ontologies in the config or set sel_latent_dim to an int or list of ints.&quot;</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">sel_latent_dim</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;sel_latent_dim is set to &#39;</span><span class="si">{</span><span class="n">sel_latent_dim</span><span class="si">}</span><span class="s2">&#39;, but this is not a key in the available ontologies: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">. Please provide a valid ontology key or set sel_latent_dim to an int or list of ints.&quot;</span>
+                <span class="p">)</span>
+            <span class="n">sel_latent_dim</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">sel_latent_dim</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sel_latent_dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">sel_latent_dim</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">sel_latent_dim</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;sel_latent_dim is set to </span><span class="si">{</span><span class="n">sel_latent_dim</span><span class="si">}</span><span class="s2">, but this is out of bounds for the latent dimension size of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="si">}</span><span class="s2">. Please provide a valid integer index or set sel_latent_dim to None to explain all dimensions.&quot;</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sel_latent_dim</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="c1"># Check if entries are strings or integers and validate accordingly</span>
+            <span class="n">sel_latent_dim_validated</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">sel_latent_dim</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="s2">&quot;sel_latent_dim is a list of strings, but no ontologies are available in the pipeline. Please provide ontologies in the config or set sel_latent_dim to a list of ints.&quot;</span>
+                        <span class="p">)</span>
+                    <span class="k">if</span> <span class="n">dim</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;sel_latent_dim contains &#39;</span><span class="si">{</span><span class="n">dim</span><span class="si">}</span><span class="s2">&#39;, but this is not a key in the available ontologies: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">. Please provide valid ontology keys or set sel_latent_dim to a list of ints.&quot;</span>
+                        <span class="p">)</span>
+                    <span class="n">sel_latent_dim_validated</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">dim</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">dim</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;sel_latent_dim contains </span><span class="si">{</span><span class="n">dim</span><span class="si">}</span><span class="s2">, but this is out of bounds for the latent dimension size of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="si">}</span><span class="s2">. Please provide valid integer indices or set sel_latent_dim to None to explain all dimensions.&quot;</span>
+                        <span class="p">)</span>
+                    <span class="n">sel_latent_dim_validated</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;sel_latent_dim list contains entries of type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span><span class="si">}</span><span class="s2">, but only str and int are allowed. Please ensure all entries are either strings corresponding to ontology keys or integers corresponding to latent dimension indices.&quot;</span>
+                    <span class="p">)</span>
+            <span class="n">sel_latent_dim</span> <span class="o">=</span> <span class="n">sel_latent_dim_validated</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;sel_latent_dim must be either an int, a str, a list of ints or a list of strs, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">sel_latent_dim</span><span class="p">)</span><span class="si">}</span><span class="s2">. Please provide a valid type for sel_latent_dim.&quot;</span>
+            <span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Start feature attribution calculation&quot;</span><span class="p">)</span>
+    <span class="n">explainer</span> <span class="o">=</span> <span class="n">FeatureImportanceExplainer</span><span class="p">(</span>
+        <span class="n">adata</span><span class="o">=</span><span class="n">adata</span><span class="p">[</span><span class="s2">&quot;global&quot;</span><span class="p">],</span>
+        <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+        <span class="n">n_subset</span><span class="o">=</span><span class="n">n_subset</span><span class="p">,</span>
+        <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span>
+        <span class="n">sel_latent_dim</span><span class="o">=</span><span class="n">sel_latent_dim</span><span class="p">,</span>
+        <span class="n">input_type</span><span class="o">=</span><span class="n">input_type</span><span class="p">,</span>
+        <span class="n">input_group</span><span class="o">=</span><span class="n">input_group</span><span class="p">,</span>
+        <span class="n">baseline_type</span><span class="o">=</span><span class="n">baseline_type</span><span class="p">,</span>
+        <span class="n">baseline_group</span><span class="o">=</span><span class="n">baseline_group</span><span class="p">,</span>
+        <span class="n">anno_col</span><span class="o">=</span><span class="n">anno_col</span><span class="p">,</span>
+        <span class="n">seed_int</span><span class="o">=</span><span class="n">seed_int</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">df_attributions</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">explain</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">llm_explain</span><span class="p">:</span>
+        <span class="n">gene_attributions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">]</span> <span class="o">=</span> <span class="n">preprocess_explanations</span><span class="p">(</span>
+            <span class="n">df</span><span class="o">=</span><span class="n">df_attributions</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">top_n_genes</span><span class="p">,</span> <span class="n">max_dims</span><span class="o">=</span><span class="mi">8</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_attributions</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">8</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;You requested LLM-generated explanations for each latent dimension. &quot;</span>
+                <span class="s2">&quot;However, more than eight latent dimensions were provided. To avoid excessively long &quot;</span>
+                <span class="s2">&quot;and computationally intensive output, only the eight most informative latent &quot;</span>
+                <span class="s2">&quot;dimensions will be analyzed.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">llm_explainer</span> <span class="o">=</span> <span class="n">LLMExplainer</span><span class="p">(</span>
+            <span class="n">client_name</span><span class="o">=</span><span class="n">llm_client</span><span class="p">,</span>
+            <span class="n">model_name</span><span class="o">=</span><span class="n">llm_model</span><span class="p">,</span>
+            <span class="n">genes_to_latent</span><span class="o">=</span><span class="n">gene_attributions</span><span class="p">,</span>  <span class="c1"># Example gene list</span>
+            <span class="n">prompt</span><span class="o">=</span><span class="n">prompt</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Start LLM explanation generation&quot;</span><span class="p">)</span>
+        <span class="n">explanation</span> <span class="o">=</span> <span class="n">llm_explainer</span><span class="o">.</span><span class="n">explain</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">embedding_explanations</span> <span class="o">=</span> <span class="n">explanation</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">embedding_attributions</span> <span class="o">=</span> <span class="n">df_attributions</span>
+    <span class="k">return</span> <span class="n">df_attributions</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -9154,7 +9989,8 @@ process using the preprocessed datasets.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/base/_base_pipeline.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">452</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">451</span>
+<span class="normal">452</span>
 <span class="normal">453</span>
 <span class="normal">454</span>
 <span class="normal">455</span>
@@ -9217,6 +10053,7 @@ process using the preprocessed datasets.</p>
         <span class="n">masking_fn_kwargs</span><span class="o">=</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">masking_fn_kwargs</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;masking_fn_kwargs&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="p">),</span>
+        <span class="n">model_map</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model_map</span><span class="p">,</span>
     <span class="p">)</span>
 
     <span class="n">trainer_result</span><span class="p">:</span> <span class="n">Result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
@@ -9386,15 +10223,7 @@ prior has incompatible dimensions.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/base/_base_pipeline.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1122</span>
-<span class="normal">1123</span>
-<span class="normal">1124</span>
-<span class="normal">1125</span>
-<span class="normal">1126</span>
-<span class="normal">1127</span>
-<span class="normal">1128</span>
-<span class="normal">1129</span>
-<span class="normal">1130</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1130</span>
 <span class="normal">1131</span>
 <span class="normal">1132</span>
 <span class="normal">1133</span>
@@ -9454,7 +10283,17 @@ prior has incompatible dimensions.</p>
 <span class="normal">1187</span>
 <span class="normal">1188</span>
 <span class="normal">1189</span>
-<span class="normal">1190</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">generate</span><span class="p">(</span>
+<span class="normal">1190</span>
+<span class="normal">1191</span>
+<span class="normal">1192</span>
+<span class="normal">1193</span>
+<span class="normal">1194</span>
+<span class="normal">1195</span>
+<span class="normal">1196</span>
+<span class="normal">1197</span>
+<span class="normal">1198</span>
+<span class="normal">1199</span>
+<span class="normal">1200</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">generate</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">n_samples</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">latent_prior</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -9485,6 +10324,8 @@ prior has incompatible dimensions.</p>
 <span class="sd">            prior has incompatible dimensions.</span>
 <span class="sd">        TypeError: If latent_prior is not a numpy array or tensor.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span><span class="o">.</span><span class="n">setup_trainer</span><span class="p">(</span><span class="n">old_model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">n_samples</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">latent_prior</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -9602,18 +10443,18 @@ prior has incompatible dimensions.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/base/_base_pipeline.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1045</span>
-<span class="normal">1046</span>
-<span class="normal">1047</span>
-<span class="normal">1048</span>
-<span class="normal">1049</span>
-<span class="normal">1050</span>
-<span class="normal">1051</span>
-<span class="normal">1052</span>
-<span class="normal">1053</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1053</span>
 <span class="normal">1054</span>
 <span class="normal">1055</span>
-<span class="normal">1056</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">1056</span>
+<span class="normal">1057</span>
+<span class="normal">1058</span>
+<span class="normal">1059</span>
+<span class="normal">1060</span>
+<span class="normal">1061</span>
+<span class="normal">1062</span>
+<span class="normal">1063</span>
+<span class="normal">1064</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Loads a pipeline from a file.</span>
 
@@ -9957,7 +10798,8 @@ train/validation/test splits as needed.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/base/_base_pipeline.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">426</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">425</span>
+<span class="normal">426</span>
 <span class="normal">427</span>
 <span class="normal">428</span>
 <span class="normal">429</span>
@@ -9980,8 +10822,7 @@ train/validation/test splits as needed.</p>
 <span class="normal">446</span>
 <span class="normal">447</span>
 <span class="normal">448</span>
-<span class="normal">449</span>
-<span class="normal">450</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">DefaultConfig</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="normal">449</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">DefaultConfig</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Filters, normalizes and prepares data for model training.</span>
 
 <span class="sd">    Processes raw input data into the format required by the model and creates</span>
@@ -10098,15 +10939,7 @@ train/validation/test splits as needed.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/base/_base_pipeline.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1017</span>
-<span class="normal">1018</span>
-<span class="normal">1019</span>
-<span class="normal">1020</span>
-<span class="normal">1021</span>
-<span class="normal">1022</span>
-<span class="normal">1023</span>
-<span class="normal">1024</span>
-<span class="normal">1025</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1025</span>
 <span class="normal">1026</span>
 <span class="normal">1027</span>
 <span class="normal">1028</span>
@@ -10115,7 +10948,15 @@ train/validation/test splits as needed.</p>
 <span class="normal">1031</span>
 <span class="normal">1032</span>
 <span class="normal">1033</span>
-<span class="normal">1034</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
+<span class="normal">1034</span>
+<span class="normal">1035</span>
+<span class="normal">1036</span>
+<span class="normal">1037</span>
+<span class="normal">1038</span>
+<span class="normal">1039</span>
+<span class="normal">1040</span>
+<span class="normal">1041</span>
+<span class="normal">1042</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">DatasetContainer</span><span class="p">,</span> <span class="n">DataPackage</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Executes the complete pipeline from preprocessing to visualization.</span>
@@ -10279,15 +11120,7 @@ have not been computed.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/base/_base_pipeline.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1058</span>
-<span class="normal">1059</span>
-<span class="normal">1060</span>
-<span class="normal">1061</span>
-<span class="normal">1062</span>
-<span class="normal">1063</span>
-<span class="normal">1064</span>
-<span class="normal">1065</span>
-<span class="normal">1066</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1066</span>
 <span class="normal">1067</span>
 <span class="normal">1068</span>
 <span class="normal">1069</span>
@@ -10341,7 +11174,15 @@ have not been computed.</p>
 <span class="normal">1117</span>
 <span class="normal">1118</span>
 <span class="normal">1119</span>
-<span class="normal">1120</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">sample_latent_space</span><span class="p">(</span>
+<span class="normal">1120</span>
+<span class="normal">1121</span>
+<span class="normal">1122</span>
+<span class="normal">1123</span>
+<span class="normal">1124</span>
+<span class="normal">1125</span>
+<span class="normal">1126</span>
+<span class="normal">1127</span>
+<span class="normal">1128</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">sample_latent_space</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">n_samples</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">split</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;test&quot;</span><span class="p">,</span>
@@ -10457,14 +11298,14 @@ have not been computed.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/base/_base_pipeline.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1036</span>
-<span class="normal">1037</span>
-<span class="normal">1038</span>
-<span class="normal">1039</span>
-<span class="normal">1040</span>
-<span class="normal">1041</span>
-<span class="normal">1042</span>
-<span class="normal">1043</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">save_all</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1044</span>
+<span class="normal">1045</span>
+<span class="normal">1046</span>
+<span class="normal">1047</span>
+<span class="normal">1048</span>
+<span class="normal">1049</span>
+<span class="normal">1050</span>
+<span class="normal">1051</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">save_all</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Saves the pipeline to a file.</span>
 
 <span class="sd">    Args:</span>
@@ -10504,15 +11345,7 @@ the structure of the latent space representations.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/base/_base_pipeline.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 975</span>
-<span class="normal"> 976</span>
-<span class="normal"> 977</span>
-<span class="normal"> 978</span>
-<span class="normal"> 979</span>
-<span class="normal"> 980</span>
-<span class="normal"> 981</span>
-<span class="normal"> 982</span>
-<span class="normal"> 983</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 983</span>
 <span class="normal"> 984</span>
 <span class="normal"> 985</span>
 <span class="normal"> 986</span>
@@ -10544,7 +11377,15 @@ the structure of the latent space representations.</p>
 <span class="normal">1012</span>
 <span class="normal">1013</span>
 <span class="normal">1014</span>
-<span class="normal">1015</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">show_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">split</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="normal">1015</span>
+<span class="normal">1016</span>
+<span class="normal">1017</span>
+<span class="normal">1018</span>
+<span class="normal">1019</span>
+<span class="normal">1020</span>
+<span class="normal">1021</span>
+<span class="normal">1022</span>
+<span class="normal">1023</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">show_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">split</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Displays key visualizations of model results.</span>
 
 <span class="sd">    This method generates the following visualizations:</span>
@@ -10676,20 +11517,20 @@ the structure of the latent space representations.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/base/_base_pipeline.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">960</span>
-<span class="normal">961</span>
-<span class="normal">962</span>
-<span class="normal">963</span>
-<span class="normal">964</span>
-<span class="normal">965</span>
-<span class="normal">966</span>
-<span class="normal">967</span>
-<span class="normal">968</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">968</span>
 <span class="normal">969</span>
 <span class="normal">970</span>
 <span class="normal">971</span>
 <span class="normal">972</span>
-<span class="normal">973</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">DefaultConfig</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="normal">973</span>
+<span class="normal">974</span>
+<span class="normal">975</span>
+<span class="normal">976</span>
+<span class="normal">977</span>
+<span class="normal">978</span>
+<span class="normal">979</span>
+<span class="normal">980</span>
+<span class="normal">981</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="n">DefaultConfig</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates visualizations of model results and performance.</span>
 
 <span class="sd">    Args:</span>
@@ -10865,7 +11706,8 @@ specific preprocessing steps.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/autoencodix/base/_base_preprocessor.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">  33</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">  32</span>
+<span class="normal">  33</span>
 <span class="normal">  34</span>
 <span class="normal">  35</span>
 <span class="normal">  36</span>
@@ -11865,8 +12707,7 @@ specific preprocessing steps.</p>
 <span class="normal">1030</span>
 <span class="normal">1031</span>
 <span class="normal">1032</span>
-<span class="normal">1033</span>
-<span class="normal">1034</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BasePreprocessor</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
+<span class="normal">1033</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BasePreprocessor</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Contains logic for data preprocessing in the Autoencodix framework.</span>
 
 <span class="sd">    This class defines the general preprocessing workflow and provides</span>
@@ -12906,7 +13747,8 @@ ontologies: Ontology information, if provided for Ontix.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/base/_base_preprocessor.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">53</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">52</span>
+<span class="normal">53</span>
 <span class="normal">54</span>
 <span class="normal">55</span>
 <span class="normal">56</span>
@@ -12939,8 +13781,7 @@ ontologies: Ontology information, if provided for Ontix.</p>
 <span class="normal">83</span>
 <span class="normal">84</span>
 <span class="normal">85</span>
-<span class="normal">86</span>
-<span class="normal">87</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">86</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">DefaultConfig</span><span class="p">,</span>
     <span class="n">ontologies</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -13006,7 +13847,8 @@ Args:
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/base/_base_preprocessor.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 89</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 88</span>
+<span class="normal"> 89</span>
 <span class="normal"> 90</span>
 <span class="normal"> 91</span>
 <span class="normal"> 92</span>
@@ -13018,8 +13860,7 @@ Args:
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
 <span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+<span class="normal">101</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">preprocess</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">raw_user_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DataPackage</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -13212,8 +14053,7 @@ model training and prediction logic.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/autoencodix/base/_base_trainer.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 19</span>
-<span class="normal"> 20</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 20</span>
 <span class="normal"> 21</span>
 <span class="normal"> 22</span>
 <span class="normal"> 23</span>
@@ -13441,7 +14281,18 @@ model training and prediction logic.</p>
 <span class="normal">245</span>
 <span class="normal">246</span>
 <span class="normal">247</span>
-<span class="normal">248</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BaseTrainer</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BaseTrainer</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;General training logic for all autoencoder models.</span>
 
 <span class="sd">    This class sets up the model, optimizer, and data loaders. It also handles</span>
@@ -13522,12 +14373,20 @@ model training and prediction logic.</p>
             <span class="n">lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">learning_rate</span><span class="p">,</span>
             <span class="n">weight_decay</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">weight_decay</span><span class="p">,</span>
         <span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fabric</span><span class="o">.</span><span class="n">setup</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">old_model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_trainloader</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fabric</span><span class="o">.</span><span class="n">setup_dataloaders</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_trainloader</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validloader</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_validloader</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fabric</span><span class="o">.</span><span class="n">setup_dataloaders</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_validloader</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">Version</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">Version</span><span class="p">(</span><span class="s2">&quot;2.0&quot;</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span>
+            <span class="ow">and</span> <span class="n">old_model</span> <span class="ow">is</span> <span class="kc">None</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">compile_model</span>
+        <span class="p">):</span>  <span class="c1"># dont compile twice</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fabric</span><span class="o">.</span><span class="n">setup</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_init_loaders</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes the DataLoaders for training and validation datasets.&quot;&quot;&quot;</span>
@@ -13549,6 +14408,7 @@ model training and prediction logic.</p>
             <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="n">batch_size</span><span class="o">=</span><span class="n">corrected_bs</span><span class="p">,</span>
             <span class="n">worker_init_fn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_seed_worker</span><span class="p">,</span>
+            <span class="n">pin_memory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">pin_memory</span><span class="p">,</span>
             <span class="c1"># generator=g,</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validset</span><span class="p">:</span>
@@ -13569,6 +14429,7 @@ model training and prediction logic.</p>
                 <span class="n">dataset</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_validset</span><span class="p">,</span>
                 <span class="n">batch_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span>
                 <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">pin_memory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">pin_memory</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_validloader</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># type: ignore</span>
@@ -13707,10 +14568,10 @@ model training and prediction logic.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/base/_base_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">purge</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Cleans up any resources used during training, such as cached data or large attributes.&quot;&quot;&quot;</span>
     <span class="k">pass</span>

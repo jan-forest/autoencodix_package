@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -1526,7 +1526,131 @@
 <span class="normal">603</span>
 <span class="normal">604</span>
 <span class="normal">605</span>
-<span class="normal">606</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GeneralEvaluator</span><span class="p">(</span><span class="n">BaseEvaluator</span><span class="p">):</span>
+<span class="normal">606</span>
+<span class="normal">607</span>
+<span class="normal">608</span>
+<span class="normal">609</span>
+<span class="normal">610</span>
+<span class="normal">611</span>
+<span class="normal">612</span>
+<span class="normal">613</span>
+<span class="normal">614</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span>
+<span class="normal">618</span>
+<span class="normal">619</span>
+<span class="normal">620</span>
+<span class="normal">621</span>
+<span class="normal">622</span>
+<span class="normal">623</span>
+<span class="normal">624</span>
+<span class="normal">625</span>
+<span class="normal">626</span>
+<span class="normal">627</span>
+<span class="normal">628</span>
+<span class="normal">629</span>
+<span class="normal">630</span>
+<span class="normal">631</span>
+<span class="normal">632</span>
+<span class="normal">633</span>
+<span class="normal">634</span>
+<span class="normal">635</span>
+<span class="normal">636</span>
+<span class="normal">637</span>
+<span class="normal">638</span>
+<span class="normal">639</span>
+<span class="normal">640</span>
+<span class="normal">641</span>
+<span class="normal">642</span>
+<span class="normal">643</span>
+<span class="normal">644</span>
+<span class="normal">645</span>
+<span class="normal">646</span>
+<span class="normal">647</span>
+<span class="normal">648</span>
+<span class="normal">649</span>
+<span class="normal">650</span>
+<span class="normal">651</span>
+<span class="normal">652</span>
+<span class="normal">653</span>
+<span class="normal">654</span>
+<span class="normal">655</span>
+<span class="normal">656</span>
+<span class="normal">657</span>
+<span class="normal">658</span>
+<span class="normal">659</span>
+<span class="normal">660</span>
+<span class="normal">661</span>
+<span class="normal">662</span>
+<span class="normal">663</span>
+<span class="normal">664</span>
+<span class="normal">665</span>
+<span class="normal">666</span>
+<span class="normal">667</span>
+<span class="normal">668</span>
+<span class="normal">669</span>
+<span class="normal">670</span>
+<span class="normal">671</span>
+<span class="normal">672</span>
+<span class="normal">673</span>
+<span class="normal">674</span>
+<span class="normal">675</span>
+<span class="normal">676</span>
+<span class="normal">677</span>
+<span class="normal">678</span>
+<span class="normal">679</span>
+<span class="normal">680</span>
+<span class="normal">681</span>
+<span class="normal">682</span>
+<span class="normal">683</span>
+<span class="normal">684</span>
+<span class="normal">685</span>
+<span class="normal">686</span>
+<span class="normal">687</span>
+<span class="normal">688</span>
+<span class="normal">689</span>
+<span class="normal">690</span>
+<span class="normal">691</span>
+<span class="normal">692</span>
+<span class="normal">693</span>
+<span class="normal">694</span>
+<span class="normal">695</span>
+<span class="normal">696</span>
+<span class="normal">697</span>
+<span class="normal">698</span>
+<span class="normal">699</span>
+<span class="normal">700</span>
+<span class="normal">701</span>
+<span class="normal">702</span>
+<span class="normal">703</span>
+<span class="normal">704</span>
+<span class="normal">705</span>
+<span class="normal">706</span>
+<span class="normal">707</span>
+<span class="normal">708</span>
+<span class="normal">709</span>
+<span class="normal">710</span>
+<span class="normal">711</span>
+<span class="normal">712</span>
+<span class="normal">713</span>
+<span class="normal">714</span>
+<span class="normal">715</span>
+<span class="normal">716</span>
+<span class="normal">717</span>
+<span class="normal">718</span>
+<span class="normal">719</span>
+<span class="normal">720</span>
+<span class="normal">721</span>
+<span class="normal">722</span>
+<span class="normal">723</span>
+<span class="normal">724</span>
+<span class="normal">725</span>
+<span class="normal">726</span>
+<span class="normal">727</span>
+<span class="normal">728</span>
+<span class="normal">729</span>
+<span class="normal">730</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GeneralEvaluator</span><span class="p">(</span><span class="n">BaseEvaluator</span><span class="p">):</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># super().__init__()</span>
         <span class="k">pass</span>
@@ -1546,10 +1670,17 @@
         <span class="n">metric_class</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;roc_auc_ovo&quot;</span><span class="p">,</span>  <span class="c1"># Default is &#39;roc_auc_ovo&#39; via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names</span>
         <span class="n">metric_regression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;r2&quot;</span><span class="p">,</span>  <span class="c1"># Default is &#39;r2&#39;</span>
         <span class="n">reference_methods</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[],</span>  <span class="c1"># Default [], Options are &quot;PCA&quot;, &quot;UMAP&quot;, &quot;TSNE&quot;, &quot;RandomFeature&quot;</span>
+        <span class="n">reference_reducer</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>  <span class="c1"># Option to provide pre-fitted reducer objects for PCA, UMAP or TSNE, e.g. {&quot;PCA&quot;: pca_reducer, &quot;UMAP&quot;: umap_reducer, &quot;TSNE&quot;: tsne_reducer}</span>
         <span class="n">split_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;use-split&quot;</span><span class="p">,</span>  <span class="c1"># Default is &quot;use-split&quot;, other options: &quot;CV-5&quot;, ... &quot;LOOCV&quot;?</span>
         <span class="n">n_downsample</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span>
             <span class="nb">int</span><span class="p">,</span> <span class="kc">None</span>
         <span class="p">]</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">,</span>  <span class="c1"># Default is 10000, if provided downsample to this number of samples for faster evaluation. Set to None to disable downsampling.</span>
+        <span class="n">top_k_classes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span>
+            <span class="nb">int</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>  <span class="c1"># Default is 20, if provided restrict classification tasks to top k classes, others combined into &quot;other&quot;</span>
+        <span class="n">exclude_classes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span>
+            <span class="nb">list</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># Default is None, if provided exclude these classes from evaluation</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Evaluates the performance of machine learning models on various feature representations and clinical parameters.</span>
 
@@ -1566,10 +1697,13 @@
 <span class="sd">            params:List of clinical annotation columns to evaluate, or &quot;all&quot; to use all columns (default: &quot;all&quot;).</span>
 <span class="sd">            metric_class: Scoring metric for classification tasks (default: &quot;roc_auc_ovo&quot;).</span>
 <span class="sd">            metric_regression: Scoring metric for regression tasks (default: &quot;r2&quot;).</span>
-<span class="sd">            reference_methods:List of feature representations to evaluate (e.g., &quot;PCA&quot;, &quot;UMAP&quot;, &quot;TSNE&quot;, &quot;RandomFeature&quot;). &quot;Latent&quot; is always included (default: []).</span>
+<span class="sd">            reference_methods: List of feature representations to evaluate (e.g., &quot;PCA&quot;, &quot;UMAP&quot;, &quot;TSNE&quot;, &quot;RandomFeature&quot;). &quot;Latent&quot; is always included (default: []).</span>
+<span class="sd">            reference_reducer: Optional dictionary of pre-fitted dimensionality reduction objects for PCA, UMAP, or TSNE to ensure consistent transformations across runs (default: {}).</span>
 <span class="sd">            split_type: which split to use</span>
 <span class="sd">                use-split&quot; for pre-defined splits, &quot;CV-N&quot; for N-fold cross-validation, or &quot;LOOCV&quot; for leave-one-out cross-validation (default: &quot;use-split&quot;).</span>
 <span class="sd">            n_downsample: If provided, downsample the data to this number of samples for faster evaluation. Default is 10000. Set to None to disable downsampling.</span>
+<span class="sd">            top_k_classes: If provided, restrict classification tasks to the top k classes, combining others into &quot;other&quot; (default: 20).</span>
+<span class="sd">            exclude_classes: List of classes to exclude from evaluation (default: None).</span>
 <span class="sd">        Returns:</span>
 <span class="sd">            The updated result object with evaluation results stored in `embedding_evaluation`.</span>
 <span class="sd">        Raises</span>
@@ -1591,6 +1725,10 @@
         <span class="k">if</span> <span class="n">datasets</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">datasets</span> <span class="o">=</span> <span class="n">DatasetContainer</span><span class="p">()</span>
 
+        <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">new_datasets</span><span class="o">.</span><span class="n">train</span><span class="p">):</span>
+            <span class="n">datasets</span><span class="o">.</span><span class="n">train</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">new_datasets</span><span class="o">.</span><span class="n">train</span>
+        <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">new_datasets</span><span class="o">.</span><span class="n">valid</span><span class="p">):</span>
+            <span class="n">datasets</span><span class="o">.</span><span class="n">valid</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">new_datasets</span><span class="o">.</span><span class="n">valid</span>
         <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">new_datasets</span><span class="o">.</span><span class="n">test</span><span class="p">):</span>
             <span class="n">datasets</span><span class="o">.</span><span class="n">test</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">new_datasets</span><span class="o">.</span><span class="n">test</span>
 
@@ -1687,14 +1825,20 @@
 
                 <span class="c1">#     df = self._load_input_for_ml_xmodal(task_xmodal, datasets, result, modality=modality)</span>
                 <span class="c1"># else:</span>
-                <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_input_for_ml</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="n">datasets</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_input_for_ml</span><span class="p">(</span>
+                    <span class="n">task</span><span class="p">,</span>
+                    <span class="n">datasets</span><span class="p">,</span>
+                    <span class="n">result</span><span class="p">,</span>
+                    <span class="n">n_downsample</span><span class="p">,</span>
+                    <span class="n">reference_reducer</span><span class="o">=</span><span class="n">reference_reducer</span><span class="p">,</span>
+                <span class="p">)</span>
 
                 <span class="k">if</span> <span class="n">params</span> <span class="o">==</span> <span class="s2">&quot;all&quot;</span><span class="p">:</span>
                     <span class="n">params</span> <span class="o">=</span> <span class="n">clin_data</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
 
                 <span class="k">for</span> <span class="n">task_param</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="s2">&quot;Latent&quot;</span> <span class="ow">in</span> <span class="n">task</span><span class="p">:</span>
-                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Perform ML task for target parameter: </span><span class="si">{</span><span class="n">task_param</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="c1"># if &quot;Latent&quot; in task:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Perform ML task for target parameter: </span><span class="si">{</span><span class="n">task_param</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                     <span class="c1">## Check if classification or regression task</span>
                     <span class="n">ml_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_ml_type</span><span class="p">(</span><span class="n">clin_data</span><span class="p">,</span> <span class="n">task_param</span><span class="p">)</span>
 
@@ -1748,6 +1892,7 @@
                             <span class="n">sklearn_ml</span><span class="o">=</span><span class="n">sklearn_ml</span><span class="p">,</span>
                             <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span>
                             <span class="n">ml_type</span><span class="o">=</span><span class="n">ml_type</span><span class="p">,</span>
+                            <span class="n">top_k_classes</span><span class="o">=</span><span class="n">top_k_classes</span><span class="p">,</span>
                         <span class="p">)</span>
                     <span class="k">elif</span> <span class="n">split_type</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;CV-&quot;</span><span class="p">):</span>
                         <span class="n">cv_folds</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">split_type</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
@@ -1758,7 +1903,10 @@
                             <span class="n">task_param</span><span class="o">=</span><span class="n">task_param</span><span class="p">,</span>
                             <span class="n">sklearn_ml</span><span class="o">=</span><span class="n">sklearn_ml</span><span class="p">,</span>
                             <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span>
+                            <span class="n">ml_type</span><span class="o">=</span><span class="n">ml_type</span><span class="p">,</span>
                             <span class="n">cv_folds</span><span class="o">=</span><span class="n">cv_folds</span><span class="p">,</span>
+                            <span class="n">top_k_classes</span><span class="o">=</span><span class="n">top_k_classes</span><span class="p">,</span>
+                            <span class="n">exclude_classes</span><span class="o">=</span><span class="n">exclude_classes</span><span class="p">,</span>
                         <span class="p">)</span>
                     <span class="k">elif</span> <span class="n">split_type</span> <span class="o">==</span> <span class="s2">&quot;LOOCV&quot;</span><span class="p">:</span>
                         <span class="c1"># Leave One Out Cross Validation</span>
@@ -1768,7 +1916,10 @@
                             <span class="n">task_param</span><span class="o">=</span><span class="n">task_param</span><span class="p">,</span>
                             <span class="n">sklearn_ml</span><span class="o">=</span><span class="n">sklearn_ml</span><span class="p">,</span>
                             <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span>
+                            <span class="n">ml_type</span><span class="o">=</span><span class="n">ml_type</span><span class="p">,</span>
                             <span class="n">cv_folds</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span>
+                            <span class="n">top_k_classes</span><span class="o">=</span><span class="n">top_k_classes</span><span class="p">,</span>
+                            <span class="n">exclude_classes</span><span class="o">=</span><span class="n">exclude_classes</span><span class="p">,</span>
                         <span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -1805,7 +1956,10 @@
         <span class="n">task_param</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">sklearn_ml</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ClassifierMixin</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">],</span>
         <span class="n">metric</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">ml_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">cv_folds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="n">top_k_classes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+        <span class="n">exclude_classes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Function learns on the given data frame df and label data the provided sklearn model.</span>
 
@@ -1817,7 +1971,10 @@
 <span class="sd">            task_param: Column name with label data</span>
 <span class="sd">            sklearn_ml: Sklearn ML module specifying the ML algorithm</span>
 <span class="sd">            metric: string specifying the metric to be calculated by cross validation</span>
-<span class="sd">            cv_folds:</span>
+<span class="sd">            ml_type: string specifying if this is a classification or regression task, used to determine which sklearn model and metric to use</span>
+<span class="sd">            cv_folds: Number of cross validation folds</span>
+<span class="sd">            top_k_classes: Number of top classes to keep, others combined into &quot;other&quot;</span>
+<span class="sd">            exclude_classes: List of classes to exclude from evaluation (default: None)</span>
 <span class="sd">        Returns:</span>
 <span class="sd">            score_df: data frame containing metrics (scores) for all CV runs (long format)</span>
 
@@ -1826,12 +1983,49 @@
         <span class="c1"># X -&gt; df</span>
         <span class="c1"># Y -&gt; task_param</span>
         <span class="n">y</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">=</span> <span class="n">clin_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">task_param</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">exclude_classes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="o">~</span><span class="n">y</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">exclude_classes</span><span class="p">)]</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="o">~</span><span class="n">y</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">exclude_classes</span><span class="p">)]</span>
         <span class="n">score_df</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="c1"># check if classification</span>
+        <span class="k">if</span> <span class="n">ml_type</span> <span class="o">==</span> <span class="s2">&quot;classification&quot;</span><span class="p">:</span>
+            <span class="c1"># Remove empty classes from y</span>
+            <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;category&quot;</span><span class="p">:</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">remove_unused_categories</span><span class="p">()</span>
 
         <span class="c1">## Cross Validation</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># ty: ignore</span>
+            <span class="c1"># Check that more samples per class than cv_folds</span>
+            <span class="c1"># print(y.value_counts())</span>
+            <span class="k">if</span> <span class="n">ml_type</span> <span class="o">==</span> <span class="s2">&quot;classification&quot;</span><span class="p">:</span>
+                <span class="n">min_class_count</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>  <span class="c1"># ty: ignore</span>
+                <span class="k">if</span> <span class="n">min_class_count</span> <span class="o">&lt;</span> <span class="n">cv_folds</span><span class="p">:</span>
+                    <span class="c1"># Combine all classes with less than cv_folds samples into one class &quot;other&quot;</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Warning: For task parameter </span><span class="si">{</span><span class="n">task_param</span><span class="si">}</span><span class="s2">, some classes have less samples (</span><span class="si">{</span><span class="n">min_class_count</span><span class="si">}</span><span class="s2">) than the number of CV folds (</span><span class="si">{</span><span class="n">cv_folds</span><span class="si">}</span><span class="s2">). Combining these classes into one class &#39;other&#39; for evaluation.&quot;</span>
+                    <span class="p">)</span>
+                    <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                        <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span>
+                            <span class="n">x</span>
+                            <span class="k">if</span> <span class="n">clin_data</span><span class="p">[</span><span class="n">task_param</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">cv_folds</span>
+                            <span class="k">else</span> <span class="s2">&quot;other&quot;</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="c1"># Restrict number of classes to top k classes</span>
+                <span class="k">if</span> <span class="n">top_k_classes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span> <span class="o">&gt;</span> <span class="n">top_k_classes</span><span class="p">:</span>
+                        <span class="n">top_k_classes_list</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="n">y</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">nlargest</span><span class="p">(</span><span class="n">top_k_classes</span><span class="p">)</span><span class="o">.</span><span class="n">index</span>
+                        <span class="p">)</span>
+                        <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">top_k_classes_list</span> <span class="k">else</span> <span class="s2">&quot;other&quot;</span><span class="p">)</span>
             <span class="n">scores</span> <span class="o">=</span> <span class="n">cross_validate</span><span class="p">(</span>
-                <span class="n">sklearn_ml</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="n">cv_folds</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span> <span class="n">return_train_score</span><span class="o">=</span><span class="kc">True</span>
+                <span class="n">sklearn_ml</span><span class="p">,</span>
+                <span class="n">df</span><span class="p">,</span>
+                <span class="n">y</span><span class="p">,</span>
+                <span class="n">cv</span><span class="o">=</span><span class="n">cv_folds</span><span class="p">,</span>
+                <span class="n">scoring</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span>
+                <span class="n">return_train_score</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
             <span class="p">)</span>
 
             <span class="c1"># Output</span>
@@ -1869,7 +2063,7 @@
         <span class="n">task</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">sub</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-        <span class="n">res_ml_alg</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">sklearn_ml</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">results</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
+        <span class="n">res_ml_alg</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">sklearn_ml</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;(&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">results</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
         <span class="n">res_ml_type</span> <span class="o">=</span> <span class="p">[</span><span class="n">ml_type</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">results</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
         <span class="n">res_ml_task</span> <span class="o">=</span> <span class="p">[</span><span class="n">task</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">results</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
         <span class="n">res_ml_subtask</span> <span class="o">=</span> <span class="p">[</span><span class="n">sub</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">results</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
@@ -1894,6 +2088,7 @@
         <span class="n">sklearn_ml</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">ClassifierMixin</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">],</span>
         <span class="n">metric</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">ml_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">top_k_classes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Trains the provided sklearn model on the training split and evaluates it on train, valid, and test splits using the specified metric.</span>
 
@@ -1905,6 +2100,7 @@
 <span class="sd">            sklearn_ml: Instantiated sklearn model to use for training and evaluation.</span>
 <span class="sd">            metric: Scoring metric compatible with sklearn&#39;s get_scorer.</span>
 <span class="sd">            ml_type: Type of machine learning task (&quot;classification&quot; or &quot;regression&quot;).</span>
+<span class="sd">            top_k_classes: If provided, restrict classification tasks to the top k classes, combining others into &quot;other&quot; (default: 20).</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            DataFrame containing evaluation scores for each split (train, valid, test) and the specified metric.</span>
@@ -1927,6 +2123,16 @@
         <span class="n">Y_train</span> <span class="o">=</span> <span class="n">clin_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">train_samples</span><span class="p">,</span> <span class="n">task_param</span><span class="p">]</span>
         <span class="c1"># train model once on training data</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Y_train</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># ty: ignore</span>
+
+            <span class="c1"># Restrict number of classes to top k classes</span>
+            <span class="k">if</span> <span class="n">top_k_classes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">ml_type</span> <span class="o">==</span> <span class="s2">&quot;classification&quot;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Y_train</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span> <span class="o">&gt;</span> <span class="n">top_k_classes</span><span class="p">:</span>
+                    <span class="n">top_k_classes_list</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">Y_train</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">nlargest</span><span class="p">(</span><span class="n">top_k_classes</span><span class="p">)</span><span class="o">.</span><span class="n">index</span>
+                    <span class="p">)</span>
+                    <span class="n">Y_train</span> <span class="o">=</span> <span class="n">Y_train</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                        <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">top_k_classes_list</span> <span class="k">else</span> <span class="s2">&quot;other&quot;</span>
+                    <span class="p">)</span>
             <span class="n">sklearn_ml</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">)</span>  <span class="c1"># ty: ignore</span>
 
             <span class="c1"># eval on all splits</span>
@@ -1953,6 +2159,11 @@
                     <span class="p">)</span>
 
                 <span class="k">if</span> <span class="n">ml_type</span> <span class="o">==</span> <span class="s2">&quot;classification&quot;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">top_k_classes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span>
+                        <span class="nb">len</span><span class="p">(</span><span class="n">Y_train</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span> <span class="o">&gt;</span> <span class="n">top_k_classes</span>
+                    <span class="p">):</span>
+                        <span class="c1"># Adjust Y to only contain top k classes and other as for Y_train</span>
+                        <span class="n">Y</span> <span class="o">=</span> <span class="n">Y</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">top_k_classes_list</span> <span class="k">else</span> <span class="s2">&quot;other&quot;</span><span class="p">)</span>
                     <span class="c1"># Check that Y has only classes which are present in Y_train</span>
                     <span class="k">if</span> <span class="p">(</span>
                         <span class="nb">len</span><span class="p">(</span>
@@ -2012,7 +2223,11 @@
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_input_for_ml</span><span class="p">(</span>
-        <span class="n">task</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">DatasetContainer</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">Result</span>
+        <span class="n">task</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">dataset</span><span class="p">:</span> <span class="n">DatasetContainer</span><span class="p">,</span>
+        <span class="n">result</span><span class="p">:</span> <span class="n">Result</span><span class="p">,</span>
+        <span class="n">n_downsample</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">reference_reducer</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Loads and processes input data for various machine learning tasks based on the specified task type.</span>
 
@@ -2028,6 +2243,8 @@
 <span class="sd">            task: The type of ML task. Supported values are &quot;Latent&quot;, &quot;UMAP&quot;, &quot;PCA&quot;, &quot;TSNE&quot;, and &quot;RandomFeature&quot;.</span>
 <span class="sd">            dataset: The dataset container object holding train, validation, and test splits.</span>
 <span class="sd">            result: The result object containing model configuration and methods to retrieve latent representations.</span>
+<span class="sd">            n_downsample: If provided, downsample the data to this number of samples for faster processing. Default is None (no downsampling).</span>
+<span class="sd">            reference_reducer: Optional dictionary of pre-fitted dimensionality reduction objects for PCA, UMAP, or TSNE to ensure consistent transformations across runs (default: {}).</span>
 <span class="sd">        Returns:</span>
 <span class="sd">            A DataFrame containing the processed input data suitable for the specified ML task.</span>
 <span class="sd">        Raises:</span>
@@ -2052,6 +2269,13 @@
                     <span class="n">epoch</span><span class="o">=</span><span class="n">final_epoch</span> <span class="k">if</span> <span class="n">split</span> <span class="o">!=</span> <span class="s2">&quot;test&quot;</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="n">split</span>
                 <span class="p">)</span>
                 <span class="k">if</span> <span class="n">df_split</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">df_split</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">n_downsample</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">df_split</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">n_downsample</span><span class="p">:</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Downsampling data for Latent representation...&quot;</span><span class="p">)</span>
+                            <span class="n">sample_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span>
+                                <span class="n">df_split</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">n_downsample</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span>
+                            <span class="p">)</span>
+                            <span class="n">df_split</span> <span class="o">=</span> <span class="n">df_split</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">sample_idx</span><span class="p">]</span>
                     <span class="n">dfs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df_split</span><span class="p">)</span>
 
             <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">dfs</span><span class="p">)</span> <span class="k">if</span> <span class="n">dfs</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
@@ -2086,19 +2310,43 @@
             <span class="c1">#         ]</span>
             <span class="c1">#     )</span>
             <span class="k">if</span> <span class="n">task</span> <span class="o">==</span> <span class="s2">&quot;UMAP&quot;</span><span class="p">:</span>
-                <span class="n">reducer</span> <span class="o">=</span> <span class="n">UMAP</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">reference_reducer</span><span class="p">:</span>
+                    <span class="n">reducer</span> <span class="o">=</span> <span class="n">reference_reducer</span><span class="p">[</span><span class="n">task</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">reducer</span><span class="o">.</span><span class="n">n_components</span> <span class="o">!=</span> <span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;The provided UMAP reducer has n_components=</span><span class="si">{</span><span class="n">reducer</span><span class="o">.</span><span class="n">n_components</span><span class="si">}</span><span class="s2">, which does not match the latent dimension </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="si">}</span><span class="s2"> specified in the model config.&quot;</span>
+                        <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">reducer</span> <span class="o">=</span> <span class="n">UMAP</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">)</span>
+                    <span class="n">reducer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df_processed</span><span class="p">)</span>
+
                 <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-                    <span class="n">reducer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">df_processed</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">df_processed</span><span class="o">.</span><span class="n">index</span>
+                    <span class="n">reducer</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">df_processed</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">df_processed</span><span class="o">.</span><span class="n">index</span>
                 <span class="p">)</span>
             <span class="k">elif</span> <span class="n">task</span> <span class="o">==</span> <span class="s2">&quot;PCA&quot;</span><span class="p">:</span>
-                <span class="n">reducer</span> <span class="o">=</span> <span class="n">PCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">reference_reducer</span><span class="p">:</span>
+                    <span class="n">reducer</span> <span class="o">=</span> <span class="n">reference_reducer</span><span class="p">[</span><span class="n">task</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">reducer</span><span class="o">.</span><span class="n">n_components_</span> <span class="o">!=</span> <span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;The provided PCA reducer has n_components=</span><span class="si">{</span><span class="n">reducer</span><span class="o">.</span><span class="n">n_components_</span><span class="si">}</span><span class="s2">, which does not match the latent dimension </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="si">}</span><span class="s2"> specified in the model config.&quot;</span>
+                        <span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Using pre-fitted PCA reducer for dimensionality reduction.&quot;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">reducer</span> <span class="o">=</span> <span class="n">PCA</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">)</span>
+                    <span class="n">reducer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df_processed</span><span class="p">)</span>
+
                 <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-                    <span class="n">reducer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">df_processed</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">df_processed</span><span class="o">.</span><span class="n">index</span>
+                    <span class="n">reducer</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">df_processed</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">df_processed</span><span class="o">.</span><span class="n">index</span>
                 <span class="p">)</span>
             <span class="k">elif</span> <span class="n">task</span> <span class="o">==</span> <span class="s2">&quot;TSNE&quot;</span><span class="p">:</span>
-                <span class="n">reducer</span> <span class="o">=</span> <span class="n">TSNE</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">reference_reducer</span><span class="p">:</span>
+                    <span class="n">reducer</span> <span class="o">=</span> <span class="n">reference_reducer</span><span class="p">[</span><span class="n">task</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">reducer</span> <span class="o">=</span> <span class="n">TSNE</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">)</span>
+                    <span class="n">reducer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df_processed</span><span class="p">)</span>
+
                 <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-                    <span class="n">reducer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">df_processed</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">df_processed</span><span class="o">.</span><span class="n">index</span>
+                    <span class="n">reducer</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">df_processed</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">df_processed</span><span class="o">.</span><span class="n">index</span>
                 <span class="p">)</span>
             <span class="k">elif</span> <span class="n">task</span> <span class="o">==</span> <span class="s2">&quot;RandomFeature&quot;</span><span class="p">:</span>
                 <span class="n">df</span> <span class="o">=</span> <span class="n">df_processed</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -2128,7 +2376,7 @@
 
 
 <h3 id="autoencodix.evaluate.GeneralEvaluator.evaluate" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">evaluate</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="n">ml_model_class</span><span class="o">=</span><span class="n">linear_model</span><span class="o">.</span><span class="n">LogisticRegression</span><span class="p">(</span><span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">),</span> <span class="n">ml_model_regression</span><span class="o">=</span><span class="n">linear_model</span><span class="o">.</span><span class="n">LinearRegression</span><span class="p">(),</span> <span class="n">params</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="n">metric_class</span><span class="o">=</span><span class="s1">&#39;roc_auc_ovo&#39;</span><span class="p">,</span> <span class="n">metric_regression</span><span class="o">=</span><span class="s1">&#39;r2&#39;</span><span class="p">,</span> <span class="n">reference_methods</span><span class="o">=</span><span class="p">[],</span> <span class="n">split_type</span><span class="o">=</span><span class="s1">&#39;use-split&#39;</span><span class="p">,</span> <span class="n">n_downsample</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">evaluate</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="n">ml_model_class</span><span class="o">=</span><span class="n">linear_model</span><span class="o">.</span><span class="n">LogisticRegression</span><span class="p">(</span><span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">),</span> <span class="n">ml_model_regression</span><span class="o">=</span><span class="n">linear_model</span><span class="o">.</span><span class="n">LinearRegression</span><span class="p">(),</span> <span class="n">params</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="n">metric_class</span><span class="o">=</span><span class="s1">&#39;roc_auc_ovo&#39;</span><span class="p">,</span> <span class="n">metric_regression</span><span class="o">=</span><span class="s1">&#39;r2&#39;</span><span class="p">,</span> <span class="n">reference_methods</span><span class="o">=</span><span class="p">[],</span> <span class="n">reference_reducer</span><span class="o">=</span><span class="p">{},</span> <span class="n">split_type</span><span class="o">=</span><span class="s1">&#39;use-split&#39;</span><span class="p">,</span> <span class="n">n_downsample</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="n">top_k_classes</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">exclude_classes</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h3>
 
@@ -2293,6 +2541,22 @@
           </tr>
           <tr class="doc-section-item">
             <td>
+                <code>reference_reducer</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional dictionary of pre-fitted dimensionality reduction objects for PCA, UMAP, or TSNE to ensure consistent transformations across runs (default: {}).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
                 <code>split_type</code>
             </td>
             <td>
@@ -2322,6 +2586,38 @@ use-split" for pre-defined splits, "CV-N" for N-fold cross-validation, or "LOOCV
             </td>
             <td>
                   <code>10000</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>top_k_classes</code>
+            </td>
+            <td>
+                  <code><span title="typing.Union">Union</span>[<span title="int">int</span>, None]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If provided, restrict classification tasks to the top k classes, combining others into "other" (default: 20).</p>
+              </div>
+            </td>
+            <td>
+                  <code>20</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>exclude_classes</code>
+            </td>
+            <td>
+                  <code><span title="typing.Union">Union</span>[<span title="list">list</span>, None]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of classes to exclude from evaluation (default: None).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -2599,7 +2895,34 @@ Raises
 <span class="normal">292</span>
 <span class="normal">293</span>
 <span class="normal">294</span>
-<span class="normal">295</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@no_type_check</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@no_type_check</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">datasets</span><span class="p">:</span> <span class="n">DatasetContainer</span><span class="p">,</span>
@@ -2614,10 +2937,17 @@ Raises
     <span class="n">metric_class</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;roc_auc_ovo&quot;</span><span class="p">,</span>  <span class="c1"># Default is &#39;roc_auc_ovo&#39; via https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-string-names</span>
     <span class="n">metric_regression</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;r2&quot;</span><span class="p">,</span>  <span class="c1"># Default is &#39;r2&#39;</span>
     <span class="n">reference_methods</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[],</span>  <span class="c1"># Default [], Options are &quot;PCA&quot;, &quot;UMAP&quot;, &quot;TSNE&quot;, &quot;RandomFeature&quot;</span>
+    <span class="n">reference_reducer</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>  <span class="c1"># Option to provide pre-fitted reducer objects for PCA, UMAP or TSNE, e.g. {&quot;PCA&quot;: pca_reducer, &quot;UMAP&quot;: umap_reducer, &quot;TSNE&quot;: tsne_reducer}</span>
     <span class="n">split_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;use-split&quot;</span><span class="p">,</span>  <span class="c1"># Default is &quot;use-split&quot;, other options: &quot;CV-5&quot;, ... &quot;LOOCV&quot;?</span>
     <span class="n">n_downsample</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span>
         <span class="nb">int</span><span class="p">,</span> <span class="kc">None</span>
     <span class="p">]</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">,</span>  <span class="c1"># Default is 10000, if provided downsample to this number of samples for faster evaluation. Set to None to disable downsampling.</span>
+    <span class="n">top_k_classes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span>
+        <span class="nb">int</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>  <span class="c1"># Default is 20, if provided restrict classification tasks to top k classes, others combined into &quot;other&quot;</span>
+    <span class="n">exclude_classes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span>
+        <span class="nb">list</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># Default is None, if provided exclude these classes from evaluation</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Evaluates the performance of machine learning models on various feature representations and clinical parameters.</span>
 
@@ -2634,10 +2964,13 @@ Raises
 <span class="sd">        params:List of clinical annotation columns to evaluate, or &quot;all&quot; to use all columns (default: &quot;all&quot;).</span>
 <span class="sd">        metric_class: Scoring metric for classification tasks (default: &quot;roc_auc_ovo&quot;).</span>
 <span class="sd">        metric_regression: Scoring metric for regression tasks (default: &quot;r2&quot;).</span>
-<span class="sd">        reference_methods:List of feature representations to evaluate (e.g., &quot;PCA&quot;, &quot;UMAP&quot;, &quot;TSNE&quot;, &quot;RandomFeature&quot;). &quot;Latent&quot; is always included (default: []).</span>
+<span class="sd">        reference_methods: List of feature representations to evaluate (e.g., &quot;PCA&quot;, &quot;UMAP&quot;, &quot;TSNE&quot;, &quot;RandomFeature&quot;). &quot;Latent&quot; is always included (default: []).</span>
+<span class="sd">        reference_reducer: Optional dictionary of pre-fitted dimensionality reduction objects for PCA, UMAP, or TSNE to ensure consistent transformations across runs (default: {}).</span>
 <span class="sd">        split_type: which split to use</span>
 <span class="sd">            use-split&quot; for pre-defined splits, &quot;CV-N&quot; for N-fold cross-validation, or &quot;LOOCV&quot; for leave-one-out cross-validation (default: &quot;use-split&quot;).</span>
 <span class="sd">        n_downsample: If provided, downsample the data to this number of samples for faster evaluation. Default is 10000. Set to None to disable downsampling.</span>
+<span class="sd">        top_k_classes: If provided, restrict classification tasks to the top k classes, combining others into &quot;other&quot; (default: 20).</span>
+<span class="sd">        exclude_classes: List of classes to exclude from evaluation (default: None).</span>
 <span class="sd">    Returns:</span>
 <span class="sd">        The updated result object with evaluation results stored in `embedding_evaluation`.</span>
 <span class="sd">    Raises</span>
@@ -2659,6 +2992,10 @@ Raises
     <span class="k">if</span> <span class="n">datasets</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">datasets</span> <span class="o">=</span> <span class="n">DatasetContainer</span><span class="p">()</span>
 
+    <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">new_datasets</span><span class="o">.</span><span class="n">train</span><span class="p">):</span>
+        <span class="n">datasets</span><span class="o">.</span><span class="n">train</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">new_datasets</span><span class="o">.</span><span class="n">train</span>
+    <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">new_datasets</span><span class="o">.</span><span class="n">valid</span><span class="p">):</span>
+        <span class="n">datasets</span><span class="o">.</span><span class="n">valid</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">new_datasets</span><span class="o">.</span><span class="n">valid</span>
     <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">new_datasets</span><span class="o">.</span><span class="n">test</span><span class="p">):</span>
         <span class="n">datasets</span><span class="o">.</span><span class="n">test</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">new_datasets</span><span class="o">.</span><span class="n">test</span>
 
@@ -2755,14 +3092,20 @@ Raises
 
             <span class="c1">#     df = self._load_input_for_ml_xmodal(task_xmodal, datasets, result, modality=modality)</span>
             <span class="c1"># else:</span>
-            <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_input_for_ml</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="n">datasets</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_input_for_ml</span><span class="p">(</span>
+                <span class="n">task</span><span class="p">,</span>
+                <span class="n">datasets</span><span class="p">,</span>
+                <span class="n">result</span><span class="p">,</span>
+                <span class="n">n_downsample</span><span class="p">,</span>
+                <span class="n">reference_reducer</span><span class="o">=</span><span class="n">reference_reducer</span><span class="p">,</span>
+            <span class="p">)</span>
 
             <span class="k">if</span> <span class="n">params</span> <span class="o">==</span> <span class="s2">&quot;all&quot;</span><span class="p">:</span>
                 <span class="n">params</span> <span class="o">=</span> <span class="n">clin_data</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
 
             <span class="k">for</span> <span class="n">task_param</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
-                <span class="k">if</span> <span class="s2">&quot;Latent&quot;</span> <span class="ow">in</span> <span class="n">task</span><span class="p">:</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Perform ML task for target parameter: </span><span class="si">{</span><span class="n">task_param</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="c1"># if &quot;Latent&quot; in task:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Perform ML task for target parameter: </span><span class="si">{</span><span class="n">task_param</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                 <span class="c1">## Check if classification or regression task</span>
                 <span class="n">ml_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_ml_type</span><span class="p">(</span><span class="n">clin_data</span><span class="p">,</span> <span class="n">task_param</span><span class="p">)</span>
 
@@ -2816,6 +3159,7 @@ Raises
                         <span class="n">sklearn_ml</span><span class="o">=</span><span class="n">sklearn_ml</span><span class="p">,</span>
                         <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span>
                         <span class="n">ml_type</span><span class="o">=</span><span class="n">ml_type</span><span class="p">,</span>
+                        <span class="n">top_k_classes</span><span class="o">=</span><span class="n">top_k_classes</span><span class="p">,</span>
                     <span class="p">)</span>
                 <span class="k">elif</span> <span class="n">split_type</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;CV-&quot;</span><span class="p">):</span>
                     <span class="n">cv_folds</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">split_type</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
@@ -2826,7 +3170,10 @@ Raises
                         <span class="n">task_param</span><span class="o">=</span><span class="n">task_param</span><span class="p">,</span>
                         <span class="n">sklearn_ml</span><span class="o">=</span><span class="n">sklearn_ml</span><span class="p">,</span>
                         <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span>
+                        <span class="n">ml_type</span><span class="o">=</span><span class="n">ml_type</span><span class="p">,</span>
                         <span class="n">cv_folds</span><span class="o">=</span><span class="n">cv_folds</span><span class="p">,</span>
+                        <span class="n">top_k_classes</span><span class="o">=</span><span class="n">top_k_classes</span><span class="p">,</span>
+                        <span class="n">exclude_classes</span><span class="o">=</span><span class="n">exclude_classes</span><span class="p">,</span>
                     <span class="p">)</span>
                 <span class="k">elif</span> <span class="n">split_type</span> <span class="o">==</span> <span class="s2">&quot;LOOCV&quot;</span><span class="p">:</span>
                     <span class="c1"># Leave One Out Cross Validation</span>
@@ -2836,7 +3183,10 @@ Raises
                         <span class="n">task_param</span><span class="o">=</span><span class="n">task_param</span><span class="p">,</span>
                         <span class="n">sklearn_ml</span><span class="o">=</span><span class="n">sklearn_ml</span><span class="p">,</span>
                         <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span>
+                        <span class="n">ml_type</span><span class="o">=</span><span class="n">ml_type</span><span class="p">,</span>
                         <span class="n">cv_folds</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span>
+                        <span class="n">top_k_classes</span><span class="o">=</span><span class="n">top_k_classes</span><span class="p">,</span>
+                        <span class="n">exclude_classes</span><span class="o">=</span><span class="n">exclude_classes</span><span class="p">,</span>
                     <span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>

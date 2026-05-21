@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -7864,7 +7864,13 @@ test : Dataset
 <span class="normal">340</span>
 <span class="normal">341</span>
 <span class="normal">342</span>
-<span class="normal">343</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GeneralPreprocessor</span><span class="p">(</span><span class="n">BasePreprocessor</span><span class="p">):</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GeneralPreprocessor</span><span class="p">(</span><span class="n">BasePreprocessor</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Preprocessor for handling multi-modal data.</span>
 
 <span class="sd">    Attributes:</span>
@@ -8023,6 +8029,12 @@ test : Dataset
             <span class="n">mudata</span><span class="p">:</span> <span class="n">md</span><span class="o">.</span><span class="n">MuData</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">multi_sc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>  <span class="c1"># ty: ignore[invalid-type-form]</span>
                 <span class="s2">&quot;multi_sc&quot;</span><span class="p">,</span> <span class="kc">None</span>
             <span class="p">)</span>  <span class="c1"># ty: ignore[invalid-type-form]</span>
+            <span class="n">first_mod</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">mudata</span><span class="o">.</span><span class="n">mod</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+            <span class="c1"># for single cell we know, we have a shared metadata</span>
+            <span class="c1"># so we can use the first modality as reference</span>
+            <span class="c1"># otherwise when using .obs from mudata, we get</span>
+            <span class="c1"># unintutive column names with modality name prefix</span>
+
             <span class="k">if</span> <span class="n">mudata</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
                     <span class="s2">&quot;Unpaired multi Single Cell case not implemented vor Varix and Vanillix, set requires_paired=True in config&quot;</span>
@@ -8038,7 +8050,7 @@ test : Dataset
                 <span class="n">data</span><span class="o">=</span><span class="n">combined_data</span><span class="p">,</span>
                 <span class="n">config</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
                 <span class="n">split_ids</span><span class="o">=</span><span class="n">split_ids</span><span class="p">,</span>
-                <span class="n">metadata</span><span class="o">=</span><span class="n">mudata</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
+                <span class="n">metadata</span><span class="o">=</span><span class="n">first_mod</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
                 <span class="n">ids</span><span class="o">=</span><span class="n">mudata</span><span class="o">.</span><span class="n">obs_names</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
                 <span class="n">feature_ids</span><span class="o">=</span><span class="n">feature_ids</span><span class="p">,</span>
             <span class="p">)</span>
@@ -9886,9 +9898,7 @@ annotation data within a DataPackage.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/autoencodix/data/_nanremover.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 13</span>
-<span class="normal"> 14</span>
-<span class="normal"> 15</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 15</span>
 <span class="normal"> 16</span>
 <span class="normal"> 17</span>
 <span class="normal"> 18</span>
@@ -10055,7 +10065,25 @@ annotation data within a DataPackage.</p>
 <span class="normal">179</span>
 <span class="normal">180</span>
 <span class="normal">181</span>
-<span class="normal">182</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">NaNRemover</span><span class="p">:</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">NaNRemover</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Removes NaN values from multi-modal datasets.</span>
 
 <span class="sd">    This object identifies and removes NaN values from various data structures</span>
@@ -10110,17 +10138,26 @@ annotation data within a DataPackage.</p>
                 <span class="n">adata</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="n">layer_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">layer_data</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
 
         <span class="c1"># Handle obs metadata</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_cols</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_cols</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-                    <span class="c1"># Fill NaNs with &quot;missing&quot; for non-numeric columns</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">col</span><span class="p">]):</span>
-                        <span class="c1"># Add &quot;missing&quot; to categories first, then fill</span>
-                        <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">add_categories</span><span class="p">([</span><span class="s2">&quot;missing&quot;</span><span class="p">])</span>
-                        <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-                            <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;missing&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
-                        <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_cols</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">adata</span>
+
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_cols</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2"> not found in obs.&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+                <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">is_categorical_dtype</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s2">&quot;missing&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">categories</span><span class="p">:</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">add_categories</span><span class="p">([</span><span class="s2">&quot;missing&quot;</span><span class="p">])</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;missing&quot;</span><span class="p">)</span>
+            <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span>
+
         <span class="k">return</span> <span class="n">adata</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">remove_nan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">DataPackage</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataPackage</span><span class="p">:</span>
@@ -10171,12 +10208,19 @@ annotation data within a DataPackage.</p>
             <span class="n">processed</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">multi_sc</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
 
             <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">multi_sc</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="c1"># we know from screader that there is only one modality</span>
-                <span class="k">for</span> <span class="n">modkey</span><span class="p">,</span> <span class="n">adata</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">mod</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                    <span class="n">processed_mod</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_modality</span><span class="p">(</span><span class="n">adata</span><span class="o">=</span><span class="n">adata</span><span class="p">)</span>
-                    <span class="n">processed_mod</span> <span class="o">=</span> <span class="n">md</span><span class="o">.</span><span class="n">MuData</span><span class="p">({</span><span class="n">modkey</span><span class="p">:</span> <span class="n">processed_mod</span><span class="p">})</span>
-                <span class="n">processed</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">processed_mod</span>
-            <span class="n">data</span><span class="o">.</span><span class="n">multi_sc</span> <span class="o">=</span> <span class="n">processed</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">sub_k</span><span class="p">,</span> <span class="n">sub_v</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="n">processed_mod</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_modality</span><span class="p">(</span><span class="n">adata</span><span class="o">=</span><span class="n">sub_v</span><span class="p">)</span>
+                        <span class="n">processed_mod</span> <span class="o">=</span> <span class="n">md</span><span class="o">.</span><span class="n">MuData</span><span class="p">({</span><span class="n">sub_k</span><span class="p">:</span> <span class="n">processed_mod</span><span class="p">})</span>
+                        <span class="n">processed</span><span class="p">[</span><span class="n">sub_k</span><span class="p">]</span> <span class="o">=</span> <span class="n">processed_mod</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">modkey</span><span class="p">,</span> <span class="n">adata</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">mod</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="n">processed_mod</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_modality</span><span class="p">(</span><span class="n">adata</span><span class="o">=</span><span class="n">adata</span><span class="p">)</span>
+                        <span class="n">processed_mod</span> <span class="o">=</span> <span class="n">md</span><span class="o">.</span><span class="n">MuData</span><span class="p">({</span><span class="n">modkey</span><span class="p">:</span> <span class="n">processed_mod</span><span class="p">})</span>
+                    <span class="n">processed</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">processed_mod</span>
+            <span class="n">processed_clean</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">processed</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span><span class="p">}</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">multi_sc</span> <span class="o">=</span> <span class="n">processed_clean</span>
 
         <span class="c1"># Handle from_modality and to_modality (for translation cases)</span>
         <span class="k">for</span> <span class="n">direction</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;from_modality&quot;</span><span class="p">,</span> <span class="s2">&quot;to_modality&quot;</span><span class="p">]:</span>
@@ -10259,9 +10303,7 @@ Args:
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/data/_nanremover.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">27</span>
-<span class="normal">28</span>
-<span class="normal">29</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">29</span>
 <span class="normal">30</span>
 <span class="normal">31</span>
 <span class="normal">32</span>
@@ -10269,7 +10311,9 @@ Args:
 <span class="normal">34</span>
 <span class="normal">35</span>
 <span class="normal">36</span>
-<span class="normal">37</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">DefaultConfig</span><span class="p">,</span>
 <span class="p">):</span>
@@ -10369,18 +10413,7 @@ DataPackage and removes rows/columns/entries containing NaN values.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/data/_nanremover.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 81</span>
-<span class="normal"> 82</span>
-<span class="normal"> 83</span>
-<span class="normal"> 84</span>
-<span class="normal"> 85</span>
-<span class="normal"> 86</span>
-<span class="normal"> 87</span>
-<span class="normal"> 88</span>
-<span class="normal"> 89</span>
-<span class="normal"> 90</span>
-<span class="normal"> 91</span>
-<span class="normal"> 92</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 92</span>
 <span class="normal"> 93</span>
 <span class="normal"> 94</span>
 <span class="normal"> 95</span>
@@ -10470,7 +10503,25 @@ DataPackage and removes rows/columns/entries containing NaN values.</p>
 <span class="normal">179</span>
 <span class="normal">180</span>
 <span class="normal">181</span>
-<span class="normal">182</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">remove_nan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">DataPackage</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataPackage</span><span class="p">:</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">remove_nan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">DataPackage</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataPackage</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Removes NaN values from all applicable DataPackage components.</span>
 
 <span class="sd">    Iterates through the bulk data, annotation data, and multi-modal</span>
@@ -10518,12 +10569,19 @@ DataPackage and removes rows/columns/entries containing NaN values.</p>
         <span class="n">processed</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">multi_sc</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
 
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">multi_sc</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="c1"># we know from screader that there is only one modality</span>
-            <span class="k">for</span> <span class="n">modkey</span><span class="p">,</span> <span class="n">adata</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">mod</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="n">processed_mod</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_modality</span><span class="p">(</span><span class="n">adata</span><span class="o">=</span><span class="n">adata</span><span class="p">)</span>
-                <span class="n">processed_mod</span> <span class="o">=</span> <span class="n">md</span><span class="o">.</span><span class="n">MuData</span><span class="p">({</span><span class="n">modkey</span><span class="p">:</span> <span class="n">processed_mod</span><span class="p">})</span>
-            <span class="n">processed</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">processed_mod</span>
-        <span class="n">data</span><span class="o">.</span><span class="n">multi_sc</span> <span class="o">=</span> <span class="n">processed</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">sub_k</span><span class="p">,</span> <span class="n">sub_v</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">processed_mod</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_modality</span><span class="p">(</span><span class="n">adata</span><span class="o">=</span><span class="n">sub_v</span><span class="p">)</span>
+                    <span class="n">processed_mod</span> <span class="o">=</span> <span class="n">md</span><span class="o">.</span><span class="n">MuData</span><span class="p">({</span><span class="n">sub_k</span><span class="p">:</span> <span class="n">processed_mod</span><span class="p">})</span>
+                    <span class="n">processed</span><span class="p">[</span><span class="n">sub_k</span><span class="p">]</span> <span class="o">=</span> <span class="n">processed_mod</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">modkey</span><span class="p">,</span> <span class="n">adata</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">mod</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">processed_mod</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_modality</span><span class="p">(</span><span class="n">adata</span><span class="o">=</span><span class="n">adata</span><span class="p">)</span>
+                    <span class="n">processed_mod</span> <span class="o">=</span> <span class="n">md</span><span class="o">.</span><span class="n">MuData</span><span class="p">({</span><span class="n">modkey</span><span class="p">:</span> <span class="n">processed_mod</span><span class="p">})</span>
+                <span class="n">processed</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">processed_mod</span>
+        <span class="n">processed_clean</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">processed</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span><span class="p">}</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">multi_sc</span> <span class="o">=</span> <span class="n">processed_clean</span>
 
     <span class="c1"># Handle from_modality and to_modality (for translation cases)</span>
     <span class="k">for</span> <span class="n">direction</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;from_modality&quot;</span><span class="p">,</span> <span class="s2">&quot;to_modality&quot;</span><span class="p">]:</span>
@@ -10698,11 +10756,7 @@ DataPackage and removes rows/columns/entries containing NaN values.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/autoencodix/data/_numeric_dataset.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">120</span>
 <span class="normal">121</span>
 <span class="normal">122</span>
 <span class="normal">123</span>
@@ -10787,7 +10841,11 @@ DataPackage and removes rows/columns/entries containing NaN values.</p>
 <span class="normal">202</span>
 <span class="normal">203</span>
 <span class="normal">204</span>
-<span class="normal">205</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">NumericDataset</span><span class="p">(</span><span class="n">TensorAwareDataset</span><span class="p">):</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">NumericDataset</span><span class="p">(</span><span class="n">TensorAwareDataset</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A custom PyTorch dataset that handles tensors.</span>
 
 
@@ -10973,11 +11031,7 @@ DataPackage and removes rows/columns/entries containing NaN values.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/data/_numeric_dataset.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">169</span>
-<span class="normal">170</span>
-<span class="normal">171</span>
-<span class="normal">172</span>
-<span class="normal">173</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">173</span>
 <span class="normal">174</span>
 <span class="normal">175</span>
 <span class="normal">176</span>
@@ -11005,7 +11059,11 @@ DataPackage and removes rows/columns/entries containing NaN values.</p>
 <span class="normal">198</span>
 <span class="normal">199</span>
 <span class="normal">200</span>
-<span class="normal">201</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@no_type_check</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@no_type_check</span>
 <span class="k">def</span><span class="w"> </span><span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span>
     <span class="n">Tuple</span><span class="p">[</span>
         <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
@@ -11171,11 +11229,7 @@ DataPackage and removes rows/columns/entries containing NaN values.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/data/_numeric_dataset.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span>
-<span class="normal">133</span>
-<span class="normal">134</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">134</span>
 <span class="normal">135</span>
 <span class="normal">136</span>
 <span class="normal">137</span>
@@ -11208,7 +11262,11 @@ DataPackage and removes rows/columns/entries containing NaN values.</p>
 <span class="normal">164</span>
 <span class="normal">165</span>
 <span class="normal">166</span>
-<span class="normal">167</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">spmatrix</span><span class="p">],</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">DefaultConfig</span><span class="p">,</span>
@@ -11268,9 +11326,9 @@ DataPackage and removes rows/columns/entries containing NaN values.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/data/_numeric_dataset.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">203</span>
-<span class="normal">204</span>
-<span class="normal">205</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the number of samples (rows) in the dataset&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 </code></pre></div></td></tr></table></div>
@@ -11770,7 +11828,8 @@ DataPackage and removes rows/columns/entries containing NaN values.</p>
 <span class="normal">420</span>
 <span class="normal">421</span>
 <span class="normal">422</span>
-<span class="normal">423</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">SingleCellFilter</span><span class="p">:</span>
+<span class="normal">423</span>
+<span class="normal">424</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">SingleCellFilter</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Filter and scale single-cell data, returning a MuData object with synchronized metadata.AnnData</span>
 
 <span class="sd">    Attributes:</span>
@@ -11888,6 +11947,7 @@ DataPackage and removes rows/columns/entries containing NaN values.</p>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_presplit_processing</span><span class="p">(</span><span class="n">mudata</span><span class="o">=</span><span class="n">multi_sc</span><span class="p">)</span>
         <span class="n">res</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">multi_sc</span><span class="o">.</span><span class="n">keys</span><span class="p">()}</span>
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">multi_sc</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
             <span class="n">processed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_presplit_processing</span><span class="p">(</span><span class="n">mudata</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
             <span class="n">res</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">processed</span>
         <span class="k">return</span> <span class="n">res</span>
@@ -12326,8 +12386,7 @@ Args:
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/data/_sc_filter.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">381</span>
-<span class="normal">382</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">382</span>
 <span class="normal">383</span>
 <span class="normal">384</span>
 <span class="normal">385</span>
@@ -12368,7 +12427,8 @@ Args:
 <span class="normal">420</span>
 <span class="normal">421</span>
 <span class="normal">422</span>
-<span class="normal">423</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">distribute_features_across_modalities</span><span class="p">(</span>
+<span class="normal">423</span>
+<span class="normal">424</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">distribute_features_across_modalities</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">mudata</span><span class="p">:</span> <span class="n">MuData</span><span class="p">,</span>  <span class="c1"># ty: ignore[invalid-type-form]</span>
     <span class="n">total_features</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>  <span class="c1"># ty: ignore[invalid-type-form]</span>
@@ -12439,8 +12499,7 @@ Returns:
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/data/_sc_filter.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">278</span>
-<span class="normal">279</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">279</span>
 <span class="normal">280</span>
 <span class="normal">281</span>
 <span class="normal">282</span>
@@ -12528,7 +12587,8 @@ Returns:
 <span class="normal">364</span>
 <span class="normal">365</span>
 <span class="normal">366</span>
-<span class="normal">367</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">general_postsplit_processing</span><span class="p">(</span>
+<span class="normal">367</span>
+<span class="normal">368</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">general_postsplit_processing</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">mudata</span><span class="p">:</span> <span class="n">MuData</span><span class="p">,</span>  <span class="c1"># ty: ignore[invalid-type-form]</span>
     <span class="n">gene_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">]],</span>
@@ -12693,7 +12753,8 @@ Returns:
 <span class="normal">137</span>
 <span class="normal">138</span>
 <span class="normal">139</span>
-<span class="normal">140</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">presplit_processing</span><span class="p">(</span>
+<span class="normal">140</span>
+<span class="normal">141</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">presplit_processing</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">multi_sc</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">MuData</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MuData</span><span class="p">]],</span>  <span class="c1"># ty: ignore[invalid-type-form]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MuData</span><span class="p">]:</span>  <span class="c1"># ty: ignore[invalid-type-form]</span>
@@ -12711,6 +12772,7 @@ Returns:
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_presplit_processing</span><span class="p">(</span><span class="n">mudata</span><span class="o">=</span><span class="n">multi_sc</span><span class="p">)</span>
     <span class="n">res</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">multi_sc</span><span class="o">.</span><span class="n">keys</span><span class="p">()}</span>
     <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">multi_sc</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
         <span class="n">processed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_presplit_processing</span><span class="p">(</span><span class="n">mudata</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
         <span class="n">res</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">processed</span>
     <span class="k">return</span> <span class="n">res</span>
@@ -12777,8 +12839,7 @@ gene_map : Optional override of genes to keep per modality</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/data/_sc_filter.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">191</span>
-<span class="normal">192</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">192</span>
 <span class="normal">193</span>
 <span class="normal">194</span>
 <span class="normal">195</span>
@@ -12847,7 +12908,8 @@ gene_map : Optional override of genes to keep per modality</p>
 <span class="normal">258</span>
 <span class="normal">259</span>
 <span class="normal">260</span>
-<span class="normal">261</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">sc_postsplit_processing</span><span class="p">(</span>
+<span class="normal">261</span>
+<span class="normal">262</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">sc_postsplit_processing</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">mudata</span><span class="p">:</span> <span class="n">MuData</span><span class="p">,</span>  <span class="c1"># ty: ignore[invalid-type-form]</span>
     <span class="n">gene_map</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
@@ -14812,7 +14874,11 @@ raw_user_data: Raw user data to preprocess, or None to use self._datapackage</p>
 <span class="normal">110</span>
 <span class="normal">111</span>
 <span class="normal">112</span>
-<span class="normal">113</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TensorAwareDataset</span><span class="p">(</span><span class="n">BaseDataset</span><span class="p">):</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TensorAwareDataset</span><span class="p">(</span><span class="n">BaseDataset</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Handles dtype mapping and tensor conversion logic.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -14874,6 +14940,10 @@ raw_user_data: Raw user data to preprocess, or None to use self._datapackage</p>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_ids</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_ids</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">issparse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">toarray</span><span class="p">(),</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_ids</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_ids</span>
             <span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
             <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span>
@@ -14999,9 +15069,7 @@ raw_user_data: Raw user data to preprocess, or None to use self._datapackage</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/autoencodix/data/_xmodal_preprocessor.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 18</span>
-<span class="normal"> 19</span>
-<span class="normal"> 20</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 20</span>
 <span class="normal"> 21</span>
 <span class="normal"> 22</span>
 <span class="normal"> 23</span>
@@ -15143,7 +15211,33 @@ raw_user_data: Raw user data to preprocess, or None to use self._datapackage</p>
 <span class="normal">159</span>
 <span class="normal">160</span>
 <span class="normal">161</span>
-<span class="normal">162</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">XModalPreprocessor</span><span class="p">(</span><span class="n">GeneralPreprocessor</span><span class="p">):</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">XModalPreprocessor</span><span class="p">(</span><span class="n">GeneralPreprocessor</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Preprocessor for cross-modal data, handling multiple data types and their transformations.</span>
 
 
@@ -15261,23 +15355,37 @@ raw_user_data: Raw user data to preprocess, or None to use self._datapackage</p>
                     <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
                 <span class="p">)</span>
             <span class="k">elif</span> <span class="n">dp_key</span> <span class="o">==</span> <span class="s2">&quot;multi_sc&quot;</span><span class="p">:</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">md</span><span class="o">.</span><span class="n">MuData</span><span class="p">):</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">()</span>
-                <span class="k">for</span> <span class="n">mod_key</span><span class="p">,</span> <span class="n">mod_data</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">mod</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                    <span class="n">selected_layers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">data_config</span><span class="o">.</span><span class="n">data_info</span><span class="p">[</span>
-                        <span class="n">mod_key</span>
-                    <span class="p">]</span><span class="o">.</span><span class="n">selected_layers</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="n">selected_layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;X&quot;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected_layers</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-                            <span class="s2">&quot;Xmodalix works only with X layer of single cell data as of now&quot;</span>
+                <span class="c1"># unpaired multi_sc case with adata dicts</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">adata_name</span><span class="p">,</span> <span class="n">adata_v</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_layers</span><span class="p">(</span><span class="n">data_name</span><span class="o">=</span><span class="n">adata_name</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">adata_v</span><span class="p">,</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">):</span>
+                            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;Input data has unsupported data type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                            <span class="p">)</span>
+                        <span class="n">dataset_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">NumericDataset</span><span class="p">(</span>
+                            <span class="n">data</span><span class="o">=</span><span class="n">adata_v</span><span class="o">.</span><span class="n">X</span><span class="p">,</span>
+                            <span class="n">config</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
+                            <span class="n">sample_ids</span><span class="o">=</span><span class="n">adata_v</span><span class="o">.</span><span class="n">obs_names</span><span class="p">,</span>
+                            <span class="n">feature_ids</span><span class="o">=</span><span class="n">adata_v</span><span class="o">.</span><span class="n">var_names</span><span class="p">,</span>
+                            <span class="n">split_indices</span><span class="o">=</span><span class="n">indices</span><span class="p">,</span>
+                            <span class="n">metadata</span><span class="o">=</span><span class="n">adata_v</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
                         <span class="p">)</span>
-                    <span class="n">dataset_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">NumericDataset</span><span class="p">(</span>
-                        <span class="n">data</span><span class="o">=</span><span class="n">mod_data</span><span class="o">.</span><span class="n">X</span><span class="p">,</span>
-                        <span class="n">config</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
-                        <span class="n">sample_ids</span><span class="o">=</span><span class="n">mod_data</span><span class="o">.</span><span class="n">obs_names</span><span class="p">,</span>
-                        <span class="n">feature_ids</span><span class="o">=</span><span class="n">mod_data</span><span class="o">.</span><span class="n">var_names</span><span class="p">,</span>
-                        <span class="n">split_indices</span><span class="o">=</span><span class="n">indices</span><span class="p">,</span>
-                        <span class="n">metadata</span><span class="o">=</span><span class="n">mod_data</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
+
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">md</span><span class="o">.</span><span class="n">MuData</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">mod_key</span><span class="p">,</span> <span class="n">mod_data</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">mod</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_layers</span><span class="p">(</span><span class="n">data_name</span><span class="o">=</span><span class="n">mod_key</span><span class="p">)</span>
+                        <span class="n">dataset_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">NumericDataset</span><span class="p">(</span>
+                            <span class="n">data</span><span class="o">=</span><span class="n">mod_data</span><span class="o">.</span><span class="n">X</span><span class="p">,</span>
+                            <span class="n">config</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
+                            <span class="n">sample_ids</span><span class="o">=</span><span class="n">mod_data</span><span class="o">.</span><span class="n">obs_names</span><span class="p">,</span>
+                            <span class="n">feature_ids</span><span class="o">=</span><span class="n">mod_data</span><span class="o">.</span><span class="n">var_names</span><span class="p">,</span>
+                            <span class="n">split_indices</span><span class="o">=</span><span class="n">indices</span><span class="p">,</span>
+                            <span class="n">metadata</span><span class="o">=</span><span class="n">mod_data</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span>
+                        <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Input data has unsupported data type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
                     <span class="p">)</span>
 
             <span class="k">elif</span> <span class="n">dp_key</span> <span class="o">==</span> <span class="s2">&quot;annotation&quot;</span><span class="p">:</span>
@@ -15288,6 +15396,16 @@ raw_user_data: Raw user data to preprocess, or None to use self._datapackage</p>
                     <span class="sa">f</span><span class="s2">&quot;Got datapackage attribute: </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">, probably you have added an attribute to the Datapackage class without adjusting this method. Only supports: [&#39;multi_bulk&#39;, &#39;multi_sc&#39;, &#39;img&#39; and &#39;annotation&#39;]&quot;</span>
                 <span class="p">)</span>
         <span class="k">return</span> <span class="n">dataset_dict</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">selected_layers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">data_config</span><span class="o">.</span><span class="n">data_info</span><span class="p">[</span><span class="n">data_name</span><span class="p">]</span><span class="o">.</span><span class="n">selected_layers</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">selected_layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;X&quot;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected_layers</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Xmodalix works only with X layer of single cell data as of now&quot;</span>
+                <span class="s2">&quot;Using X Layer, discarding selected layers&quot;</span>
+            <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -15323,16 +15441,16 @@ Args:
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/data/_xmodal_preprocessor.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">27</span>
-<span class="normal">28</span>
-<span class="normal">29</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">29</span>
 <span class="normal">30</span>
 <span class="normal">31</span>
 <span class="normal">32</span>
 <span class="normal">33</span>
 <span class="normal">34</span>
 <span class="normal">35</span>
-<span class="normal">36</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">DefaultConfig</span><span class="p">,</span> <span class="n">ontologies</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">Dict</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the XModalPreprocessor</span>
@@ -15367,9 +15485,7 @@ Args:
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/data/_xmodal_preprocessor.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">38</span>
-<span class="normal">39</span>
-<span class="normal">40</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
 <span class="normal">41</span>
 <span class="normal">42</span>
 <span class="normal">43</span>
@@ -15402,7 +15518,9 @@ Args:
 <span class="normal">70</span>
 <span class="normal">71</span>
 <span class="normal">72</span>
-<span class="normal">73</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">preprocess</span><span class="p">(</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">preprocess</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">raw_user_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DataPackage</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">predict_new_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>

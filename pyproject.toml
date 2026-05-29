@@ -34,6 +34,8 @@ dependencies = [
     "openai==2.31.0",
     "tensorboard-plugin-profile==2.20.1",
     "tensorboard>=2.20.0",
+	"nibabel==5.4.2",
+	"torchio==1.0.2",
 ]
 
 [dependency-groups]

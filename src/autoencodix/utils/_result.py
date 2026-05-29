@@ -346,11 +346,8 @@ class Result:
             import warnings
 
             warnings.warn(
-                f"We could not create visualizations for the loss plots.\n"
-                f"This usually happens if you try to visualize after saving and loading "
-                f"the pipeline object with `save_all=False`. This memory-efficient saving mode "
-                f"does not retain past training loss data.\n\n"
-                f"Original error message: {e}"
+                f"Could not retrieve latent representations for epoch {epoch} and split '{split}'. "
+                f"Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.\n\n"
             )
 
             return pd.DataFrame()

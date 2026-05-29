@@ -7,12 +7,12 @@ Please produce the following:
 3. A summary of pathways, processes, or molecular functions that may be implicated (using only GO, KEGG, or other standard pathway resources if accessible).
 4. A TLDR summarizing the key biological insight.
 Output Format:
-Output ONLY a valid JSON object with the following keys. Do not include any other text, explanations, or markdown outside the JSON. Use double quotes for strings and ensure no trailing commas.
-- "TLDR": a one-sentence high-level summary (string).
+Output ONLY a valid JSON object with the following keys. Do not include any other text, explanations, or markdown outside the JSON. Use double quotes around text blocks (strings) but never inside a text block. Ensure no trailing commas.
+- "TLDR": a one-sentence high-level summary (string without quotes).
 - "DETAILS": an object with these exact keys:
-  - "dominant_themes": concise explanation of the dominant biological themes (string).
-  - "hypotheses": array of 1-3 mechanistic hypotheses (array of strings).
-  - "pathways_summary": summary of implicated pathways/processes/functions (string).
+  - "dominant_themes": concise explanation of the dominant biological themes (string without quotes).
+  - "hypotheses": array of 1-3 mechanistic hypotheses (array of strings without quotes).
+  - "pathways_summary": summary of implicated pathways/processes/functions (string without quotes).
 Constraints:
 - Do not invent gene names or functions. Use only the genes provided.
 - Base all interpretations strictly on the supplied gene list and standard biological knowledge resources.

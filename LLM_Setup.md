@@ -56,6 +56,22 @@ Your `model_name` must match exactly the name of the model served by Ollama:
 
 ---
 
+## 3. Using Openrouter
+
+To use a widespread options of models you can use Openrouter. For this simply set a environment variable in your terminal with: 
+
+`export OPENROUTER_PREMIUM_API_KEY="sk-my-key"`
+
+## 4. Using ScaDS-LLM server
+
+If you are a ScaDS.AI member or have a ZIH TU Dresden account, you can use our self-hosted LLM server (https://llm.scads.ai/docs/).
+
+To enable this, set an environment variable like this: 
+
+`export SCADS_LLM_API_KEY="sk-my-key"`
+
+``
+
 # 🧬 Using `.explain()` for Gene Expression Interpretation
 
 The `.explain()` method can generate a short biological explanation and hypothesis about what is happening in disease vs healthy samples given a list of altered genes.

@@ -4,7 +4,8 @@ Use of OOP would be overkill for the simple functions in this module.
 """
 
 from pathlib import Path
-import zipfile
+
+# import zipfile
 import inspect
 import os
 from collections import defaultdict
@@ -319,20 +320,21 @@ class Saver:
 
         self._save_pipeline_object(self.pipeline)
 
-        with zipfile.ZipFile(
-            os.path.join(self.folder, f"{self.file_stem}.zip"), "w"
-        ) as archive:
-            arcname = self.file_name
-            archive.write(self.file_path , arcname=arcname)
-            arcname = f"{self.file_stem}_preprocessor.pkl"
-            archive.write(self.preprocessor_path, arcname=arcname)
-            for model_state_path in self.model_state_paths:
-                arcname = f"{self.file_stem}_model.pth"
-                archive.write(model_state_path, arcname=arcname)
-        os.remove(self.file_path)
-        os.remove(self.preprocessor_path)
-        for model_state_path in self.model_state_paths:
-            os.remove(model_state_path)
+        ## REMOVING Zip functionality as it causes issues with filesystems
+        # with zipfile.ZipFile(
+        #     os.path.join(self.folder, f"{self.file_stem}.zip"), "w"
+        # ) as archive:
+        #     arcname = self.file_name
+        #     archive.write(self.file_path , arcname=arcname)
+        #     arcname = f"{self.file_stem}_preprocessor.pkl"
+        #     archive.write(self.preprocessor_path, arcname=arcname)
+        #     for model_state_path in self.model_state_paths:
+        #         arcname = f"{self.file_stem}_model.pth"
+        #         archive.write(model_state_path, arcname=arcname)
+        # os.remove(self.file_path)
+        # os.remove(self.preprocessor_path)
+        # for model_state_path in self.model_state_paths:
+        #     os.remove(model_state_path)
 
     def _save_pipeline_object(self, pipeline: "BasePipeline"):
         try:
@@ -392,7 +394,7 @@ class Saver:
             # we keep the adata_latent space as a "core result"
             if f.name == "adata_latent":
                 continue
-            if f.name == "losses" or f.name == "sub_losses": # Keep loss dynamics
+            if f.name == "losses" or f.name == "sub_losses":  # Keep loss dynamics
                 continue
             if f.name == "model":
                 # we need to keep the instantiated class, so we can load the state dict
@@ -453,14 +455,15 @@ class Loader:
         Returns:
             The loaded BasePipeline object, or None on error.
         """
-        try:
-            with zipfile.ZipFile(
-                os.path.join(self.folder, f"{self.file_stem}.zip"), "r"
-            ) as archive:
-                archive.extractall()
-        except:
-            print(f"Error extracting zip file at {self.file_path}")
-            print("Attempting to load without extraction...")
+        ## REMOVING Zip functionality since it causes issues with filesystems
+        # try:
+        #     with zipfile.ZipFile(
+        #         os.path.join(self.folder, f"{self.file_stem}.zip"), "r"
+        #     ) as archive:
+        #         archive.extractall()
+        # except:
+        #     print(f"Error extracting zip file at {self.file_path}")
+        #     print("Attempting to load without extraction...")
 
         loaded_obj = self._load_pipeline_object()
         if loaded_obj is None:

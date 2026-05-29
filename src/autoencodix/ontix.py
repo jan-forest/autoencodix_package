@@ -87,6 +87,10 @@ class Ontix(BasePipeline):
                 f"Expected ontologies to be of type tuple or list, got {type(ontologies)}."
             )
 
+        config.latent_dim = len(
+            self.ontologies[0]
+        )  # Set latent dim to number of nodes in the ontology
+
         super().__init__(
             data=data,
             dataset_type=dataset_type,

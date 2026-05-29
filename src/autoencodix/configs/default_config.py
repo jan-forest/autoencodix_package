@@ -254,7 +254,8 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=False, description="If set to True we don't store TrainingDynamics"
     )
     save_vram: bool = Field(
-        default=False, description="If set to True we move intermediate results to CPU to save GPU VRAM, but this will be slower"
+        default=False,
+        description="If set to True we move intermediate results to CPU to save GPU VRAM, but this will be slower",
     )
     learning_rate: float = Field(
         default=0.001, gt=0, description="Learning rate for optimization"

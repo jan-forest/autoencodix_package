@@ -28,7 +28,7 @@ class MaskixConfig(DefaultConfig):
     delta_mask_predictor: float = Field(
         default=0.7,
         ge=0.0,
-        description="Delt weighting factor of the mask predictin loss term for the Maskix",
+        description="Delta weighting factor of the mask prediction loss term for the Maskix",
     )
     delta_mask_corrupted: float = Field(
         default=0.75,

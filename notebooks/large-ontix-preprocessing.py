@@ -1,7 +1,6 @@
 import scanpy as sc
 import pandas as pd
 
-
 ## Pre-handling of Anndata-files
 # anndata_file = "./large_sc_data/gtex_all-tissue_v9.h5ad"
 anndata_file = "./notebooks/large_sc_data/census_train_split.h5ad"

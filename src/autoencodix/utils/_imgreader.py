@@ -156,7 +156,7 @@ class ImageDataReader:
             if image is None:
                 raise FileNotFoundError(f"Failed to read image: {image_path}")
 
-            (h, w, _) = image.shape[:3]
+            h, w, _ = image.shape[:3]
             if to_h is None:
                 to_h = h
             if to_w is None:

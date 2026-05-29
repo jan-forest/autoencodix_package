@@ -58,12 +58,40 @@ Whether you have a feature request, found a bug, or have any other idea, we're a
 ## Read The Docs
 You can find our documentation [here](https://jan-forest.github.io/autoencodix_package/).
 
+## FAQ
+
+### Reproducibility and CUBLAS_WORKSPACE_CONFIG
+If you run for reproducibility with `FIX_RANDOMNESS: "all"` and you receive the following error:
+```
+RuntimeError: Deterministic behavior was enabled with either `torch.use_deterministic_algorithms(True)` or `at::Context::setDeterministicAlgorithms(true)`, but this operation is not deterministic because it uses CuBLAS and you have CUDA >= 10.2. 
+```
+You need to run the following in your terminal before running our pipeline: 
+```
+export CUBLAS_WORKSPACE_CONFIG=:16:8
+```
+
+
 ## Cite
-TODO
+
+While we are working on a new publication of the Python package version, we are referring to our previous publication in [Nature Computational Science](https://doi.org/10.1038/s43588-025-00916-4) 
+
+Please, use this to cite our work when using our framework: 
+
+```
+@article{joas2025autoencodix,
+  title={AUTOENCODIX: a generalized and versatile framework to train and evaluate autoencoders for biological representation learning and beyond},
+  author={Joas, Maximilian Josef and Jurenaite, Neringa and Pra{\v{s}}{\v{c}}evi{\'c}, Du{\v{s}}an and Scherf, Nico and Ewald, Jan},
+  journal={Nature Computational Science},
+  pages={1--13},
+  year={2025},
+  doi={}
+  publisher={Nature Publishing Group US New York}
+}
+```
 
 ## License
 
-Copyright [2024] [Maximilian Josef Joas & Jan Ewald, ScaDS.AI, Leipzig University]
+Copyright [2026] [Maximilian Josef Joas & Jan Ewald, ScaDS.AI, Leipzig University]
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -53,7 +53,7 @@ class GeneralVisualizer(BaseVisualizer):
                 f"This usually happens if you try to visualize after saving and loading "
                 f"the pipeline object with `save_all=False`. This memory-efficient saving mode "
                 f"does not retain past training loss data.\n\n"
-                f"Original error message: {e}"
+                # f"Original error message: {e}"
             )
 
         return result
@@ -345,8 +345,17 @@ class GeneralVisualizer(BaseVisualizer):
                     if focus_labels is None:
                         self.plots["2D-scatter"][epoch][split][p] = fig
                     else:
-                        focus_group = "group_" + str(len(self.plots["2D-scatter"][epoch][split][p+"_focus"].keys())+1)
-                        self.plots["2D-scatter"][epoch][split][p+"_focus"][focus_group] = fig
+                        focus_group = "group_" + str(
+                            len(
+                                self.plots["2D-scatter"][epoch][split][
+                                    p + "_focus"
+                                ].keys()
+                            )
+                            + 1
+                        )
+                        self.plots["2D-scatter"][epoch][split][p + "_focus"][
+                            focus_group
+                        ] = fig
                     show_figure(fig)
                     plt.show()
 
@@ -354,13 +363,25 @@ class GeneralVisualizer(BaseVisualizer):
                     ## Make ridgeline plot
 
                     fig = self._plot_latent_ridge(
-                        lat_space=df_latent, labels=labels, focus_labels=focus_labels, param=p
+                        lat_space=df_latent,
+                        labels=labels,
+                        focus_labels=focus_labels,
+                        param=p,
                     )
                     if focus_labels is None:
                         self.plots["Ridgeline"][epoch][split][p] = fig
                     else:
-                        focus_group = "group_" + str(len(self.plots["Ridgeline"][epoch][split][p+"_focus"].keys())+1)
-                        self.plots["Ridgeline"][epoch][split][p+"_focus"][focus_group] = fig
+                        focus_group = "group_" + str(
+                            len(
+                                self.plots["Ridgeline"][epoch][split][
+                                    p + "_focus"
+                                ].keys()
+                            )
+                            + 1
+                        )
+                        self.plots["Ridgeline"][epoch][split][p + "_focus"][
+                            focus_group
+                        ] = fig
                     show_figure(fig.figure)
                     plt.show()
 
@@ -368,13 +389,25 @@ class GeneralVisualizer(BaseVisualizer):
                     ## Make clustermap plot
 
                     fig = self._plot_latent_clustermap(
-                            lat_space=df_latent, labels=labels, focus_labels=focus_labels, param=p
-                        )
+                        lat_space=df_latent,
+                        labels=labels,
+                        focus_labels=focus_labels,
+                        param=p,
+                    )
                     if focus_labels is None:
                         self.plots["Clustermap"][epoch][split][p] = fig
                     else:
-                        focus_group = "group_" + str(len(self.plots["Clustermap"][epoch][split][p+"_focus"].keys())+1)
-                        self.plots["Clustermap"][epoch][split][p+"_focus"][focus_group] = fig
+                        focus_group = "group_" + str(
+                            len(
+                                self.plots["Clustermap"][epoch][split][
+                                    p + "_focus"
+                                ].keys()
+                            )
+                            + 1
+                        )
+                        self.plots["Clustermap"][epoch][split][p + "_focus"][
+                            focus_group
+                        ] = fig
                     show_figure(fig)
                     plt.show()
 
@@ -470,7 +503,7 @@ class GeneralVisualizer(BaseVisualizer):
             ]
         elif len(labels) > embedding.shape[0]:
             labels = list(set(labels))
-        
+
         if len(np.unique(labels)) > 20 and focus_labels is None:
             warnings.warn(
                 f"The provided label column has {len(np.unique(labels))} unique labels which might make the scatter plot unclear."
@@ -480,10 +513,8 @@ class GeneralVisualizer(BaseVisualizer):
             print(f"Focusing on top 20 labels instead")
 
         if focus_labels is not None:
-            labels = [
-                label if label in focus_labels else "other" for label in labels
-            ]
-        
+            labels = [label if label in focus_labels else "other" for label in labels]
+
         # Increase figure size width if legend has has more than 10 labels (two columns)
         if len(np.unique(labels)) > 10:
             figsize = (figsize[0] * 1.5, figsize[1])
@@ -507,12 +538,12 @@ class GeneralVisualizer(BaseVisualizer):
                 cat_pal = sns.color_palette("tab20", n_colors=len(np.unique(labels)))
             else:
                 cat_pal = sns.color_palette("tab10", n_colors=len(np.unique(labels)))
-            
+
             if "other" in np.unique(labels):
                 # set color of "other" to light grey
                 other_color = (0.3, 0.3, 0.3)
                 cat_pal[list(np.unique(labels)).index("other")] = other_color
-            
+
             # Adjust alpha depending on number of points
             if len(labels) > 10000:
                 point_alpha = 0.2
@@ -611,9 +642,7 @@ class GeneralVisualizer(BaseVisualizer):
             print(f"Focusing on top 50 labels instead")
 
         if focus_labels is not None:
-            labels = [
-                label if label in focus_labels else "other" for label in labels
-            ]
+            labels = [label if label in focus_labels else "other" for label in labels]
 
         lat_space[param] = labels
 
@@ -682,12 +711,10 @@ class GeneralVisualizer(BaseVisualizer):
             # Restrict to top 20 labels
             focus_labels = pd.Series(labels).value_counts().nlargest(20).index.tolist()
             print(f"Focusing on top 20 labels instead")
-            
+
         if focus_labels is not None:
-            labels = [
-                label if label in focus_labels else "other" for label in labels
-            ]
-        
+            labels = [label if label in focus_labels else "other" for label in labels]
+
         df[param] = len(lat_space.columns) * labels  # type: ignore
 
         exclude_missing_info = (df[param] == "unknown") | (df[param] == "nan")
@@ -727,7 +754,7 @@ class GeneralVisualizer(BaseVisualizer):
             df[~exclude_missing_info],
             row="latent dim",
             hue=param,
-            aspect=12+len_longest_latent_dim/4,
+            aspect=12 + len_longest_latent_dim / 4,
             height=0.8,
             xlim=(xmin.iloc[0], xmax.iloc[0]),
             palette=cat_pal,

@@ -21,7 +21,6 @@ from autoencodix.utils._screader import SingleCellDataReader
 from autoencodix.configs.default_config import DataCase, DefaultConfig
 from autoencodix.utils._result import Result
 
-
 if TYPE_CHECKING:
     import mudata as md  # type: ignore
 

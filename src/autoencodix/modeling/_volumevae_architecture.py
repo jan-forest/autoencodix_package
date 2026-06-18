@@ -248,7 +248,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
 
         """
         h = self._encoder(x) # type: ignore
-        # this makes sure we get the <batchsize, 1, latent_dim> shape for our latent space in the next step
+        # this makes sure we get the <batchsize, latent_dim> shape for our latent space in the next step
         # because we put all dimensionality in the second dimension of the output shape.
         # By covering all dimensionality here, we are sure that the rest is
         h = h.view(-1, self.hidden_dim * 8 * self.reduced_d * self.reduced_h * self.reduced_w)

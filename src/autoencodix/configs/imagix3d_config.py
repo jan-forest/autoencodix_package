@@ -55,6 +55,21 @@ class Imagix3DConfig(DefaultConfig):
         default = "per_volume",
         description="Whether volumes are scaled individually, or on train/valid/test - set level.")
     
+    clamp_logvar: bool = Field(
+        default=False,
+        description="Whether logvar values in the model architecture should be prevented from being too close to zero"
+    )
+    
+    logvar_range: Optional[Tuple[float, float]] = Field(
+        default=(-10, 20), # previously: (0.1, 20)
+        description="Indicate the range that logvar values can take on"
+    )
+    
+    keep_mu_positive: bool = Field(
+        default=False,
+        description="If True, mu values below 0.000001 will be set to 0"
+    )
+    
     ## Validation
     @model_validator(mode="after")
     def set_target_multiple(self) -> "Imagix3DConfig":

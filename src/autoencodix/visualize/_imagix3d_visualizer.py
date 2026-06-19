@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import seaborn as sns
 from typing import no_type_check
 
 from autoencodix.visualize._imagix_visualizer import ImagixVisualizer
@@ -244,3 +246,148 @@ class Imagix3DVisualizer(ImagixVisualizer):
         
         # show_figure(fig)
         plt.show()
+    
+    
+    def show_latent_corr(
+        self,
+        result: Result,
+        show_table: bool = False,
+        show_corrmat: bool = False
+    ) -> None:
+    
+        rows = []
+        stored_epochs = [e for e in result.latentspaces._data.keys() if e != -1]
+
+        for epoch in stored_epochs:
+            for split in ["train", "valid"]:
+                latent_df = result.get_latent_df(epoch=epoch, split=split)
+
+                if latent_df.empty:
+                    continue
+
+                latent = latent_df.select_dtypes(include=[np.number])
+                latent = latent.loc[:, latent.var(axis=0) > 1e-12]
+
+                corr = latent.corr().to_numpy()
+
+                # upper triangle (because corr matrices are symmetric), excluding diagonal (k=1)
+                tri = corr[np.triu_indices_from(corr, k=1)]
+
+                rows.append({
+                    "epoch": epoch + 1,
+                    "split": split,
+                    "mean_abs_pairwise_corr": np.nanmean(np.abs(tri)),
+                    "max_abs_pairwise_corr": np.nanmax(np.abs(tri)),
+                    "n_samples": latent.shape[0],
+                    "n_latent_dims": latent.shape[1],
+                })
+
+        df_corr = pd.DataFrame(rows)
+
+        ## Plot 1 - Mean
+        plt.figure(figsize=(8, 5))
+        sns.lineplot(
+            data=df_corr,
+            x="epoch",
+            y="mean_abs_pairwise_corr",
+            hue="split",
+            marker="o",
+        )
+        plt.title("Mean absolute pairwise correlation between latent dimensions")
+        plt.xlabel("Epoch")
+        plt.ylabel("Mean absolute pairwise correlation")
+        plt.tight_layout()
+        plt.show()
+
+        ## Plot 2 - Max
+        plt.figure(figsize=(8, 5))
+        sns.lineplot(
+            data=df_corr,
+            x="epoch",
+            y="max_abs_pairwise_corr",
+            hue="split",
+            marker="o",
+        )
+        plt.title("Maximum absolute pairwise correlation between latent dimensions")
+        plt.xlabel("Epoch")
+        plt.ylabel("Max absolute pairwise correlation")
+        plt.tight_layout()
+        plt.show()
+        
+        if show_corrmat:
+            # Use the final stored train/valid epoch.
+            final_epoch = max(stored_epochs)
+            display_epoch = final_epoch + 1
+
+            corr_mats = {}
+
+            for split in ["train", "valid"]:
+                latent_df = result.get_latent_df(epoch=final_epoch, split=split)
+
+                if latent_df.empty:
+                    continue
+
+                latent = latent_df.select_dtypes(include=[np.number])
+                latent = latent.loc[:, latent.var(axis=0) > 1e-12]
+
+                if latent.shape[1] < 2:
+                    continue
+
+                corr_mats[split] = latent.corr()
+
+            if len(corr_mats) == 0:
+                raise ValueError(
+                    f"No valid latent correlation matrix could be computed "
+                    f"for final epoch {display_epoch}."
+                )
+
+            n_plots = len(corr_mats)
+
+            fig, axes = plt.subplots(
+                nrows=1,
+                ncols=n_plots,
+                figsize=(7 * n_plots, 6),
+                squeeze=False,
+                constrained_layout=True,
+            )
+
+            for ax, (split, corr_mat) in zip(axes.ravel(), corr_mats.items()):
+                sns.heatmap(
+                    corr_mat,
+                    ax=ax,
+                    cmap="vlag",
+                    vmin=-1,
+                    vmax=1,
+                    center=0,
+                    square=True,
+                    linewidths=0.0,
+                    cbar=True,
+                    cbar_kws={"label": "Pearson correlation"},
+                    xticklabels=8,
+                    yticklabels=8,
+                )
+
+                ax.set_title(
+                    f"{split.capitalize()} split\n"
+                    f"latent correlation matrix, epoch {display_epoch}",
+                    fontsize=12,
+                )
+                ax.set_xlabel("Latent dimension")
+                ax.set_ylabel("Latent dimension")
+
+            fig.suptitle(
+                f"Pairwise correlations between latent dimensions at epoch {display_epoch}",
+                fontsize=14,
+                fontweight="bold",
+            )
+
+            self.plots["LatentCorrelationMatrix"] = fig
+            plt.show()
+        
+        # Print results table (using display for notebook, if possible)
+        if show_table:
+            try:
+                from IPython.display import display
+                display(df_corr)
+            except ImportError:
+                print(df_corr.to_string(index=False))

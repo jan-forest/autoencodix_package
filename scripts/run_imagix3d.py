@@ -23,7 +23,7 @@ def parse_args() -> argparse.Namespace:
         "--target-shape",
         nargs=3,
         type=int,
-        default = (192, 192, 192),
+        default = (64, 64, 64),
         metavar=("D", "H", "W"),
         required=True,
     )

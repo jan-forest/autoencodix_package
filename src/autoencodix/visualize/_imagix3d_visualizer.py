@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from typing import no_type_check
+from typing import Optional, no_type_check
 
 from autoencodix.visualize._imagix_visualizer import ImagixVisualizer
 from autoencodix.data._datasetcontainer import DatasetContainer
@@ -391,3 +391,261 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 display(df_corr)
             except ImportError:
                 print(df_corr.to_string(index=False))
+    
+    
+    def show_latent_activity(
+        self,
+        result: Result,
+        final_epoch: Optional[int] = None,
+        include_test: bool = True,
+        show_table: bool = False,
+        show_dim_table: bool = False,
+        log_activity: bool = True,
+    ) -> None:
+        """
+        Visualize latent-dimension activity statistics computed by Imagix3DEvaluator.
+
+        This method expects that the evaluator method
+
+        compute_latent_activity(...)
+
+        has already been called. The evaluator stores two tables in
+        result.sub_results:
+
+        "imagix3d_latent_activity_summary"
+        "imagix3d_latent_activity_by_dim"
+
+        The visualizer then creates three diagnostic plots:
+
+        1. Number of active latent dimensions across training epochs.
+        2. Activity per latent dimension at the final selected epoch.
+        3. Mean KL contribution per latent dimension at the final selected epoch,
+            if KL values are available.
+
+        Args:
+            result:
+                Result object containing latent-activity tables in result.sub_results.
+            final_epoch:
+                Stored epoch key to use for the per-dimension final-epoch plots.
+                If None, the largest non-test epoch in the summary table is used.
+            include_test:
+                Whether to include the final test prediction rows in the
+                final-epoch per-dimension plots, if they are available.
+            show_table:
+                If True, display the summary table.
+            show_dim_table:
+                If True, display the final-epoch per-dimension table.
+            log_activity:
+                If True, use a log scale for the activity-per-dimension plot.
+                This is often helpful because latent-dimension variances can be
+                highly skewed.
+        """
+
+        summary_key = "imagix3d_latent_activity_summary"
+        dim_key = "imagix3d_latent_activity_by_dim"
+
+        # if not hasattr(result, "sub_results") or result.sub_results is None:
+        #     raise ValueError(
+        #         "No sub_results found in result. "
+        #         "Please run result = evaluator.compute_latent_activity(result) first."
+        #     )
+
+        if summary_key not in result.sub_results or dim_key not in result.sub_results:
+            raise ValueError(
+                "Latent activity tables were not found in result.sub_results. "
+                "Please run:\n\n"
+                "    result = imagix3d_loaded.evaluator.compute_latent_activity(\n"
+                "        result=imagix3d_loaded.result\n"
+                "    )\n\n"
+                "before calling show_latent_activity()."
+            )
+
+        summary_df = result.sub_results[summary_key].copy()
+        dim_df = result.sub_results[dim_key].copy()
+
+        if summary_df.empty or dim_df.empty:
+            raise ValueError(
+                "Latent activity tables are empty. "
+                "Please check whether compute_latent_activity() produced valid output."
+            )
+
+        # Ensure predictable order.
+        summary_df = summary_df.sort_values(["epoch", "split"]).reset_index(drop=True)
+        dim_df = dim_df.sort_values(["epoch", "split", "latent_dim"]).reset_index(drop=True)
+
+
+        # Optional table output
+        if show_table:
+            try:
+                from IPython.display import display
+                display(summary_df)
+            except ImportError:
+                print(summary_df.to_string(index=False))
+
+
+        # Plot 1: active units over training epochs
+        train_valid_summary = summary_df.loc[~summary_df["is_test_prediction"].astype(bool)].copy()
+
+        if not train_valid_summary.empty:
+            fig, ax = plt.subplots(figsize=(8, 5))
+
+            sns.lineplot(
+                data=train_valid_summary,
+                x="epoch_display",
+                y="n_active_units",
+                hue="split",
+                marker="o",
+                ax=ax,
+            )
+
+            n_latent_dims = int(train_valid_summary["n_latent_dims"].max())
+            threshold = train_valid_summary["threshold"].iloc[0]
+
+            ax.set_title("Active latent dimensions over training")
+            ax.set_xlabel("Epoch")
+            ax.set_ylabel("Number of active latent dimensions")
+            ax.set_ylim(0, n_latent_dims + 1)
+
+            ax.text(
+                0.01,
+                -0.18,
+                f"Active unit criterion: Var\u2093(\u03bc\u2c7c(x)) > {threshold:g}",
+                transform=ax.transAxes,
+                ha="left",
+                va="top",
+                fontsize=9,
+            )
+
+            fig.tight_layout()
+            self.plots["LatentActivityActiveUnits"] = fig
+            plt.show()
+        else:
+            warnings.warn(
+                "No train/valid latent-activity rows found. "
+                "Skipping active-units-over-training plot."
+            )
+
+
+        # Select final epoch for per-dimension plots
+        if final_epoch is None:
+            if train_valid_summary.empty:
+                raise ValueError(
+                    "Cannot infer final_epoch because no train/valid rows are available. "
+                    "Please pass final_epoch explicitly."
+                )
+            final_epoch = int(train_valid_summary["epoch"].max())
+
+        final_epoch_rows = dim_df.loc[(dim_df["epoch"] == final_epoch) & (~dim_df["is_test_prediction"].astype(bool))].copy()
+
+        if include_test:
+            test_rows = dim_df.loc[dim_df["is_test_prediction"].astype(bool)].copy()
+            if not test_rows.empty:
+                final_epoch_rows = pd.concat(
+                    [final_epoch_rows, test_rows],
+                    axis=0,
+                    ignore_index=True,
+                )
+
+        if final_epoch_rows.empty:
+            raise ValueError(
+                f"No per-dimension latent-activity rows found for final_epoch={final_epoch}."
+            )
+
+        display_epoch = final_epoch_rows.loc[final_epoch_rows["epoch"] == final_epoch, "epoch_display"]
+
+        if len(display_epoch) > 0:
+            display_epoch = int(display_epoch.iloc[0])
+        else:
+            display_epoch = final_epoch + 1
+
+        if show_dim_table:
+            try:
+                from IPython.display import display
+                display(final_epoch_rows)
+            except ImportError:
+                print(final_epoch_rows.to_string(index=False))
+
+
+        # Plot 2: activity per latent dimension at final epoch
+        fig, ax = plt.subplots(figsize=(10, 5))
+
+        sns.scatterplot(
+            data=final_epoch_rows,
+            x="latent_dim",
+            y="activity",
+            hue="split",
+            style="active",
+            s=60,
+            ax=ax,
+        )
+
+        threshold = final_epoch_rows["threshold"].iloc[0]
+        ax.axhline(
+            threshold,
+            linestyle="--",
+            linewidth=1,
+            label=f"activity threshold = {threshold:g}",
+        )
+
+        ax.set_title(
+            f"Latent-dimension activity at epoch {display_epoch}"
+        )
+        ax.set_xlabel("Latent dimension")
+        ax.set_ylabel("Activity: variance of posterior mean")
+
+        if log_activity:
+            positive_activity = final_epoch_rows.loc[
+                final_epoch_rows["activity"] > 0, "activity"
+            ]
+
+            if not positive_activity.empty:
+                ax.set_yscale("log")
+            else:
+                warnings.warn(
+                    "All activity values are zero or non-positive. "
+                    "Keeping linear y-axis for activity plot."
+                )
+
+        ax.legend(title="Split / active", bbox_to_anchor=(1.02, 1), loc="upper left")
+        fig.tight_layout()
+
+        self.plots["LatentActivityPerDimension"] = fig
+        plt.show()
+
+
+        # Plot 3: KL contribution per latent dimension at final epoch
+        if "mean_kl" in final_epoch_rows.columns:
+            kl_plot_df = final_epoch_rows.loc[np.isfinite(final_epoch_rows["mean_kl"])].copy()
+
+            if not kl_plot_df.empty:
+                fig, ax = plt.subplots(figsize=(10, 5))
+
+                sns.lineplot(
+                    data=kl_plot_df,
+                    x="latent_dim",
+                    y="mean_kl",
+                    hue="split",
+                    marker="o",
+                    ax=ax,
+                )
+
+                ax.set_title(
+                    f"Mean KL contribution per latent dimension at epoch {display_epoch}"
+                )
+                ax.set_xlabel("Latent dimension")
+                ax.set_ylabel("Mean KL contribution")
+
+                fig.tight_layout()
+
+                self.plots["LatentActivityKLPerDimension"] = fig
+                plt.show()
+            else:
+                warnings.warn(
+                    "No finite mean_kl values found. "
+                    "Skipping KL-per-dimension plot."
+                )
+        else:
+            warnings.warn(
+                "Column 'mean_kl' not found in latent-activity table. "
+                "Skipping KL-per-dimension plot."
+            )

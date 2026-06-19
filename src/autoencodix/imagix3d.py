@@ -13,7 +13,8 @@ from autoencodix.data._datasplitter import DataSplitter
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._image_dataset import ImageDataset
 from autoencodix.data._volume_processor import VolumePreprocessor
-from autoencodix.evaluate._general_evaluator import GeneralEvaluator
+#from autoencodix.evaluate._general_evaluator import GeneralEvaluator
+from autoencodix.evaluate._imagix3d_evaluator import Imagix3DEvaluator
 from autoencodix.modeling._volumevae_architecture import VolumeVAEArchitecture
 from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.utils._result import Result
@@ -42,7 +43,7 @@ class Imagix3D(BasePipeline):
         loss_type: Type[BaseLoss] = VarixLoss,
         preprocessor_type: Type[BasePreprocessor] = VolumePreprocessor,
         visualizer: Optional[Type[BaseVisualizer]] = Imagix3DVisualizer,
-        evaluator: Optional[Type[GeneralEvaluator]] = GeneralEvaluator,
+        evaluator: Optional[Type[Imagix3DEvaluator]] = Imagix3DEvaluator, # Optional[Type[GeneralEvaluator]] = GeneralEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,

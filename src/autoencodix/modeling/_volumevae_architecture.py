@@ -82,11 +82,53 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         self.nc, self.d, self.h, self.w = input_dim
         self.img_shape: Tuple[int, int, int, int] = input_dim
         self.hidden_dim: int = self._config.hidden_dim
+        self.norm_3d: str = self._config.train_normalization
+        self.norm_groups: int = self._config.train_norm_groupsize #type: ignore
         self.clamp_logvar: bool = self._config.clamp_logvar
-        self.logvar_range: Tuple[float, float] = self._config.logvar_range
+        self.logvar_range: Tuple[float, float] = self._config.logvar_range #type: ignore
         self.keep_mu_positive: bool = self._config.keep_mu_positive
         self._build_network()
         self.apply(self._init_weights)
+    
+    def make_norm_3d(self, num_channels: int) -> nn.Module:
+        """Create a 3D normalization layer."""
+        
+        norm_type = self.norm_3d
+        
+        if norm_type == "batch":
+            return nn.BatchNorm3d(num_channels)
+        
+        if norm_type == "group":
+            num_groups = self._get_num_groups(num_channels)
+            return nn.GroupNorm(
+                num_groups=num_groups,
+                num_channels=num_channels    
+            )
+        
+        if norm_type == "instance":
+            return nn.InstanceNorm3d(
+                num_features=num_channels,
+                affine=True
+            )
+        
+        raise ValueError(
+            f"Unknown normalization_3d={self.normalization_3d!r}. "
+            "Expected 'batch', 'group', or 'instance'."
+        )
+            
+    def _get_num_groups(self, num_channels: int) -> int:
+        """Return a valid number of groups for GroupNorm."""
+        
+        requested_groups = min(int(self.norm_groups), num_channels)
+
+        if num_channels % requested_groups == 0:
+            return requested_groups
+
+        for num_groups in range(requested_groups, 0, -1):
+            if num_channels % num_groups == 0:
+                return num_groups
+
+        return 1 # Fall back -> shouldn't be reached   
 
     def _build_network(self) -> None:
         """Construct the encoder and decoder networks."""
@@ -108,7 +150,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
                 padding=1,
                 bias=False,
             ),
-            nn.BatchNorm3d(self.hidden_dim * 2),
+            self.make_norm_3d(self.hidden_dim * 2),
             nn.LeakyReLU(0.2, inplace=False),
             nn.Conv3d(
                 in_channels=self.hidden_dim * 2,
@@ -118,7 +160,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
                 padding=1,
                 bias=False,
             ),
-            nn.BatchNorm3d(self.hidden_dim * 4),
+            self.make_norm_3d(self.hidden_dim * 4),
             nn.LeakyReLU(0.2, inplace=False),
             nn.Conv3d(
                 in_channels=self.hidden_dim * 4,
@@ -128,7 +170,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
                 padding=1,
                 bias=False,
             ),
-            nn.BatchNorm3d(self.hidden_dim * 8),
+            self.make_norm_3d(self.hidden_dim * 8),
             nn.LeakyReLU(0.2, inplace=False),
             nn.Conv3d(
                 in_channels=self.hidden_dim * 8,
@@ -138,7 +180,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
                 padding=1,
                 bias=False,
             ),
-            nn.BatchNorm3d(self.hidden_dim * 8),
+            self.make_norm_3d(self.hidden_dim * 8),
             nn.LeakyReLU(0.2, inplace=False),
         )
 
@@ -195,7 +237,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
                 padding=1,
                 bias=False,
             ),
-            nn.BatchNorm3d(self.hidden_dim * 8),
+            self.make_norm_3d(self.hidden_dim * 8),
             nn.LeakyReLU(0.2, inplace=False),
             nn.ConvTranspose3d(
                 in_channels=self.hidden_dim * 8,
@@ -205,7 +247,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
                 padding=1,
                 bias=False,
             ),
-            nn.BatchNorm3d(self.hidden_dim * 4),
+            self.make_norm_3d(self.hidden_dim * 4),
             nn.LeakyReLU(0.2, inplace=False),
             nn.ConvTranspose3d(
                 in_channels=self.hidden_dim * 4,
@@ -215,7 +257,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
                 padding=1,
                 bias=False,
             ),
-            nn.BatchNorm3d(self.hidden_dim * 2),
+            self.make_norm_3d(self.hidden_dim * 2),
             nn.LeakyReLU(0.2, inplace=False),
             nn.ConvTranspose3d(
                 in_channels=self.hidden_dim * 2,
@@ -225,7 +267,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
                 padding=1,
                 bias=False,
             ),
-            nn.BatchNorm3d(self.hidden_dim),
+            self.make_norm_3d(self.hidden_dim),
             nn.LeakyReLU(0.2, inplace=False),
             nn.ConvTranspose3d(
                 in_channels=self.hidden_dim,
@@ -259,7 +301,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         
         if self.clamp_logvar:
             # prevent  mu and logvar from being too close to zero, this increases numerical stability
-            logvar = torch.clamp(logvar, self.logvar_range)
+            logvar = torch.clamp(logvar, self.logvar_range) #type: ignore
         
         if self.keep_mu_positive:
             # replace mu when mu < 0.000001 with 0

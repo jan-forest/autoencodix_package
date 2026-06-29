@@ -20,6 +20,7 @@ class Imagix3DConfig(DefaultConfig):
         description="Number of 3D convolutional layers."
     )
 
+    # Spatial shape of 3D image configuration --------------------------------------------------
     spatial_shape_policy: Literal[
         "pad_to_multiple",
         "crop_to_multiple",
@@ -55,6 +56,7 @@ class Imagix3DConfig(DefaultConfig):
         default = "per_volume",
         description="Whether volumes are scaled individually, or on train/valid/test - set level.")
     
+    # Model architecture configuration -------------------------------------------
     clamp_logvar: bool = Field(
         default=False,
         description="Whether logvar values in the model architecture should be prevented from being too close to zero"
@@ -70,7 +72,18 @@ class Imagix3DConfig(DefaultConfig):
         description="If True, mu values below 0.000001 will be set to 0"
     )
     
-    ## Validation
+    train_normalization: Literal["batch", "group", "instance"] = Field(
+        default="batch",
+        description="Indicate how the input to the convolutional layers should get normalized"
+    )
+    
+    train_norm_groupsize: Optional[int] = Field(
+        default=8,
+        ge=1,
+        description="Requested size of group for GroupNorm. Will fall back to the gcd if requested size does not divide the number of channels "
+    )
+    
+     ##### VALIDATION ##### -----------------------------------------------------
     @model_validator(mode="after")
     def set_target_multiple(self) -> "Imagix3DConfig":
         """

@@ -87,6 +87,9 @@ class VolumeVAEFastArchitecture(BaseAutoencoder):
         self.nc, self.d, self.h, self.w = input_dim
         self.img_shape: Tuple[int, int, int, int] = input_dim
         self.hidden_dim: int = self._config.hidden_dim
+        self.clamp_logvar: bool = self._config.clamp_logvar
+        self.logvar_range: Tuple[float, float] = self._config.logvar_range #type: ignore
+        self.keep_mu_positive: bool = self._config.keep_mu_positive
         self._build_network()
         self.apply(self._init_weights)
 
@@ -250,10 +253,14 @@ class VolumeVAEFastArchitecture(BaseAutoencoder):
         h = h.view(-1, self.hidden_dim * 8 * self.reduced_d * self.reduced_h * self.reduced_w)
         logvar = self.logvar(h)
         mu = self.mu(h)
-        # prevent  mu and logvar from being too close to zero, this increases numerical stability
-        logvar = torch.clamp(logvar, 0.1, 20)
-        # replace mu when mu < 0.00000001 with 0.1
-        mu = torch.where(mu < 0.000001, torch.zeros_like(mu), mu)
+        
+        if self.clamp_logvar:
+            # prevent  mu and logvar from being too close to zero, this increases numerical stability
+            logvar = torch.clamp(logvar, self.logvar_range) #type: ignore
+        
+        if self.keep_mu_positive:
+            # replace mu when mu < 0.00000001 with 0.1
+            mu = torch.where(mu < 0.000001, torch.zeros_like(mu), mu)
         return mu, logvar
 
     def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:

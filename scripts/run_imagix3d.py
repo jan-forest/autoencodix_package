@@ -30,13 +30,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, default=250)
     parser.add_argument("--latent-dim", type=int, default=16)
     parser.add_argument("--hidden-dim", type=int, default=16)
-    parser.add_argument("--reconstruction-loss", type=str, default="bce")
+    parser.add_argument("--reconstruction-loss", type=str, default="mse")
     parser.add_argument("--loss-reduction", type=str, default="mean")
     parser.add_argument("--beta", type=float, default=0.005)
     parser.add_argument("--scaling", type=str, default="MINMAX")
     parser.add_argument("--anneal-function", type=str, default="logistic-late")
     parser.add_argument("--checkpoint-interval", type=int, default=10)
     parser.add_argument("--evaluate-param", type=str, default=None)
+    parser.add_argument("--clamp-logvar", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--keep-mu-positive", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--train-normalization", type=str, default="batch")
+    parser.add_argument("--train-norm-groupsize", type=int, default=8)
 
     return parser.parse_args()
 
@@ -56,6 +60,10 @@ def build_config(args: argparse.Namespace) -> Imagix3DConfig:
         beta=args.beta,
         scaling=args.scaling,
         anneal_function=args.anneal_function,
+        clamp_logvar=args.clamp_logvar,
+        keep_mu_positive=args.keep_mu_positive,
+        train_normalization=args.train_normalization,
+        train_norm_groupsize=args.train_norm_groupsize,
         data_config=DataConfig(
             data_info={
                 "IMG": DataInfo(
@@ -98,6 +106,10 @@ def main() -> None:
         "scaling": args.scaling,
         "anneal_function": args.anneal_function,
         "checkpoint_interval": args.checkpoint_interval,
+        "clamp_logvar": args.clamp_logvar,
+        "keep_mu_positive":args.keep_mu_positive,
+        "train_normalization": args.train_normalization,
+        "train_norm_groupsize": args.train_norm_groupsize,
         "evaluate_param": args.evaluate_param,
     }
 

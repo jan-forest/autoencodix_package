@@ -301,7 +301,9 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         
         if self.clamp_logvar:
             # prevent  mu and logvar from being too close to zero, this increases numerical stability
-            logvar = torch.clamp(logvar, self.logvar_range) #type: ignore
+            logvar = torch.clamp(logvar, 
+                                 min=self.logvar_range[0], 
+                                 max=self.logvar_range[1]) 
         
         if self.keep_mu_positive:
             # replace mu when mu < 0.000001 with 0

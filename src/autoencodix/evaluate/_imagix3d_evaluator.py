@@ -1,8 +1,9 @@
-from typing import Optional
+from typing import Any, Literal, Optional, Sequence
 import warnings
 
 import numpy as np
 import pandas as pd
+import torch
 
 from autoencodix.utils._result import Result
 from autoencodix.evaluate._general_evaluator import GeneralEvaluator
@@ -21,7 +22,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
         include_test: bool = True,
     ) -> Result:
         """
-        Evaluator extension for Imagix3D-specific latent-space diagnostics.
+        Latent-space diagnostics.
 
         The latent activity diagnostic follows the common "active units" idea:
         a latent dimension is considered active if the variance of its posterior
@@ -177,7 +178,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
                 "epoch": epoch,
                 "epoch_display": epoch_display,
                 "split": split,
-                "is_test_prediction": is_test_prediction,
+                #"is_test_prediction": is_test_prediction,
                 "threshold": threshold,
                 "n_samples": n_samples,
                 "n_latent_dims": n_latent_dims,
@@ -197,7 +198,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
                     "epoch": epoch,
                     "epoch_display": epoch_display,
                     "split": split,
-                    "is_test_prediction": is_test_prediction,
+                    #"is_test_prediction": is_test_prediction,
                     "threshold": threshold,
                     "latent_dim": dim_idx,
                     "latent_dim_label": f"LatDim_{dim_idx}",

@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from typing import Optional, no_type_check
+from typing import Optional, Literal, no_type_check
 
 from autoencodix.visualize._imagix_visualizer import ImagixVisualizer
 from autoencodix.data._datasetcontainer import DatasetContainer
@@ -412,8 +412,8 @@ class Imagix3DVisualizer(ImagixVisualizer):
         has already been called. The evaluator stores two tables in
         result.sub_results:
 
-        "imagix3d_latent_activity_summary"
-        "imagix3d_latent_activity_by_dim"
+        "latent_activity_summary"
+        "latent_activity_by_dim"
 
         The visualizer then creates three diagnostic plots:
 
@@ -441,8 +441,8 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 highly skewed.
         """
 
-        summary_key = "imagix3d_latent_activity_summary"
-        dim_key = "imagix3d_latent_activity_by_dim"
+        summary_key = "latent_activity_summary"
+        dim_key = "latent_activity_by_dim"
 
         # if not hasattr(result, "sub_results") or result.sub_results is None:
         #     raise ValueError(
@@ -649,3 +649,309 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 "Column 'mean_kl' not found in latent-activity table. "
                 "Skipping KL-per-dimension plot."
             )
+            
+    def show_latent_traversal(
+        self,
+        result: Result,
+        view: Literal["axial", "coronal", "sagittal"] = "axial",
+        channel: int = 0,
+    ) -> None:
+        """
+        Visualize latent traversal volumes.
+
+        This method expects that the evaluator method
+            compute_latent_traversal(...)
+        has already been called. 
+        
+        The evaluator stores the decoded traversal volumes and metadata in:
+            result.sub_results["latent_traversal"]
+
+        The figure layout is:
+            rows    = latent dimensions
+            columns = traversal values
+
+        Args:
+            result:
+                Result object containing the latent traversal output in
+                result.sub_results["latent_traversal"].
+
+            view:
+                Anatomical plane to visualize.
+                Options:
+                    "axial":    slice along the depth axis
+                    "coronal":  slice along the height axis
+                    "sagittal": slice along the width axis
+
+            channel:
+                Image channel to visualize. For single-channel 3D images, use 0.
+        """
+
+        traversal_key = "latent_traversal"
+
+        if not hasattr(result, "sub_results") or result.sub_results is None:
+            raise ValueError(
+                "No sub_results found in result. "
+                "Please run compute_latent_traversal() first."
+            )
+
+        if traversal_key not in result.sub_results:
+            raise ValueError(
+                "Latent traversal results were not found in result.sub_results. "
+                "Please run:\n\n"
+                "    result = imagix3d_loaded.evaluator.compute_latent_traversal(\n"
+                "        result=imagix3d_loaded.result\n"
+                "    )\n\n"
+                "before calling show_latent_traversal()."
+            )
+
+        traversal = result.sub_results[traversal_key]
+
+        if not isinstance(traversal, dict):
+            raise TypeError(
+                f"Expected result.sub_results[{traversal_key!r}] to be a dict, "
+                f"got {type(traversal)}."
+            )
+
+        if "decoded" not in traversal:
+            raise ValueError(
+                f"result.sub_results[{traversal_key!r}] does not contain 'decoded'."
+            )
+
+        if "metadata" not in traversal:
+            raise ValueError(
+                f"result.sub_results[{traversal_key!r}] does not contain 'metadata'."
+            )
+
+        decoded = np.asarray(traversal["decoded"])
+        metadata = traversal["metadata"].copy()
+        settings = traversal.get("settings", {})
+
+        if metadata.empty:
+            raise ValueError("Latent traversal metadata table is empty.")
+
+        required_columns = {
+            "row_index",
+            "latent_dim",
+            "latent_dim_label",
+            "value_index",
+            "traversal_value",
+            "value_mode",
+        }
+
+        missing_columns = required_columns.difference(metadata.columns)
+
+        if missing_columns:
+            raise ValueError(
+                "Latent traversal metadata is missing required columns: "
+                f"{sorted(missing_columns)}"
+            )
+
+        if decoded.shape[0] != len(metadata):
+            raise ValueError(
+                "Number of decoded traversal volumes does not match metadata rows: "
+                f"decoded.shape[0]={decoded.shape[0]}, len(metadata)={len(metadata)}."
+            )
+
+        if view not in {"axial", "coronal", "sagittal"}:
+            raise ValueError(
+                f"Unknown view={view!r}. "
+                "Expected 'axial', 'coronal', or 'sagittal'."
+            )
+
+        # Preserve the evaluator's latent-dimension order if available.
+        if isinstance(settings, dict) and "latent_dims" in settings:
+            latent_dim_order = [int(dim) for dim in settings["latent_dims"]]
+        else:
+            latent_dim_order = (
+                metadata["latent_dim"]
+                .drop_duplicates()
+                .astype(int)
+                .tolist()
+            )
+
+        value_indices = (
+            metadata["value_index"]
+            .drop_duplicates()
+            .astype(int)
+            .sort_values()
+            .tolist()
+        )
+
+        n_rows = len(latent_dim_order)
+        n_cols = len(value_indices)
+
+        if n_rows == 0 or n_cols == 0:
+            raise ValueError(
+                "Could not infer latent dimensions or traversal values from metadata."
+            )
+
+        fig_width = max(2.2 * n_cols, 6)
+        fig_height = max(2.2 * n_rows, 4)
+
+        fig, axes = plt.subplots(
+            nrows=n_rows,
+            ncols=n_cols,
+            figsize=(fig_width, fig_height),
+            squeeze=False,
+            constrained_layout=True,
+        )
+
+        # Use a common intensity range for all decoded traversal volumes.
+        # This makes differences across traversal values visually comparable.
+        image_min = np.nanpercentile(decoded, 1)
+        image_max = np.nanpercentile(decoded, 99)
+
+        if not np.isfinite(image_min) or not np.isfinite(image_max):
+            image_min = np.nanmin(decoded)
+            image_max = np.nanmax(decoded)
+
+        if image_min == image_max:
+            image_min = None
+            image_max = None
+
+        for row_idx, latent_dim in enumerate(latent_dim_order):
+            for col_idx, value_index in enumerate(value_indices):
+                row_match = metadata.loc[
+                    (metadata["latent_dim"].astype(int) == int(latent_dim))
+                    & (metadata["value_index"].astype(int) == int(value_index))
+                ]
+
+                ax = axes[row_idx, col_idx]
+
+                if row_match.empty:
+                    ax.axis("off")
+                    continue
+
+                row = row_match.iloc[0]
+                decoded_index = int(row["row_index"])
+
+                volume = decoded[decoded_index]
+
+                slice_2d = self._get_middle_slice_from_decoded_volume(
+                    volume=volume,
+                    view=view,
+                    channel=channel,
+                )
+
+                ax.imshow(
+                    slice_2d,
+                    cmap="gray",
+                    origin="lower",
+                    vmin=image_min,
+                    vmax=image_max,
+                )
+
+                ax.axis("off")
+
+                if row_idx == 0:
+                    traversal_value = float(row["traversal_value"])
+                    ax.set_title(f"{traversal_value:.3g}", fontsize=10)
+
+                if col_idx == 0:
+                    mean_kl = row.get("mean_kl", np.nan)
+
+                    if np.isfinite(mean_kl):
+                        row_label = (
+                            f"{row['latent_dim_label']}\n"
+                            f"KL={mean_kl:.3g}"
+                        )
+                    else:
+                        row_label = f"{row['latent_dim_label']}"
+
+                    ax.annotate(
+                        row_label,
+                        xy=(-0.12, 0.5),
+                        xycoords="axes fraction",
+                        va="center",
+                        ha="right",
+                        fontsize=10,
+                        rotation=0,
+                    )
+
+        value_mode = (
+            settings.get("value_mode", metadata["value_mode"].iloc[0])
+            if isinstance(settings, dict)
+            else metadata["value_mode"].iloc[0]
+        )
+
+        base_sample_index = (
+            settings.get("base_sample_index", None)
+            if isinstance(settings, dict)
+            else None
+        )
+
+        title = (
+            f"Latent traversal "
+            f"({view}, {value_mode} values)"
+        )
+
+        if base_sample_index is not None:
+            title += f"\nBase sample index: {base_sample_index}"
+
+        fig.suptitle(
+            title,
+            fontsize=14,
+            fontweight="bold",
+        )
+
+        self.plots["LatentTraversal"] = fig
+
+        plt.show()
+    
+    @staticmethod
+    def _get_middle_slice_from_decoded_volume(
+        volume: np.ndarray,
+        view: Literal["axial", "coronal", "sagittal"],
+        channel: int = 0,
+    ) -> np.ndarray:
+        """
+        Extract the middle 2D slice from one decoded 3D volume.
+
+        Args:
+            volume:
+                One decoded traversal volume.
+            view:
+                Anatomical plane to extract.
+            channel:
+                Channel index used when volume has shape (C, D, H, W).
+
+        Returns:
+            A 2D NumPy array.
+        """
+
+        volume = np.asarray(volume)
+
+        if volume.ndim == 4:
+            if channel < 0 or channel >= volume.shape[0]:
+                raise ValueError(
+                    f"channel={channel} is out of range for volume with "
+                    f"{volume.shape[0]} channels."
+                )
+
+            volume_3d = volume[channel]
+
+        elif volume.ndim == 3:
+            volume_3d = volume
+
+        else:
+            raise ValueError(
+                "Expected decoded volume to have shape (C, D, H, W) or (D, H, W), "
+                f"got shape {volume.shape}."
+            )
+
+        if view == "axial":
+            d_mid = volume_3d.shape[0] // 2
+            return volume_3d[d_mid, :, :]
+
+        if view == "coronal":
+            h_mid = volume_3d.shape[1] // 2
+            return volume_3d[:, h_mid, :]
+
+        if view == "sagittal":
+            w_mid = volume_3d.shape[2] // 2
+            return volume_3d[:, :, w_mid]
+
+        raise ValueError(
+            f"Unknown view={view!r}. "
+            "Expected 'axial', 'coronal', or 'sagittal'."
+        )

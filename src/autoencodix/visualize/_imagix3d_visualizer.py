@@ -551,6 +551,16 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 marker="o",
                 ax=ax,
             )
+            
+            legend = ax.get_legend()
+            if legend is not None:
+                legend.get_frame().set_facecolor("white")
+                legend.get_frame().set_edgecolor("0.8")
+                legend.get_frame().set_alpha(1.0)
+                legend.get_title().set_color("black")
+
+                for text in legend.get_texts():
+                    text.set_color("black")
 
             n_latent_dims = int(train_valid_summary["n_latent_dims"].max())
             threshold = train_valid_summary["threshold"].iloc[0]

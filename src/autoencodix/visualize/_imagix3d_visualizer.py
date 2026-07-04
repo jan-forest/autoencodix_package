@@ -152,15 +152,27 @@ class Imagix3DVisualizer(ImagixVisualizer):
             constrained_layout=True
         )
         
+        # row_labels = [
+        #     "Original\nAxial",
+        #     "Original\nCoronal",
+        #     "Original\nSagittal",
+        #     "Recon\nAxial",
+        #     "Recon\nCoronal",
+        #     "Recon\nSagittal",
+        #     "Error\nAxial",
+        #     "Error\nCoronal",
+        #     "Error\nSagittal",
+        # ]
+        
         row_labels = [
             "Original\nAxial",
-            "Original\nCoronal",
-            "Original\nSagittal",
             "Recon\nAxial",
-            "Recon\nCoronal",
-            "Recon\nSagittal",
             "Error\nAxial",
+            "Original\nCoronal",
+            "Recon\nCoronal",
             "Error\nCoronal",
+            "Original\nSagittal",
+            "Recon\nSagittal",
             "Error\nSagittal",
         ]
 
@@ -181,25 +193,45 @@ class Imagix3DVisualizer(ImagixVisualizer):
             d_mid, h_mid, w_mid = [s // 2 for s in orig.shape]
                                
             # extract slices
-            orig_slices = [
-                orig[d_mid, :, :],   # axial
-                orig[:, h_mid, :],   # coronal
-                orig[:, :, w_mid],   # sagittal
-            ]
+            
+            # orig_slices = [
+            #     orig[d_mid, :, :],   # axial
+            #     orig[:, h_mid, :],   # coronal
+            #     orig[:, :, w_mid],   # sagittal
+            # ]
 
-            recon_slices = [
+            # recon_slices = [
+            #     recon[d_mid, :, :],  # axial
+            #     recon[:, h_mid, :],  # coronal
+            #     recon[:, :, w_mid],  # sagittal
+            # ]
+            
+            axial_slices = [
+                orig[d_mid, :, :],   # axial
                 recon[d_mid, :, :],  # axial
-                recon[:, h_mid, :],  # coronal
-                recon[:, :, w_mid],  # sagittal
+                error[d_mid, :, :],  # axial
             ]
             
-            error_slices = [
-                error[d_mid, :, :],  # axial
+            coronal_slices = [
+                orig[:, h_mid, :],   # coronal
+                recon[:, h_mid, :],  # coronal
                 error[:, h_mid, :],  # coronal
+            ]
+            
+            sagittal_slices = [
+                orig[:, :, w_mid],   # sagittal
+                recon[:, :, w_mid],  # sagittal
                 error[:, :, w_mid],  # sagittal
             ]
+            
+            # error_slices = [
+            #     error[d_mid, :, :],  # axial
+            #     error[:, h_mid, :],  # coronal
+            #     error[:, :, w_mid],  # sagittal
+            # ]
                     
-            all_slices = orig_slices + recon_slices + error_slices
+            #all_slices = orig_slices + recon_slices + error_slices
+            all_slices = axial_slices + coronal_slices + sagittal_slices
             
             # Use same intensity range for orig and recon of this sample
             image_min = min(np.nanmin(orig), np.nanmin(recon))
@@ -213,7 +245,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
 
             for r in range(9):
                 
-                if r < 6:
+                if r in [0, 1, 3, 4, 6, 7]:
                     axes[r, c].imshow(all_slices[r], cmap="gray", origin="lower", vmin=image_min, vmax=image_max)
                 else:
                     axes[r, c].imshow(all_slices[r], cmap="magma", origin="lower", vmin=error_min, vmax=error_max)

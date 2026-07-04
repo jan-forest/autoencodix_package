@@ -317,7 +317,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
         df_corr = pd.DataFrame(rows)
 
         ## Plot 1 - Mean
-        plt.figure(figsize=(8, 5))
+        fig, ax = plt.subplots(figsize=(8, 5))
         sns.lineplot(
             data=df_corr,
             x="epoch",
@@ -325,6 +325,17 @@ class Imagix3DVisualizer(ImagixVisualizer):
             hue="split",
             marker="o",
         )
+        
+        legend = ax.get_legend()
+        if legend is not None:
+            legend.get_frame().set_facecolor("white")
+            legend.get_frame().set_edgecolor("0.8")
+            legend.get_frame().set_alpha(1.0)
+            legend.get_title().set_color("black")
+
+            for text in legend.get_texts():
+                text.set_color("black")
+        
         plt.title("Mean absolute pairwise correlation between latent dimensions")
         plt.xlabel("Epoch")
         plt.ylabel("Mean absolute pairwise correlation")
@@ -332,7 +343,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
         plt.show()
 
         ## Plot 2 - Max
-        plt.figure(figsize=(8, 5))
+        fig, ax = plt.subplots(figsize=(8, 5))
         sns.lineplot(
             data=df_corr,
             x="epoch",
@@ -340,6 +351,17 @@ class Imagix3DVisualizer(ImagixVisualizer):
             hue="split",
             marker="o",
         )
+        
+        legend = ax.get_legend()
+        if legend is not None:
+            legend.get_frame().set_facecolor("white")
+            legend.get_frame().set_edgecolor("0.8")
+            legend.get_frame().set_alpha(1.0)
+            legend.get_title().set_color("black")
+
+            for text in legend.get_texts():
+                text.set_color("black")
+        
         plt.title("Maximum absolute pairwise correlation between latent dimensions")
         plt.xlabel("Epoch")
         plt.ylabel("Max absolute pairwise correlation")
@@ -610,6 +632,16 @@ class Imagix3DVisualizer(ImagixVisualizer):
             s=60,
             ax=ax,
         )
+        legend = ax.get_legend()
+
+        if legend is not None:
+            legend.get_frame().set_facecolor("white")
+            legend.get_frame().set_edgecolor("0.8")
+            legend.get_frame().set_alpha(1.0)
+            legend.get_title().set_color("black")
+
+            for text in legend.get_texts():
+                text.set_color("black")
 
         threshold = final_epoch_rows["threshold"].iloc[0]
         ax.axhline(
@@ -638,7 +670,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
                     "Keeping linear y-axis for activity plot."
                 )
 
-        ax.legend(title="Split / active", bbox_to_anchor=(1.02, 1), loc="upper left")
+        ax.legend(title="Split / active", bbox_to_anchor=(1.02, 1), loc="upper left", frameon=True, facecolor="white")
         fig.tight_layout()
 
         self.plots["LatentActivityPerDimension"] = fig
@@ -660,6 +692,16 @@ class Imagix3DVisualizer(ImagixVisualizer):
                     marker="o",
                     ax=ax,
                 )
+                
+                legend = ax.get_legend()
+                if legend is not None:
+                    legend.get_frame().set_facecolor("white")
+                    legend.get_frame().set_edgecolor("0.8")
+                    legend.get_frame().set_alpha(1.0)
+                    legend.get_title().set_color("black")
+
+                    for text in legend.get_texts():
+                        text.set_color("black")
 
                 ax.set_title(
                     f"Mean KL contribution per latent dimension at epoch {display_epoch}"

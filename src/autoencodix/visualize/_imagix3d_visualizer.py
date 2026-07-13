@@ -17,10 +17,11 @@ class Imagix3DVisualizer(ImagixVisualizer):
         result: Result, 
         n_samples: int = 3, 
         selection: str = "random", 
-        metric: str = "mse"
+        metric: str = "mse",
+        chosen_split: str = "test"        
     ) -> None: 
         """
-        Plot original, reconstructed, and absolute-error slices for test samples.
+        Plot original, reconstructed, and absolute-error slices for samples of the chosen split.
 
         Args:
             result: Result object.
@@ -29,6 +30,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
             selection: "random" or "bmw".
                        "bmw" selects best, median, and worst reconstruction.
             metric: Metric used for bmw selection. Options: "mse" or "bce".
+            chosen_split: "test", "valid" or "train"
         """
          
         if selection not in ["random", "bmw"]:
@@ -36,6 +38,9 @@ class Imagix3DVisualizer(ImagixVisualizer):
         
         if metric not in ["mse", "bce"]:
             raise ValueError("metric must be either 'mse' or 'bce'.")
+        
+        if chosen_split not in ["test", "valid", "train"]:
+            raise ValueError("chosen_split must be either 'test', 'valid' or 'train'.")
         
         def reconstruction_score(orig, recon, metric):
             """Compute reconstruction score for sample selection"""
@@ -60,20 +65,36 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 
         dataset = result.datasets
 
-        ## Overwrite original datasets with new_datasets if available after predict with other data
+        ## Overwrite original datasets with new_datasets if available
         if dataset is None:
             dataset = DatasetContainer()
 
-        if result.new_datasets.test:
-            dataset.test = result.new_datasets.test
-
-        if dataset.test is None:
-            raise ValueError("test of dataset is None")
+        new_split_data = getattr(result.new_datasets, chosen_split, None)
+        if new_split_data:
+            setattr(dataset, chosen_split, new_split_data)
+            
+        # if result.new_datasets.test:
+        #     dataset.test = result.new_datasets.test
         
-        all_sample_order = dataset.test.sample_ids
+        split_data = getattr(dataset, chosen_split, None)
+
+        # if dataset.test is None:
+        #     raise ValueError("test of dataset is None")
+        
+        if split_data is None:
+            raise ValueError(f"dataset is None for split '{chosen_split}'")
+        
+        #all_sample_order = dataset.test.sample_ids
+        all_sample_order = split_data.sample_ids
+        
+        if chosen_split == "test":
+            epoch = -1
+        else:
+            stored_epochs = [e for e in result.reconstructions._data.keys()]
+            epoch = max(stored_epochs)
         
         # get reconstructed images
-        recons = result.reconstructions.get(split="test", epoch=-1)
+        recons = result.reconstructions.get(split=chosen_split, epoch=epoch)
         if recons is None: 
                 raise ValueError("No reconstructions found in result")
         
@@ -104,7 +125,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 sid = all_sample_order[idx]
                 
                 # original volume
-                orig = dataset.test.raw_data[idx].img.squeeze()
+                orig = split_data.raw_data[idx].img.squeeze()
                 
                 # reconstructed volume
                 recon = recons[idx].squeeze()           
@@ -158,7 +179,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
             sample_id = item["sample_id"]
             
             # original volume
-            orig = dataset.test.raw_data[idx].img.squeeze()
+            orig = split_data.raw_data[idx].img.squeeze()
 
             # reconstructed volume
             recon = recons[idx].squeeze()

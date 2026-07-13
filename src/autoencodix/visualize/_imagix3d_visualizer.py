@@ -30,9 +30,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
                        "bmw" selects best, median, and worst reconstruction.
             metric: Metric used for bmw selection. Options: "mse" or "bce".
         """
-        
-        ## TODO add similar labels/param logic from other visualizations
-        
+         
         if selection not in ["random", "bmw"]:
             raise ValueError("selection must be either 'random' or 'bmw'.")
         
@@ -58,8 +56,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 p = np.clip(p, eps, 1.0 - eps)
                 
                 bce = -(y * np.log(p) + (1.0 - y) * np.log(1.0 - p))
-                return float(np.mean(bce))
-                              
+                return float(np.mean(bce))                          
                 
         dataset = result.datasets
 
@@ -73,10 +70,6 @@ class Imagix3DVisualizer(ImagixVisualizer):
         if dataset.test is None:
             raise ValueError("test of dataset is None")
         
-        meta = dataset.test.metadata
-        #n_samples = min(n_samples, len(meta))
-        #sample_ids = meta.sample(n=n_samples, random_state=42).index
-
         all_sample_order = dataset.test.sample_ids
         
         # get reconstructed images
@@ -84,27 +77,24 @@ class Imagix3DVisualizer(ImagixVisualizer):
         if recons is None: 
                 raise ValueError("No reconstructions found in result")
         
-        indices = [
-            idx for idx, sid in enumerate(all_sample_order)
-            if sid in meta.index and idx < len(recons)
-        ]
+        n_indices = len(recons)
+        indices = list(range(n_indices))
         
         if selection == "random":
-            n_samples = min(n_samples, len(meta))
-            sample_ids = meta.sample(n=n_samples, random_state=42).index
+            n_samples = min(n_samples, n_indices)
             
-            selected = []
-            for sid in sample_ids:
-                if sid in all_sample_order:
-                    idx = all_sample_order.index(sid)
-                    selected.append(
-                        {
-                            "idx": idx,
-                            "sample_id": sid,
-                            "label": "random",
-                            "score": None
-                        }
-                    )
+            rng = np.random.default_rng(42)
+            chosen_indices = rng.choice(indices, size=n_samples, replace=False,)
+
+            selected = [
+                {
+                    "idx": idx,
+                    "sample_id": all_sample_order[idx],
+                    "label": "random",
+                    "score": None,
+                }
+                for idx in chosen_indices
+            ]
         
         else:
             # bmw: best, median and worst by reconstruction score
@@ -117,10 +107,8 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 orig = dataset.test.raw_data[idx].img.squeeze()
                 
                 # reconstructed volume
-                recon = recons[idx].squeeze()
-            
-                score = reconstruction_score(orig, recon, metric)
-            
+                recon = recons[idx].squeeze()           
+                score = reconstruction_score(orig, recon, metric)        
                 scored_samples.append(
                     {
                         "idx": idx,
@@ -140,7 +128,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 {**median, "label": "median"},
                 {**best, "label": "best"}
             ]
-        
+                  
             n_samples = len(selected) # i.e. 3
             
         
@@ -151,19 +139,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
             squeeze=False,
             constrained_layout=True
         )
-        
-        # row_labels = [
-        #     "Original\nAxial",
-        #     "Original\nCoronal",
-        #     "Original\nSagittal",
-        #     "Recon\nAxial",
-        #     "Recon\nCoronal",
-        #     "Recon\nSagittal",
-        #     "Error\nAxial",
-        #     "Error\nCoronal",
-        #     "Error\nSagittal",
-        # ]
-        
+             
         row_labels = [
             "Original\nAxial",
             "Recon\nAxial",
@@ -192,20 +168,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
             # index for the middle slice of every dimension
             d_mid, h_mid, w_mid = [s // 2 for s in orig.shape]
                                
-            # extract slices
-            
-            # orig_slices = [
-            #     orig[d_mid, :, :],   # axial
-            #     orig[:, h_mid, :],   # coronal
-            #     orig[:, :, w_mid],   # sagittal
-            # ]
-
-            # recon_slices = [
-            #     recon[d_mid, :, :],  # axial
-            #     recon[:, h_mid, :],  # coronal
-            #     recon[:, :, w_mid],  # sagittal
-            # ]
-            
+            # extract slices            
             axial_slices = [
                 orig[d_mid, :, :],   # axial
                 recon[d_mid, :, :],  # axial
@@ -224,13 +187,6 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 error[:, :, w_mid],  # sagittal
             ]
             
-            # error_slices = [
-            #     error[d_mid, :, :],  # axial
-            #     error[:, h_mid, :],  # coronal
-            #     error[:, :, w_mid],  # sagittal
-            # ]
-                    
-            #all_slices = orig_slices + recon_slices + error_slices
             all_slices = axial_slices + coronal_slices + sagittal_slices
             
             # Use same intensity range for orig and recon of this sample

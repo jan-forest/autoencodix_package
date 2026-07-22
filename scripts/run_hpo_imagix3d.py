@@ -8,14 +8,14 @@ from typing import Literal, Union
 
 
 def run_synetune_hpo(
-    data_path: Path,
-    tasks: str | list[str] = "group",
-    metric: Literal["reconstruction_loss", "downstream_performance"] = "reconstruction_loss", 
-    folder: str = "train", 
-    anno: str = "train_metadata.csv"):
-    
-    volume_root = data_path / folder
-    annotation_file = data_path / anno
+	data_path: Path,
+	tasks: str | list[str] = "group",
+	metric: Literal["reconstruction_loss", "downstream_performance"] = "reconstruction_loss", 
+	folder: str = "train", 
+	anno: str = "train_metadata.csv"):
+
+	volume_root = data_path / folder
+	annotation_file = data_path / anno
 
 	### Step 1: Defining the Configuration Space ###
 
@@ -113,25 +113,25 @@ def run_synetune_hpo(
     ):
 
     	# Imports
-    	from autoencodix.configs.imagix3d_config import Imagix3DConfig
-    	from autoencodix.configs.default_config import (
+		from autoencodix.configs.imagix3d_config import Imagix3DConfig
+		from autoencodix.configs.default_config import (
         	DataConfig,
         	DataCase,
         	DataInfo
     	)
-    	import autoencodix as acx
+		import autoencodix as acx
     
-    	import sklearn
+		import sklearn
 		import numpy as np
-    	from sklearn import linear_model
-    	from syne_tune import Reporter
+		from sklearn import linear_model
+		from syne_tune import Reporter
 
     	## Step 3.1 instantiating our model with a given configuration
     	# Define path to data and annotation file
-    	VOLROOT = volume_root
-    	VOLANNO = annotation_file
+		VOLROOT = volume_root
+		VOLANNO = annotation_file
     
-   		volconfig = Imagix3DConfig(     
+		volconfig = Imagix3DConfig(     
         	## Tunable params
         	beta=beta,
         	batch_size= batch_size,
@@ -160,51 +160,51 @@ def run_synetune_hpo(
         	data_config=DataConfig(
             	data_info={
                 	"IMG": DataInfo(
-                    	file_path=volume_root,
+                    	file_path=VOLROOT,
                     	scaling="MINMAX",
                     	data_type="IMG",
                 	),
                 	"ANNO": DataInfo(
-                    	file_path=annotation_file,
+                    	file_path=VOLANNO,
                     	data_type="ANNOTATION",
                 	),
             	},
         	),
     	)
     
-    	imagix3d = acx.Imagix3D(config=volconfig)
-    	imagix3d.run()
+		imagix3d = acx.Imagix3D(config=volconfig)
+		imagix3d.run()
 
 		# Step 3.2 Evaluating our learned embedding
-    	valid_recon_loss = float(np.asarray(imagix3d.result.sub_losses.get("recon_loss").get(epoch=-1, split="valid")).item())
-    	train_recon_loss = float(np.asarray(imagix3d.result.sub_losses.get("recon_loss").get(epoch=-1, split="train")).item())
-    	valid_total_loss = float(np.asarray(imagix3d.result.losses.get(epoch=-1, split="valid")).item())
-    	train_total_loss = float(np.asarray(imagix3d.result.losses.get(epoch=-1, split="train")).item())
-    	valid_var_loss = float(np.asarray(imagix3d.result.sub_losses.get("var_loss").get(epoch=-1, split="valid")).item())
+		valid_recon_loss = float(np.asarray(imagix3d.result.sub_losses.get("recon_loss").get(epoch=-1, split="valid")).item())
+		train_recon_loss = float(np.asarray(imagix3d.result.sub_losses.get("recon_loss").get(epoch=-1, split="train")).item())
+		valid_total_loss = float(np.asarray(imagix3d.result.losses.get(epoch=-1, split="valid")).item())
+		train_total_loss = float(np.asarray(imagix3d.result.losses.get(epoch=-1, split="train")).item())
+		valid_var_loss = float(np.asarray(imagix3d.result.sub_losses.get("var_loss").get(epoch=-1, split="valid")).item())
 
     	# Compute the downstream performance
     	# We define a list of tasks which are either regression or classification tasks from our annotation file.
     	# A linear model is used on the learned embedding to compute the performance for each task.
-    	sklearn.set_config(enable_metadata_routing=True)
+		sklearn.set_config(enable_metadata_routing=True)
 
 		# Define Classifier
-    	sklearn_ml_class = linear_model.LogisticRegression(
+		sklearn_ml_class = linear_model.LogisticRegression(
 			solver="sag",
 			n_jobs=-1,
 			class_weight="balanced",
 			max_iter=200,
 		)
     	# Define Regressor
-    	sklearn_ml_regression = linear_model.LinearRegression() # Unused, only needed if downstream task is regression variable
+		sklearn_ml_regression = linear_model.LinearRegression() # Unused, only needed if downstream task is regression variable
 
     	# Downstream performance metrics
-    	own_metric_class = 'roc_auc_ovo'
-    	own_metric_regression = 'r2'
+		own_metric_class = 'roc_auc_ovo'
+		own_metric_regression = 'r2'
 
 		# make sure the task list has the proper type for autoencodix evaluate function
-    	tasks_list = [t for s in (tasks.split("$") if isinstance(tasks,str) else tasks) for t in (s.split("$") if isinstance(s,str) else [s])]
+		tasks_list = [t for s in (tasks.split("$") if isinstance(tasks,str) else tasks) for t in (s.split("$") if isinstance(s,str) else [s])]
 
-    	imagix3d.evaluate(
+		imagix3d.evaluate(
 			ml_model_class=sklearn_ml_class,
 			ml_model_regression=sklearn_ml_regression,
 			params= tasks_list,
@@ -216,14 +216,14 @@ def run_synetune_hpo(
 		)
 
 		# here we take the average over all downstream tasks
-    	downstream_performance = imagix3d.result.embedding_evaluation.loc[
+		downstream_performance = imagix3d.result.embedding_evaluation.loc[
 			imagix3d.result.embedding_evaluation.score_split == "valid",
 			"value"
 		].mean()
 
     	# We instantiate the Syne Tune Reporter and pass the model performance back to our Tuner
-    	report = Reporter()
-    	report(
+		report = Reporter()
+		report(
         	downstream_performance=downstream_performance, 
         	reconstruction_loss=valid_recon_loss,
         	train_reconstruction_loss=train_recon_loss,
@@ -248,7 +248,6 @@ def run_synetune_hpo(
 
 	# Start tuning
 	tuner.run()
-
 	return load_experiment(tuner.name)
 
 

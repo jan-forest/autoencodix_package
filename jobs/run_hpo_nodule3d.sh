@@ -22,6 +22,34 @@ source /data/horse/ws/baeuchl-imagix3d/venvs/alpha/bin/activate
 
 cd /home/baeuchl/autoencodix_package
 
+echo "===== GPU / CUDA preflight ====="
+echo "SLURM_JOB_ID=${SLURM_JOB_ID}"
+echo "CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-not set}"
+echo "SLURM_JOB_GPUS=${SLURM_JOB_GPUS:-not set}"
+
+which python
+python --version
+
+nvidia-smi
+
+srun python - <<'PY'
+import os
+import torch
+
+print("CUDA_VISIBLE_DEVICES:", os.environ.get("CUDA_VISIBLE_DEVICES"))
+print("torch version:", torch.__version__)
+print("torch CUDA version:", torch.version.cuda)
+
+try:
+    print("torch.cuda.is_available():", torch.cuda.is_available())
+    print("torch.cuda.device_count():", torch.cuda.device_count())
+    for i in range(torch.cuda.device_count()):
+        print(i, torch.cuda.get_device_name(i))
+except Exception as e:
+    print("CUDA test failed:")
+    raise
+PY
+
 export PYTHONUNBUFFERED=1
 
 export DATA_PATH="/data/horse/ws/baeuchl-imagix3d/data/medmnist/nifti/nodule3d"
@@ -44,7 +72,7 @@ echo "Data path: ${DATA_PATH}"
 echo "Output directory: ${OUT_DIR}"
 echo "CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-not set}"
 
-python - <<'PY'
+srun python - <<'PY'
 import os
 import pickle
 import sys

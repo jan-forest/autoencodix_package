@@ -166,7 +166,7 @@ def run_synetune_hpo(
         "n_gpus": 1,
 
         # Tunable params
-        "batch_size": choice([16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 256]),
+        "batch_size": choice([32, 48, 64, 80, 96, 112, 128, 144, 160, 256]),
         "learning_rate": loguniform(1e-5, 1e-1),
         "weight_decay": loguniform(1e-5, 1e-1),
         "beta": loguniform(1e-5, 5e-2),
@@ -189,7 +189,7 @@ def run_synetune_hpo(
 
     points_to_evaluate = [
         {
-            "batch_size": 256,
+            "batch_size": 32,
             "learning_rate": 1e-3,
             "weight_decay": 5e-3,
             "beta": 0.02,
@@ -217,13 +217,13 @@ def run_synetune_hpo(
         trial_backend=PythonBackend(
             tune_function=synetune_objective_function,
             config_space=config_space,
-            rotate_gpus=True,
+            rotate_gpus=False,
         ),
         scheduler=scheduler,
         stop_criterion=StoppingCriterion(
             max_num_trials_completed=100,
         ),
-        n_workers=4,
+        n_workers=1,
     )
 
     tuner.run()

@@ -52,7 +52,7 @@ PY
 
 export PYTHONUNBUFFERED=1
 
-export DATA_PATH="/data/horse/ws/baeuchl-imagix3d/data/medmnist/nifti/nodule3d"
+export DATA_PATH="/data/horse/ws/baeuchl-imagix3d/data/medmnist/nodule3d"
 export FOLDER="train"
 export ANNO="train_metadata.csv"
 export TASKS="group"

@@ -1,7 +1,8 @@
 from pathlib import Path
 
 from syne_tune.config_space import choice, loguniform
-from syne_tune.optimizer.baselines import FIFOScheduler, CQR
+#from syne_tune.optimizer.baselines import CQR
+from syne_tune.optimizer.baselines import RandomSearch
 from syne_tune import Tuner, StoppingCriterion
 from syne_tune.experiments import load_experiment
 from syne_tune.backend import PythonBackend
@@ -206,20 +207,14 @@ def run_synetune_hpo(
     else:
         do_minimize = True
 
-    # scheduler = CQR(
-    #     config_space=config_space,
-    #     metric=metric,
-    #     do_minimize=do_minimize,
-    #     points_to_evaluate=points_to_evaluate,
-    # )
+    scheduler = RandomSearch(
+        config_space=config_space,
+        metrics=[metric],
+        do_minimize=do_minimize,
+        points_to_evaluate=points_to_evaluate,
+        random_seed=42
+    )
     
-    scheduler = FIFOScheduler(
-    	config_space=config_space,
-    	searcher="random",
-    	metric=metric,
-    	mode="min" if do_minimize else "max",
-    	points_to_evaluate=points_to_evaluate,
-	)
 
     tuner = Tuner(
         trial_backend=PythonBackend(

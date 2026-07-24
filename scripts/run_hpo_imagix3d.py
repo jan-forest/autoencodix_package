@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from syne_tune.config_space import choice, loguniform
-#from syne_tune.optimizer.baselines import CQR
 from syne_tune.optimizer.baselines import RandomSearch
 from syne_tune import Tuner, StoppingCriterion
 from syne_tune.experiments import load_experiment
@@ -31,11 +30,11 @@ def synetune_objective_function(
     keep_mu_positive: int,
 ) -> None:
     import numpy as np
-    import sklearn
+    #import sklearn
     import autoencodix as acx
 
     from syne_tune import Reporter
-    from sklearn import linear_model
+    #from sklearn import linear_model
     from autoencodix.configs.imagix3d_config import Imagix3DConfig
     from autoencodix.configs.default_config import (
         DataConfig,
@@ -58,14 +57,14 @@ def synetune_objective_function(
         data_case=DataCase.IMG_TO_IMG,
         img_path_col="filepath",
         spatial_shape_policy="crop_or_pad_to_shape",
-        target_shape_3d=(64, 64, 64),
+        target_shape_3d=(160, 192, 160),
         checkpoint_interval=checkpoint_interval,
         epochs=epochs,
         reconstruction_loss="mse",
         loss_reduction=loss_reduction,
         scaling="MINMAX",
         anneal_function=anneal_function,
-        normalize_nonzero_only=False,
+        normalize_nonzero_only=True,
         clamp_logvar=True,
         train_norm_groupsize=8,
         device=device,
@@ -94,36 +93,37 @@ def synetune_objective_function(
     train_total_loss = float(np.asarray(imagix3d.result.losses.get(epoch=-1,split="train",)).item())
     valid_var_loss = float(np.asarray(imagix3d.result.sub_losses.get("var_loss").get(epoch=-1,split="valid",)).item())
 
-    sklearn.set_config(enable_metadata_routing=True)
+    # sklearn.set_config(enable_metadata_routing=True)
 
-    sklearn_ml_class = linear_model.LogisticRegression(
-        solver="sag",
-        n_jobs=1,
-        class_weight="balanced",
-        max_iter=200,
-    )
+    # sklearn_ml_class = linear_model.LogisticRegression(
+    #     solver="sag",
+    #     n_jobs=1,
+    #     class_weight="balanced",
+    #     max_iter=200,
+    # )
 
-    sklearn_ml_regression = linear_model.LinearRegression()
+    # sklearn_ml_regression = linear_model.LinearRegression()
 
-    tasks_list = [task for task in tasks.split("$") if task]
+    # tasks_list = [task for task in tasks.split("$") if task]
 
-    imagix3d.evaluate(
-        ml_model_class=sklearn_ml_class,
-        ml_model_regression=sklearn_ml_regression,
-        params=tasks_list,
-        metric_class="roc_auc_ovo",
-        metric_regression="r2",
-        reference_methods=[],
-        split_type="use-split",
-        n_downsample=None,
-    )
+    # imagix3d.evaluate(
+    #     ml_model_class=sklearn_ml_class,
+    #     ml_model_regression=sklearn_ml_regression,
+    #     params=tasks_list,
+    #     metric_class="roc_auc_ovo",
+    #     metric_regression="r2",
+    #     reference_methods=[],
+    #     split_type="use-split",
+    #     n_downsample=None,
+    # )
 
-    downstream_performance = float(
-        imagix3d.result.embedding_evaluation.loc[
-            imagix3d.result.embedding_evaluation.score_split == "valid",
-            "value",
-        ].mean()
-    )
+    # downstream_performance = float(
+    #     imagix3d.result.embedding_evaluation.loc[
+    #         imagix3d.result.embedding_evaluation.score_split == "valid",
+    #         "value",
+    #     ].mean()
+    # )
+    downstream_performance = float("nan")
 
     report = Reporter()
     report(
@@ -139,9 +139,9 @@ def synetune_objective_function(
 
 def run_synetune_hpo(
     data_path: Path,
-    folder: str = "train",
-    anno: str = "train_metadata.csv",
-    tasks: str = "group",
+    folder: str = "ncct_flat",
+    anno: str = "ct_anno_flat.csv",
+    #tasks: str = "group",
     metric: str = "reconstruction_loss",
 ):
     if metric not in ["reconstruction_loss", "downstream_performance"]:
@@ -155,24 +155,24 @@ def run_synetune_hpo(
 
     config_space = {
         # Fixed params
-        "epochs": 100,
+        "epochs": 150,
         "checkpoint_interval": 10,
         "loss_reduction": "mean",
         "volume_root": str(volume_root),
         "annotation_file": str(annotation_file),
-        "tasks": tasks,
+       #"tasks": tasks,
 
         # Hardware params
         "device": "cuda",
         "n_gpus": 1,
 
         # Tunable params
-        "batch_size": choice([32, 48, 64, 80, 96, 112, 128, 144, 160, 256]),
-        "learning_rate": loguniform(1e-5, 1e-1),
-        "weight_decay": loguniform(1e-5, 1e-1),
-        "beta": loguniform(1e-5, 5e-2),
-        "latent_dim": choice([16, 32, 48, 64, 128, 256]),
-        "hidden_dim": choice([8, 16, 32, 48, 64]),
+        "batch_size": choice([32, 48, 64, 80, 96, 112, 128]),
+        "learning_rate": loguniform(1e-6, 1e-1),
+        "weight_decay": loguniform(1e-6, 1e-1),
+        "beta": loguniform(1e-6, 5e-2),
+        "latent_dim": choice([16, 32, 48, 64, 96, 128]),
+        "hidden_dim": choice([16, 32, 48, 64, 96, 128]),
         "train_normalization": choice(["group", "instance", "batch"]),
         "anneal_function": choice(
             [
@@ -191,13 +191,13 @@ def run_synetune_hpo(
     points_to_evaluate = [
         {
             "batch_size": 32,
-            "learning_rate": 1e-3,
-            "weight_decay": 5e-3,
+            "learning_rate": 0.001,
+            "weight_decay": 0.01,
             "beta": 0.02,
-            "latent_dim": 32,
-            "hidden_dim": 8,
+            "latent_dim": 64,
+            "hidden_dim": 32,
             "anneal_function": "logistic-late",
-            "train_normalization": "instance",
+            "train_normalization": "group",
             "keep_mu_positive": 0,
         }
     ]

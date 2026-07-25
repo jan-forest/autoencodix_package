@@ -14,7 +14,7 @@ def synetune_objective_function(
     loss_reduction: str,
     volume_root: str,
     annotation_file: str,
-    tasks: str,
+    #tasks: str,
     device: str,
     n_gpus: int,
 
@@ -84,8 +84,33 @@ def synetune_objective_function(
         ),
     )
 
-    imagix3d = acx.Imagix3D(config=volconfig)
-    imagix3d.run()
+    report = Reporter()
+    try:
+        imagix3d = acx.Imagix3D(config=volconfig)
+        imagix3d.run()
+
+    except RuntimeError as error:
+        import torch
+
+        if "out of memory" in str(error).lower():
+            print(
+                "CUDA out of memory in this trial. Reporting penalty value.",
+                flush=True,
+            )
+            torch.cuda.empty_cache()
+
+            report(
+                downstream_performance=-1.0,
+                reconstruction_loss=1e9,
+                train_reconstruction_loss=1e9,
+                valid_total_loss=1e9,
+                train_total_loss=1e9,
+                valid_var_loss=1e9,
+                recon_generalization_gap=1e9,
+            )
+            return
+
+        raise
 
     valid_recon_loss = float(np.asarray(imagix3d.result.sub_losses.get("recon_loss").get(epoch=-1,split="valid",)).item())
     train_recon_loss = float(np.asarray(imagix3d.result.sub_losses.get("recon_loss").get(epoch=-1,split="train",)).item())
@@ -167,7 +192,7 @@ def run_synetune_hpo(
         "n_gpus": 1,
 
         # Tunable params
-        "batch_size": choice([32, 48, 64, 80, 96, 112, 128]),
+        "batch_size": choice([16, 32, 48]),
         "learning_rate": loguniform(1e-6, 1e-1),
         "weight_decay": loguniform(1e-6, 1e-1),
         "beta": loguniform(1e-6, 5e-2),
@@ -220,13 +245,13 @@ def run_synetune_hpo(
         trial_backend=PythonBackend(
             tune_function=synetune_objective_function,
             config_space=config_space,
-            rotate_gpus=False,
+            rotate_gpus=True,
         ),
         scheduler=scheduler,
         stop_criterion=StoppingCriterion(
             max_num_trials_completed=100,
         ),
-        n_workers=1,
+        n_workers=4,
     )
 
     tuner.run()

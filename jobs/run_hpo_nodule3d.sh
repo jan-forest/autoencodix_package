@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=hpo_nodule3d
+#SBATCH --job-name=hpo_ncct
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=24
+#SBATCH --cpus-per-task=12
 #SBATCH --gres=gpu:4
-#SBATCH --mem=120G
+#SBATCH --mem=480G
 #SBATCH --time=12:00:00
 #SBATCH --output=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.out
 #SBATCH --error=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.err
@@ -76,6 +76,7 @@ srun python - <<'PY'
 import os
 import pickle
 import sys
+import json
 from pathlib import Path
 
 repo = Path.cwd()
@@ -103,6 +104,17 @@ tuning_experiment = run_synetune_hpo(
 
 results = tuning_experiment.results.copy()
 
+metadata = {
+    "scheduler": "RandomSearch",
+    "n_workers": 1,
+    "metric": metric,
+    "mode": "minimize" if metric != "downstream_performance" else "maximize",
+    "data_path": str(data_path),
+    "folder": folder,
+    "annotation_file": anno,
+    "tasks": tasks,
+}
+
 results_csv = out_dir / "results.csv"
 results_pkl = out_dir / "tuning_experiment.pkl"
 best_config_txt = out_dir / "best_config.txt"
@@ -114,6 +126,9 @@ with open(results_pkl, "wb") as f:
 
 with open(best_config_txt, "w", encoding="utf-8") as f:
     f.write(str(tuning_experiment.best_config()))
+
+with open(out_dir / "hpo_metadata.json", "w", encoding="utf-8") as f:
+    json.dump(metadata, f, indent=4)
 
 PY
 

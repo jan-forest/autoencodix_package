@@ -41,6 +41,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--keep-mu-positive", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--train-normalization", type=str, default="batch")
     parser.add_argument("--train-norm-groupsize", type=int, default=8)
+    parser.add_argument("--weight-decay", type=float, default=0.01)
+    parser.add_argument("--learning-rate", type=float, default=0.001)
+    parser.add_argument("--batch-size", type=int, default=32)
 
     return parser.parse_args()
 
@@ -55,6 +58,7 @@ def build_config(args: argparse.Namespace) -> Imagix3DConfig:
         epochs=args.epochs,
         latent_dim=args.latent_dim,
         hidden_dim=args.hidden_dim,
+        batch_size=args.batch_size,
         reconstruction_loss=args.reconstruction_loss,
         loss_reduction=args.loss_reduction,
         beta=args.beta,
@@ -64,6 +68,8 @@ def build_config(args: argparse.Namespace) -> Imagix3DConfig:
         keep_mu_positive=args.keep_mu_positive,
         train_normalization=args.train_normalization,
         train_norm_groupsize=args.train_norm_groupsize,
+        weight_decay=args.weight_decay,
+        learning_rate=args.learning_rate, 
         data_config=DataConfig(
             data_info={
                 "IMG": DataInfo(
@@ -100,6 +106,7 @@ def main() -> None:
         "epochs": args.epochs,
         "latent_dim": args.latent_dim,
         "hidden_dim": args.hidden_dim,
+        "batch_size": args.batch_size,
         "reconstruction_loss": args.reconstruction_loss,
         "loss_reduction": args.loss_reduction,
         "beta": args.beta,
@@ -110,6 +117,8 @@ def main() -> None:
         "keep_mu_positive":args.keep_mu_positive,
         "train_normalization": args.train_normalization,
         "train_norm_groupsize": args.train_norm_groupsize,
+        "learning_rate": args.learning_rate,
+        "weight_decay": args.weight_decay,
         "evaluate_param": args.evaluate_param,
     }
 

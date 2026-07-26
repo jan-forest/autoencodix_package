@@ -58,7 +58,7 @@ export ANNO="ct_anno_flat.csv"
 export METRIC="reconstruction_loss"
 
 HPO_ROOT="/data/horse/ws/baeuchl-imagix3d/hpo"
-RUN_NAME="nodule3d_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
+RUN_NAME="ncct_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
 OUT_DIR="${HPO_ROOT}/${RUN_NAME}"
 
 mkdir -p "${OUT_DIR}"

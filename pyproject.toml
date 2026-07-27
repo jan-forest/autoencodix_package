@@ -1,7 +1,17 @@
 [project]
 name = "autoencodix"
-version = "0.2.0"
-description = "A flexible autoencoder toolkit."
+version = "0.2.2"
+authors = [
+  { name="Maximilian Joas & Jan Ewald", email="jan.ewald@uni-leipzig.de" },
+]
+description = "Framework for multi-omics data integration by autoencoders."
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "Apache-2.0"
+license-files = ["LICENCSE"]
 requires-python = ">=3.9,<3.13"
 dependencies = [
     "lightning-fabric>=2.5.0.post0",
@@ -34,9 +44,7 @@ dependencies = [
     "openai==2.31.0",
     "tensorboard-plugin-profile==2.20.1",
     "tensorboard>=2.20.0",
-	"nibabel==5.4.2",
-	"torchio==1.0.2",
-	"python-dotenv>=1.2.2",
+    "python-dotenv>=1.2.1",
 ]
 
 [dependency-groups]
@@ -66,3 +74,7 @@ build-backend = "hatchling.build"
 [tool.ty.rules]
 [tool.ty.src]
 exclude = ["src/autoencodix/utils/feature_importance.py", "**/.ipynb_checkpoints/**",]
+
+[project.urls]
+Homepage = "https://github.com/jan-forest/autoencodix_package"
+Issues = "https://github.com/jan-forest/autoencodix_package/issues"

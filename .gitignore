@@ -1,0 +1,10 @@
+data/
+notebooks/census_chunks/
+notebooks/*/*
+results/*
+Tutorials/DeepDives/acx_pretrained_models/*
+Tutorials/DeepDives/TutData/*
+*.pkl
+*.pth
+*.h5ad
+*.pyc

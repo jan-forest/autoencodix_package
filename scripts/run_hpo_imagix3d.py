@@ -1,7 +1,8 @@
 from pathlib import Path
 
 from syne_tune.config_space import choice, loguniform
-from syne_tune.optimizer.baselines import RandomSearch
+#from syne_tune.optimizer.baselines import RandomSearch
+from syne_tune.optimizer.baselines import CQR
 from syne_tune import Tuner, StoppingCriterion
 from syne_tune.experiments import load_experiment
 from syne_tune.backend import PythonBackend
@@ -168,6 +169,8 @@ def run_synetune_hpo(
     anno: str = "ct_anno_flat.csv",
     #tasks: str = "group",
     metric: str = "reconstruction_loss",
+    max_wallclock_time: int = 11 * 60 * 60,
+    n_workers: int = 4
 ):
     if metric not in ["reconstruction_loss", "downstream_performance"]:
         raise ValueError(
@@ -181,49 +184,52 @@ def run_synetune_hpo(
     config_space = {
         # Fixed params
         "epochs": 150,
-        "checkpoint_interval": 10,
+        "checkpoint_interval": 150,
         "loss_reduction": "mean",
         "volume_root": str(volume_root),
         "annotation_file": str(annotation_file),
        #"tasks": tasks,
+        "anneal_function": "logistic-late",
+        "keep_mu_positive": 0,
+        "batch_size": 48,
 
         # Hardware params
         "device": "cuda",
         "n_gpus": 1,
 
         # Tunable params
-        "batch_size": choice([16, 32, 48]),
+        #"batch_size": choice([16, 32, 48]),
         "learning_rate": loguniform(1e-6, 1e-1),
         "weight_decay": loguniform(1e-6, 1e-1),
         "beta": loguniform(1e-6, 5e-2),
         "latent_dim": choice([16, 32, 48, 64, 96, 128]),
         "hidden_dim": choice([16, 32, 48, 64, 96, 128]),
         "train_normalization": choice(["group", "instance", "batch"]),
-        "anneal_function": choice(
-            [
-                "5phase-constant",
-                "3phase-linear",
-                "3phase-log",
-                "logistic-mid",
-                "logistic-early",
-                "logistic-late",
-            ]
-        ),
+        # "anneal_function": choice(
+        #     [
+        #         "5phase-constant",
+        #         "3phase-linear",
+        #         "3phase-log",
+        #         "logistic-mid",
+        #         "logistic-early",
+        #         "logistic-late",
+        #     ]
+        # ),
         # Encoded as scalar values for Syne Tune compatibility
-        "keep_mu_positive": choice([0, 1]),
+        # "keep_mu_positive": choice([0, 1]),
     }
 
     points_to_evaluate = [
         {
-            "batch_size": 32,
-            "learning_rate": 0.001,
-            "weight_decay": 0.01,
-            "beta": 0.02,
-            "latent_dim": 64,
-            "hidden_dim": 32,
-            "anneal_function": "logistic-late",
+            #"batch_size": 32,
+            "learning_rate": 0.0006,
+            "weight_decay": 0.003,
+            "beta": 0.0000015,
+            "latent_dim": 32,
+            "hidden_dim": 16,
+            #"anneal_function": "logistic-late",
             "train_normalization": "group",
-            "keep_mu_positive": 0,
+            #"keep_mu_positive": 0,
         }
     ]
 
@@ -232,12 +238,20 @@ def run_synetune_hpo(
     else:
         do_minimize = True
 
-    scheduler = RandomSearch(
+    # scheduler = RandomSearch(
+    #     config_space=config_space,
+    #     metrics=[metric],
+    #     do_minimize=do_minimize,
+    #     points_to_evaluate=points_to_evaluate,
+    #     random_seed=42
+    # )
+    
+    scheduler = CQR(
         config_space=config_space,
-        metrics=[metric],
+        metric=metric,
         do_minimize=do_minimize,
         points_to_evaluate=points_to_evaluate,
-        random_seed=42
+        random_seed=42,
     )
     
 
@@ -249,9 +263,10 @@ def run_synetune_hpo(
         ),
         scheduler=scheduler,
         stop_criterion=StoppingCriterion(
-            max_num_trials_completed=100,
+            max_wallclock_time=max_wallclock_time,
+            #max_num_trials_completed=100,
         ),
-        n_workers=4,
+        n_workers=n_workers,
     )
 
     tuner.run()

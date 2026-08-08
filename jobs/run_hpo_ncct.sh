@@ -56,6 +56,8 @@ export DATA_PATH="/data/horse/ws/baeuchl-imagix3d/data/stroke_data"
 export FOLDER="ncct_flat"
 export ANNO="ct_anno_flat.csv"
 export METRIC="reconstruction_loss"
+export MAX_WALLCLOCK_HOURS=11.5
+export N_WORKERS=4
 
 HPO_ROOT="/data/horse/ws/baeuchl-imagix3d/hpo"
 RUN_NAME="ncct_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
@@ -89,7 +91,9 @@ folder = os.environ["FOLDER"]
 anno = os.environ["ANNO"]
 metric = os.environ["METRIC"]
 out_dir = Path(os.environ["OUT_DIR"])
-
+max_wallclock_hours = float(os.environ.get("MAX_WALLCLOCK_HOURS", "11.5"))
+max_wallclock_time = int(max_wallclock_hours * 60 * 60)
+n_workers = int(os.environ.get("N_WORKERS", "4"))
 out_dir.mkdir(parents=True, exist_ok=True)
 
 tuning_experiment = run_synetune_hpo(
@@ -97,6 +101,8 @@ tuning_experiment = run_synetune_hpo(
     folder=folder,
     anno=anno,
     metric=metric,
+    max_wallclock_time=max_wallclock_time,
+    n_workers=n_workers,
 )
 
 results = tuning_experiment.results.copy()

@@ -108,8 +108,8 @@ tuning_experiment = run_synetune_hpo(
 results = tuning_experiment.results.copy()
 
 metadata = {
-    "scheduler": "RandomSearch",
-    "n_workers": 1,
+    "scheduler": "CQR",
+    "n_workers": n_workers,
     "metric": metric,
     "mode": "minimize" if metric != "downstream_performance" else "maximize",
     "data_path": str(data_path),

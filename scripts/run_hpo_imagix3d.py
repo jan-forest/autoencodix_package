@@ -149,7 +149,7 @@ def synetune_objective_function(
     #         "value",
     #     ].mean()
     # )
-    downstream_performance = float("nan")
+    downstream_performance = -1.0
 
     report = Reporter()
     report(
@@ -190,6 +190,7 @@ def run_synetune_hpo(
         "annotation_file": str(annotation_file),
        #"tasks": tasks,
         "anneal_function": "logistic-late",
+        "train_normalization": "group",
         "keep_mu_positive": 0,
         "batch_size": 48,
 
@@ -203,8 +204,8 @@ def run_synetune_hpo(
         "weight_decay": loguniform(1e-6, 1e-1),
         "beta": loguniform(1e-6, 5e-2),
         "latent_dim": choice([16, 32, 48, 64, 96, 128]),
-        "hidden_dim": choice([16, 32, 48, 64, 96, 128]),
-        "train_normalization": choice(["group", "instance", "batch"]),
+        "hidden_dim": choice([16, 32, 48, 64]),
+        #"train_normalization": choice(["group", "instance", "batch"]),
         # "anneal_function": choice(
         #     [
         #         "5phase-constant",
@@ -228,7 +229,7 @@ def run_synetune_hpo(
             "latent_dim": 32,
             "hidden_dim": 16,
             #"anneal_function": "logistic-late",
-            "train_normalization": "group",
+            #"train_normalization": "group",
             #"keep_mu_positive": 0,
         }
     ]

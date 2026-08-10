@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from syne_tune.config_space import choice, loguniform
-#from syne_tune.optimizer.baselines import RandomSearch
-from syne_tune.optimizer.baselines import CQR
+from syne_tune.optimizer.baselines import RandomSearch
+#from syne_tune.optimizer.baselines import CQR
 from syne_tune import Tuner, StoppingCriterion
 from syne_tune.experiments import load_experiment
 from syne_tune.backend import PythonBackend
@@ -240,21 +240,21 @@ def run_synetune_hpo(
     else:
         do_minimize = True
 
-    # scheduler = RandomSearch(
-    #     config_space=config_space,
-    #     metrics=[metric],
-    #     do_minimize=do_minimize,
-    #     points_to_evaluate=points_to_evaluate,
-    #     random_seed=42
-    # )
-    
-    scheduler = CQR(
+    scheduler = RandomSearch(
         config_space=config_space,
-        metric=metric,
+        metrics=[metric],
         do_minimize=do_minimize,
         points_to_evaluate=points_to_evaluate,
-        random_seed=42,
+        random_seed=42
     )
+    
+    # scheduler = CQR(
+    #     config_space=config_space,
+    #     metric=metric,
+    #     do_minimize=do_minimize,
+    #     points_to_evaluate=points_to_evaluate,
+    #     random_seed=42,
+    # )
     
 
     tuner = Tuner(
@@ -271,7 +271,12 @@ def run_synetune_hpo(
         n_workers=n_workers,
     )
 
-    tuner.run()
+    try:
+        tuner.run()
+    except Exception as error:
+        print("Tuning crashed, attempting to load partial Syne Tune experiment.")
+        print(repr(error))
+        return load_experiment(tuner.name)
 
     return load_experiment(tuner.name)
 

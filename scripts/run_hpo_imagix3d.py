@@ -193,6 +193,7 @@ def run_synetune_hpo(
         "train_normalization": "group",
         "keep_mu_positive": 0,
         "batch_size": 48,
+        "hidden_dim": 16,
 
         # Hardware params
         "device": "cuda",
@@ -200,11 +201,11 @@ def run_synetune_hpo(
 
         # Tunable params
         #"batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(1e-6, 1e-1),
-        "weight_decay": loguniform(1e-6, 1e-1),
+        "learning_rate": loguniform(1e-6, 1e-3),
+        "weight_decay": loguniform(1e-6, 1e-2),
         "beta": loguniform(1e-6, 5e-2),
         "latent_dim": choice([16, 32, 48, 64, 96, 128]),
-        "hidden_dim": choice([16, 32, 48, 64]),
+        #"hidden_dim": choice([16, 32, 48, 64]),
         #"train_normalization": choice(["group", "instance", "batch"]),
         # "anneal_function": choice(
         #     [
@@ -227,7 +228,7 @@ def run_synetune_hpo(
             "weight_decay": 0.003,
             "beta": 0.0000015,
             "latent_dim": 32,
-            "hidden_dim": 16,
+            #"hidden_dim": 16,
             #"anneal_function": "logistic-late",
             #"train_normalization": "group",
             #"keep_mu_positive": 0,

@@ -2230,7 +2230,9 @@
 <span class="normal">547</span>
 <span class="normal">548</span>
 <span class="normal">549</span>
-<span class="normal">550</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GeneralTrainer</span><span class="p">(</span><span class="n">BaseTrainer</span><span class="p">):</span>
+<span class="normal">550</span>
+<span class="normal">551</span>
+<span class="normal">552</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GeneralTrainer</span><span class="p">(</span><span class="n">BaseTrainer</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Handles general training logic for autoencoder models.</span>
 
 <span class="sd">    Attributes:</span>
@@ -2378,13 +2380,13 @@
                 <span class="n">epoch_loss</span><span class="p">,</span> <span class="n">epoch_sub_losses</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_epoch</span><span class="p">(</span>
                     <span class="n">should_checkpoint</span><span class="o">=</span><span class="n">should_checkpoint</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span>
                 <span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_log_losses</span><span class="p">(</span><span class="n">epoch</span><span class="p">,</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="n">epoch_loss</span><span class="p">,</span> <span class="n">epoch_sub_losses</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_losses</span><span class="p">(</span><span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="n">total_loss</span><span class="o">=</span><span class="n">epoch_loss</span><span class="p">,</span> <span class="n">sub_losses</span><span class="o">=</span><span class="n">epoch_sub_losses</span><span class="p">,</span> <span class="n">should_checkpoint</span><span class="o">=</span><span class="n">should_checkpoint</span><span class="p">)</span>
 
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validset</span><span class="p">:</span>
                     <span class="n">valid_loss</span><span class="p">,</span> <span class="n">valid_sub_losses</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_epoch</span><span class="p">(</span>
                         <span class="n">should_checkpoint</span><span class="o">=</span><span class="n">should_checkpoint</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span>
                     <span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_log_losses</span><span class="p">(</span><span class="n">epoch</span><span class="p">,</span> <span class="s2">&quot;valid&quot;</span><span class="p">,</span> <span class="n">valid_loss</span><span class="p">,</span> <span class="n">valid_sub_losses</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log_losses</span><span class="p">(</span><span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">&quot;valid&quot;</span><span class="p">,</span> <span class="n">total_loss</span><span class="o">=</span><span class="n">valid_loss</span><span class="p">,</span> <span class="n">sub_losses</span><span class="o">=</span><span class="n">valid_sub_losses</span><span class="p">,</span> <span class="n">should_checkpoint</span><span class="o">=</span><span class="n">should_checkpoint</span><span class="p">)</span>
 
                 <span class="k">if</span> <span class="n">should_checkpoint</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_store_checkpoint</span><span class="p">(</span><span class="n">epoch</span><span class="p">)</span>
@@ -2444,7 +2446,7 @@
                 <span class="c1"># Give warning about gradient clipping if it is applied (warn only once)</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="ow">and</span> <span class="n">total_norm</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">grad_clip_max_norm</span><span class="p">:</span>
                     <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">&quot;Gradient clipping was applied in epoch </span><span class="si">{</span><span class="n">epoch</span><span class="si">}</span><span class="s2">. Total norm of gradients (adjusted for number of features): </span><span class="si">{</span><span class="n">total_norm</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> exceeded max norm of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">grad_clip_max_norm</span><span class="si">}</span><span class="s2">.&quot;</span>
+                            <span class="sa">f</span><span class="s2">&quot;Gradient clipping was first applied in epoch </span><span class="si">{</span><span class="n">epoch</span><span class="si">}</span><span class="s2">. Total norm of gradients (adjusted for number of features): </span><span class="si">{</span><span class="n">total_norm</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> exceeded max norm of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">grad_clip_max_norm</span><span class="si">}</span><span class="s2">.&quot;</span>
                         <span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="o">=</span> <span class="kc">True</span>
 
@@ -2460,7 +2462,7 @@
             <span class="k">if</span> <span class="n">should_checkpoint</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_capture_dynamics</span><span class="p">(</span><span class="n">model_outputs</span><span class="p">,</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">sample_ids</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># Reset the warning flag for gradient clipping</span>
+        <span class="c1"># self._grad_clip_warning_sent = False  # Reset the warning flag for gradient clipping</span>
 
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sub_losses</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="s2">&quot;_factor&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">k</span><span class="p">:</span>
@@ -2521,7 +2523,7 @@
         <span class="k">return</span> <span class="n">total_loss</span><span class="p">,</span> <span class="n">sub_losses</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_log_losses</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">split</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">total_loss</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">sub_losses</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">split</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">total_loss</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">sub_losses</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">should_checkpoint</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Logs the total and sub-losses for an epoch and stores them in the Result object.</span>
 
@@ -2530,6 +2532,7 @@
 <span class="sd">            split: The data split (&quot;train&quot; or &quot;valid&quot;).</span>
 <span class="sd">            total_loss: The total loss for the epoch.</span>
 <span class="sd">            sub_losses: A dictionary of sub-losses for the epoch.</span>
+<span class="sd">            should_checkpoint: Whether to checkpoint this epoch.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># dataset_len = len(</span>
         <span class="c1">#     self._trainloader.dataset if split == &quot;train&quot; else self._validloader.dataset</span>
@@ -2541,12 +2544,13 @@
             <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">if</span> <span class="s2">&quot;_factor&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">k</span> <span class="k">else</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sub_losses</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
         <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_fabric</span><span class="o">.</span><span class="n">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Epoch </span><span class="si">{</span><span class="n">epoch</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">split</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span><span class="si">}</span><span class="s2"> Loss: </span><span class="si">{</span><span class="n">total_loss</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_fabric</span><span class="o">.</span><span class="n">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Sub-losses: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">k</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">sub_losses</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">should_checkpoint</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fabric</span><span class="o">.</span><span class="n">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Epoch </span><span class="si">{</span><span class="n">epoch</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">split</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span><span class="si">}</span><span class="s2"> Loss: </span><span class="si">{</span><span class="n">total_loss</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fabric</span><span class="o">.</span><span class="n">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Sub-losses: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">k</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">sub_losses</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_store_checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Stores model checkpoints and training dynamics to result object.</span>
@@ -3069,9 +3073,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_general_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">497</span>
-<span class="normal">498</span>
-<span class="normal">499</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">499</span>
 <span class="normal">500</span>
 <span class="normal">501</span>
 <span class="normal">502</span>
@@ -3083,7 +3085,9 @@
 <span class="normal">508</span>
 <span class="normal">509</span>
 <span class="normal">510</span>
-<span class="normal">511</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">decode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+<span class="normal">511</span>
+<span class="normal">512</span>
+<span class="normal">513</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">decode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Decodes the input tensor x using the trained model.</span>
 
 <span class="sd">    Args:</span>
@@ -3123,14 +3127,14 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_general_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">513</span>
-<span class="normal">514</span>
-<span class="normal">515</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">515</span>
 <span class="normal">516</span>
 <span class="normal">517</span>
 <span class="normal">518</span>
 <span class="normal">519</span>
-<span class="normal">520</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_model</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+<span class="normal">520</span>
+<span class="normal">521</span>
+<span class="normal">522</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_model</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Getter method for the trained model.</span>
 
 <span class="sd">    Returns:</span>
@@ -3279,9 +3283,7 @@ that are needed for prediction. So this way we don't need to write so much dupli
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_general_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">446</span>
-<span class="normal">447</span>
-<span class="normal">448</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">448</span>
 <span class="normal">449</span>
 <span class="normal">450</span>
 <span class="normal">451</span>
@@ -3328,7 +3330,9 @@ that are needed for prediction. So this way we don't need to write so much dupli
 <span class="normal">492</span>
 <span class="normal">493</span>
 <span class="normal">494</span>
-<span class="normal">495</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span>
+<span class="normal">495</span>
+<span class="normal">496</span>
+<span class="normal">497</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Decided to add predict method to the trainer class.</span>
@@ -3400,9 +3404,7 @@ that are needed for prediction. So this way we don't need to write so much dupli
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_general_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">522</span>
-<span class="normal">523</span>
-<span class="normal">524</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">524</span>
 <span class="normal">525</span>
 <span class="normal">526</span>
 <span class="normal">527</span>
@@ -3428,7 +3430,9 @@ that are needed for prediction. So this way we don't need to write so much dupli
 <span class="normal">547</span>
 <span class="normal">548</span>
 <span class="normal">549</span>
-<span class="normal">550</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">purge</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">550</span>
+<span class="normal">551</span>
+<span class="normal">552</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">purge</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Cleans up any resources used during training, such as cached data or large attributes.&quot;&quot;&quot;</span>
 
     <span class="n">attrs_to_delete</span> <span class="o">=</span> <span class="p">[</span>
@@ -3568,13 +3572,13 @@ This is only there so we can use the train method for pretraining.Any</p>
             <span class="n">epoch_loss</span><span class="p">,</span> <span class="n">epoch_sub_losses</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_epoch</span><span class="p">(</span>
                 <span class="n">should_checkpoint</span><span class="o">=</span><span class="n">should_checkpoint</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span>
             <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log_losses</span><span class="p">(</span><span class="n">epoch</span><span class="p">,</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="n">epoch_loss</span><span class="p">,</span> <span class="n">epoch_sub_losses</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_losses</span><span class="p">(</span><span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="n">total_loss</span><span class="o">=</span><span class="n">epoch_loss</span><span class="p">,</span> <span class="n">sub_losses</span><span class="o">=</span><span class="n">epoch_sub_losses</span><span class="p">,</span> <span class="n">should_checkpoint</span><span class="o">=</span><span class="n">should_checkpoint</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validset</span><span class="p">:</span>
                 <span class="n">valid_loss</span><span class="p">,</span> <span class="n">valid_sub_losses</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_epoch</span><span class="p">(</span>
                     <span class="n">should_checkpoint</span><span class="o">=</span><span class="n">should_checkpoint</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span>
                 <span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_log_losses</span><span class="p">(</span><span class="n">epoch</span><span class="p">,</span> <span class="s2">&quot;valid&quot;</span><span class="p">,</span> <span class="n">valid_loss</span><span class="p">,</span> <span class="n">valid_sub_losses</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_losses</span><span class="p">(</span><span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">&quot;valid&quot;</span><span class="p">,</span> <span class="n">total_loss</span><span class="o">=</span><span class="n">valid_loss</span><span class="p">,</span> <span class="n">sub_losses</span><span class="o">=</span><span class="n">valid_sub_losses</span><span class="p">,</span> <span class="n">should_checkpoint</span><span class="o">=</span><span class="n">should_checkpoint</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">should_checkpoint</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_store_checkpoint</span><span class="p">(</span><span class="n">epoch</span><span class="p">)</span>
@@ -8466,7 +8470,7 @@ _workdir: Directory for saving intermediate models and results</p>
             <span class="mi">0</span>  <span class="c1"># because of unpaired training we need to sum the samples instead of using len(dataset)</span>
         <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="o">=</span> <span class="kc">False</span> <span class="c1"># Reset the warning flag at the start of each epoch</span>
+        <span class="c1"># self._grad_clip_warning_sent = False # Reset the warning flag at the start of each epoch</span>
 
         <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trainloader</span><span class="p">:</span>
             <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fabric</span><span class="o">.</span><span class="n">autocast</span><span class="p">():</span>
@@ -8514,7 +8518,7 @@ _workdir: Directory for saving intermediate models and results</p>
                     <span class="c1"># Give warning about gradient clipping if it is applied (warn only once)</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="ow">and</span> <span class="n">total_norm</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">grad_clip_max_norm</span><span class="p">:</span>
                         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                                <span class="sa">f</span><span class="s2">&quot;Gradient clipping was applied in epoch </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_cur_epoch</span><span class="si">}</span><span class="s2">. Total norm of gradients (adjusted for number of features): </span><span class="si">{</span><span class="n">total_norm</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> exceeded max norm of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">grad_clip_max_norm</span><span class="si">}</span><span class="s2">.&quot;</span>
+                                <span class="sa">f</span><span class="s2">&quot;Gradient clipping was first applied in epoch </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_cur_epoch</span><span class="si">}</span><span class="s2">. Total norm of gradients (adjusted for number of features): </span><span class="si">{</span><span class="n">total_norm</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> exceeded max norm of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">grad_clip_max_norm</span><span class="si">}</span><span class="s2">.&quot;</span>
                             <span class="p">)</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="o">=</span> <span class="kc">True</span> 
                 <span class="c1"># Perform optimizer step for each modality</span>
@@ -9052,7 +9056,7 @@ _workdir: Directory for saving intermediate models and results</p>
                                 <span class="c1"># Give warning about gradient clipping if it is applied (warn only once)</span>
                                 <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="ow">and</span> <span class="n">total_norm</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">grad_clip_max_norm</span><span class="p">:</span>
                                     <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                                            <span class="sa">f</span><span class="s2">&quot;Gradient clipping was applied in epoch </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_cur_epoch</span><span class="si">}</span><span class="s2">. Total norm of gradients (adjusted for number of features): </span><span class="si">{</span><span class="n">total_norm</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> exceeded max norm of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">grad_clip_max_norm</span><span class="si">}</span><span class="s2">.&quot;</span>
+                                            <span class="sa">f</span><span class="s2">&quot;Gradient clipping was first applied in epoch </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_cur_epoch</span><span class="si">}</span><span class="s2">. Total norm of gradients (adjusted for number of features): </span><span class="si">{</span><span class="n">total_norm</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> exceeded max norm of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">grad_clip_max_norm</span><span class="si">}</span><span class="s2">.&quot;</span>
                                         <span class="p">)</span>
                                 <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="o">=</span> <span class="kc">True</span> 
                             <span class="n">dynamics</span><span class="p">[</span><span class="s2">&quot;optim&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>

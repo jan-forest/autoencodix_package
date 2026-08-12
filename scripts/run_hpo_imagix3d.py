@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from syne_tune.config_space import choice, loguniform
-from syne_tune.optimizer.baselines import RandomSearch
-#from syne_tune.optimizer.baselines import CQR
+#from syne_tune.optimizer.baselines import RandomSearch
+from syne_tune.optimizer.baselines import CQR
 from syne_tune import Tuner, StoppingCriterion
 from syne_tune.experiments import load_experiment
 from syne_tune.backend import PythonBackend
@@ -224,10 +224,10 @@ def run_synetune_hpo(
     points_to_evaluate = [
         {
             #"batch_size": 32,
-            "learning_rate": 0.000556,
-            "weight_decay": 0.0000015,
-            "beta": 0.00007,
-            "latent_dim": 16,
+            "learning_rate": 0.0006,
+            "weight_decay": 0.00013,
+            "beta": 0.0000075,
+            "latent_dim": 48,
             "hidden_dim": 16,
             #"anneal_function": "logistic-late",
             #"train_normalization": "group",
@@ -240,21 +240,21 @@ def run_synetune_hpo(
     else:
         do_minimize = True
 
-    scheduler = RandomSearch(
-        config_space=config_space,
-        metrics=[metric],
-        do_minimize=do_minimize,
-        points_to_evaluate=points_to_evaluate,
-        random_seed=42
-    )
-    
-    # scheduler = CQR(
+    # scheduler = RandomSearch(
     #     config_space=config_space,
-    #     metric=metric,
+    #     metrics=[metric],
     #     do_minimize=do_minimize,
     #     points_to_evaluate=points_to_evaluate,
-    #     random_seed=42,
+    #     random_seed=42
     # )
+    
+    scheduler = CQR(
+        config_space=config_space,
+        metric=metric,
+        do_minimize=do_minimize,
+        points_to_evaluate=points_to_evaluate,
+        random_seed=42,
+    )
     
 
     tuner = Tuner(

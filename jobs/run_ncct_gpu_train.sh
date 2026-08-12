@@ -50,7 +50,7 @@ python scripts/run_imagix3d.py \
   --hidden-dim 16 \
   --train-normalization "group" \
   --anneal-function "logistic-late" \
-  --keep-mu-positive 0\
+  --no-keep-mu-positive \
   --weight-decay 0.00013 \
   --learning-rate 0.0006 \
   --batch-size 48

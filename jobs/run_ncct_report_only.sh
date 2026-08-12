@@ -4,7 +4,7 @@
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=6
 #SBATCH --gres=gpu:1
 #SBATCH --mem=250G
 #SBATCH --time=0:30:00
@@ -12,6 +12,10 @@
 #SBATCH --error=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.err
 
 set -euo pipefail
+
+: "${BASE:?BASE is not set. Submit with --export=ALL,BASE=/home/baeuchl/autoencodix_package,...}"
+: "${RESULT_DIR:?RESULT_DIR is not set. Submit with --export=ALL,RESULT_DIR=/path/to/result_dir,...}"
+: "${TEMPLATE:?TEMPLATE is not set. Submit with --export=ALL,TEMPLATE=/path/to/template.ipynb,...}"
 
 module --force purge
 module load release/24.04

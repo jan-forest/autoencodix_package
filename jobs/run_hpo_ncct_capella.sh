@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=hpo_ncct_capella
+#SBATCH --job-name=hpo_cbf_capella
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=capella
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=24
+#SBATCH --cpus-per-task=12
 #SBATCH --gres=gpu:4
 #SBATCH --mem=480G
 #SBATCH --time=12:00:00
@@ -53,9 +53,9 @@ PY
 export PYTHONUNBUFFERED=1
 
 export DATA_PATH="/data/horse/ws/baeuchl-imagix3d/data/stroke_data"
-export FOLDER="ncct_flat"
-export ANNO="ct_anno_flat.csv"
-export METRIC="reconstruction_loss"
+export FOLDER="cbf_flat"
+export ANNO="cbf_anno.csv"
+export METRIC="downstream_performance"
 export MAX_WALLCLOCK_HOURS=11.5
 export N_WORKERS=4
 

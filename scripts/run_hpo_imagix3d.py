@@ -6,6 +6,7 @@ from syne_tune.optimizer.baselines import CQR
 from syne_tune import Tuner, StoppingCriterion
 from syne_tune.experiments import load_experiment
 from syne_tune.backend import PythonBackend
+import json
 
 
 def synetune_objective_function(
@@ -15,7 +16,7 @@ def synetune_objective_function(
     loss_reduction: str,
     volume_root: str,
     annotation_file: str,
-    #tasks: str,
+    tasks: str,
     device: str,
     n_gpus: int,
 
@@ -31,11 +32,11 @@ def synetune_objective_function(
     keep_mu_positive: int,
 ) -> None:
     import numpy as np
-    #import sklearn
+    import sklearn
     import autoencodix as acx
 
     from syne_tune import Reporter
-    #from sklearn import linear_model
+    from sklearn import linear_model
     from autoencodix.configs.imagix3d_config import Imagix3DConfig
     from autoencodix.configs.default_config import (
         DataConfig,
@@ -119,37 +120,37 @@ def synetune_objective_function(
     train_total_loss = float(np.asarray(imagix3d.result.losses.get(epoch=-1,split="train",)).item())
     valid_var_loss = float(np.asarray(imagix3d.result.sub_losses.get("var_loss").get(epoch=-1,split="valid",)).item())
 
-    # sklearn.set_config(enable_metadata_routing=True)
+    sklearn.set_config(enable_metadata_routing=True)
 
-    # sklearn_ml_class = linear_model.LogisticRegression(
-    #     solver="sag",
-    #     n_jobs=1,
-    #     class_weight="balanced",
-    #     max_iter=200,
-    # )
+    sklearn_ml_class = linear_model.LogisticRegression(
+        solver="sag",
+        n_jobs=1,
+        class_weight="balanced",
+        max_iter=200,
+    )
 
-    # sklearn_ml_regression = linear_model.LinearRegression()
+    sklearn_ml_regression = linear_model.LinearRegression()
 
-    # tasks_list = [task for task in tasks.split("$") if task]
+    tasks_list = [task for task in tasks.split("$") if task]
 
-    # imagix3d.evaluate(
-    #     ml_model_class=sklearn_ml_class,
-    #     ml_model_regression=sklearn_ml_regression,
-    #     params=tasks_list,
-    #     metric_class="roc_auc_ovo",
-    #     metric_regression="r2",
-    #     reference_methods=[],
-    #     split_type="use-split",
-    #     n_downsample=None,
-    # )
+    imagix3d.evaluate(
+        ml_model_class=sklearn_ml_class,
+        ml_model_regression=sklearn_ml_regression,
+        params=tasks_list,
+        metric_class="roc_auc_ovo",
+        metric_regression="r2",
+        reference_methods=[],
+        split_type="use-split",
+        n_downsample=None,
+    )
 
-    # downstream_performance = float(
-    #     imagix3d.result.embedding_evaluation.loc[
-    #         imagix3d.result.embedding_evaluation.score_split == "valid",
-    #         "value",
-    #     ].mean()
-    # )
-    downstream_performance = -1.0
+    downstream_performance = float(
+        imagix3d.result.embedding_evaluation.loc[
+            imagix3d.result.embedding_evaluation.score_split == "valid",
+            "value",
+        ].mean()
+    )
+    #downstream_performance = -1.0
 
     report = Reporter()
     report(
@@ -165,10 +166,10 @@ def synetune_objective_function(
 
 def run_synetune_hpo(
     data_path: Path,
-    folder: str = "ncct_flat",
-    anno: str = "ct_anno_flat.csv",
-    #tasks: str = "group",
-    metric: str = "reconstruction_loss",
+    folder: str = "cbf_flat",
+    anno: str = "cbf_anno.csv",
+    tasks: str = "median_split",
+    metric: str = "downstream_performance",
     max_wallclock_time: int = 11 * 60 * 60,
     n_workers: int = 4
 ):
@@ -188,11 +189,11 @@ def run_synetune_hpo(
         "loss_reduction": "mean",
         "volume_root": str(volume_root),
         "annotation_file": str(annotation_file),
-       #"tasks": tasks,
+        "tasks": tasks,
         "anneal_function": "logistic-late",
-        "train_normalization": "group",
-        "keep_mu_positive": 0,
-        "batch_size": 48,
+        #"train_normalization": "group",
+        #"keep_mu_positive": 0,
+        #"batch_size": 48,
         #"hidden_dim": 16,
 
         # Hardware params
@@ -200,13 +201,13 @@ def run_synetune_hpo(
         "n_gpus": 1,
 
         # Tunable params
-        #"batch_size": choice([16, 32, 48]),
+        "batch_size": choice([16, 32, 48]),
         "learning_rate": loguniform(1e-7, 1e-3),
         "weight_decay": loguniform(1e-7, 1e-2),
         "beta": loguniform(1e-7, 5e-2),
         "latent_dim": choice([16, 32, 48, 64, 96, 128]),
-        "hidden_dim": choice([16, 32, 48, 64]),
-        #"train_normalization": choice(["group", "instance", "batch"]),
+        "hidden_dim": choice([16, 32, 48, 64, 80]),
+        "train_normalization": choice(["group", "instance", "batch"]),
         # "anneal_function": choice(
         #     [
         #         "5phase-constant",
@@ -218,20 +219,20 @@ def run_synetune_hpo(
         #     ]
         # ),
         # Encoded as scalar values for Syne Tune compatibility
-        # "keep_mu_positive": choice([0, 1]),
+        "keep_mu_positive": choice([0, 1]),
     }
 
     points_to_evaluate = [
         {
-            #"batch_size": 32,
-            "learning_rate": 0.0006,
-            "weight_decay": 0.00013,
-            "beta": 0.0000075,
+            "batch_size": 32,
+            "learning_rate": 0.001,
+            "weight_decay": 0.001,
+            "beta": 0.05,
             "latent_dim": 48,
             "hidden_dim": 16,
             #"anneal_function": "logistic-late",
-            #"train_normalization": "group",
-            #"keep_mu_positive": 0,
+            "train_normalization": "batch",
+            "keep_mu_positive": 0,
         }
     ]
 
@@ -256,7 +257,10 @@ def run_synetune_hpo(
         random_seed=42,
     )
     
-
+    metadata = {
+        "points_to_evaluate": json.dumps(points_to_evaluate),
+    }
+    
     tuner = Tuner(
         trial_backend=PythonBackend(
             tune_function=synetune_objective_function,
@@ -269,8 +273,9 @@ def run_synetune_hpo(
             #max_num_trials_completed=100,
         ),
         n_workers=n_workers,
+        metadata=metadata,
     )
-
+    
     try:
         tuner.run()
     except Exception as error:

@@ -71,6 +71,7 @@ def synetune_objective_function(
         train_norm_groupsize=8,
         device=device,
         n_gpus=n_gpus,
+        volume_scaling_strategy="train_global",
         data_config=DataConfig(
             data_info={
                 "IMG": DataInfo(
@@ -166,8 +167,8 @@ def synetune_objective_function(
 
 def run_synetune_hpo(
     data_path: Path,
-    folder: str = "cbf_flat",
-    anno: str = "cbf_anno.csv",
+    folder: str = "cbv_flat",
+    anno: str = "cbv_anno_dst.csv",
     tasks: str = "median_split",
     metric: str = "downstream_performance",
     max_wallclock_time: int = 11 * 60 * 60,

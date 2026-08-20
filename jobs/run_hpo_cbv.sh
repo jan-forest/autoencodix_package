@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=hpo_cta
+#SBATCH --job-name=hpo_tmax
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -53,15 +53,15 @@ PY
 export PYTHONUNBUFFERED=1
 
 export DATA_PATH="/data/horse/ws/baeuchl-imagix3d/data/stroke_data"
-export FOLDER="cta_flat"
-export ANNO="cta_anno_dst.csv"
+export FOLDER="tmax_flat"
+export ANNO="tmax_anno_dst.csv"
 export METRIC="downstream_performance"
 export TASKS="median_split"
 export MAX_WALLCLOCK_HOURS=11.5
 export N_WORKERS=4
 
 HPO_ROOT="/data/horse/ws/baeuchl-imagix3d/hpo"
-RUN_NAME="cta_01_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
+RUN_NAME="tmax_01_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
 OUT_DIR="${HPO_ROOT}/${RUN_NAME}"
 
 mkdir -p "${OUT_DIR}"

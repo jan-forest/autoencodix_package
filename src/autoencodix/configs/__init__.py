@@ -6,6 +6,7 @@ from .vanillix_config import VanillixConfig
 from .varix_config import VarixConfig
 from .xmodalix_config import XModalixConfig
 from .maskix_config import MaskixConfig
+from .supervisix_config import SupervisixConfig
 
 __all__ = [
     "DataCase",
@@ -18,4 +19,5 @@ __all__ = [
     "VarixConfig",
     "XModalixConfig",
     "MaskixConfig",
+    "SupervisixConfig",
 ]

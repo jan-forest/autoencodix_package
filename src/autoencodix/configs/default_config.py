@@ -313,6 +313,16 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         ge=0,
         description="Gamma weighting factor for Adversial Loss Term i.e. for XModalix Classfier training",
     )
+    gamma_class_separation: float = Field(
+        default=0.0,
+        ge=0,
+        description="Gamma weighting factor for class separation loss term in Supervisix Training",
+    )
+    delta_class_cohesion: float = Field(
+        default=0.0,
+        ge=0,
+        description="Delta weighting factor for class cohesion loss term in Supervisix Training",
+    )
     delta_pair: float = Field(
         default=5.0,
         ge=0,

@@ -181,6 +181,31 @@ class GeneralTrainer(BaseTrainer):
         """Only active when override from MaskixTrainer is used"""
         return X
 
+    def supervisix_capture_hook(
+            self, 
+            model_output: ModelOutput, 
+            sample_ids: list[str], 
+            dataset_type: str,
+            batch_class_means: dict[str, torch.Tensor],
+    ):
+        """Only active when override from SupervisixTrainer is used"""
+        pass
+
+    def supervisix_get_hook(
+            self,
+            dataset_type: str
+    ):
+        """Only active when override from SupervisixTrainer is used"""
+        pass
+
+    def supervisix_update_hook(
+            self, 
+            batch_class_means: dict[str, torch.Tensor], 
+            dataset_type: str
+    ):
+        """Only active when override from SupervisixTrainer is used"""
+        pass
+
     def _train_epoch(
         self, should_checkpoint: bool, epoch: int
     ) -> Tuple[float, Dict[str, float]]:
@@ -196,10 +221,14 @@ class GeneralTrainer(BaseTrainer):
         total_loss = 0.0
         sub_losses: Dict[str, float] = defaultdict(float)
         current_batch = 0
+        # Initialize batch class means collector for supervisix trainer
+        batch_class_means: Dict[str, torch.Tensor] = {}
+
         for indices, features, sample_ids in self._trainloader:
             current_batch += 1
             self._optimizer.zero_grad()
             X: torch.Tensor = self.maskix_hook(features)
+            # _model(x) runs the model (autoencoder type)'s forward method
             model_outputs = self._model(X)
             loss, batch_sub_losses = self._loss_fn(
                 model_output=model_outputs,
@@ -209,6 +238,9 @@ class GeneralTrainer(BaseTrainer):
                 n_samples=len(
                     self._trainloader.dataset
                 ),  # Pass n_samples for disentangled loss calculations
+                sample_ids=sample_ids, # Pass sample IDs for class separation loss calculations
+                metadata=self._trainset.metadata, # Pass metadata for class separation loss calculations
+                last_epoch_class_means=self.supervisix_get_hook("train"), # Pass last epoch class means for class separation loss calculations
             )
             self._fabric.backward(loss)
             self._ontix_hook()
@@ -221,8 +253,14 @@ class GeneralTrainer(BaseTrainer):
                 else:
                     sub_losses[k] = v.item()
 
+            # Only active when override from SupervisixTrainer is used
+            self.supervisix_capture_hook(model_outputs, sample_ids, "train", batch_class_means)
+                    
             if should_checkpoint:
                 self._capture_dynamics(model_outputs, "train", indices, sample_ids)
+
+        # Only active when override from SupervisixTrainer is used
+        self.supervisix_update_hook(batch_class_means, "train")
 
         for k, v in sub_losses.items():
             if "_factor" not in k:
@@ -242,6 +280,7 @@ class GeneralTrainer(BaseTrainer):
         Args:
             should_checkpoint: Whether to checkpoint this epoch.
             epoch: The current epoch number.
+        
         Returns:
             total_loss: The total loss for the epoch.
             sub_losses: A dictionary of sub-losses accumulated over the epoch.
@@ -249,6 +288,8 @@ class GeneralTrainer(BaseTrainer):
         total_loss = 0.0
         sub_losses: Dict[str, float] = defaultdict(float)
         self._model.eval()
+        # Initialize batch class means collector for supervisix trainer
+        batch_class_means: Dict[str, torch.Tensor] = {} 
 
         with torch.no_grad():
             for indices, features, sample_ids in self._validloader:
@@ -262,15 +303,26 @@ class GeneralTrainer(BaseTrainer):
                     n_samples=len(
                         self._validloader.dataset
                     ),  # Pass n_samples for disentangled loss calculations
+                    sample_ids=sample_ids, # Pass sample IDs for class separation loss calculations
+                    metadata=self._validset.metadata, # Pass metadata for class separation loss calculations
+                    last_epoch_class_means=self.supervisix_get_hook("valid"), # Pass last epoch class means for class separation loss calculations
                 )
+
                 total_loss += loss.item()
                 for k, v in batch_sub_losses.items():
                     if "_factor" not in k:  # Skip factor losses
                         sub_losses[k] += v.item()
                     else:
                         sub_losses[k] = v.item()
+
+                # Only active when override from SupervisixTrainer is used
+                self.supervisix_capture_hook(model_outputs, sample_ids, "valid", batch_class_means)
+                                    
                 if should_checkpoint:
                     self._capture_dynamics(model_outputs, "valid", indices, sample_ids)
+
+        # Only active when override from SupervisixTrainer is used
+        self.supervisix_update_hook(batch_class_means, "valid")
 
         for k, v in sub_losses.items():
             if "_factor" not in k:

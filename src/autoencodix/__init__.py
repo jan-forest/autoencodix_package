@@ -14,6 +14,7 @@ from .disentanglix import Disentanglix
 from .xmodalix import XModalix
 from .imagix import Imagix
 from .maskix import Maskix
+from .supervisix import Supervisix
 
 __all__ = [
     "Vanillix",
@@ -24,4 +25,5 @@ __all__ = [
     "Imagix",
     "Disentanglix",
     "Maskix",
+    "Supervisix",
 ]

@@ -237,6 +237,7 @@ class BaseLoss(nn.Module, ABC):
             return torch.tensor(0.0)
         return torch.stack(loss_helper).mean()
 
+
     @staticmethod
     def _compute_log_gauss_dense(
         z: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor

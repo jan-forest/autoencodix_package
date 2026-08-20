@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=hpo_cbv
+#SBATCH --job-name=hpo_cta
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -53,15 +53,15 @@ PY
 export PYTHONUNBUFFERED=1
 
 export DATA_PATH="/data/horse/ws/baeuchl-imagix3d/data/stroke_data"
-export FOLDER="cbv_flat"
-export ANNO="cbv_anno_dst.csv"
+export FOLDER="cta_flat"
+export ANNO="cta_anno_dst.csv"
 export METRIC="downstream_performance"
 export TASKS="median_split"
 export MAX_WALLCLOCK_HOURS=11.5
 export N_WORKERS=4
 
 HPO_ROOT="/data/horse/ws/baeuchl-imagix3d/hpo"
-RUN_NAME="ncbv_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
+RUN_NAME="cta_01_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
 OUT_DIR="${HPO_ROOT}/${RUN_NAME}"
 
 mkdir -p "${OUT_DIR}"
@@ -111,7 +111,7 @@ tuning_experiment = run_synetune_hpo(
 results = tuning_experiment.results.copy()
 
 metadata = {
-    "scheduler": "RandomSearch",
+    "scheduler": "CQR",
     "n_workers": n_workers,
     "metric": metric,
     "tasks": tasks,

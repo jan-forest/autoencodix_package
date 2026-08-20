@@ -234,8 +234,6 @@ class BaseVisualizer(abc.ABC):
             loss_df = pd.DataFrame.from_dict(loss_values, orient="index")  # type: ignore
 
             # Rest of your code remains the same
-            if term == "var_loss":
-                loss_df = loss_df * config.beta
             loss_df["Epoch"] = loss_df.index + 1
             loss_df["Loss Term"] = term
 

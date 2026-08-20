@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+import warnings
 
 from autoencodix.base._base_autoencoder import BaseAutoencoder
 from autoencodix.base._base_dataset import BaseDataset, DataSetTypes
@@ -392,6 +393,10 @@ class XModalTrainer(BaseTrainer):
             0  # because of unpaired training we need to sum the samples instead of using len(dataset)
         )
 
+        self._grad_clip_warning_sent = (
+            False  # Reset the warning flag at the start of each epoch
+        )
+
         for batch in self._trainloader:
             with self._fabric.autocast():
                 # --- Stage 1: forward for each data modality ---
@@ -421,6 +426,30 @@ class XModalTrainer(BaseTrainer):
                 )
             self._fabric.backward(batch_loss)
             for _, dynamics in self._modality_dynamics.items():
+                # Gradient clipping if specified in the config
+                if self._config.grad_clip_max_norm is not None:
+                    total_norm = torch.nn.utils.clip_grad_norm_(
+                        dynamics["model"].parameters(), self._config.grad_clip_max_norm
+                    )
+                    # Scale total_norm to input feature size if loss reduction is set to "sum"
+                    if self._config.loss_reduction == "sum":
+                        # check if self.n_features is multi-dimensional tensor, if so take the product of its dimensions
+                        if isinstance(dynamics["model"].input_dim, (tuple, list)):
+                            n_features = np.prod(dynamics["model"].input_dim)
+                        else:
+                            n_features = dynamics["model"].input_dim
+
+                        total_norm /= n_features
+                    # Give warning about gradient clipping if it is applied (warn only once)
+                    if (
+                        not self._grad_clip_warning_sent
+                        and total_norm > self._config.grad_clip_max_norm
+                    ):
+                        warnings.warn(
+                            f"Gradient clipping was applied in epoch {self._cur_epoch}. Total norm of gradients (adjusted for number of features): {total_norm:.4f} exceeded max norm of {self._config.grad_clip_max_norm}."
+                        )
+                    self._grad_clip_warning_sent = True
+                # Perform optimizer step for each modality
                 dynamics["optim"].step()
 
             # --- Logging and Capturing ---
@@ -939,6 +968,33 @@ class XModalTrainer(BaseTrainer):
 
                     with record_function("optimizer_step"):
                         for _, dynamics in self._modality_dynamics.items():
+                            # Gradient clipping if specified in the config
+                            if self._config.grad_clip_max_norm is not None:
+                                total_norm = torch.nn.utils.clip_grad_norm_(
+                                    dynamics["model"].parameters(),
+                                    self._config.grad_clip_max_norm,
+                                )
+                                # Scale total_norm to input feature size if loss reduction is set to "sum"
+                                if self._config.loss_reduction == "sum":
+                                    if isinstance(
+                                        dynamics["model"].input_dim, (tuple, list)
+                                    ):
+                                        n_features = np.prod(
+                                            dynamics["model"].input_dim
+                                        )
+                                    else:
+                                        n_features = dynamics["model"].input_dim
+
+                                    total_norm /= n_features
+                                # Give warning about gradient clipping if it is applied (warn only once)
+                                if (
+                                    not self._grad_clip_warning_sent
+                                    and total_norm > self._config.grad_clip_max_norm
+                                ):
+                                    warnings.warn(
+                                        f"Gradient clipping was applied in epoch {self._cur_epoch}. Total norm of gradients (adjusted for number of features): {total_norm:.4f} exceeded max norm of {self._config.grad_clip_max_norm}."
+                                    )
+                                self._grad_clip_warning_sent = True
                             dynamics["optim"].step()
 
                     # --- Logging and Capturing ---

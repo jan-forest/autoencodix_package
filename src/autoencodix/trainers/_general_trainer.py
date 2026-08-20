@@ -6,6 +6,7 @@ import numpy as np
 from typing import Optional, Type, Union, Tuple, Any, Dict, List
 from collections import defaultdict
 from torch.utils.data import DataLoader
+import warnings
 
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_loss import BaseLoss
@@ -155,6 +156,9 @@ class GeneralTrainer(BaseTrainer):
         if epochs_overwrite:
             epochs = epochs_overwrite
         with self._fabric.autocast():
+            self._grad_clip_warning_sent = (
+                False  # Reset the warning flag for gradient clipping
+            )
             for epoch in range(epochs):
                 self._init_buffers()
                 should_checkpoint: bool = self._should_checkpoint(epoch)
@@ -244,6 +248,30 @@ class GeneralTrainer(BaseTrainer):
             )
             self._fabric.backward(loss)
             self._ontix_hook()
+            # Gradient clipping if specified in the config
+            if self._config.grad_clip_max_norm is not None:
+                total_norm = torch.nn.utils.clip_grad_norm_(
+                    self._model.parameters(), self._config.grad_clip_max_norm
+                )
+                # Scale total_norm to input feature size if loss reduction is set to "sum"
+                if self._config.loss_reduction == "sum":
+                    # check if self.n_features is multi-dimensional tensor, if so take the product of its dimensions
+                    if isinstance(self.n_features, (tuple, list)):
+                        n_features = np.prod(self.n_features)
+                    else:
+                        n_features = self.n_features
+
+                    total_norm /= n_features
+                # Give warning about gradient clipping if it is applied (warn only once)
+                if (
+                    not self._grad_clip_warning_sent
+                    and total_norm > self._config.grad_clip_max_norm
+                ):
+                    warnings.warn(
+                        f"Gradient clipping was applied in epoch {epoch}. Total norm of gradients (adjusted for number of features): {total_norm:.4f} exceeded max norm of {self._config.grad_clip_max_norm}."
+                    )
+                self._grad_clip_warning_sent = True
+
             self._optimizer.step()
 
             total_loss += loss.item()
@@ -258,6 +286,10 @@ class GeneralTrainer(BaseTrainer):
                     
             if should_checkpoint:
                 self._capture_dynamics(model_outputs, "train", indices, sample_ids)
+
+        self._grad_clip_warning_sent = (
+            False  # Reset the warning flag for gradient clipping
+        )
 
         # Only active when override from SupervisixTrainer is used
         self.supervisix_update_hook(batch_class_means, "train")

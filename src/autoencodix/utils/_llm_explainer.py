@@ -3,7 +3,13 @@ import re
 import json
 import ollama
 from dotenv import find_dotenv, load_dotenv
-from mistralai.client import Mistral
+
+try:
+    # mistralai>=2.0.0
+    from mistralai.client import Mistral
+except ImportError:
+    # mistralai<2.0.0
+    from mistralai import Mistral
 from typing import List, Dict, Any
 
 import requests

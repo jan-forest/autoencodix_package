@@ -370,6 +370,12 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         description="Number of pretraining epochs, can be overwritten in DataInfo to have different number of pretraining epochs for each data modality",
     )
 
+    grad_clip_max_norm: Optional[float] = Field(
+        default=5,
+        ge=0.0,
+        description="Maximum norm for gradient clipping (see torch.nn.utils.clip_grad_norm_). Set None, to disable gradient clipping.",
+    )
+
     # Hardware configuration --------------------------------------------------
     device: Literal["cpu", "cuda", "gpu", "tpu", "mps", "auto"] = Field(
         default="auto", description="Device to use"

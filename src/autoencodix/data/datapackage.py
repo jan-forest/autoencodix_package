@@ -7,7 +7,6 @@ from mudata import MuData  # type: ignore
 
 from autoencodix.data._imgdataclass import ImgData
 
-
 T = TypeVar("T")  # For generic type hints
 
 

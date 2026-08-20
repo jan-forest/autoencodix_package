@@ -16,7 +16,6 @@ from ._multimodal_dataset import MultiModalDataset
 from ._image_processor import ImagePreprocessor
 from ._sampler import BalancedBatchSampler
 
-
 __all__ = [
     "DataSplitter",
     "NumericDataset",

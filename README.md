@@ -1,23 +1,23 @@
 # AUTOENCODIX
 Autoencoders are deep-learning-based networks for dimension reduction and embedding by a combination of a compressing encoder and decoder structure for non-linear and multi-modal data integration, with promising applications to complex biological data from large-scale omics measurements. Current ongoing research and publications provide many exciting architectures and implementations of autoencoders. However, there is a lack of easy-to-use and unified implementations covering the whole pipeline of autoencoder applications.
-Consequently, we present `AUTOENCODIX` with the following features:
-- Multi-modal data integration for any numerical or categorical data
-- Different autoencoder architectures:
-  - vanilla `vanillix`
-  - variational `varix`
-  - disentangled variational `disentanglix`
-  - hierarchical/stacked `stackix`
-  - ontology-based `ontix`
-  - masking `maskix`
-  - Image VAE (2D) `imagix`
-  - cross-modal autoencoder (translation between different data modalities) `x-modalix` (works for multiple modalities paired and unpaired)
-- A Python package with a scikit-learn-like interface
+Consequently, we present `AUTOENCODIX` with the following features in a easy-to-use Python package:
+
+<img src="https://raw.githubusercontent.com/jan-forest/autoencodix_package/main/images/features.png" alt="pipeline-features" width="1200"/>
+
+We have a growing list of architectures for a broad range of applications. AUTOENCODIX currently comprises this set of architectures: 
+
+<img src="https://raw.githubusercontent.com/jan-forest/autoencodix_package/main/images/architectures.png" alt="architectures" width="1200"/>
+
 
 ## Requirements
-- Python>=3.8 <3.13
+- Python>=3.9 <3.13
 - uv or another package manager (we recommend uv)
 - git or gh
+
 ## Installation
+via pip:
+`pip install autoencodix`
+or clone the latest version from repository:
 - `gh repo clone jan-forest/autoencodix_package`
 - `cd autoencodix_package`
 - `uv venv --python 3.10`

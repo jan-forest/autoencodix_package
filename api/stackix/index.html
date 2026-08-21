@@ -1687,7 +1687,7 @@
 <span class="normal">120</span>
 <span class="normal">121</span>
 <span class="normal">122</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Stackix</span><span class="p">(</span><span class="n">BasePipeline</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stackix pipeline for training multiple VAEs on different modalities and stacking their latent spaces.</span>
+<span class="w">    </span><span class="sd">"""Stackix pipeline for training multiple VAEs on different modalities and stacking their latent spaces.</span>
 
 <span class="sd">    This pipeline uses:</span>
 <span class="sd">    1. StackixPreprocessor to prepare data for multi-modality training</span>
@@ -1698,7 +1698,7 @@
 <span class="sd">    Additional Attributes:</span>
 <span class="sd">        _default_config: Is set to StackixConfig here.</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -1716,10 +1716,10 @@
         <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DefaultConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">ontologies</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the Stackix pipeline.</span>
+<span class="w">        </span><span class="sd">"""Initialize the Stackix pipeline.</span>
 
 <span class="sd">        See parent class for full list of Args.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_default_config</span> <span class="o">=</span> <span class="n">StackixConfig</span><span class="p">()</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
@@ -1739,13 +1739,13 @@
         <span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">StackixConfig</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;For Stackix Pipeline, we only allow StackixConfig as type for config, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"For Stackix Pipeline, we only allow StackixConfig as type for config, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_process_latent_results</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">predictor_results</span><span class="p">:</span> <span class="n">Result</span><span class="p">,</span> <span class="n">predict_data</span><span class="p">:</span> <span class="n">DatasetContainer</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Processes the latent spaces from the StackixTrainer prediction results.</span>
+<span class="w">        </span><span class="sd">"""Processes the latent spaces from the StackixTrainer prediction results.</span>
 
 <span class="sd">        Creates a correctly annotated AnnData object.</span>
 <span class="sd">        This method overrides the BasePipeline implementation to specifically handle</span>
@@ -1756,27 +1756,27 @@
 <span class="sd">            predictor_results: Result object after predict step</span>
 <span class="sd">            predict_data: not used here, only to keep interface structure</span>
 
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">latent</span> <span class="o">=</span> <span class="n">predictor_results</span><span class="o">.</span><span class="n">latentspaces</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">epoch</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
-        <span class="n">sample_ids</span> <span class="o">=</span> <span class="n">predictor_results</span><span class="o">.</span><span class="n">sample_ids</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">epoch</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
+<span class="sd">        """</span>
+        <span class="n">latent</span> <span class="o">=</span> <span class="n">predictor_results</span><span class="o">.</span><span class="n">latentspaces</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">epoch</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">"test"</span><span class="p">)</span>
+        <span class="n">sample_ids</span> <span class="o">=</span> <span class="n">predictor_results</span><span class="o">.</span><span class="n">sample_ids</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">epoch</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">"test"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">latent</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                <span class="s2">&quot;No latent space found in predictor results. Cannot create AnnData object.&quot;</span>
+                <span class="s2">"No latent space found in predictor results. Cannot create AnnData object."</span>
             <span class="p">)</span>
             <span class="k">return</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">adata_latent</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">latent</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">adata_latent</span><span class="o">.</span><span class="n">obs_names</span> <span class="o">=</span> <span class="n">sample_ids</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">adata_latent</span><span class="o">.</span><span class="n">var_names</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="sa">f</span><span class="s2">&quot;Latent_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">latent</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># ty: ignore</span>
+            <span class="sa">f</span><span class="s2">"Latent_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">latent</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># ty: ignore</span>
         <span class="p">]</span>
 
         <span class="c1"># 4. Update the main result object with the rest of the prediction results.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">predictor_results</span><span class="p">)</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Successfully created annotated latent space object (adata_latent).&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Successfully created annotated latent space object (adata_latent)."</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -1866,10 +1866,10 @@
     <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DefaultConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">ontologies</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initialize the Stackix pipeline.</span>
+<span class="w">    </span><span class="sd">"""Initialize the Stackix pipeline.</span>
 
 <span class="sd">    See parent class for full list of Args.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_default_config</span> <span class="o">=</span> <span class="n">StackixConfig</span><span class="p">()</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
         <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
@@ -1889,7 +1889,7 @@
     <span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">StackixConfig</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;For Stackix Pipeline, we only allow StackixConfig as type for config, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"For Stackix Pipeline, we only allow StackixConfig as type for config, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>

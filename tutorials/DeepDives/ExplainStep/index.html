@@ -2697,39 +2697,15 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </style>
 <!-- End of mermaid configuration --><div class="jupyter-wrapper">
 <div class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=74aebb64">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=1bc0ea1c">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="explain-step-tutorial">Explain Step Tutorial<a class="anchor-link" href="#explain-step-tutorial">¶</a></h1><h2 id="what-youll-learn">What you'll learn<a class="anchor-link" href="#what-youll-learn">¶</a></h2><ol>
-<li>Theory Primer <br/></li>
-<li>How to run explain step <br/></li>
-<li>How to customize the explain step <br/></li>
-<li>Using LLMs to get biological insights of the latent dimensions <br/></li>
-</ol>
-<h3 id="1-theory-primer">1) Theory Primer<a class="anchor-link" href="#1-theory-primer">¶</a></h3><p>TODO</p>
-<h3 id="2-how-to-perform-the-explain-step">2) How To Perform the Explain Step<a class="anchor-link" href="#2-how-to-perform-the-explain-step">¶</a></h3><p>First, we need to run an AUTOENCODIX pipeline, <code>Ontix</code> is a very good choice here.</p>
-<h4 id="requirements-getting-tutorial-data">❗❗ Requirements: Getting Tutorial Data ❗❗<a class="anchor-link" href="#requirements-getting-tutorial-data">¶</a></h4><p>To follow along, please download the date from the link below (1GB):</p>
-<p><a href="https://cloud.scadsai.uni-leipzig.de/index.php/s/HcaB8csTctGimQQ/download/OntixTutorialData.zip">https://cloud.scadsai.uni-leipzig.de/index.php/s/HcaB8csTctGimQQ/download/OntixTutorialData.zip</a></p>
-<p>After downloading:</p>
-<ul>
-<li>from the root of the repository, create the folders <code>data/raw</code> if not created yet</li>
-<li>move the donwloaded files there</li>
-</ul>
-<h4 id="extra-2-get-correct-path">Extra 2: Get correct path<a class="anchor-link" href="#extra-2-get-correct-path">¶</a></h4><p>We assume you are in the root of the package. The following code ensures that the correct paths are used.
-[1] <a href="./ConfigTutorial.ipynb">Tutorials/DeepDives/ConfigTutorial.ipynb</a></p>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=9203e86b">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<blockquote>
+<p><strong>Note:</strong> This environment variable is required for fully deterministic CuBLAS ops on CUDA &gt;= 10.2 when <code>reproducible=True</code> is set below. Without it, PyTorch raises a <code>RuntimeError</code> instead of training deterministically. It must be set before <code>torch</code> is imported. See the <a href="../../README.md#reproducibility-and-cublas_workspace_config">README FAQ</a> for details.</p>
+</blockquote>
 </div>
 </div>
 </div>
@@ -2775,13 +2751,44 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=2f748e0a">
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=74aebb64">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h1 id="explain-step-tutorial">Explain Step Tutorial<a class="anchor-link" href="#explain-step-tutorial">¶</a></h1><h2 id="what-youll-learn">What you'll learn<a class="anchor-link" href="#what-youll-learn">¶</a></h2><ol>
+<li>Theory Primer <br/></li>
+<li>How to run explain step <br/></li>
+<li>How to customize the explain step <br/></li>
+<li>Using LLMs to get biological insights of the latent dimensions <br/></li>
+</ol>
+<h3 id="1-theory-primer">1) Theory Primer<a class="anchor-link" href="#1-theory-primer">¶</a></h3><p>TODO</p>
+<h3 id="2-how-to-perform-the-explain-step">2) How To Perform the Explain Step<a class="anchor-link" href="#2-how-to-perform-the-explain-step">¶</a></h3><p>First, we need to run an AUTOENCODIX pipeline, <code>Ontix</code> is a very good choice here.</p>
+<h4 id="requirements-getting-tutorial-data">❗❗ Requirements: Getting Tutorial Data ❗❗<a class="anchor-link" href="#requirements-getting-tutorial-data">¶</a></h4><p>The data for this tutorial is hosted on Hugging Face Hub (<a href="https://huggingface.co/datasets/autoencodix/tcga">autoencodix/tcga</a>) and is downloaded automatically in the cell below on first run.</p>
+<h4 id="extra-2-get-correct-path">Extra 2: Get correct path<a class="anchor-link" href="#extra-2-get-correct-path">¶</a></h4><p>We assume you are in the root of the package. The following code ensures that the correct paths are used.
+[1] <a href="./ConfigTutorial.ipynb">Tutorials/DeepDives/ConfigTutorial.ipynb</a></p>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=9203e86b">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=2f748e0a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
 <clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-2">
@@ -2802,6 +2809,25 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
     <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="n">d</span><span class="si">}</span><span class="s2">' not found in path: </span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)[:</span> <span class="n">p</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]))</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Changed to: </span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="c1"># ---------------------------------------------------------------------</span>
+<span class="c1"># Data is hosted on Hugging Face Hub and downloaded (and locally cached)</span>
+<span class="c1"># automatically, then placed under the paths used below</span>
+<span class="c1"># ---------------------------------------------------------------------</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">huggingface_hub</span><span class="w"> </span><span class="kn">import</span> <span class="n">hf_hub_download</span>
+
+<span class="n">HF_REPO_ID</span> <span class="o">=</span> <span class="s2">"autoencodix/tcga"</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="s2">"data/raw"</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">hf_filename</span><span class="p">,</span> <span class="n">local_name</span> <span class="ow">in</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">"rna.parquet"</span><span class="p">,</span> <span class="s2">"combined_rnaseq_formatted.parquet"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"methylation.parquet"</span><span class="p">,</span> <span class="s2">"combined_meth_formatted.parquet"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"clinical.parquet"</span><span class="p">,</span> <span class="s2">"combined_clin_formatted.parquet"</span><span class="p">),</span>
+<span class="p">]:</span>
+    <span class="n">downloaded_path</span> <span class="o">=</span> <span class="n">hf_hub_download</span><span class="p">(</span>
+        <span class="n">repo_id</span><span class="o">=</span><span class="n">HF_REPO_ID</span><span class="p">,</span> <span class="n">repo_type</span><span class="o">=</span><span class="s2">"dataset"</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="n">hf_filename</span>
+    <span class="p">)</span>
+    <span class="n">shutil</span><span class="o">.</span><span class="n">copyfile</span><span class="p">(</span><span class="n">downloaded_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">"data/raw"</span><span class="p">,</span> <span class="n">local_name</span><span class="p">))</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-2">import os
 
@@ -2811,20 +2837,26 @@ if d not in p:
     raise FileNotFoundError(f"'{d}' not found in path: {p}")
 os.chdir(os.sep.join(p.split(os.sep)[: p.split(os.sep).index(d) + 1]))
 print(f"Changed to: {os.getcwd()}")
+
+# ---------------------------------------------------------------------
+# Data is hosted on Hugging Face Hub and downloaded (and locally cached)
+# automatically, then placed under the paths used below
+# ---------------------------------------------------------------------
+import shutil
+from huggingface_hub import hf_hub_download
+
+HF_REPO_ID = "autoencodix/tcga"
+os.makedirs("data/raw", exist_ok=True)
+for hf_filename, local_name in [
+    ("rna.parquet", "combined_rnaseq_formatted.parquet"),
+    ("methylation.parquet", "combined_meth_formatted.parquet"),
+    ("clinical.parquet", "combined_clin_formatted.parquet"),
+]:
+    downloaded_path = hf_hub_download(
+        repo_id=HF_REPO_ID, repo_type="dataset", filename=hf_filename
+    )
+    shutil.copyfile(downloaded_path, os.path.join("data/raw", local_name))
 </div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Changed to: /home/ewald/Github/acx_main_releases/autoencodix_package
-</pre>
 </div>
 </div>
 </div>

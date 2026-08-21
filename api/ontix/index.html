@@ -1700,7 +1700,7 @@ of attributes and methods.</p>
 <span class="normal">134</span>
 <span class="normal">135</span>
 <span class="normal">136</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Ontix</span><span class="p">(</span><span class="n">BasePipeline</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Ontix specific version of the BasePipeline class.</span>
+<span class="w">    </span><span class="sd">"""Ontix specific version of the BasePipeline class.</span>
 
 <span class="sd">    Inherits preprocess, fit, predict, evaluate, and visualize methods from BasePipeline.</span>
 
@@ -1710,12 +1710,12 @@ of attributes and methods.</p>
 <span class="sd">    Additional Attributes:</span>
 <span class="sd">        _default_config: Is set to OntixConfig here.</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">ontologies</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">],</span>  <span class="c1"># Addition to Varix, mandotory for Ontix</span>
-        <span class="n">sep</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>  <span class="c1"># Addition to Varix, optional to read in ontologies</span>
+        <span class="n">sep</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span>  <span class="c1"># Addition to Varix, optional to read in ontologies</span>
         <span class="n">data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">DataPackage</span><span class="p">,</span> <span class="n">DatasetContainer</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">trainer_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">BaseTrainer</span><span class="p">]</span> <span class="o">=</span> <span class="n">OntixTrainer</span><span class="p">,</span>
         <span class="n">dataset_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">BaseDataset</span><span class="p">]</span> <span class="o">=</span> <span class="n">NumericDataset</span><span class="p">,</span>
@@ -1729,7 +1729,7 @@ of attributes and methods.</p>
         <span class="n">custom_splits</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DefaultConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize Ontix pipeline with customizable components.</span>
+<span class="w">        </span><span class="sd">"""Initialize Ontix pipeline with customizable components.</span>
 
 <span class="sd">        Some components are passed as types rather than instances because they require</span>
 <span class="sd">        data that is only available after preprocessing.</span>
@@ -1739,14 +1739,14 @@ of attributes and methods.</p>
 <span class="sd">        Raises:</span>
 <span class="sd">            TypeError: if ontologies are not a Tuple or List.</span>
 
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_default_config</span> <span class="o">=</span> <span class="n">OntixConfig</span><span class="p">()</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ontologies</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span> <span class="o">=</span> <span class="n">ontologies</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ontologies</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">sep</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">&quot;If ontologies are provided as a list, the seperator &#39;sep&#39; cannot be None. &quot;</span>
+                    <span class="s2">"If ontologies are provided as a list, the seperator 'sep' cannot be None. "</span>
                 <span class="p">)</span>
             <span class="n">ontologies_dict_list</span> <span class="o">=</span> <span class="p">[</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_read_ont_file</span><span class="p">(</span><span class="n">ont_file</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="n">sep</span><span class="p">)</span> <span class="k">for</span> <span class="n">ont_file</span> <span class="ow">in</span> <span class="n">ontologies</span>
@@ -1754,7 +1754,7 @@ of attributes and methods.</p>
             <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">ontologies_dict_list</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Expected ontologies to be of type tuple or list, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">ontologies</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="sa">f</span><span class="s2">"Expected ontologies to be of type tuple or list, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">ontologies</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
 
         <span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span>
@@ -1778,11 +1778,11 @@ of attributes and methods.</p>
         <span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">OntixConfig</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;For Ontix Pipeline, we only allow OntixConfig as type for config, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"For Ontix Pipeline, we only allow OntixConfig as type for config, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_read_ont_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sep</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Function to read-in text files of ontologies with format child - separator - parent into an dictionary.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_read_ont_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sep</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Function to read-in text files of ontologies with format child - separator - parent into an dictionary.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            file_path: Path to file with ontology</span>
@@ -1790,9 +1790,9 @@ of attributes and methods.</p>
 <span class="sd">        Returns:</span>
 <span class="sd">            ont_dic: Dictionary containing the ontology as described in the text file.</span>
 
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">ont_dic</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">ont_file</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">ont_file</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">ont_file</span><span class="p">:</span>
                 <span class="n">id_parent</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">sep</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
                 <span class="n">id_child</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">sep</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
@@ -1824,7 +1824,7 @@ of attributes and methods.</p>
 
 
 <h3 id="autoencodix.ontix.Ontix.__init__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">ontologies</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">trainer_type</span><span class="o">=</span><span class="n">OntixTrainer</span><span class="p">,</span> <span class="n">dataset_type</span><span class="o">=</span><span class="n">NumericDataset</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="n">OntixArchitecture</span><span class="p">,</span> <span class="n">loss_type</span><span class="o">=</span><span class="n">VarixLoss</span><span class="p">,</span> <span class="n">preprocessor_type</span><span class="o">=</span><span class="n">GeneralPreprocessor</span><span class="p">,</span> <span class="n">visualizer</span><span class="o">=</span><span class="n">GeneralVisualizer</span><span class="p">,</span> <span class="n">evaluator</span><span class="o">=</span><span class="n">GeneralEvaluator</span><span class="p">,</span> <span class="n">result</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">datasplitter_type</span><span class="o">=</span><span class="n">DataSplitter</span><span class="p">,</span> <span class="n">custom_splits</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">ontologies</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">'</span><span class="se">\t</span><span class="s1">'</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">trainer_type</span><span class="o">=</span><span class="n">OntixTrainer</span><span class="p">,</span> <span class="n">dataset_type</span><span class="o">=</span><span class="n">NumericDataset</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="n">OntixArchitecture</span><span class="p">,</span> <span class="n">loss_type</span><span class="o">=</span><span class="n">VarixLoss</span><span class="p">,</span> <span class="n">preprocessor_type</span><span class="o">=</span><span class="n">GeneralPreprocessor</span><span class="p">,</span> <span class="n">visualizer</span><span class="o">=</span><span class="n">GeneralVisualizer</span><span class="p">,</span> <span class="n">evaluator</span><span class="o">=</span><span class="n">GeneralEvaluator</span><span class="p">,</span> <span class="n">result</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">datasplitter_type</span><span class="o">=</span><span class="n">DataSplitter</span><span class="p">,</span> <span class="n">custom_splits</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h3>
 
@@ -1932,7 +1932,7 @@ data that is only available after preprocessing.</p>
 <span class="normal">112</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">ontologies</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">],</span>  <span class="c1"># Addition to Varix, mandotory for Ontix</span>
-    <span class="n">sep</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>  <span class="c1"># Addition to Varix, optional to read in ontologies</span>
+    <span class="n">sep</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span>  <span class="c1"># Addition to Varix, optional to read in ontologies</span>
     <span class="n">data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">DataPackage</span><span class="p">,</span> <span class="n">DatasetContainer</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">trainer_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">BaseTrainer</span><span class="p">]</span> <span class="o">=</span> <span class="n">OntixTrainer</span><span class="p">,</span>
     <span class="n">dataset_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">BaseDataset</span><span class="p">]</span> <span class="o">=</span> <span class="n">NumericDataset</span><span class="p">,</span>
@@ -1946,7 +1946,7 @@ data that is only available after preprocessing.</p>
     <span class="n">custom_splits</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DefaultConfig</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initialize Ontix pipeline with customizable components.</span>
+<span class="w">    </span><span class="sd">"""Initialize Ontix pipeline with customizable components.</span>
 
 <span class="sd">    Some components are passed as types rather than instances because they require</span>
 <span class="sd">    data that is only available after preprocessing.</span>
@@ -1956,14 +1956,14 @@ data that is only available after preprocessing.</p>
 <span class="sd">    Raises:</span>
 <span class="sd">        TypeError: if ontologies are not a Tuple or List.</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_default_config</span> <span class="o">=</span> <span class="n">OntixConfig</span><span class="p">()</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ontologies</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span> <span class="o">=</span> <span class="n">ontologies</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ontologies</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">sep</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;If ontologies are provided as a list, the seperator &#39;sep&#39; cannot be None. &quot;</span>
+                <span class="s2">"If ontologies are provided as a list, the seperator 'sep' cannot be None. "</span>
             <span class="p">)</span>
         <span class="n">ontologies_dict_list</span> <span class="o">=</span> <span class="p">[</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_read_ont_file</span><span class="p">(</span><span class="n">ont_file</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="n">sep</span><span class="p">)</span> <span class="k">for</span> <span class="n">ont_file</span> <span class="ow">in</span> <span class="n">ontologies</span>
@@ -1971,7 +1971,7 @@ data that is only available after preprocessing.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">ontologies_dict_list</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Expected ontologies to be of type tuple or list, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">ontologies</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="sa">f</span><span class="s2">"Expected ontologies to be of type tuple or list, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">ontologies</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
         <span class="p">)</span>
 
     <span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span>
@@ -1995,7 +1995,7 @@ data that is only available after preprocessing.</p>
     <span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">OntixConfig</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;For Ontix Pipeline, we only allow OntixConfig as type for config, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"For Ontix Pipeline, we only allow OntixConfig as type for config, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>

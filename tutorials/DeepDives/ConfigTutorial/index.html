@@ -2697,6 +2697,46 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </style>
 <!-- End of mermaid configuration --><div class="jupyter-wrapper">
 <div class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=8116c7c0">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<blockquote>
+<p><strong>Note:</strong> This environment variable is required for fully deterministic CuBLAS ops on CUDA &gt;= 10.2 when <code>reproducible=True</code> is set below. Without it, PyTorch raises a <code>RuntimeError</code> instead of training deterministically. It must be set before <code>torch</code> is imported. See the <a href="../../README.md#reproducibility-and-cublas_workspace_config">README FAQ</a> for details.</p>
+</blockquote>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=366ee1f6">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="CodeMirror cm-s-jupyter">
+<div class="zeroclipboard-container">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-1">
+<div>
+<span class="notice" hidden="">Copied!</span>
+<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
+<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
+<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+</clipboard-copy>
+</div>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="o">%</span><span class="n">env</span> <span class="n">CUBLAS_WORKSPACE_CONFIG</span><span class="o">=</span><span class="p">:</span><span class="mi">16</span><span class="p">:</span><span class="mi">8</span>
+</pre></div>
+<div class="clipboard-copy-txt" id="cell-1">%env CUBLAS_WORKSPACE_CONFIG=:16:8</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
 <div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=3271f9b8">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -2749,7 +2789,7 @@ we recommend following the <code>Getting Started - Vanillix</code> Tutorial firs
 <div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-1">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-2">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2771,7 +2811,7 @@ we recommend following the <code>Getting Started - Vanillix</code> Tutorial firs
 <span class="p">)</span>
 <span class="n">varix</span> <span class="o">=</span> <span class="n">acx</span><span class="o">.</span><span class="n">Varix</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">EXAMPLE_MULTI_BULK</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-1">import autoencodix as acx
+<div class="clipboard-copy-txt" id="cell-2">import autoencodix as acx
 from autoencodix.configs.default_config import DefaultConfig, DataCase
 from autoencodix.configs import VarixConfig
 from autoencodix.utils.example_data import EXAMPLE_MULTI_BULK
@@ -2810,28 +2850,22 @@ varix = acx.Varix(config=config, data=EXAMPLE_MULTI_BULK)
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h4 id="12-provide-the-config-as-a-yaml-file">1.2 Provide the Config as a YAML file<a class="anchor-link" href="#12-provide-the-config-as-a-yaml-file">¶</a></h4><p>In our GitHub repo, we prepared a directory called <code>configs</code> with sample YAML files.<br/>
 We can easily load the values into our config class with the <code>model_validate</code> method, as shown below:</p>
-<h4 id="requirements-getting-tutorial-data">❗❗ Requirements: Getting Tutorial Data ❗❗<a class="anchor-link" href="#requirements-getting-tutorial-data">¶</a></h4><p>To follow along, please download the date from the link below (1GB), if you've already done the <a href="../PipelineTutorials/Ontix.ipynb"><code>Ontix</code> Tutorial</a>, you've probably already downloaded the data.</p>
-<p><a href="https://cloud.scadsai.uni-leipzig.de/index.php/s/QXYnieKY8AA3Zta/download/OntixTutorialData.zip">https://cloud.scadsai.uni-leipzig.de/index.php/s/QXYnieKY8AA3Zta/download/OntixTutorialData.zip</a></p>
-<p>After downloading:</p>
-<ul>
-<li>from the root of the repository, create the folders <code>data/raw</code> if not created yet</li>
-<li>move the donwloaded files there</li>
-</ul>
+<h4 id="requirements-getting-tutorial-data">❗❗ Requirements: Getting Tutorial Data ❗❗<a class="anchor-link" href="#requirements-getting-tutorial-data">¶</a></h4><p>The data for this tutorial is hosted on Hugging Face Hub (<a href="https://huggingface.co/datasets/autoencodix/tcga">autoencodix/tcga</a>) and is downloaded automatically in the cell below on first run.</p>
 <h3 id="extra-2-get-correct-path">Extra 2: Get correct path<a class="anchor-link" href="#extra-2-get-correct-path">¶</a></h3><p>We assume you are in the root of the package. The following code ensures that the correct paths are used.
 [1] <a href="./ConfigTutorial.ipynb">Tutorials/DeepDives/ConfigTutorial.ipynb</a></p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=2b32c088">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=2b32c088">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-2">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-3">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2851,6 +2885,25 @@ We can easily load the values into our config class with the <code>model_validat
 <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)[:</span> <span class="n">p</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]))</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Changed to: </span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
+<span class="c1"># ---------------------------------------------------------------------</span>
+<span class="c1"># Data is hosted on Hugging Face Hub and downloaded (and locally cached)</span>
+<span class="c1"># automatically, then placed under the paths configs/multi_bulk.yaml expects</span>
+<span class="c1"># ---------------------------------------------------------------------</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">huggingface_hub</span><span class="w"> </span><span class="kn">import</span> <span class="n">hf_hub_download</span>
+
+<span class="n">HF_REPO_ID</span> <span class="o">=</span> <span class="s2">"autoencodix/tcga"</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="s2">"data/raw"</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">hf_filename</span><span class="p">,</span> <span class="n">local_name</span> <span class="ow">in</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">"rna.parquet"</span><span class="p">,</span> <span class="s2">"combined_rnaseq_formatted.parquet"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"methylation.parquet"</span><span class="p">,</span> <span class="s2">"combined_meth_formatted.parquet"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"clinical.parquet"</span><span class="p">,</span> <span class="s2">"combined_clin_formatted.parquet"</span><span class="p">),</span>
+<span class="p">]:</span>
+    <span class="n">downloaded_path</span> <span class="o">=</span> <span class="n">hf_hub_download</span><span class="p">(</span>
+        <span class="n">repo_id</span><span class="o">=</span><span class="n">HF_REPO_ID</span><span class="p">,</span> <span class="n">repo_type</span><span class="o">=</span><span class="s2">"dataset"</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="n">hf_filename</span>
+    <span class="p">)</span>
+    <span class="n">shutil</span><span class="o">.</span><span class="n">copyfile</span><span class="p">(</span><span class="n">downloaded_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">"data/raw"</span><span class="p">,</span> <span class="n">local_name</span><span class="p">))</span>
+
 <span class="c1"># now we can load the config</span>
 <span class="n">custom_config</span> <span class="o">=</span> <span class="n">VarixConfig</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span>
     <span class="p">{</span>
@@ -2862,7 +2915,7 @@ We can easily load the values into our config class with the <code>model_validat
 <span class="n">varix</span> <span class="o">=</span> <span class="n">acx</span><span class="o">.</span><span class="n">Varix</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">custom_config</span><span class="p">)</span>
 <span class="n">r</span> <span class="o">=</span> <span class="n">varix</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-2"># first be sure to be in root
+<div class="clipboard-copy-txt" id="cell-3"># first be sure to be in root
 import os
 
 p = os.getcwd()
@@ -2871,6 +2924,25 @@ if d not in p:
     raise FileNotFoundError(f"'{d}' not found in path: {p}")
 os.chdir(os.sep.join(p.split(os.sep)[: p.split(os.sep).index(d) + 1]))
 print(f"Changed to: {os.getcwd()}")
+
+# ---------------------------------------------------------------------
+# Data is hosted on Hugging Face Hub and downloaded (and locally cached)
+# automatically, then placed under the paths configs/multi_bulk.yaml expects
+# ---------------------------------------------------------------------
+import shutil
+from huggingface_hub import hf_hub_download
+
+HF_REPO_ID = "autoencodix/tcga"
+os.makedirs("data/raw", exist_ok=True)
+for hf_filename, local_name in [
+    ("rna.parquet", "combined_rnaseq_formatted.parquet"),
+    ("methylation.parquet", "combined_meth_formatted.parquet"),
+    ("clinical.parquet", "combined_clin_formatted.parquet"),
+]:
+    downloaded_path = hf_hub_download(
+        repo_id=HF_REPO_ID, repo_type="dataset", filename=hf_filename
+    )
+    shutil.copyfile(downloaded_path, os.path.join("data/raw", local_name))
 
 # now we can load the config
 custom_config = VarixConfig.model_validate(
@@ -2883,184 +2955,6 @@ custom_config = VarixConfig.model_validate(
 varix = acx.Varix(config=custom_config)
 r = varix.run()
 </div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Changed to: /Users/maximilianjoas/development/autoencodix_package
-reading parquet: data/raw/combined_rnaseq_formatted.parquet
-reading parquet: data/raw/combined_meth_formatted.parquet
-reading parquet: data/raw/combined_clin_formatted.parquet
-anno key: paired
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>
-<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
-<span class="ansi-red-fg">KeyboardInterrupt</span>                         Traceback (most recent call last)
-Cell <span class="ansi-green-fg">In[2], line 20</span>
-<span class="ansi-green-intense-fg ansi-bold">     18</span> <span style="color: rgb(95,135,135)"># and pass to a pipeline</span>
-<span class="ansi-green-intense-fg ansi-bold">     19</span> varix <span style="color: rgb(98,98,98)">=</span> acx<span style="color: rgb(98,98,98)">.</span>Varix(config<span style="color: rgb(98,98,98)">=</span>custom_config)
-<span class="ansi-green-fg">---&gt; 20</span> r <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">varix</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">run</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span>
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/src/autoencodix/base/_base_pipeline.py:1033</span>, in <span class="ansi-cyan-fg">BasePipeline.run</span><span class="ansi-blue-fg">(self, data)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1022</span> <span style="color: rgb(175,0,0)">"""Executes the complete pipeline from preprocessing to visualization.</span>
-<span class="ansi-green-intense-fg ansi-bold">   1023</span> 
-<span class="ansi-green-intense-fg ansi-bold">   1024</span> <span style="color: rgb(175,0,0)">Runs all pipeline steps in sequence and returns the result.</span>
-<span class="ansi-green-fg">   (...)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1030</span> <span style="color: rgb(175,0,0)">    Complete pipeline results.</span>
-<span class="ansi-green-intense-fg ansi-bold">   1031</span> <span style="color: rgb(175,0,0)">"""</span>
-<span class="ansi-green-intense-fg ansi-bold">   1032</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>preprocess()
-<span class="ansi-green-fg">-&gt; 1033</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">fit</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1034</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>predict(data<span style="color: rgb(98,98,98)">=</span>data)
-<span class="ansi-green-intense-fg ansi-bold">   1035</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>visualize()
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/src/autoencodix/base/_base_pipeline.py:486</span>, in <span class="ansi-cyan-fg">BasePipeline.fit</span><span class="ansi-blue-fg">(self, config, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">    467</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">ValueError</span>(
-<span class="ansi-green-intense-fg ansi-bold">    468</span>         <span style="color: rgb(175,0,0)">"</span><span style="color: rgb(175,0,0)">Datasets not built. Please run the preprocess method first.</span><span style="color: rgb(175,0,0)">"</span>
-<span class="ansi-green-intense-fg ansi-bold">    469</span>     )
-<span class="ansi-green-intense-fg ansi-bold">    471</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_trainer <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_trainer_type(
-<span class="ansi-green-intense-fg ansi-bold">    472</span>     trainset<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_datasets<span style="color: rgb(98,98,98)">.</span>train,
-<span class="ansi-green-intense-fg ansi-bold">    473</span>     validset<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_datasets<span style="color: rgb(98,98,98)">.</span>valid,
-<span class="ansi-green-fg">   (...)</span>
-<span class="ansi-green-intense-fg ansi-bold">    483</span>     model_map<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>model_map,
-<span class="ansi-green-intense-fg ansi-bold">    484</span> )
-<span class="ansi-green-fg">--&gt; 486</span> trainer_result: Result <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">_trainer</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">train</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    487</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>result<span style="color: rgb(98,98,98)">.</span>update(other<span style="color: rgb(98,98,98)">=</span>trainer_result)
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:153</span>, in <span class="ansi-cyan-fg">GeneralTrainer.train</span><span class="ansi-blue-fg">(self, epochs_overwrite)</span>
-<span class="ansi-green-intense-fg ansi-bold">    150</span> should_checkpoint: <span style="color: rgb(0,135,0)">bool</span> <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_should_checkpoint(epoch)
-<span class="ansi-green-intense-fg ansi-bold">    151</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_model<span style="color: rgb(98,98,98)">.</span>train()
-<span class="ansi-green-fg">--&gt; 153</span> epoch_loss, epoch_sub_losses <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">_train_epoch</span><span class="ansi-yellow-bg">(</span>
-<span class="ansi-green-intense-fg ansi-bold">    154</span> <span class="ansi-yellow-bg">    </span><span class="ansi-yellow-bg">should_checkpoint</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">should_checkpoint</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">epoch</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">epoch</span>
-<span class="ansi-green-intense-fg ansi-bold">    155</span> <span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    156</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_log_losses(epoch, <span style="color: rgb(175,0,0)">"</span><span style="color: rgb(175,0,0)">train</span><span style="color: rgb(175,0,0)">"</span>, epoch_loss, epoch_sub_losses)
-<span class="ansi-green-intense-fg ansi-bold">    158</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_validset:
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:193</span>, in <span class="ansi-cyan-fg">GeneralTrainer._train_epoch</span><span class="ansi-blue-fg">(self, should_checkpoint, epoch)</span>
-<span class="ansi-green-intense-fg ansi-bold">    191</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_optimizer<span style="color: rgb(98,98,98)">.</span>zero_grad()
-<span class="ansi-green-intense-fg ansi-bold">    192</span> X: torch<span style="color: rgb(98,98,98)">.</span>Tensor <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>maskix_hook(features)
-<span class="ansi-green-fg">--&gt; 193</span> model_outputs <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">_model</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">X</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    194</span> loss, batch_sub_losses <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_loss_fn(
-<span class="ansi-green-intense-fg ansi-bold">    195</span>     model_output<span style="color: rgb(98,98,98)">=</span>model_outputs,
-<span class="ansi-green-intense-fg ansi-bold">    196</span>     targets<span style="color: rgb(98,98,98)">=</span>features,
-<span class="ansi-green-fg">   (...)</span>
-<span class="ansi-green-intense-fg ansi-bold">    201</span>     ),  <span style="color: rgb(95,135,135)"># Pass n_samples for disentangled loss calculations</span>
-<span class="ansi-green-intense-fg ansi-bold">    202</span> )
-<span class="ansi-green-intense-fg ansi-bold">    203</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_fabric<span style="color: rgb(98,98,98)">.</span>backward(loss)
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/python3.10/site-packages/torch/nn/modules/module.py:1532</span>, in <span class="ansi-cyan-fg">Module._wrapped_call_impl</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1530</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_compiled_call_impl(<span style="color: rgb(98,98,98)">*</span>args, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs)  <span style="color: rgb(95,135,135)"># type: ignore[misc]</span>
-<span class="ansi-green-intense-fg ansi-bold">   1531</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-fg">-&gt; 1532</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">_call_impl</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">args</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/python3.10/site-packages/torch/nn/modules/module.py:1541</span>, in <span class="ansi-cyan-fg">Module._call_impl</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1536</span> <span style="color: rgb(95,135,135)"># If we don't have any hooks, we want to skip the rest of the logic in</span>
-<span class="ansi-green-intense-fg ansi-bold">   1537</span> <span style="color: rgb(95,135,135)"># this function, and just call forward.</span>
-<span class="ansi-green-intense-fg ansi-bold">   1538</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> (<span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_backward_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_backward_pre_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_forward_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_forward_pre_hooks
-<span class="ansi-green-intense-fg ansi-bold">   1539</span>         <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_backward_pre_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_backward_hooks
-<span class="ansi-green-intense-fg ansi-bold">   1540</span>         <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_forward_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_forward_pre_hooks):
-<span class="ansi-green-fg">-&gt; 1541</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg">forward_call</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">args</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1543</span> <span class="ansi-bold" style="color: rgb(0,135,0)">try</span>:
-<span class="ansi-green-intense-fg ansi-bold">   1544</span>     result <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/python3.10/site-packages/lightning_fabric/wrappers.py:136</span>, in <span class="ansi-cyan-fg">_FabricModule.forward</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">    133</span> args, kwargs <span style="color: rgb(98,98,98)">=</span> precision<span style="color: rgb(98,98,98)">.</span>convert_input((args, kwargs))
-<span class="ansi-green-intense-fg ansi-bold">    135</span> <span class="ansi-bold" style="color: rgb(0,135,0)">with</span> precision<span style="color: rgb(98,98,98)">.</span>forward_context():
-<span class="ansi-green-fg">--&gt; 136</span>     output <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">_forward_module</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">args</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    138</span> output <span style="color: rgb(98,98,98)">=</span> precision<span style="color: rgb(98,98,98)">.</span>convert_output(output)
-<span class="ansi-green-intense-fg ansi-bold">    140</span> apply_to_collection(output, dtype<span style="color: rgb(98,98,98)">=</span>Tensor, function<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_register_backward_hook)
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/python3.10/site-packages/torch/nn/modules/module.py:1532</span>, in <span class="ansi-cyan-fg">Module._wrapped_call_impl</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1530</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_compiled_call_impl(<span style="color: rgb(98,98,98)">*</span>args, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs)  <span style="color: rgb(95,135,135)"># type: ignore[misc]</span>
-<span class="ansi-green-intense-fg ansi-bold">   1531</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-fg">-&gt; 1532</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">_call_impl</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">args</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/python3.10/site-packages/torch/nn/modules/module.py:1541</span>, in <span class="ansi-cyan-fg">Module._call_impl</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1536</span> <span style="color: rgb(95,135,135)"># If we don't have any hooks, we want to skip the rest of the logic in</span>
-<span class="ansi-green-intense-fg ansi-bold">   1537</span> <span style="color: rgb(95,135,135)"># this function, and just call forward.</span>
-<span class="ansi-green-intense-fg ansi-bold">   1538</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> (<span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_backward_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_backward_pre_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_forward_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_forward_pre_hooks
-<span class="ansi-green-intense-fg ansi-bold">   1539</span>         <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_backward_pre_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_backward_hooks
-<span class="ansi-green-intense-fg ansi-bold">   1540</span>         <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_forward_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_forward_pre_hooks):
-<span class="ansi-green-fg">-&gt; 1541</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg">forward_call</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">args</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1543</span> <span class="ansi-bold" style="color: rgb(0,135,0)">try</span>:
-<span class="ansi-green-intense-fg ansi-bold">   1544</span>     result <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/src/autoencodix/modeling/_varix_architecture.py:183</span>, in <span class="ansi-cyan-fg">VarixArchitecture.forward</span><span class="ansi-blue-fg">(self, x)</span>
-<span class="ansi-green-intense-fg ansi-bold">    173</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span><span style="color: rgb(188,188,188)"> </span><span style="color: rgb(0,0,255)">forward</span>(<span style="color: rgb(0,135,0)">self</span>, x: torch<span style="color: rgb(98,98,98)">.</span>Tensor) <span style="color: rgb(98,98,98)">-</span><span style="color: rgb(98,98,98)">&gt;</span> ModelOutput:
-<span class="ansi-green-intense-fg ansi-bold">    174</span> <span style="color: rgb(188,188,188)">    </span><span style="color: rgb(175,0,0)">"""Forward pass of the model, fill</span>
-<span class="ansi-green-intense-fg ansi-bold">    175</span> 
-<span class="ansi-green-intense-fg ansi-bold">    176</span> <span style="color: rgb(175,0,0)">    Args:</span>
-<span class="ansi-green-fg">   (...)</span>
-<span class="ansi-green-intense-fg ansi-bold">    181</span> 
-<span class="ansi-green-intense-fg ansi-bold">    182</span> <span style="color: rgb(175,0,0)">    """</span>
-<span class="ansi-green-fg">--&gt; 183</span>     mu, logvar <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">encode</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">x</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    184</span>     z <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>reparameterize(mu, logvar)
-<span class="ansi-green-intense-fg ansi-bold">    185</span>     x_hat <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>decode(z)
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/src/autoencodix/modeling/_varix_architecture.py:124</span>, in <span class="ansi-cyan-fg">VarixArchitecture.encode</span><span class="ansi-blue-fg">(self, x)</span>
-<span class="ansi-green-intense-fg ansi-bold">    122</span> latent <span style="color: rgb(98,98,98)">=</span> x  <span style="color: rgb(95,135,135)"># for case where n_layers=0</span>
-<span class="ansi-green-intense-fg ansi-bold">    123</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_config<span style="color: rgb(98,98,98)">.</span>n_layers <span style="color: rgb(98,98,98)">&gt;</span> <span style="color: rgb(98,98,98)">0</span>:
-<span class="ansi-green-fg">--&gt; 124</span>     latent <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">_encoder</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">x</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    125</span> mu <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_mu(latent)
-<span class="ansi-green-intense-fg ansi-bold">    126</span> logvar <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_logvar(latent)
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/python3.10/site-packages/torch/nn/modules/module.py:1532</span>, in <span class="ansi-cyan-fg">Module._wrapped_call_impl</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1530</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_compiled_call_impl(<span style="color: rgb(98,98,98)">*</span>args, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs)  <span style="color: rgb(95,135,135)"># type: ignore[misc]</span>
-<span class="ansi-green-intense-fg ansi-bold">   1531</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-fg">-&gt; 1532</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">_call_impl</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">args</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/python3.10/site-packages/torch/nn/modules/module.py:1541</span>, in <span class="ansi-cyan-fg">Module._call_impl</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1536</span> <span style="color: rgb(95,135,135)"># If we don't have any hooks, we want to skip the rest of the logic in</span>
-<span class="ansi-green-intense-fg ansi-bold">   1537</span> <span style="color: rgb(95,135,135)"># this function, and just call forward.</span>
-<span class="ansi-green-intense-fg ansi-bold">   1538</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> (<span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_backward_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_backward_pre_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_forward_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_forward_pre_hooks
-<span class="ansi-green-intense-fg ansi-bold">   1539</span>         <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_backward_pre_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_backward_hooks
-<span class="ansi-green-intense-fg ansi-bold">   1540</span>         <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_forward_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_forward_pre_hooks):
-<span class="ansi-green-fg">-&gt; 1541</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg">forward_call</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">args</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1543</span> <span class="ansi-bold" style="color: rgb(0,135,0)">try</span>:
-<span class="ansi-green-intense-fg ansi-bold">   1544</span>     result <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/python3.10/site-packages/torch/nn/modules/container.py:217</span>, in <span class="ansi-cyan-fg">Sequential.forward</span><span class="ansi-blue-fg">(self, input)</span>
-<span class="ansi-green-intense-fg ansi-bold">    215</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span><span style="color: rgb(188,188,188)"> </span><span style="color: rgb(0,0,255)">forward</span>(<span style="color: rgb(0,135,0)">self</span>, <span style="color: rgb(0,135,0)">input</span>):
-<span class="ansi-green-intense-fg ansi-bold">    216</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> module <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> <span style="color: rgb(0,135,0)">self</span>:
-<span class="ansi-green-fg">--&gt; 217</span>         <span style="color: rgb(0,135,0)">input</span> <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">module</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(0,135,0)">input</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    218</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span style="color: rgb(0,135,0)">input</span>
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/python3.10/site-packages/torch/nn/modules/module.py:1532</span>, in <span class="ansi-cyan-fg">Module._wrapped_call_impl</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1530</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_compiled_call_impl(<span style="color: rgb(98,98,98)">*</span>args, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs)  <span style="color: rgb(95,135,135)"># type: ignore[misc]</span>
-<span class="ansi-green-intense-fg ansi-bold">   1531</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-fg">-&gt; 1532</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">_call_impl</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">args</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/python3.10/site-packages/torch/nn/modules/module.py:1541</span>, in <span class="ansi-cyan-fg">Module._call_impl</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1536</span> <span style="color: rgb(95,135,135)"># If we don't have any hooks, we want to skip the rest of the logic in</span>
-<span class="ansi-green-intense-fg ansi-bold">   1537</span> <span style="color: rgb(95,135,135)"># this function, and just call forward.</span>
-<span class="ansi-green-intense-fg ansi-bold">   1538</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> (<span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_backward_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_backward_pre_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_forward_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_forward_pre_hooks
-<span class="ansi-green-intense-fg ansi-bold">   1539</span>         <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_backward_pre_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_backward_hooks
-<span class="ansi-green-intense-fg ansi-bold">   1540</span>         <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_forward_hooks <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> _global_forward_pre_hooks):
-<span class="ansi-green-fg">-&gt; 1541</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg">forward_call</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">args</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1543</span> <span class="ansi-bold" style="color: rgb(0,135,0)">try</span>:
-<span class="ansi-green-intense-fg ansi-bold">   1544</span>     result <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/python3.10/site-packages/torch/nn/modules/dropout.py:59</span>, in <span class="ansi-cyan-fg">Dropout.forward</span><span class="ansi-blue-fg">(self, input)</span>
-<span class="ansi-green-intense-fg ansi-bold">     58</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span><span style="color: rgb(188,188,188)"> </span><span style="color: rgb(0,0,255)">forward</span>(<span style="color: rgb(0,135,0)">self</span>, <span style="color: rgb(0,135,0)">input</span>: Tensor) <span style="color: rgb(98,98,98)">-</span><span style="color: rgb(98,98,98)">&gt;</span> Tensor:
-<span class="ansi-green-fg">---&gt; 59</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg">F</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">dropout</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(0,135,0)">input</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">p</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">training</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">inplace</span><span class="ansi-yellow-bg">)</span>
-
-File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/python3.10/site-packages/torch/nn/functional.py:1295</span>, in <span class="ansi-cyan-fg">dropout</span><span class="ansi-blue-fg">(input, p, training, inplace)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1293</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> p <span style="color: rgb(98,98,98)">&lt;</span> <span style="color: rgb(98,98,98)">0.0</span> <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> p <span style="color: rgb(98,98,98)">&gt;</span> <span style="color: rgb(98,98,98)">1.0</span>:
-<span class="ansi-green-intense-fg ansi-bold">   1294</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">ValueError</span>(<span style="color: rgb(175,0,0)">f</span><span style="color: rgb(175,0,0)">"</span><span style="color: rgb(175,0,0)">dropout probability has to be between 0 and 1, but got </span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>p<span class="ansi-bold" style="color: rgb(175,95,135)">}</span><span style="color: rgb(175,0,0)">"</span>)
-<span class="ansi-green-fg">-&gt; 1295</span> <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> _VF<span style="color: rgb(98,98,98)">.</span>dropout_(<span style="color: rgb(0,135,0)">input</span>, p, training) <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> inplace <span class="ansi-bold" style="color: rgb(0,135,0)">else</span> <span class="ansi-yellow-bg">_VF</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">dropout</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(0,135,0)">input</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">p</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">training</span><span class="ansi-yellow-bg">)</span>
-
-<span class="ansi-red-fg">KeyboardInterrupt</span>: </pre>
 </div>
 </div>
 </div>
@@ -3089,7 +2983,7 @@ File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/pyt
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-3">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-4">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -3109,7 +3003,7 @@ File <span class="ansi-green-fg">~/development/autoencodix_package/.venv/lib/pyt
 
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"✅ Saved config to </span><span class="si">{</span><span class="n">output_path</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-3">output_path = Path("default_config.yaml")
+<div class="clipboard-copy-txt" id="cell-4">output_path = Path("default_config.yaml")
 
 # Convert to plain Python dict first
 config_dict = config.model_dump()
@@ -3233,7 +3127,7 @@ You can find a full list of parameters in <a href="#51-dataconfig--configuration
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-4">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-5">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -3264,7 +3158,7 @@ You can find a full list of parameters in <a href="#51-dataconfig--configuration
 <span class="n">bulk_config</span> <span class="o">=</span> <span class="n">VarixConfig</span><span class="p">(</span><span class="n">data_config</span><span class="o">=</span><span class="n">data_config</span><span class="p">,</span> <span class="n">data_case</span><span class="o">=</span><span class="n">DataCase</span><span class="o">.</span><span class="n">MULTI_BULK</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
 <span class="n">varix</span> <span class="o">=</span> <span class="n">acx</span><span class="o">.</span><span class="n">Varix</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">bulk_config</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">my_dp</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-4">import os
+<div class="clipboard-copy-txt" id="cell-5">import os
 import autoencodix as acx
 from autoencodix.configs.default_config import DataConfig, DataInfo, DataCase
 from autoencodix.configs import VarixConfig
@@ -3793,7 +3687,7 @@ The config can be imported from <code>autoencodix.configs</code>. The naming con
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-5">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-6">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -3806,7 +3700,7 @@ The config can be imported from <code>autoencodix.configs</code>. The naming con
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="n">config</span> <span class="o">=</span> <span class="n">DefaultConfig</span><span class="p">()</span>
 <span class="n">config</span><span class="o">.</span><span class="n">print_schema</span><span class="p">()</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-5">config = DefaultConfig()
+<div class="clipboard-copy-txt" id="cell-6">config = DefaultConfig()
 config.print_schema()</div>
 </div>
 </div>

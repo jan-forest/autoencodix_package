@@ -10,9 +10,10 @@ from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._model_output import ModelOutput
 
 class SupervisixTrainer(GeneralTrainer):
-    """Specialized trainer for Supervisix (supervised) autoencoders.
+    """
+    Specialized trainer for Supervisix (supervised) autoencoders.
 
-    Handles retaining and passing on the mean loss per class in the data set for previous epochs. 
+    Handles retaining and passing on the mean loss per class in the data set for the previous epoch. 
     Uses most of the functionality from the GeneralTrainer class and supervisix-specific functionality 
     is added via a hook.
 
@@ -30,7 +31,8 @@ class SupervisixTrainer(GeneralTrainer):
         loss_type: Type[BaseLoss],
         **kwargs,
     ):
-        """Initializes the SupervisixTrainer with the given datasets, model, and configuration.
+        """
+        Initializes the SupervisixTrainer with the given datasets, model, and configuration.
 
 
         Args:
@@ -60,7 +62,8 @@ class SupervisixTrainer(GeneralTrainer):
             dataset_type: str,
             batch_class_means: Dict[str, torch.Tensor]
     ):
-        """Capture latent representations for each class in the dataset per batch in the current epoch.
+        """
+        Capture latent representations for each class in the dataset per batch in the current epoch.
 
         Args:
             model_outputs: The output from the model's forward pass.
@@ -106,7 +109,9 @@ class SupervisixTrainer(GeneralTrainer):
             self,
             dataset_type: str
     ) -> Dict[str, torch.Tensor]:
-        """Get the last epoch class means for the current dataset type.
+        """
+        Get the last epoch class means for the current dataset type.
+
         Args:
             dataset_type: A string indicating whether the data is from 'train' or 'valid'.
 
@@ -126,7 +131,8 @@ class SupervisixTrainer(GeneralTrainer):
             batch_class_means: Dict[str, torch.Tensor], 
             dataset_type: str
     ):
-        """Update epoch class means at the end of each epoch.
+        """
+        Update epoch class means at the end of each epoch.
         
         Args:
             batch_class_means: A dictionary containing the mean latent representations for each class in the current batch.

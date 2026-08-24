@@ -4,7 +4,7 @@ from pydantic import Field, model_validator
 
 class SupervisixConfig(VarixConfig):
     """
-    A specialized configuration for supervisix,inheriting from DefaultConfig.
+    A specialized configuration for supervisix, inheriting from DefaultConfig.
     """
     # TODO find sensible defaults for Supervisix
 

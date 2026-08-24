@@ -32,7 +32,7 @@ class SupervisixLoss(BaseLoss):
         targets: torch.Tensor,
         sample_ids: Tuple[str],
         metadata: Union[pd.DataFrame, pd.Series],
-        last_epoc_class_means: Dict[str, torch.Tensor]
+        last_epoch_class_means: Dict[str, torch.Tensor]
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Compute reconstruction, variational and class-based losses.
@@ -40,6 +40,9 @@ class SupervisixLoss(BaseLoss):
         Args:
             model_output: custom class that stores model output like latentspaces and reconstructions.
             targets: original data to compare with reconstruction
+            sample_ids: tuple of sample IDs corresponding to the batch, used to identify class labels
+            metadata: DataFrame or Series containing metadata for each sample
+            last_epoch_class_means: Dictionary containing the mean latent representations for each class from the last epoch.
 
         Returns:
             Tuple of torch.Tensors: reconstruction loss, variational loss, class separation loss and 
@@ -52,6 +55,7 @@ class SupervisixLoss(BaseLoss):
         )
 
         recon_loss = self.recon_loss(model_output.reconstruction, targets)
+
         # compute_variational_loss uses true_samples when the configured variational
         # loss is set to MMD -> true_samples represents samples from the prior distribution
         # and compares it to z (latent codes produced by the endcoder)
@@ -67,14 +71,14 @@ class SupervisixLoss(BaseLoss):
             model_output=model_output,
             sample_ids=sample_ids,
             metadata=metadata,
-            last_epoch_class_means=last_epoc_class_means
+            last_epoch_class_means=last_epoch_class_means
         )
 
         class_cohesion_loss = self._compute_class_cohesion_loss(
             model_output=model_output,
             sample_ids=sample_ids,
             metadata=metadata,
-            last_epoch_class_means=last_epoc_class_means
+            last_epoch_class_means=last_epoch_class_means
         )
 
         return recon_loss, var_loss, class_sep_loss, class_cohesion_loss
@@ -87,9 +91,9 @@ class SupervisixLoss(BaseLoss):
         """
         Function as defined in utils.py of the autoencodix pipeline package.
 
-        Computes the euclidean distance between two vectors in the latent space, then
-        calculates the mean of the absolute differences across all latent dimensions and
-        applies the reduction function (mean or sum) to get a single value representing
+        Computes the euclidean distance between two vectors or groups of vectors in the latent space, 
+        then calculates the mean of the absolute distances across all latent dimensions and
+        applies the reduction function (mean or sum) across samples to get a single value representing
         the distance between the two vectors.
 
         Args:
@@ -99,7 +103,7 @@ class SupervisixLoss(BaseLoss):
         Returns:
             torch.Tensor: A single value representing the distance between the two latent vectors.
         """
-        # Calculate vector a - vector b, get the absoltue value and apply the reduction function
+        # Calculate vector a - vector b and apply the reduction function
         return self.reduction_fn( # Mean or sum across samples
             torch.mean(torch.abs(latent_a - latent_b), dim=1) # Mean across latent dimensions
         )
@@ -111,10 +115,11 @@ class SupervisixLoss(BaseLoss):
             metadata: Union[pd.DataFrame, pd.Series],
             last_epoch_class_means: Dict[str, torch.Tensor]
     ) -> torch.Tensor:
-        """Compute class separation loss.
+        """
+        Compute class separation loss.
 
         Formula: L_sep = ((-||latents samples class 1 - latent mean class 2|| - ||latents samples class 1 - latent mean class 3|| - ...) / n_classes) 
-                         - ((-||latents samples class 2 - latent mean class 1|| - ||latents samples class 2 - latent mean class 3|| - ...) / n_classes)
+                         + ((-||latents samples class 2 - latent mean class 1|| - ||latents samples class 2 - latent mean class 3|| - ...) / n_classes)
         
         The latent mean of a class is calcuated by summing up the mean value over
         samples of a group per latent dimension. For this the mean of the last
@@ -128,15 +133,9 @@ class SupervisixLoss(BaseLoss):
 
         Returns:
             torch.Tensor: class separation loss
-
-        NOTE: Averaging over number of classes twice OK? -> Yes
         """
         # Get the column name that contains the class labels
         class_col = self.config.class_param # Has to be set in config
-
-        # NOTE: In config auslagern
-        if class_col is None:
-            raise ValueError("config.class_param must be set for Supervisix losses")
 
         # Get the class labels for all classes in the data set
         classes_all = metadata.loc[:, class_col].unique()
@@ -200,14 +199,9 @@ class SupervisixLoss(BaseLoss):
 
         Returns:
             torch.Tensor: class cohesion loss
-
-        TODO: Deviding through number of classes in dataset OK? Or should it be number of classes in batch?
         """
         # Get the column name that contains the class labels
         class_col = self.config.class_param # Has to be set in config
-
-        if class_col is None:
-            raise ValueError("config.class_param must be set for Supervisix losses")
         
         # Get the class labels for all classes in the data set
         classes_all = metadata.loc[:, class_col].unique()
@@ -257,6 +251,9 @@ class SupervisixLoss(BaseLoss):
         Args:
             model_output: custom class that stores model output like latentspaces and reconstructions.
             targets: original data to compare with reconstruction
+            sample_ids: tuple of sample IDs corresponding to the batch, used to identify class labels
+            metadata: DataFrame or Series containing metadata for each sample
+            last_epoch_class_means: Dictionary containing the mean latent representations for each class from the last epoch
             epoch: current training epoch
             total_epochs: number of total epochs
             **kwargs

@@ -33,7 +33,7 @@ class Supervisix(BasePipeline):
     of attributes and methods.
 
     Additional Attributes:
-        _default_config: Is set to VarixConfig here. # NOTE: HOW?
+        _default_config: Is set to SupervisixConfig here.
 
     """
 
@@ -51,7 +51,7 @@ class Supervisix(BasePipeline):
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,
         ontologies: Optional[Union[List, Dict]] = None,
-        config: Optional[DefaultConfig] = None, # NOTE: Do I need to change this?
+        config: Optional[DefaultConfig] = None,
     ) -> None:
         """
         Initialize Supervisix pipeline with customizable components.

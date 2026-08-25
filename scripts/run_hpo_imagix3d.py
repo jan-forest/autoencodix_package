@@ -167,8 +167,8 @@ def synetune_objective_function(
 
 def run_synetune_hpo(
     data_path: Path,
-    folder: str = "cbv_flat",
-    anno: str = "cbv_anno_dst.csv",
+    folder: str = "ncct_flat",
+    anno: str = "ncct_anno_dst.csv",
     tasks: str = "median_split",
     metric: str = "downstream_performance",
     max_wallclock_time: int = 11 * 60 * 60,

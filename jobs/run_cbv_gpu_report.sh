@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_cbf_report
+#SBATCH --job-name=imagix3d_cbv_report
 #SBATCH --account=p_scads_stroke
 #SBATCH --partition=capella
 #SBATCH --nodes=1

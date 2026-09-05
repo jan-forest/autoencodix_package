@@ -156,7 +156,9 @@ class GeneralTrainer(BaseTrainer):
         if epochs_overwrite:
             epochs = epochs_overwrite
         with self._fabric.autocast():
-            self._grad_clip_warning_sent = False  # Reset the warning flag for gradient clipping
+            self._grad_clip_warning_sent = (
+                False  # Reset the warning flag for gradient clipping
+            )
             for epoch in range(epochs):
                 self._init_buffers()
                 should_checkpoint: bool = self._should_checkpoint(epoch)
@@ -165,13 +167,25 @@ class GeneralTrainer(BaseTrainer):
                 epoch_loss, epoch_sub_losses = self._train_epoch(
                     should_checkpoint=should_checkpoint, epoch=epoch
                 )
-                self._log_losses(epoch, "train", epoch_loss, epoch_sub_losses)
+                self._log_losses(
+                    epoch=epoch,
+                    split="train",
+                    total_loss=epoch_loss,
+                    sub_losses=epoch_sub_losses,
+                    should_checkpoint=should_checkpoint,
+                )
 
                 if self._validset:
                     valid_loss, valid_sub_losses = self._validate_epoch(
                         should_checkpoint=should_checkpoint, epoch=epoch
                     )
-                    self._log_losses(epoch, "valid", valid_loss, valid_sub_losses)
+                    self._log_losses(
+                        epoch=epoch,
+                        split="valid",
+                        total_loss=valid_loss,
+                        sub_losses=valid_sub_losses,
+                        should_checkpoint=should_checkpoint,
+                    )
 
                 if should_checkpoint:
                     self._store_checkpoint(epoch)
@@ -229,12 +243,15 @@ class GeneralTrainer(BaseTrainer):
 
                     total_norm /= n_features
                 # Give warning about gradient clipping if it is applied (warn only once)
-                if not self._grad_clip_warning_sent and total_norm > self._config.grad_clip_max_norm:
+                if (
+                    not self._grad_clip_warning_sent
+                    and total_norm > self._config.grad_clip_max_norm
+                ):
                     warnings.warn(
-                            f"Gradient clipping was applied in epoch {epoch}. Total norm of gradients (adjusted for number of features): {total_norm:.4f} exceeded max norm of {self._config.grad_clip_max_norm}."
-                        )
+                        f"Gradient clipping was first applied in epoch {epoch}. Total norm of gradients (adjusted for number of features): {total_norm:.4f} exceeded max norm of {self._config.grad_clip_max_norm}."
+                    )
                 self._grad_clip_warning_sent = True
-                
+
             self._optimizer.step()
 
             total_loss += loss.item()
@@ -246,8 +263,8 @@ class GeneralTrainer(BaseTrainer):
 
             if should_checkpoint:
                 self._capture_dynamics(model_outputs, "train", indices, sample_ids)
-        
-        self._grad_clip_warning_sent = False  # Reset the warning flag for gradient clipping
+
+        # self._grad_clip_warning_sent = False  # Reset the warning flag for gradient clipping
 
         for k, v in sub_losses.items():
             if "_factor" not in k:
@@ -308,7 +325,12 @@ class GeneralTrainer(BaseTrainer):
         return total_loss, sub_losses
 
     def _log_losses(
-        self, epoch: int, split: str, total_loss: float, sub_losses: Dict[str, float]
+        self,
+        epoch: int,
+        split: str,
+        total_loss: float,
+        sub_losses: Dict[str, float],
+        should_checkpoint: bool = False,
     ) -> None:
         """Logs the total and sub-losses for an epoch and stores them in the Result object.
 
@@ -317,6 +339,7 @@ class GeneralTrainer(BaseTrainer):
             split: The data split ("train" or "valid").
             total_loss: The total loss for the epoch.
             sub_losses: A dictionary of sub-losses for the epoch.
+            should_checkpoint: Whether to checkpoint this epoch.
         """
         # dataset_len = len(
         #     self._trainloader.dataset if split == "train" else self._validloader.dataset
@@ -328,12 +351,13 @@ class GeneralTrainer(BaseTrainer):
             data={k: v if "_factor" not in k else v for k, v in sub_losses.items()},
         )
 
-        self._fabric.print(
-            f"Epoch {epoch + 1} - {split.capitalize()} Loss: {total_loss:.4f}"
-        )
-        self._fabric.print(
-            f"Sub-losses: {', '.join([f'{k}: {v:.4f}' for k, v in sub_losses.items()])}"
-        )
+        if should_checkpoint:
+            self._fabric.print(
+                f"Epoch {epoch + 1} - {split.capitalize()} Loss: {total_loss:.4f}"
+            )
+            self._fabric.print(
+                f"Sub-losses: {', '.join([f'{k}: {v:.4f}' for k, v in sub_losses.items()])}"
+            )
 
     def _store_checkpoint(self, epoch: int) -> None:
         """Stores model checkpoints and training dynamics to result object.

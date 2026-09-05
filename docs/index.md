@@ -1,30 +1,23 @@
-
-# Documentation
-You can find our code documentation in our `API Reference` (see navbar on the right).
-For a general overview, refer to our `README` below.
-
-
-# README
+# AUTOENCODIX
 Autoencoders are deep-learning-based networks for dimension reduction and embedding by a combination of a compressing encoder and decoder structure for non-linear and multi-modal data integration, with promising applications to complex biological data from large-scale omics measurements. Current ongoing research and publications provide many exciting architectures and implementations of autoencoders. However, there is a lack of easy-to-use and unified implementations covering the whole pipeline of autoencoder applications.
-Consequently, we present `AUTOENCODIX` with the following features:
-  
-1. Multi-modal data integration for any numerical or categorical data  
-2. Different autoencoder architectures:  
-   + vanilla `vanillix`  
-   + variational `varix`
-   + disentangled variational `disentanglix` 
-   + hierarchical/stacked `stackix`  
-   + ontology-based `ontix`  
-   + masking `maskix`  
-   + Image VAE (2D) `imagix`  
-   + cross-modal autoencoder (translation between different data modalities) `x-modalix` (works for multiple modalities paired and unpaired)  
-3. A Python package with a scikit-learn-like interface 
+Consequently, we present `AUTOENCODIX` with the following features in a easy-to-use Python package:
+
+<img src="https://raw.githubusercontent.com/jan-forest/autoencodix_package/main/images/features.png" alt="pipeline-features" width="1200"/>
+
+We have a growing list of architectures for a broad range of applications. AUTOENCODIX currently comprises this set of architectures: 
+
+<img src="https://raw.githubusercontent.com/jan-forest/autoencodix_package/main/images/architectures.png" alt="architectures" width="1200"/>
+
 
 ## Requirements
-- Python>=3.8 <3.13
+- Python>=3.9 <3.13
 - uv or another package manager (we recommend uv)
 - git or gh
+
 ## Installation
+via pip:
+`pip install autoencodix`
+or clone the latest version from repository:
 - `gh repo clone jan-forest/autoencodix_package`
 - `cd autoencodix_package`
 - `uv venv --python 3.10`
@@ -65,12 +58,40 @@ Whether you have a feature request, found a bug, or have any other idea, we're a
 ## Read The Docs
 You can find our documentation [here](https://jan-forest.github.io/autoencodix_package/).
 
+## FAQ
+
+### Reproducibility and CUBLAS_WORKSPACE_CONFIG
+If you run for reproducibility with `FIX_RANDOMNESS: "all"` and you receive the following error:
+```
+RuntimeError: Deterministic behavior was enabled with either `torch.use_deterministic_algorithms(True)` or `at::Context::setDeterministicAlgorithms(true)`, but this operation is not deterministic because it uses CuBLAS and you have CUDA >= 10.2. 
+```
+You need to run the following in your terminal before running our pipeline: 
+```
+export CUBLAS_WORKSPACE_CONFIG=:16:8
+```
+
+
 ## Cite
-TODO
+
+While we are working on a new publication of the Python package version, we are referring to our previous publication in [Nature Computational Science](https://doi.org/10.1038/s43588-025-00916-4) 
+
+Please, use this to cite our work when using our framework: 
+
+```
+@article{joas2025autoencodix,
+  title={AUTOENCODIX: a generalized and versatile framework to train and evaluate autoencoders for biological representation learning and beyond},
+  author={Joas, Maximilian Josef and Jurenaite, Neringa and Pra{\v{s}}{\v{c}}evi{\'c}, Du{\v{s}}an and Scherf, Nico and Ewald, Jan},
+  journal={Nature Computational Science},
+  pages={1--13},
+  year={2025},
+  doi={}
+  publisher={Nature Publishing Group US New York}
+}
+```
 
 ## License
 
-Copyright [2024] [Maximilian Josef Joas & Jan Ewald, ScaDS.AI, Leipzig University]
+Copyright [2026] [Maximilian Josef Joas & Jan Ewald, ScaDS.AI, Leipzig University]
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

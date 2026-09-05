@@ -33,7 +33,20 @@ jobs:
       run: |
         uv pip install --upgrade pip
         uv pip install -e .
-        uv pip install mkdocs mkdocs-material "mkdocstrings[python]==0.26.2"
+        uv pip install mkdocs mkdocs-material "mkdocstrings[python]==0.26.2" mkdocs-jupyter
+    # Copy the hand-picked tutorial notebooks into the docs tree so
+    # mkdocs-jupyter (and the nav paths in mkdocs.yml) can find them.
+    - name: Stage tutorial notebooks
+      run: |
+        mkdir -p docs/tutorials
+        cp -r Tutorials/PipelineTutorials docs/tutorials/
+        cp -r Tutorials/DeepDives docs/tutorials/
+        cp Tutorials/DevGuide.ipynb docs/tutorials/
+        # drop non-page support files the notebooks reference but that
+        # shouldn't be built as their own pages
+        rm -f docs/tutorials/PipelineTutorials/*.yaml
+        rm -rf docs/tutorials/PipelineTutorials/tutorial_res
+        rm -f docs/tutorials/DeepDives/*.yaml
 
     # Build the documentation
     - name: Build docs

@@ -1,4 +1,5 @@
-data/
+data/raw
+dist/*
 notebooks/census_chunks/
 notebooks/*/*
 results/*

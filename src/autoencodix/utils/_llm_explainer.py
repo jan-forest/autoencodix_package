@@ -3,6 +3,7 @@ import re
 import json
 import ollama
 from dotenv import find_dotenv, load_dotenv
+
 try:
     # mistralai>=2.0.0
     from mistralai.client import Mistral

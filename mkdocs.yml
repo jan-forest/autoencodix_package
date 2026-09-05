@@ -4,6 +4,28 @@ theme:
 
 nav:
 - Home: index.md
+- Tutorials:
+  - Pipeline Tutorials:
+      - Vanillix (start here): tutorials/PipelineTutorials/Vanillix.ipynb
+      - Varix: tutorials/PipelineTutorials/Varix.ipynb
+      - Disentanglix: tutorials/PipelineTutorials/Disentanglix.ipynb
+      - Stackix: tutorials/PipelineTutorials/Stackix.ipynb
+      - Ontix: tutorials/PipelineTutorials/Ontix.ipynb
+      - Maskix: tutorials/PipelineTutorials/Maskix.ipynb
+      - Imagix: tutorials/PipelineTutorials/Imagix.ipynb
+      - X-Modalix: tutorials/PipelineTutorials/XModalix.ipynb
+  - Deep Dives:
+      - Config: tutorials/DeepDives/ConfigTutorial.ipynb
+      - Input Data: tutorials/DeepDives/InputDataTutorials.ipynb
+      - Evaluate: tutorials/DeepDives/EvaluateTutorial.ipynb
+      - Visualize: tutorials/DeepDives/VisualizeTutorial.ipynb
+      - Pipeline Output: tutorials/DeepDives/PipelineOutputTutorial.ipynb
+      - Explain Step: tutorials/DeepDives/ExplainStep.ipynb
+      - Hyperparameter Optimization: tutorials/DeepDives/HyperparameterOptimizationTutorial.ipynb
+      - "Hyperparameter Optimization (Optuna)": tutorials/DeepDives/HyperparameterOptimizationOptunaTutorial.ipynb
+      - Using Pre-Trained Models: tutorials/DeepDives/UsingPreTrainedModels.ipynb
+      - Memory-Efficient Saving: tutorials/DeepDives/MemoryEfficientSaving.ipynb
+  - Developer Guide: tutorials/DevGuide.ipynb
 - API Reference:
   - Base: api/base.md
   - Configs: api/configs.md
@@ -31,3 +53,7 @@ plugins:
         options:
           extra:
             members_order: alphabetic
+- mkdocs-jupyter:
+    include_source: true      # adds a "download notebook" button on each page
+    execute: false            # don't re-run training notebooks in CI — slow / needs GPU
+    ignore_h1_titles: true    # avoid duplicate H1 (nav title + notebook's own heading)

@@ -289,7 +289,7 @@ class PairedUnpairedSplitter:
             sample IDs belonging to each combination (e.g., RNA+Protein pairs).
     """
 
-    def __init__(self, data_package, config):
+    def __init__(self, data_package, config, custom_splits: Optional[Dict[str, np.ndarray]]):
         """Initializes the splitter and computes modality membership groups.
 
         Args:
@@ -305,6 +305,7 @@ class PairedUnpairedSplitter:
 
         self.datapackage = data_package
         self.config = config
+        self.custom_splits = custom_splits
         self.membership_groups: Dict[Tuple[str, ...], Set[str]] = (
             self._compute_membership_groups()
         )
@@ -372,30 +373,34 @@ class PairedUnpairedSplitter:
             suitable for use with ``DataPackageSplitter``. Includes splits for both
             modalities and their corresponding annotation files.
         """
-        # Sort groups by descending number of modalities (most-paired first)
-        # This ensures fully-paired samples are assigned before partially-paired ones
-        sorted_groups = sorted(
-            self.membership_groups.items(), key=lambda kv: -len(kv[0])
-        )
-        assigned_ids: Set[str] = set()
+        if self.custom_splits is not None:
+            print("Using custom splits in PairedUnpairedSplitter.")
+            per_modality_splits = self._per_modality_splits_from_custom_splits()
+        else:    
+            # Sort groups by descending number of modalities (most-paired first)
+            # This ensures fully-paired samples are assigned before partially-paired ones
+            sorted_groups = sorted(
+                self.membership_groups.items(), key=lambda kv: -len(kv[0])
+            )
+            assigned_ids: Set[str] = set()
 
-        # Initialize split storage for each modality
-        per_modality_splits: Dict[str, Dict[str, Set[str]]] = {
-            mod: {"train": set(), "valid": set(), "test": set()}
-            for mod, _ in self.datapackage
-        }
+            # Initialize split storage for each modality
+            per_modality_splits: Dict[str, Dict[str, Set[str]]] = {
+                mod: {"train": set(), "valid": set(), "test": set()}
+                for mod, _ in self.datapackage
+            }
 
-        # Assign each membership group to splits
-        for mods_tuple, sids in sorted_groups:
-            sids_to_assign = [sid for sid in sids if sid not in assigned_ids]
-            if not sids_to_assign:
-                continue
+            # Assign each membership group to splits
+            for mods_tuple, sids in sorted_groups:
+                sids_to_assign = [sid for sid in sids if sid not in assigned_ids]
+                if not sids_to_assign:
+                    continue
 
-            group_splits = self._split_group(sids_to_assign)
-            for split_name, split_ids in group_splits.items():
-                for mod in mods_tuple:
-                    per_modality_splits[mod][split_name].update(split_ids)
-                assigned_ids.update(split_ids)
+                group_splits = self._split_group(sids_to_assign)
+                for split_name, split_ids in group_splits.items():
+                    for mod in mods_tuple:
+                        per_modality_splits[mod][split_name].update(split_ids)
+                    assigned_ids.update(split_ids)
 
         final_indices: Dict[str, Dict[str, Dict[str, np.ndarray]]] = {}
         for full_key, data_obj in self.datapackage:
@@ -468,5 +473,98 @@ class PairedUnpairedSplitter:
                             final_indices["annotation"][anno_key][split_name] = (
                                 np.array(anno_indices, dtype=int)
                             )
-
         return final_indices
+    
+    def _per_modality_splits_from_custom_splits(self) -> Dict[str, Dict[str, Set[str]]]:
+        """Create modality-wise split ID sets from custom annotation indices.
+
+        Custom splits are interpreted as row positions in a single annotation
+        table. The corresponding annotation index values are used as sample IDs
+        and mapped to all matching data modalities.
+
+        Returns:
+            A mapping from modality keys to train, valid, and test sample ID sets.
+
+        Raises:
+            ValueError: If custom splits are malformed, out of range, overlapping,
+            or cannot be matched to any data modality.
+        """
+        if self.custom_splits is None:
+            raise ValueError("No custom_splits were provided.")
+
+        required_keys = {"train", "valid", "test"}
+        if not required_keys.issubset(self.custom_splits):
+            raise ValueError(
+                f"custom_splits must contain {required_keys}, "
+                f"got {set(self.custom_splits.keys())}."
+            )
+
+        if not self.datapackage.annotation:
+            raise ValueError(
+                "custom_splits require an annotation table with sample IDs."
+            )
+
+        if len(self.datapackage.annotation) != 1:
+            raise ValueError(
+                "custom_splits currently require exactly one annotation table. "
+                "For multiple annotation tables, use a pre-split DatasetContainer "
+                "or extend the custom split mapping logic."
+            )
+
+        _, anno_df = next(iter(self.datapackage.annotation.items()))
+        anno_ids = np.asarray(anno_df.index, dtype=object)
+
+        split_id_sets: Dict[str, Set[str]] = {}
+        assigned_ids: Set[str] = set()
+
+        for split_name in ["train", "valid", "test"]:
+            split_idx = np.asarray(self.custom_splits[split_name], dtype=int)
+
+            if len(split_idx) > 0:
+                if split_idx.min() < 0 or split_idx.max() >= len(anno_ids):
+                    raise ValueError(
+                        f"custom_splits['{split_name}'] contains indices outside "
+                        f"the valid annotation range [0, {len(anno_ids) - 1}]."
+                    )
+
+            split_ids = set(anno_ids[split_idx])
+
+            overlap = assigned_ids & split_ids
+            if overlap:
+                raise ValueError(
+                    f"Overlapping sample IDs found in custom_splits: "
+                    f"{sorted(list(overlap))[:10]}"
+                )
+
+            split_id_sets[split_name] = split_ids
+            assigned_ids.update(split_ids)
+
+        per_modality_splits: Dict[str, Dict[str, Set[str]]] = {
+            mod: {"train": set(), "valid": set(), "test": set()}
+            for mod, _ in self.datapackage
+        }
+
+        all_modality_ids: Set[str] = set()
+
+        for full_key, data_obj in self.datapackage:
+            parent_key, _ = full_key.split(".")
+
+            if parent_key == "annotation":
+                continue
+
+            modality_ids = set(self.datapackage._get_sample_ids(data_obj))
+            all_modality_ids.update(modality_ids)
+
+            for split_name in ["train", "valid", "test"]:
+                per_modality_splits[full_key][split_name] = (
+                    split_id_sets[split_name] & modality_ids
+                )
+
+        missing_ids = assigned_ids - all_modality_ids
+        if missing_ids:
+            raise ValueError(
+                "Some custom split sample IDs were not found in any data modality. "
+                f"First missing IDs: {sorted(list(missing_ids))[:10]}"
+            )
+
+        return per_modality_splits

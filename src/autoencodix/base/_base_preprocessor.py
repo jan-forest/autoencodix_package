@@ -61,6 +61,7 @@ class BasePreprocessor(abc.ABC):
             ontologies: Ontology information, if provided for Ontix.
         """
         self.config = config
+        self.custom_splits: Optional[Dict[str, np.ndarray]] = None
         self._dataset_container: Optional[DatasetContainer] = None
         self.processed_data = Dict[str, Dict[str, Union[Any, DataPackage]]]
         self.bulk_genes_to_keep: Optional[Dict[str, List[str]]] = None
@@ -888,9 +889,8 @@ class BasePreprocessor(abc.ABC):
     ) -> Tuple[Dict[str, Optional[Dict[str, Any]]], Dict[str, Any]]:
         """Splits a data package into train/validation/test sets.
 
-        This method first uses PairedUnpairedSplitter to generate a single,
-        synchronized set of indices for all modalities. It then uses
-        DataPackageSplitter to apply these indices to the data.
+        Uses user-provided custom splits if available. 
+        Otherwise, falls back to the default pairing-aware ratio-based split.
 
         Args:
             data_package: The DataPackage to be split.
@@ -901,7 +901,9 @@ class BasePreprocessor(abc.ABC):
             2. A dictionary of the synchronized integer indices used for the split.
         """
         pairing_splitter = PairedUnpairedSplitter(
-            data_package=data_package, config=self.config
+            data_package=data_package, 
+            config=self.config,
+            custom_splits=self.custom_splits,
         )
         split_indices_config = pairing_splitter.split()
         data_package_splitter = DataPackageSplitter(

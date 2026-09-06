@@ -38,6 +38,7 @@ def synetune_objective_function(
     from syne_tune import Reporter
     from sklearn import linear_model
     from autoencodix.configs.imagix3d_config import Imagix3DConfig
+    from autoencodix.utils._utils import custom_splits_from_anno
     from autoencodix.configs.default_config import (
         DataConfig,
         DataCase,
@@ -47,7 +48,6 @@ def synetune_objective_function(
     volconfig = Imagix3DConfig(
         # Tunable params
         beta=beta,
-        batch_size=batch_size,
         latent_dim=latent_dim,
         hidden_dim=hidden_dim,
         weight_decay=weight_decay,
@@ -60,6 +60,7 @@ def synetune_objective_function(
         img_path_col="filepath",
         spatial_shape_policy="crop_or_pad_to_shape",
         target_shape_3d=(160, 192, 160),
+        batch_size=batch_size,
         checkpoint_interval=checkpoint_interval,
         epochs=epochs,
         reconstruction_loss="mse",
@@ -87,9 +88,16 @@ def synetune_objective_function(
         ),
     )
 
+    custom_splits = custom_splits_from_anno(
+        annotation_file=annotation_file, 
+        split_col="custom_splits", 
+        sample_id_col="sample_id")
+    
     report = Reporter()
     try:
-        imagix3d = acx.Imagix3D(config=volconfig)
+        imagix3d = acx.Imagix3D(
+            config=volconfig,
+            custom_splits=custom_splits)
         imagix3d.run()
 
     except RuntimeError as error:
@@ -153,7 +161,6 @@ def synetune_objective_function(
     )
     #downstream_performance = -1.0
 
-    report = Reporter()
     report(
         downstream_performance=downstream_performance,
         reconstruction_loss=valid_recon_loss,
@@ -185,8 +192,8 @@ def run_synetune_hpo(
 
     config_space = {
         # Fixed params
-        "epochs": 150,
-        "checkpoint_interval": 150,
+        "epochs": 250,
+        "checkpoint_interval": 250,
         "loss_reduction": "mean",
         "volume_root": str(volume_root),
         "annotation_file": str(annotation_file),
@@ -194,7 +201,7 @@ def run_synetune_hpo(
         "anneal_function": "logistic-late",
         #"train_normalization": "group",
         #"keep_mu_positive": 0,
-        #"batch_size": 48,
+        "batch_size": 35,
         #"hidden_dim": 16,
 
         # Hardware params
@@ -202,12 +209,12 @@ def run_synetune_hpo(
         "n_gpus": 1,
 
         # Tunable params
-        "batch_size": choice([16, 32, 48]),
+        # "batch_size": choice([16, 32, 48]),
         "learning_rate": loguniform(1e-7, 1e-3),
         "weight_decay": loguniform(1e-7, 1e-2),
-        "beta": loguniform(1e-7, 5e-2),
-        "latent_dim": choice([16, 32, 48, 64, 96, 128]),
-        "hidden_dim": choice([16, 32, 48, 64, 80]),
+        "beta": loguniform(1e-8, 5e-2),
+        "latent_dim": choice([16, 32, 48, 64, 80, 96, 112, 128]),
+        "hidden_dim": choice([16, 32, 48, 64]),
         "train_normalization": choice(["group", "instance", "batch"]),
         # "anneal_function": choice(
         #     [
@@ -225,7 +232,7 @@ def run_synetune_hpo(
 
     points_to_evaluate = [
         {
-            "batch_size": 32,
+            #"batch_size": 32,
             "learning_rate": 0.001,
             "weight_decay": 0.001,
             "beta": 0.05,
@@ -260,6 +267,15 @@ def run_synetune_hpo(
     
     metadata = {
         "points_to_evaluate": json.dumps(points_to_evaluate),
+        "volume_scaling_strategy": "train_global",
+        "custom_split_column": "custom_splits",
+        "sample_id_column": "sample_id",
+        "folder": folder,
+        "annotation_file": anno,
+        "tasks": tasks,
+        "metric": metric,
+        "epochs": 250,
+        "batch_size": 35,
     }
     
     tuner = Tuner(

@@ -27,9 +27,6 @@ echo "SLURM_JOB_ID=${SLURM_JOB_ID}"
 echo "CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-not set}"
 echo "SLURM_JOB_GPUS=${SLURM_JOB_GPUS:-not set}"
 
-which python
-python --version
-
 nvidia-smi
 
 srun python - <<'PY'
@@ -96,7 +93,6 @@ out_dir = Path(os.environ["OUT_DIR"])
 max_wallclock_hours = float(os.environ.get("MAX_WALLCLOCK_HOURS", "11.5"))
 max_wallclock_time = int(max_wallclock_hours * 60 * 60)
 n_workers = int(os.environ.get("N_WORKERS", "4"))
-out_dir.mkdir(parents=True, exist_ok=True)
 
 tuning_experiment = run_synetune_hpo(
     data_path=data_path,

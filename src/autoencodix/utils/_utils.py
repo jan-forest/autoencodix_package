@@ -694,6 +694,7 @@ def preprocess_explanations(
 def custom_splits_from_anno(
     annotation_file: str | Path,
     split_col: str = "split",
+    sample_id_col: str = "sample_id",
 ) -> dict[str, np.ndarray]:
     """Create custom split indices from an annotation table.
 
@@ -704,6 +705,7 @@ def custom_splits_from_anno(
     Args:
         annotation_file: Path to the annotation CSV file.
         split_col: Name of the column containing split assignments.
+        sample_id_col: Name of the column containing sample identifiers.
 
     Returns:
         A dictionary with three entries:
@@ -719,8 +721,14 @@ def custom_splits_from_anno(
 
     if split_col not in df.columns:
         raise ValueError(f"Missing split column: {split_col}")
+    
+    if sample_id_col not in df.columns:
+        raise ValueError(f"Missing sample ID column: {sample_id_col}")
 
-    split_values = (df[split_col].astype(str).str.strip().str.lower())
+    # Anno (df) gets sorted by sample_id, since Anno gets later sorted during prep as well
+    # Hence, if df does not get sorted here, custom_splits indices would mismatch the order of samples during prep
+    df = df.sort_values(by=sample_id_col) 
+    split_values = df[split_col].astype(str).str.strip().str.lower()
 
     allowed = {"train", "valid", "test"}
     observed = set(split_values.unique())
@@ -732,6 +740,8 @@ def custom_splits_from_anno(
             f"Allowed values are: {allowed}"
         )
 
+    #sample_ids = df[sample_id_col].astype(str)
+    
     custom_splits = {
         "train": np.where(split_values == "train")[0].astype(int),
         "valid": np.where(split_values == "valid")[0].astype(int),
@@ -739,7 +749,7 @@ def custom_splits_from_anno(
     }
 
     print("Custom split sizes:")
-    for split, idx in custom_splits.items():
-        print(split, len(idx), idx[:10])
+    for split, ids in custom_splits.items():
+        print(split, len(ids), ids[:10])
 
     return custom_splits

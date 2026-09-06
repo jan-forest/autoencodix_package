@@ -289,13 +289,15 @@ class PairedUnpairedSplitter:
             sample IDs belonging to each combination (e.g., RNA+Protein pairs).
     """
 
-    def __init__(self, data_package, config, custom_splits: Optional[Dict[str, np.ndarray]]):
+    def __init__(self, data_package, config, custom_splits: Optional[Dict[str, np.ndarray]] = None):
         """Initializes the splitter and computes modality membership groups.
 
         Args:
             data_package: The full data package to split. Must implement
                 `_get_sample_ids` and iterable access yielding (key, object) pairs.
             config: Split configuration object defining ratios and random seed.
+        custom_splits: Optional dictionary with train, valid, and test sample IDs.
+            
 
         Raises:
             TypeError: If `data_package` is not a valid DataPackage instance.
@@ -475,7 +477,9 @@ class PairedUnpairedSplitter:
                             )
         return final_indices
     
-    def _per_modality_splits_from_custom_splits(self) -> Dict[str, Dict[str, Set[str]]]:
+    def _per_modality_splits_from_custom_splits(
+        self,
+    ) -> Dict[str, Dict[str, Set[str]]]:
         """Create modality-wise split ID sets from custom annotation indices.
 
         Custom splits are interpreted as row positions in a single annotation

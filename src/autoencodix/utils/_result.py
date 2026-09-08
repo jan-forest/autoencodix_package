@@ -82,6 +82,7 @@ class Result:
         sub_results: Optional[Dict[str, Any]] containing sub-results for multi-task or multi-modal models.
         sub_reconstructions: Optional[Dict[str, Any]] containing sub-reconstructions for multi-task or multi-modal models.
         embedding_evaluation: pd.DataFrame containing embedding evaluation results.
+        class_means: Optional[Dict[str, Any]] containing the class means of the last epoch.
     """
 
     latentspaces: TrainingDynamics = field(default_factory=TrainingDynamics)
@@ -96,6 +97,9 @@ class Result:
         default_factory=torch.nn.Module
     )
     model_checkpoints: TrainingDynamics = field(default_factory=TrainingDynamics)
+    # Last epoch class means
+    # NOTE: OK to add here?
+    class_means: Optional[Dict[str, Any]] = field(default_factory=TrainingDynamics)
 
     datasets: Optional[DatasetContainer] = field(
         default_factory=lambda: DatasetContainer(train=None, valid=None, test=None)

@@ -20,7 +20,7 @@ class SupervisixConfig(VarixConfig):
         description="Delta weighting factor for class-based cohesion loss in supervisix VAE architecture"
     )
 
-    # TODO: Add @model_validator flag?
+    # NOTE: Adding this validator means running config=SupervisixConfig(); config.print_schema() does not work
     @model_validator(mode="after")
     def _check_class_param_is_set(self):
         if self.class_param is None:

@@ -296,7 +296,7 @@ class SupervisixLoss(BaseLoss):
         return total_loss, {
             "recon_loss": recon_loss,
             "var_loss": var_loss * effective_beta,
-            "class_sep_loss": class_sep_loss * self.config.gamma_class_separation,
+            "class_separation_loss": class_sep_loss * self.config.gamma_class_separation,
             "class_cohesion_loss": class_cohesion_loss * self.config.delta_class_cohesion,
             "anneal_factor": torch.tensor(anneal_factor),
             "effective_beta_factor": torch.tensor(effective_beta),

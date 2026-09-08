@@ -22,7 +22,7 @@ from autoencodix.utils._result import Result
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.configs.supervisix_config import SupervisixConfig
 from autoencodix.utils._losses import SupervisixLoss
-from autoencodix.visualize._general_visualizer import GeneralVisualizer
+from autoencodix.visualize._supervisix_visualizer import SupervisixVisualizer
 
 
 class Supervisix(BasePipeline):
@@ -45,7 +45,7 @@ class Supervisix(BasePipeline):
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
         loss_type: Type[BaseLoss] = SupervisixLoss,
         preprocessor_type: Type[BasePreprocessor] = GeneralPreprocessor,
-        visualizer: Type[BaseVisualizer] = GeneralVisualizer,
+        visualizer: Type[BaseVisualizer] = SupervisixVisualizer,
         evaluator: Optional[Type[BaseEvaluator]] = GeneralEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
@@ -62,7 +62,7 @@ class Supervisix(BasePipeline):
         See parent class for full list of Args.
 
         """
-        self._default_config = SupervisixConfig()
+        self._default_config = SupervisixConfig.model_construct()
         
         super().__init__(
             data=data,

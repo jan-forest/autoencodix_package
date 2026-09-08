@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from typing import Optional, Type, Dict, List
+from typing import Optional, Type, Dict, List, Union, Any
 from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_loss import BaseLoss
@@ -144,3 +144,40 @@ class SupervisixTrainer(GeneralTrainer):
                 self.epoch_class_means_train[class_label] = means.mean(dim=0)
             elif dataset_type == "valid":
                 self.epoch_class_means_valid[class_label] = means.mean(dim=0)
+
+    def _dynamics_to_result(self, epoch: int, split: str) -> None:
+        """Transfers buffered dynamics to the Result object.
+
+        Args:
+            epoch: The current epoch number.
+            split: The data split ("train", "valid", or "test").
+        """
+
+        def maybe_add(buffer, target):
+            if buffer[split] is not None and buffer[split].sum() != 0:
+                target.add(
+                    epoch=epoch, split=split, data=buffer[split].cpu().detach().numpy()
+                )
+
+        self._result.latentspaces.add(
+            epoch=epoch,
+            split=split,
+            data=self._latentspace_buffer[split].cpu().detach().numpy(),
+        )
+        self._result.reconstructions.add(
+            epoch=epoch,
+            split=split,
+            data=self._reconstruction_buffer[split].cpu().detach().numpy(),
+        )
+        self._result.sample_ids.add(
+            epoch=epoch, split=split, data=self._sample_ids_buffer[split]
+        )
+
+        if epoch != 0:
+            if split == "train":
+               self._result.class_means.add(epoch=epoch, data=self.epoch_class_means_train, split="train")
+            elif split == "valid":
+                self._result.class_means.add(epoch=epoch, data=self.epoch_class_means_valid, split="valid")
+
+        maybe_add(self._mu_buffer, self._result.mus)
+        maybe_add(self._sigma_buffer, self._result.sigmas)

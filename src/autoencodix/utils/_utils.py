@@ -721,13 +721,13 @@ def custom_splits_from_anno(
 
     if split_col not in df.columns:
         raise ValueError(f"Missing split column: {split_col}")
-    
+
     if sample_id_col not in df.columns:
         raise ValueError(f"Missing sample ID column: {sample_id_col}")
 
     # Anno (df) gets sorted by sample_id, since Anno gets later sorted during prep as well
     # Hence, if df does not get sorted here, custom_splits indices would mismatch the order of samples during prep
-    df = df.sort_values(by=sample_id_col) 
+    df = df.sort_values(by=sample_id_col)
     split_values = df[split_col].astype(str).str.strip().str.lower()
 
     allowed = {"train", "valid", "test"}
@@ -736,12 +736,11 @@ def custom_splits_from_anno(
     invalid = observed - allowed
     if invalid:
         raise ValueError(
-            f"Invalid split labels found: {invalid}. "
-            f"Allowed values are: {allowed}"
+            f"Invalid split labels found: {invalid}. " f"Allowed values are: {allowed}"
         )
 
-    #sample_ids = df[sample_id_col].astype(str)
-    
+    # sample_ids = df[sample_id_col].astype(str)
+
     custom_splits = {
         "train": np.where(split_values == "train")[0].astype(int),
         "valid": np.where(split_values == "valid")[0].astype(int),

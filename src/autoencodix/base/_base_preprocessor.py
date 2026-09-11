@@ -889,7 +889,7 @@ class BasePreprocessor(abc.ABC):
     ) -> Tuple[Dict[str, Optional[Dict[str, Any]]], Dict[str, Any]]:
         """Splits a data package into train/validation/test sets.
 
-        Uses user-provided custom splits if available. 
+        Uses user-provided custom splits if available.
         Otherwise, falls back to the default pairing-aware ratio-based split.
 
         Args:
@@ -901,7 +901,7 @@ class BasePreprocessor(abc.ABC):
             2. A dictionary of the synchronized integer indices used for the split.
         """
         pairing_splitter = PairedUnpairedSplitter(
-            data_package=data_package, 
+            data_package=data_package,
             config=self.config,
             custom_splits=self.custom_splits,
         )

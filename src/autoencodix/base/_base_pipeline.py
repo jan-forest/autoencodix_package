@@ -160,7 +160,7 @@ class BasePipeline(abc.ABC):
         self.visualizer = (
             visualizer()  # ty: ignore[call-non-callable]
             if visualizer is not None
-            else BaseVisualizer()  # ty: ignore[call-non-callable] 
+            else BaseVisualizer()  # ty: ignore[call-non-callable]
         )  # ty: ignore[call-non-callable]
         self.evaluator = (
             evaluator()  # ty: ignore[call-non-callable]

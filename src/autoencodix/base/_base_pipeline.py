@@ -155,6 +155,7 @@ class BasePipeline(abc.ABC):
         self._preprocessor = self._preprocessor_type(
             config=self.config, ontologies=self.ontologies
         )
+        self._preprocessor.custom_splits = custom_split
 
         self.visualizer = (
             visualizer()  # ty: ignore[call-non-callable]

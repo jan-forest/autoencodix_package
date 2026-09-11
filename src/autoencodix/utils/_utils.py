@@ -18,6 +18,7 @@ from autoencodix.utils._result import Result
 import dill as pickle  # type: ignore
 import torch
 import pandas as pd
+import numpy as np
 from matplotlib import pyplot as plt
 
 from autoencodix.configs.default_config import DefaultConfig
@@ -688,8 +689,6 @@ def preprocess_explanations(
         result[col] = df.nlargest(n, col).index.tolist()
 
     return result
-<<<<<<< HEAD
-=======
 
 
 def custom_splits_from_anno(
@@ -754,4 +753,3 @@ def custom_splits_from_anno(
         print(split, len(ids), ids[:10])
 
     return custom_splits
->>>>>>> 19a302a (fixed custom_split order bug)

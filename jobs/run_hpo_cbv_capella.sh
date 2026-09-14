@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=hpo_cbv_01_capella
-#SBATCH --account=p_scads_stroke
+#SBATCH --job-name=hpo_cbv_03_capella
+#SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=capella
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -58,7 +58,7 @@ export MAX_WALLCLOCK_HOURS=11.5
 export N_WORKERS=4
 
 HPO_ROOT="/data/horse/ws/baeuchl-imagix3d/hpo"
-RUN_NAME="cbv_01_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
+RUN_NAME="cbv_03_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
 OUT_DIR="${HPO_ROOT}/${RUN_NAME}"
 
 mkdir -p "${OUT_DIR}"

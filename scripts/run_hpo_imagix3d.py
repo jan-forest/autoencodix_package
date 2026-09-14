@@ -33,6 +33,8 @@ def synetune_objective_function(
 ) -> None:
     import numpy as np
     import sklearn
+    import os
+    import mlflow
     import autoencodix as acx
 
     from syne_tune import Reporter
@@ -44,6 +46,49 @@ def synetune_objective_function(
         DataCase,
         DataInfo,
     )
+    
+    # mlflow
+    
+    modality = Path(volume_root).name.replace("_flat", "")
+    
+    mlflow.set_tracking_uri(
+        os.environ.get(
+            "MLFLOW_TRACKING_URI",
+            "file:/data/horse/ws/baeuchl-imagix3d/mlruns",
+        )
+    )
+
+    mlflow.set_experiment("imagix3d_hpo")
+
+    with mlflow.start_run(run_name=f"{modality}_trial"):
+        mlflow.set_tags(
+            {
+                "modality": modality,
+                "slurm_job_id": os.environ.get("SLURM_JOB_ID", "unknown"),
+                "pipeline": "Imagix3D",
+                "hpo_backend": "Syne Tune",
+                "volume_root": volume_root,
+                "annotation_file": annotation_file,
+            }
+        )
+
+        mlflow.log_params(
+            {   
+                "epochs": epochs,
+                "learning_rate": learning_rate,
+                "loss_reduction": loss_reduction,
+                "weight_decay": weight_decay,
+                "beta": beta,
+                "latent_dim": latent_dim,
+                "hidden_dim": hidden_dim,
+                "train_normalization": train_normalization,
+                "keep_mu_positive": keep_mu_positive,
+                "batch_size": batch_size,
+                "anneal_function": anneal_function,
+                "tasks": tasks,
+            }
+        )
+
 
     volconfig = Imagix3DConfig(
         # Tunable params
@@ -110,17 +155,24 @@ def synetune_objective_function(
             )
             torch.cuda.empty_cache()
 
-            report(
-                downstream_performance=-1.0,
-                reconstruction_loss=1e9,
-                train_reconstruction_loss=1e9,
-                valid_total_loss=1e9,
-                train_total_loss=1e9,
-                valid_var_loss=1e9,
-                recon_generalization_gap=1e9,
-            )
+            oom_metrics = {
+                "downstream_performance": -1.0,
+                "reconstruction_loss": 1e9,
+                "train_reconstruction_loss": 1e9,
+                "valid_total_loss": 1e9,
+                "train_total_loss": 1e9,
+                "valid_var_loss": 1e9,
+                "recon_generalization_gap": 1e9,
+            }
+            
+            mlflow.set_tag("trial_status", "oom")
+            mlflow.log_metrics(oom_metrics)
+            
+            report(**oom_metrics)
             return
-
+        
+        mlflow.set_tag("trial_status", "failed")
+        mlflow.set_tag("error", repr(error)[:5000])
         raise
 
     valid_recon_loss = float(np.asarray(imagix3d.result.sub_losses.get("recon_loss").get(epoch=-1,split="valid",)).item())
@@ -161,15 +213,21 @@ def synetune_objective_function(
     )
     #downstream_performance = -1.0
 
-    report(
-        downstream_performance=downstream_performance,
-        reconstruction_loss=valid_recon_loss,
-        train_reconstruction_loss=train_recon_loss,
-        valid_total_loss=valid_total_loss,
-        train_total_loss=train_total_loss,
-        valid_var_loss=valid_var_loss,
-        recon_generalization_gap=valid_recon_loss - train_recon_loss,
-    )
+    metrics = {
+        "downstream_performance": downstream_performance,
+        "reconstruction_loss": valid_recon_loss,
+        "train_reconstruction_loss": train_recon_loss,
+        "valid_total_loss": valid_total_loss,
+        "train_total_loss": train_total_loss,
+        "valid_var_loss": valid_var_loss,
+        "recon_generalization_gap": valid_recon_loss - train_recon_loss,
+    }
+    
+    # mlflow
+    mlflow.set_tag("trial_status", "completed")
+    mlflow.log_metrics(metrics)
+    
+    report(**metrics)
 
 
 def run_synetune_hpo(
@@ -210,11 +268,11 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(1e-6, 5e-4),
-        "weight_decay": loguniform(1e-8, 1e-4),
-        "beta": loguniform(1e-8, 1e-5),
-        "latent_dim": choice([32, 48, 64, 80, 96, 112]),
-        "hidden_dim": choice([16, 32, 48]),
+        "learning_rate": loguniform(5e-5, 3e-3),
+        "weight_decay": loguniform(1e-6, 1e-2),
+        "beta": loguniform(1e-8, 1e-3),
+        "latent_dim": choice([48, 64, 80, 96, 112]),
+        "hidden_dim": choice([16, 32]),
         "train_normalization": choice(["group", "instance", "batch"]),
         # "anneal_function": choice(
         #     [

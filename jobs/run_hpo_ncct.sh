@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=hpo_ncct_01
+#SBATCH --job-name=hpo_ncct_03_alpha
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -57,6 +57,9 @@ export TASKS="median_split"
 export MAX_WALLCLOCK_HOURS=11.5
 export N_WORKERS=4
 
+export MLFLOW_ALLOW_FILE_STORE=true
+export MLFLOW_TRACKING_URI="file:/data/horse/ws/baeuchl-imagix3d/mlruns"
+
 HPO_ROOT="/data/horse/ws/baeuchl-imagix3d/hpo"
 RUN_NAME="ncct_01_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
 OUT_DIR="${HPO_ROOT}/${RUN_NAME}"
@@ -103,6 +106,12 @@ tuning_experiment = run_synetune_hpo(
     max_wallclock_time=max_wallclock_time,
     n_workers=n_workers,
 )
+
+if tuning_experiment.results is None:
+    raise RuntimeError(
+        "Syne Tune produced no results. "
+        "All initial trials may have failed. Check the trial stderr/stdout logs."
+    )
 
 results = tuning_experiment.results.copy()
 

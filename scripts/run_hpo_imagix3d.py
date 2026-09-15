@@ -269,10 +269,10 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(5e-6, 2e-3),
-        "weight_decay": loguniform(1e-5, 1e-2),
-        "beta": loguniform(1e-8, 1e-3),
-        "latent_dim": choice([32, 64, 80, 96]),
+        "learning_rate": loguniform(1e-6, 3e-4),
+        "weight_decay": loguniform(1e-8, 1e-4),
+        "beta": loguniform(1e-8, 1e-5),
+        "latent_dim": choice([48, 64, 80, 96, 112]),
         "hidden_dim": choice([16, 32]),
         "train_normalization": choice(["group", "instance", "batch"]),
         # "anneal_function": choice(
@@ -292,13 +292,13 @@ def run_synetune_hpo(
     points_to_evaluate = [
         {
             #"batch_size": 32,
-            "learning_rate": 0.000076127037,
-            "weight_decay": 0.0036422,
-            "beta": 0.000000013829018,
+            "learning_rate": 5.850213438680338e-05,
+            "weight_decay": 1.8316823097080185e-07,
+            "beta": 2.942411616354062e-07,
             "latent_dim": 64,
             "hidden_dim": 32,
             #"anneal_function": "logistic-late",
-            "train_normalization": "batch",
+            "train_normalization": "instance",
             "keep_mu_positive": 0
         }
     ]

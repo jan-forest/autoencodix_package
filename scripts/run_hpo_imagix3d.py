@@ -39,6 +39,7 @@ def synetune_objective_function(
 
     from syne_tune import Reporter
     from sklearn import linear_model
+    from pathlib import Path
     from autoencodix.configs.imagix3d_config import Imagix3DConfig
     from autoencodix.utils._utils import custom_splits_from_anno
     from autoencodix.configs.default_config import (

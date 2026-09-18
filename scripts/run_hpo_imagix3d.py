@@ -290,17 +290,38 @@ def run_synetune_hpo(
     }
 
     points_to_evaluate = [
+        # NCCT run #1 best: current highest downstream performance
         {
-            #"batch_size": 32,
-            "learning_rate": 0.000199117,
-            "weight_decay": 0.000346749,
-            "beta": 8.38118e-08,
-            "latent_dim": 64,
-            "hidden_dim": 32,
-            #"anneal_function": "logistic-late",
-            #"train_normalization": "instance",
-            #"keep_mu_positive": 0
-        }
+        "learning_rate": 3.1484983656998606e-05,
+        "weight_decay": 7.737374408547984e-06,
+        "beta": 6.718196015256182e-07,
+        "latent_dim": 96,
+        "hidden_dim": 32,
+        "train_normalization": "instance",
+        "keep_mu_positive": 0,
+        },
+
+        # NCCT run #3 best: similar downstream performance, better reconstruction loss
+        {
+        "learning_rate": 0.0004202778157322,
+        "weight_decay": 1.50906879119613e-05,
+        "beta": 2.304419600620328e-07,
+        "latent_dim": 96,
+        "hidden_dim": 16,
+        "train_normalization": "instance",
+        "keep_mu_positive": 0,
+        },
+
+        # NCCT run #2 best: lower metric, but confirms latent_dim=112 / hidden_dim=16
+        {
+        "learning_rate": 5.284236970400262e-05,
+        "weight_decay": 5.059848789073941e-06,
+        "beta": 5.5861251879963046e-05,
+        "latent_dim": 112,
+        "hidden_dim": 16,
+        "train_normalization": "instance",
+        "keep_mu_positive": 0,
+        },
     ]
 
     if metric == "downstream_performance":

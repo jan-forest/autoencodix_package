@@ -269,12 +269,12 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(1e-4, 5e-2),
-        "weight_decay": loguniform(5e-4, 5e-2),
-        "beta": loguniform(5e-6, 1e-1),
-        "latent_dim": choice([48, 64, 80, 96]),
+        "learning_rate": loguniform(2e-5, 1e-2),
+        "weight_decay": loguniform(1e-74, 1e-4),
+        "beta": loguniform(1e-8, 1e-4),
+        "latent_dim": choice([64, 80, 96, 112, 128]),
         "hidden_dim": choice([16, 24, 32, 40]),
-        "train_normalization": "batch", # choice(["group", "instance", "batch"]),
+        "train_normalization": "instance", # choice(["group", "instance", "batch"]),
         # "anneal_function": choice(
         #     [
         #         "5phase-constant",

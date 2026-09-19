@@ -269,10 +269,10 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(2e-5, 1e-2),
-        "weight_decay": loguniform(1e-74, 1e-4),
-        "beta": loguniform(1e-8, 1e-4),
-        "latent_dim": choice([64, 80, 96, 112, 128]),
+        "learning_rate": loguniform(5e-6, 3e-4),
+        "weight_decay": loguniform(1e-6, 2e-3),
+        "beta": loguniform(1e-10, 1e-6),
+        "latent_dim": choice([80, 96, 112, 128, 144, 160]),
         "hidden_dim": choice([16, 24, 32, 40]),
         "train_normalization": "instance", # choice(["group", "instance", "batch"]),
         # "anneal_function": choice(
@@ -286,41 +286,30 @@ def run_synetune_hpo(
         #     ]
         # ),
         # Encoded as scalar values for Syne Tune compatibility
-        "keep_mu_positive": 0 # choice([0, 1])
+        "keep_mu_positive": choice([0, 1])
     }
 
     points_to_evaluate = [
-        # NCCT run #1 best: current highest downstream performance
+    # CBF run #2 best: current strongest candidate
         {
-        "learning_rate": 3.1484983656998606e-05,
-        "weight_decay": 7.737374408547984e-06,
-        "beta": 6.718196015256182e-07,
-        "latent_dim": 96,
+        "learning_rate": 1.0096108555965044e-05,
+        "weight_decay": 1.794364217052906e-05,
+        "beta": 3.2465959108014116e-09,
+        "latent_dim": 128,
         "hidden_dim": 32,
         "train_normalization": "instance",
         "keep_mu_positive": 0,
         },
 
-        # NCCT run #3 best: similar downstream performance, better reconstruction loss
+    # CBF run #3 best: second strongest candidate
         {
-        "learning_rate": 0.0004202778157322,
-        "weight_decay": 1.50906879119613e-05,
-        "beta": 2.304419600620328e-07,
-        "latent_dim": 96,
-        "hidden_dim": 16,
+        "learning_rate": 4.184192670480219e-05,
+        "weight_decay": 0.0007032460927866,
+        "beta": 7.00177975840861e-10,
+        "latent_dim": 128,
+        "hidden_dim": 24,
         "train_normalization": "instance",
-        "keep_mu_positive": 0,
-        },
-
-        # NCCT run #2 best: lower metric, but confirms latent_dim=112 / hidden_dim=16
-        {
-        "learning_rate": 5.284236970400262e-05,
-        "weight_decay": 5.059848789073941e-06,
-        "beta": 5.5861251879963046e-05,
-        "latent_dim": 112,
-        "hidden_dim": 16,
-        "train_normalization": "instance",
-        "keep_mu_positive": 0,
+        "keep_mu_positive": 1,
         },
     ]
 

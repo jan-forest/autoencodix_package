@@ -290,35 +290,35 @@ def run_synetune_hpo(
     }
 
     points_to_evaluate = [
-    # CBV run #2 best: best non-pathological candidate
+        # CTA run #2 best: current strongest candidate
         {
-        "learning_rate": 0.0015888483864368,
-        "weight_decay": 0.0042890658627928,
-        "beta": 3.3446270653085546e-06,
+        "learning_rate": 7.61270376540526e-05,
+        "weight_decay": 0.0036422151620167,
+        "beta": 1.3829018849325669e-08,
         "latent_dim": 64,
         "hidden_dim": 32,
         "train_normalization": "batch",
         "keep_mu_positive": 0,
         },
 
-    # Run #1-like, but with safe beta
+        # CTA run #3 best: weaker, but useful secondary point
         {
-        "learning_rate": 0.001,
-        "weight_decay": 0.001,
-        "beta": 1e-5,
-        "latent_dim": 48,
+        "learning_rate": 1.6177501886844578e-05,
+        "weight_decay": 4.794828149976005e-07,
+        "beta": 2.422928132731304e-06,
+        "latent_dim": 80,
         "hidden_dim": 16,
         "train_normalization": "batch",
         "keep_mu_positive": 0,
         },
 
-    # Run #3-like, but with capped weight_decay and safe beta
+        # Hybrid: run #2 region, but smaller hidden_dim
         {
-        "learning_rate": 0.0006713238111597,
-        "weight_decay": 0.008,
-        "beta": 1e-5,
-        "latent_dim": 48,
-        "hidden_dim": 32,
+        "learning_rate": 7.61270376540526e-05,
+        "weight_decay": 0.0036422151620167,
+        "beta": 1.3829018849325669e-08,
+        "latent_dim": 64,
+        "hidden_dim": 16,
         "train_normalization": "batch",
         "keep_mu_positive": 0,
         },

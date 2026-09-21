@@ -269,12 +269,12 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(5e-6, 3e-4),
-        "weight_decay": loguniform(1e-6, 2e-3),
-        "beta": loguniform(1e-10, 1e-6),
-        "latent_dim": choice([80, 96, 112, 128, 144, 160]),
+        "learning_rate": loguniform(5e-4, 5e-2),
+        "weight_decay": loguniform(1e-5, 5e-2),
+        "beta": loguniform(1e-6, 1e-1),
+        "latent_dim": choice([32, 48, 64, 80]),
         "hidden_dim": choice([16, 24, 32, 40]),
-        "train_normalization": "instance", # choice(["group", "instance", "batch"]),
+        "train_normalization": "batch", # choice(["group", "instance", "batch"]),
         # "anneal_function": choice(
         #     [
         #         "5phase-constant",
@@ -286,30 +286,41 @@ def run_synetune_hpo(
         #     ]
         # ),
         # Encoded as scalar values for Syne Tune compatibility
-        "keep_mu_positive": choice([0, 1])
+        "keep_mu_positive": 0 # choice([0, 1])
     }
 
     points_to_evaluate = [
-    # CBF run #2 best: current strongest candidate
+    # CBV run #2 best: best non-pathological candidate
         {
-        "learning_rate": 1.0096108555965044e-05,
-        "weight_decay": 1.794364217052906e-05,
-        "beta": 3.2465959108014116e-09,
-        "latent_dim": 128,
+        "learning_rate": 0.0015888483864368,
+        "weight_decay": 0.0042890658627928,
+        "beta": 3.3446270653085546e-06,
+        "latent_dim": 64,
         "hidden_dim": 32,
-        "train_normalization": "instance",
+        "train_normalization": "batch",
         "keep_mu_positive": 0,
         },
 
-    # CBF run #3 best: second strongest candidate
+    # Run #1-like, but with safe beta
         {
-        "learning_rate": 4.184192670480219e-05,
-        "weight_decay": 0.0007032460927866,
-        "beta": 7.00177975840861e-10,
-        "latent_dim": 128,
-        "hidden_dim": 24,
-        "train_normalization": "instance",
-        "keep_mu_positive": 1,
+        "learning_rate": 0.001,
+        "weight_decay": 0.001,
+        "beta": 1e-5,
+        "latent_dim": 48,
+        "hidden_dim": 16,
+        "train_normalization": "batch",
+        "keep_mu_positive": 0,
+        },
+
+    # Run #3-like, but with capped weight_decay and safe beta
+        {
+        "learning_rate": 0.0006713238111597,
+        "weight_decay": 0.008,
+        "beta": 1e-5,
+        "latent_dim": 48,
+        "hidden_dim": 32,
+        "train_normalization": "batch",
+        "keep_mu_positive": 0,
         },
     ]
 

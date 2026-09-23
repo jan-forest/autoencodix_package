@@ -97,9 +97,8 @@ class Result:
         default_factory=torch.nn.Module
     )
     model_checkpoints: TrainingDynamics = field(default_factory=TrainingDynamics)
-    # Last epoch class means
-    # NOTE: OK to add here?
-    class_means: Optional[Dict[str, Any]] = field(default_factory=TrainingDynamics)
+
+    class_means: TrainingDynamics = field(default_factory=TrainingDynamics)
 
     datasets: Optional[DatasetContainer] = field(
         default_factory=lambda: DatasetContainer(train=None, valid=None, test=None)

@@ -11,7 +11,7 @@ import os
 from collections import defaultdict
 from dataclasses import MISSING, fields, is_dataclass
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, no_type_check
+from typing import Any, Callable, Dict, List, Optional, no_type_check, Union
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.utils._result import Result
 
@@ -268,7 +268,7 @@ class Saver:
 
     """
 
-    def __init__(self, file_path: str, save_all: bool):
+    def __init__(self, file_path: Union[str, Path], save_all: bool):
         """Initializes the Saver with the base file path.
 
         Args:
@@ -430,7 +430,7 @@ class Loader:
         model_state_path: path where model state dict was saved.
     """
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: Union[str, Path]):
         """Initializes the Loader with the base file path.
 
         Args:

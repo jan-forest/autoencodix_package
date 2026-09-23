@@ -3,6 +3,7 @@ import re
 import json
 import ollama
 from dotenv import find_dotenv, load_dotenv
+from openai import OpenAI
 
 try:
     # mistralai>=2.0.0

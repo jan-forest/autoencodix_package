@@ -1,6 +1,6 @@
 [project]
 name = "autoencodix"
-version = "0.2.4"
+version = "0.2.5"
 authors = [
   { name="Maximilian Joas & Jan Ewald", email="jan.ewald@uni-leipzig.de" },
 ]
@@ -43,10 +43,11 @@ dependencies = [
     "mistralai>=1.9.11",
     "ollama>=0.6.1",
     "openai==2.31.0",
-    "tensorboard-plugin-profile==2.20.1",
+    "tensorboard-plugin-profile>=2.20",
     "tensorboard>=2.20.0",
     "python-dotenv>=1.2.1",
     "syne-tune>=0.16.0",
+    "huggingface_hub>=0.24.0",
 ]
 
 [dependency-groups]

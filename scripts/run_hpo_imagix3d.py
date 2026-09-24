@@ -269,12 +269,12 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(5e-6, 1e-4),
-        "weight_decay": loguniform(1e-7, 1e-6),
-        "beta": loguniform(1e-8, 1e-6),
-        "latent_dim": choice([64, 80, 96]),
-        "hidden_dim": choice([16, 24, 32, 40]),
-        "train_normalization": "batch", # choice(["instance", "batch"]),
+        "learning_rate": loguniform(2e-5, 5e-4),
+        "weight_decay": loguniform(1e-6, 1e-4),
+        "beta": loguniform(5e-8, 1e-4),
+        "latent_dim": choice([80, 96, 112, 128]),
+        "hidden_dim": choice([16, 32]),
+        "train_normalization": "instance", # choice(["instance", "batch"]),
         # "anneal_function": choice(
         #     [
         #         "5phase-constant",
@@ -286,41 +286,41 @@ def run_synetune_hpo(
         #     ]
         # ),
         # Encoded as scalar values for Syne Tune compatibility
-        "keep_mu_positive": choice([0, 1])
+        "keep_mu_positive": 0 #choice([0, 1])
     }
 
     points_to_evaluate = [
-    # Tmax run #3 best: current strongest candidate
+        # Run #1: highest observed AUC
         {
-        "learning_rate": 5.669679481361423e-05,
-        "weight_decay": 9.693890923007569e-07,
-        "beta": 1.2561431015151065e-07,
-        "latent_dim": 80,
-        "hidden_dim": 32,
-        "train_normalization": "batch",
-        "keep_mu_positive": 1,
-        },
-
-    # Tmax run #1 best: second strongest candidate
-        {
-        "learning_rate": 5.850213438680338e-05,
-        "weight_decay": 1.8316823097080185e-07,
-        "beta": 2.942411616354062e-07,
-        "latent_dim": 64,
+        "learning_rate": 3.1484983656998606e-05,
+        "weight_decay": 7.737374408547984e-06,
+        "beta": 6.718196015256182e-07,
+        "latent_dim": 96,
         "hidden_dim": 32,
         "train_normalization": "instance",
         "keep_mu_positive": 0,
         },
 
-    # Hybrid: run #3 numeric region with instance normalization
+        # Run #2: lower peak, but most stable when repeated
         {
-        "learning_rate": 5.669679481361423e-05,
-        "weight_decay": 9.693890923007569e-07,
-        "beta": 1.2561431015151065e-07,
-        "latent_dim": 80,
-        "hidden_dim": 32,
+        "learning_rate": 5.284236970400262e-05,
+        "weight_decay": 5.059848789073941e-06,
+        "beta": 5.5861251879963046e-05,
+        "latent_dim": 112,
+        "hidden_dim": 16,
         "train_normalization": "instance",
-        "keep_mu_positive": 1,
+        "keep_mu_positive": 0,
+        },
+
+        # Run #3: second-highest observed AUC, different LR region
+        {
+        "learning_rate": 4.202778157322e-04,
+        "weight_decay": 1.50906879119613e-05,
+        "beta": 2.304419600620328e-07,
+        "latent_dim": 96,
+        "hidden_dim": 16,
+        "train_normalization": "instance",
+        "keep_mu_positive": 0,
         },
     ]
 

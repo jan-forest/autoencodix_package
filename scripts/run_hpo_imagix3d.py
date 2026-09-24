@@ -269,11 +269,11 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(2e-5, 5e-4),
-        "weight_decay": loguniform(1e-6, 1e-4),
-        "beta": loguniform(5e-8, 1e-4),
-        "latent_dim": choice([80, 96, 112, 128]),
-        "hidden_dim": choice([16, 32]),
+        "learning_rate": loguniform(8e-6, 5e-4),
+        "weight_decay": loguniform(5e-6, 5e-3),
+        "beta": loguniform(5e-11, 1e-6),
+        "latent_dim": choice([80, 96, 112, 128, 144]),
+        "hidden_dim": choice([16, 24, 32]),
         "train_normalization": "instance", # choice(["instance", "batch"]),
         # "anneal_function": choice(
         #     [
@@ -290,35 +290,35 @@ def run_synetune_hpo(
     }
 
     points_to_evaluate = [
-        # Run #1: highest observed AUC
+        # Run #2 best — highest single observed AUC
         {
-        "learning_rate": 3.1484983656998606e-05,
-        "weight_decay": 7.737374408547984e-06,
-        "beta": 6.718196015256182e-07,
-        "latent_dim": 96,
+        "learning_rate": 1.0096108555965044e-05,
+        "weight_decay": 1.794364217052906e-05,
+        "beta": 3.2465959108014116e-09,
+        "latent_dim": 128,
         "hidden_dim": 32,
         "train_normalization": "instance",
         "keep_mu_positive": 0,
         },
 
-        # Run #2: lower peak, but most stable when repeated
+        # Run #4 best — strongest result in the most focused search
         {
-        "learning_rate": 5.284236970400262e-05,
-        "weight_decay": 5.059848789073941e-06,
-        "beta": 5.5861251879963046e-05,
-        "latent_dim": 112,
-        "hidden_dim": 16,
+        "learning_rate": 7.773818163543718e-05,
+        "weight_decay": 5.794051083546537e-05,
+        "beta": 1.5265685442352231e-10,
+        "latent_dim": 128,
+        "hidden_dim": 40,
         "train_normalization": "instance",
         "keep_mu_positive": 0,
         },
 
-        # Run #3: second-highest observed AUC, different LR region
+        # Strong run #3 config representing the high-WD region
         {
-        "learning_rate": 4.202778157322e-04,
-        "weight_decay": 1.50906879119613e-05,
-        "beta": 2.304419600620328e-07,
-        "latent_dim": 96,
-        "hidden_dim": 16,
+        "learning_rate": 5.4e-05,       # use exact CSV value if copying
+        "weight_decay": 8.82e-04,      # use exact CSV value if copying
+        "beta": 8.291019e-07,
+        "latent_dim": 80,
+        "hidden_dim": 40,
         "train_normalization": "instance",
         "keep_mu_positive": 0,
         },

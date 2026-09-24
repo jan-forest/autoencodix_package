@@ -715,6 +715,9 @@ class XModalVisualizer(BaseVisualizer):
             lat_space: DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
             labels: List of labels for each sample. If None, all samples are considered as one group.
             param: Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
+        Notes:
+            Panels share the latent-intensity x-axis, but scale density heights independently. Absolute density heights are comparable only within
+            a panel, not across latent dimensions or modalities.
         Returns:
             g (sns.FacetGrid): FacetGrid object containing the ridge line plot
         """
@@ -780,6 +783,9 @@ class XModalVisualizer(BaseVisualizer):
             aspect=12,
             height=0.8,
             xlim=(xmin.iloc[0], xmax.iloc[0]),
+            # Narrow distributions can have very large density peaks. Sharing
+            # their y-axis flattens unrelated latent dimensions/modalities.
+            sharey=False,
             palette=cat_pal,
         )
 
@@ -810,7 +816,9 @@ class XModalVisualizer(BaseVisualizer):
 
         g.map_dataframe(label, text="latent dim")
 
-        g.set(xlim=(xmin.iloc[0], xmax.iloc[0]))
+        # Autoscale density separately in each panel, with a common baseline.
+        # Keep x shared so latent intensities remain directly comparable.
+        g.set(xlim=(xmin.iloc[0], xmax.iloc[0]), ylim=(0, None))
         # Set the subplots to overlap
         g.figure.subplots_adjust(hspace=-0.5)
 

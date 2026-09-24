@@ -307,7 +307,7 @@ def run_synetune_hpo(
         "weight_decay": 5.794051083546537e-05,
         "beta": 1.5265685442352231e-10,
         "latent_dim": 128,
-        "hidden_dim": 40,
+        "hidden_dim": 32,
         "train_normalization": "instance",
         "keep_mu_positive": 0,
         },
@@ -318,7 +318,7 @@ def run_synetune_hpo(
         "weight_decay": 8.82e-04,      # use exact CSV value if copying
         "beta": 8.291019e-07,
         "latent_dim": 80,
-        "hidden_dim": 40,
+        "hidden_dim": 32,
         "train_normalization": "instance",
         "keep_mu_positive": 0,
         },

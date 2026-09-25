@@ -290,32 +290,35 @@ def run_synetune_hpo(
     }
 
     points_to_evaluate = [
-        # Run #4: highest loss-sane AUC
+        # Run #4-like region:
+        # preserve LR and WD; move beta and latent_dim to nearest allowed values
         {
         "learning_rate": 9.564979533619e-04,
         "weight_decay": 4.492107825686e-05,
-        "beta": 3.103407916899e-04,
-        "latent_dim": 48,
+        "beta": 1e-04,
+        "latent_dim": 64,
         "hidden_dim": 16,
         "train_normalization": "batch",
         "keep_mu_positive": 0,
         },
 
-        # Run #3: almost identical AUC, different WD/beta/hidden region
+        # Run #3-like region:
+        # preserve LR; use upper allowed WD/beta and nearest allowed architecture
         {
         "learning_rate": 8.025116856103e-04,
-        "weight_decay": 2.163570050963e-03,
-        "beta": 6.999125214742e-04,
-        "latent_dim": 48,
-        "hidden_dim": 40,
+        "weight_decay": 1e-03,
+        "beta": 1e-04,
+        "latent_dim": 64,
+        "hidden_dim": 32,
         "train_normalization": "batch",
         "keep_mu_positive": 0,
         },
 
-        # Run #2: strongest low-beta solution
+        # Run #2-like region:
+        # preserve LR, beta and architecture; cap WD at new upper bound
         {
         "learning_rate": 1.588848386437e-03,
-        "weight_decay": 4.289065862793e-03,
+        "weight_decay": 1e-03,
         "beta": 3.344627065309e-06,
         "latent_dim": 64,
         "hidden_dim": 32,

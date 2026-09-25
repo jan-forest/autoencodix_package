@@ -269,12 +269,12 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(5e-4, 5e-3),
-        "weight_decay": loguniform(1e-3, 5e-2),
-        "beta": loguniform(5e-3, 1e-1),
-        "latent_dim": choice([32, 48, 64, 80, 96]),
-        "hidden_dim": choice([16, 32, 40]),
-        "train_normalization": "batch", # choice(["instance", "batch"]),
+        "learning_rate": loguniform(1e-5, 5e-3),
+        "weight_decay": loguniform(1e-7, 5e-5),
+        "beta": loguniform(5e-7, 1e-5),
+        "latent_dim": choice([64, 80, 96]),
+        "hidden_dim": choice([16, 32]),
+        "train_normalization": choice(["instance", "batch"]),
         # "anneal_function": choice(
         #     [
         #         "5phase-constant",
@@ -290,35 +290,38 @@ def run_synetune_hpo(
     }
 
     points_to_evaluate = [
-        # Run #4: almost-best AUC, but considerably cleaner VAE loss
+        # Run #1 best:
+        # strongest instance-normalized anchor
         {
-        "learning_rate": 2.7596373908429e-03,
-        "weight_decay": 2.16895096377976e-02,
-        "beta": 1.08010903388784e-02,
+        "learning_rate": 5.850213438680338e-05,
+        "weight_decay": 1.8316823097080185e-07,
+        "beta": 5e-07,
         "latent_dim": 64,
-        "hidden_dim": 40,
+        "hidden_dim": 32,
+        "train_normalization": "instance",
+        "keep_mu_positive": 0,
+        },
+
+        # Run #4 trial 39:
+        # strongest observed batch-normalized / mu=0 point
+        {
+        "learning_rate": 5.772057967011864e-05,
+        "weight_decay": 1.5983225907618665e-07,
+        "beta": 5e-07,
+        "latent_dim": 80,
+        "hidden_dim": 32,
         "train_normalization": "batch",
         "keep_mu_positive": 0,
         },
 
-        # Run #4 best downstream-performance configuration
+        # Run #4 trial 22:
+        # introduces latent=96 and intermediate beta
         {
-        "learning_rate": 6.328199633522e-04,
-        "weight_decay": 2.29586852261995e-02,
-        "beta": 9.56343842447908e-02,
-        "latent_dim": 64,
-        "hidden_dim": 40,
-        "train_normalization": "batch",
-        "keep_mu_positive": 0,
-        },
-
-        # Stronger low-beta edge of the newly discovered high-WD region
-        {
-        "learning_rate": 2.8057582076672e-03,
-        "weight_decay": 3.28597081696424e-02,
-        "beta": 4.5705630998014e-03,
-        "latent_dim": 32,
-        "hidden_dim": 16,
+        "learning_rate": 7.090097037422294e-05,
+        "weight_decay": 1.346885899362491e-07,
+        "beta": 5e-07,
+        "latent_dim": 96,
+        "hidden_dim": 32,
         "train_normalization": "batch",
         "keep_mu_positive": 0,
         },

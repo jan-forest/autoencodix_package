@@ -269,11 +269,11 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(5e-5, 5e-3),
-        "weight_decay": loguniform(5e-6, 1e-3),
-        "beta": loguniform(1e-7, 1e-4),
-        "latent_dim": choice([64, 80, 96, 112]),
-        "hidden_dim": choice([16, 24, 32]),
+        "learning_rate": loguniform(5e-4, 5e-3),
+        "weight_decay": loguniform(1e-3, 5e-2),
+        "beta": loguniform(5e-3, 1e-1),
+        "latent_dim": choice([32, 48, 64, 80, 96]),
+        "hidden_dim": choice([16, 32, 40]),
         "train_normalization": "batch", # choice(["instance", "batch"]),
         # "anneal_function": choice(
         #     [
@@ -290,38 +290,35 @@ def run_synetune_hpo(
     }
 
     points_to_evaluate = [
-        # Run #4-like region:
-        # preserve LR and WD; move beta and latent_dim to nearest allowed values
+        # Run #4: almost-best AUC, but considerably cleaner VAE loss
         {
-        "learning_rate": 9.564979533619e-04,
-        "weight_decay": 4.492107825686e-05,
-        "beta": 1e-04,
+        "learning_rate": 2.7596373908429e-03,
+        "weight_decay": 2.16895096377976e-02,
+        "beta": 1.08010903388784e-02,
         "latent_dim": 64,
+        "hidden_dim": 40,
+        "train_normalization": "batch",
+        "keep_mu_positive": 0,
+        },
+
+        # Run #4 best downstream-performance configuration
+        {
+        "learning_rate": 6.328199633522e-04,
+        "weight_decay": 2.29586852261995e-02,
+        "beta": 9.56343842447908e-02,
+        "latent_dim": 64,
+        "hidden_dim": 40,
+        "train_normalization": "batch",
+        "keep_mu_positive": 0,
+        },
+
+        # Stronger low-beta edge of the newly discovered high-WD region
+        {
+        "learning_rate": 2.8057582076672e-03,
+        "weight_decay": 3.28597081696424e-02,
+        "beta": 4.5705630998014e-03,
+        "latent_dim": 32,
         "hidden_dim": 16,
-        "train_normalization": "batch",
-        "keep_mu_positive": 0,
-        },
-
-        # Run #3-like region:
-        # preserve LR; use upper allowed WD/beta and nearest allowed architecture
-        {
-        "learning_rate": 8.025116856103e-04,
-        "weight_decay": 1e-03,
-        "beta": 1e-04,
-        "latent_dim": 64,
-        "hidden_dim": 32,
-        "train_normalization": "batch",
-        "keep_mu_positive": 0,
-        },
-
-        # Run #2-like region:
-        # preserve LR, beta and architecture; cap WD at new upper bound
-        {
-        "learning_rate": 1.588848386437e-03,
-        "weight_decay": 1e-03,
-        "beta": 3.344627065309e-06,
-        "latent_dim": 64,
-        "hidden_dim": 32,
         "train_normalization": "batch",
         "keep_mu_positive": 0,
         },

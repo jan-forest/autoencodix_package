@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_ncct_afterHPO_03_train
+#SBATCH --job-name=imagix3d_ncct_tuned_HP_train
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -30,7 +30,7 @@ source "${BASE}/venvs/alpha/bin/activate"
 
 cd "${REPO}"
 
-RUN_NAME="gpu_ncct_afterHPO_03_${SLURM_JOB_ID}"
+RUN_NAME="gpu_ncct_tuned_HP_${SLURM_JOB_ID}"
 
 echo "Running NCCT Imagix3D pipeline"
 echo "SLURM job id: ${SLURM_JOB_ID}"
@@ -41,19 +41,19 @@ echo "Workspace: ${BASE}"
 python scripts/run_imagix3d.py \
   --workdir "${BASE}" \
   --images "${BASE}/data/stroke_data/ncct_flat" \
-  --anno "${BASE}/data/stroke_data/ct_anno_flat.csv" \
+  --anno "${BASE}/data/stroke_data/ncct_anno_dst.csv" \
   --run-name "${RUN_NAME}" \
   --target-shape 160 192 160 \
   --epochs 250 \
-  --beta 0.0000075 \
-  --latent-dim 48 \
-  --hidden-dim 16 \
-  --train-normalization "group" \
+  --beta 0.0000006718196015256182 \
+  --latent-dim 96 \
+  --hidden-dim 32 \
+  --train-normalization "instance" \
   --anneal-function "logistic-late" \
   --no-keep-mu-positive \
-  --weight-decay 0.00013 \
-  --learning-rate 0.0006 \
-  --batch-size 48
+  --weight-decay 0.000007737374408547984 \
+  --learning-rate 0.000031484983656998606 \
+  --batch-size 35
 
 echo "Pipeline finished."
 echo "Searching for result directory..."

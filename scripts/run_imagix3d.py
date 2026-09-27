@@ -9,6 +9,7 @@ from pathlib import Path
 import autoencodix as acx
 from autoencodix.configs import DataCase, DataConfig, DataInfo
 from autoencodix.configs.imagix3d_config import Imagix3DConfig
+from autoencodix.utils._utils import custom_splits_from_anno
 
 
 def parse_args() -> argparse.Namespace:
@@ -33,7 +34,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--reconstruction-loss", type=str, default="mse")
     parser.add_argument("--loss-reduction", type=str, default="mean")
     parser.add_argument("--beta", type=float, default=0.005)
-    parser.add_argument("--scaling", type=str, default="MINMAX")
+    parser.add_argument("--scaling", type=str, default="NONE")
     parser.add_argument("--anneal-function", type=str, default="logistic-late")
     parser.add_argument("--checkpoint-interval", type=int, default=10)
     parser.add_argument("--evaluate-param", type=str, default=None)
@@ -130,8 +131,17 @@ def main() -> None:
     print(f"Image directory: {args.images}")
     print(f"Annotation file: {args.anno}")
     print(f"SLURM_JOB_ID: {os.environ.get('SLURM_JOB_ID')}")
+    
 
-    imagix3d = acx.Imagix3D(config=config)
+    
+    custom_splits = custom_splits_from_anno(
+        annotation_file=args.anno, 
+        split_col="custom_splits", 
+         sample_id_col="sample_id")
+
+    imagix3d = acx.Imagix3D(
+        config=config,
+        custom_splits=custom_splits)
     result = imagix3d.run()
 
     if args.evaluate_param:

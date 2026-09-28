@@ -1,14 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_cbv_report
+#SBATCH --job-name=imagix3d_cbv_tuned_HP_report
 #SBATCH --account=p_scads_stroke
-#SBATCH --partition=capella
+#SBATCH --partition=alpha
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=12
-#SBATCH --gres=gpu:4
-#SBATCH --gpus-per-task=4
-#SBATCH --mem=480G
-#SBATCH --time=00:20:00
+#SBATCH --cpus-per-task=6
+#SBATCH --gres=gpu:2
+#SBATCH --gpus-per-task=2
+#SBATCH --mem=240G
+#SBATCH --time=02:00:00
 #SBATCH --output=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.out
 #SBATCH --error=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.err
 
@@ -18,14 +18,14 @@ REPO="/home/baeuchl/autoencodix_package"
 BASE="/data/horse/ws/baeuchl-imagix3d"
 
 REGISTRY_DIR="${BASE}/run_registry"
-TEMPLATE_NOTEBOOK="${REPO}/notebooks/ncct_report_template.ipynb"
+TEMPLATE_NOTEBOOK="${REPO}/notebooks/imagix3d_full_report_template.ipynb"
 
 module --force purge
 module load release/24.04
 module load GCCcore/12.3.0
 module load Python/3.11.3
 
-source "${BASE}/venvs/capella/bin/activate"
+source "${BASE}/venvs/alpha/bin/activate"
 
 cd "${REPO}"
 
@@ -66,7 +66,7 @@ if [ ! -f "${TEMPLATE_NOTEBOOK}" ]; then
   exit 1
 fi
 
-echo "Creating NCCT report"
+echo "Creating CBV report"
 echo "Training job id: ${TRAIN_JOBID}"
 echo "Result directory: ${RESULT_DIR}"
 echo "Pickle path: ${PKL_PATH}"

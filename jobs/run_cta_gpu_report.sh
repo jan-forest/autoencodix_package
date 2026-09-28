@@ -76,7 +76,7 @@ echo "Template notebook: ${TEMPLATE_NOTEBOOK}"
 papermill \
   "${TEMPLATE_NOTEBOOK}" \
   "${REPORT_DIR}/cbf_report_executed.ipynb" \
-  -k imagix3d-capella \
+  -k imagix3d-alpha \
 
 jupyter nbconvert \
   --to html \

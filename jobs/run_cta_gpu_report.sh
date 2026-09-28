@@ -31,7 +31,7 @@ cd "${REPO}"
 
 if [ -z "${TRAIN_JOBID:-}" ]; then
   echo "ERROR: TRAIN_JOBID environment variable is missing."
-  echo "This report job should be submitted by submit_cbf_with_report.sh."
+  echo "This report job should be submitted by submit_cta_with_report.sh."
   exit 1
 fi
 
@@ -75,18 +75,18 @@ echo "Template notebook: ${TEMPLATE_NOTEBOOK}"
 
 papermill \
   "${TEMPLATE_NOTEBOOK}" \
-  "${REPORT_DIR}/cbf_report_executed.ipynb" \
+  "${REPORT_DIR}/cta_report_executed.ipynb" \
   -k imagix3d-alpha \
 
 jupyter nbconvert \
   --to html \
   --output-dir "${REPORT_DIR}" \
-  "${REPORT_DIR}/cbf_report_executed.ipynb"
+  "${REPORT_DIR}/cta_report_executed.ipynb"
 
 echo "Report generation finished."
 echo
 echo "Executed notebook:"
-echo "${REPORT_DIR}/cbf_report_executed.ipynb"
+echo "${REPORT_DIR}/cta_report_executed.ipynb"
 echo
 echo "HTML report:"
-echo "${REPORT_DIR}/cbf_report_executed.html"
+echo "${REPORT_DIR}/cta_report_executed.html"

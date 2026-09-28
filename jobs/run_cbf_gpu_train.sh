@@ -1,14 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_cbf_afterHPO_01
-#SBATCH --account=p_scads_stroke
-#SBATCH --partition=capella
+#SBATCH --job-name=imagix3d_cbf_after_tuning_HP_report
+#SBATCH --account=p_scads_autoencodix
+#SBATCH --partition=alpha
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
 #SBATCH --gres=gpu:4
 #SBATCH --gpus-per-task=4
 #SBATCH --mem=480G
-#SBATCH --time=01:30:00
+#SBATCH --time=01:00:00
 #SBATCH --output=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.out
 #SBATCH --error=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.err
 
@@ -26,11 +26,11 @@ module load release/24.04
 module load GCCcore/12.3.0
 module load Python/3.11.3
 
-source "${BASE}/venvs/capella/bin/activate"
+source "${BASE}/venvs/alpha/bin/activate"
 
 cd "${REPO}"
 
-RUN_NAME="gpu_cbf_afterHPO_01_${SLURM_JOB_ID}"
+RUN_NAME="gpu_cbf_after_tuning_HP_report_${SLURM_JOB_ID}"
 
 echo "Running NCCT Imagix3D pipeline"
 echo "SLURM job id: ${SLURM_JOB_ID}"
@@ -45,15 +45,15 @@ python scripts/run_imagix3d.py \
   --run-name "${RUN_NAME}" \
   --target-shape 160 192 160 \
   --epochs 250 \
-  --beta 0.000085 \
-  --latent-dim 64 \
-  --hidden-dim 64 \
-  --train-normalization "batch" \
+  --beta 0.0000000032465959108014116 \
+  --latent-dim 128 \
+  --hidden-dim 32 \
+  --train-normalization "instance" \
   --anneal-function "logistic-late" \
-  --keep-mu-positive \
-  --weight-decay 0.00000074 \
-  --learning-rate 0.0003 \
-  --batch-size 32
+  --no-keep-mu-positive \
+  --weight-decay 0.00001794364217052906 \
+  --learning-rate 0.000010096108555965044 \
+  --batch-size 35
 
 echo "Pipeline finished."
 echo "Searching for result directory..."

@@ -5,10 +5,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:2
 #SBATCH --gpus-per-task=4
-#SBATCH --mem=480G
-#SBATCH --time=00:20:00
+#SBATCH --mem=350G
+#SBATCH --time=02:00:00
 #SBATCH --output=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.out
 #SBATCH --error=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.err
 

@@ -1,0 +1,386 @@
+from pathlib import Path
+
+from syne_tune.config_space import choice, loguniform
+#from syne_tune.optimizer.baselines import RandomSearch
+from syne_tune.optimizer.baselines import CQR
+from syne_tune import Tuner, StoppingCriterion
+from syne_tune.experiments import load_experiment
+from syne_tune.backend import PythonBackend
+import json
+
+
+def synetune_objective_function(
+    # Fixed params
+    epochs: int,
+    checkpoint_interval: int,
+    loss_reduction: str,
+    image_root: str,
+    annotation_file: str,
+    tasks: str,
+    device: str,
+    n_gpus: int,
+    image_size: int,
+
+    # Tunable params
+    batch_size: int,
+    learning_rate: float,
+    weight_decay: float,
+    beta: float,
+    latent_dim: int,
+    hidden_dim: int,
+    anneal_function: str,
+) -> None:
+    import numpy as np
+    import sklearn
+    import os
+    import mlflow
+    import autoencodix as acx
+
+    from syne_tune import Reporter
+    from sklearn import linear_model
+    from pathlib import Path
+    from autoencodix.configs.default_config import (
+        DefaultConfig,
+        DataConfig,
+        DataCase,
+        DataInfo,
+    )
+    from autoencodix.utils._utils import custom_splits_from_anno
+    
+    # mlflow
+    modality = Path(image_root).name.replace("_flat", "")
+    os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
+    
+    mlflow.set_tracking_uri(
+        os.environ.get(
+            "MLFLOW_TRACKING_URI",
+            "file:/data/horse/ws/baeuchl-imagix3d/mlruns",
+        )
+    )
+
+    mlflow.set_experiment("imagix_hpo")
+
+    with mlflow.start_run(run_name=f"{modality}_trial"):
+        mlflow.set_tags(
+            {
+                "modality": modality,
+                "slurm_job_id": os.environ.get("SLURM_JOB_ID", "unknown"),
+                "pipeline": "Imagix",
+                "hpo_backend": "Syne Tune",
+                "image_root": image_root,
+                "annotation_file": annotation_file,
+            }
+        )
+
+        mlflow.log_params(
+            {   
+                "epochs": epochs,
+                "learning_rate": learning_rate,
+                "loss_reduction": loss_reduction,
+                "weight_decay": weight_decay,
+                "beta": beta,
+                "latent_dim": latent_dim,
+                "hidden_dim": hidden_dim,
+                "batch_size": batch_size,
+                "anneal_function": anneal_function,
+                "tasks": tasks,
+                "image_size": image_size,
+            }
+        )
+
+
+        imgconfig = DefaultConfig(
+            # Tunable params
+            beta=beta,
+            latent_dim=latent_dim,
+            hidden_dim=hidden_dim,
+            weight_decay=weight_decay,
+            learning_rate=learning_rate,
+
+            # Fixed params
+            data_case=DataCase.IMG_TO_IMG,
+            img_path_col="filepath",
+            batch_size=batch_size,
+            checkpoint_interval=checkpoint_interval,
+            epochs=epochs,
+            reconstruction_loss="mse",
+            loss_reduction=loss_reduction,
+            scaling="NONE",
+            anneal_function=anneal_function,
+            device=device,
+            n_gpus=n_gpus,
+            data_config=DataConfig(
+                data_info={
+                    "IMG": DataInfo(
+                        file_path=image_root,
+                        scaling="NONE",
+                        data_type="IMG",
+                        img_width_resize=image_size,
+                        img_height_resize=image_size,
+                    ),
+                    "ANNO": DataInfo(
+                        file_path=annotation_file,
+                        data_type="ANNOTATION",
+                    ),
+                },
+            ),
+        )
+
+        custom_splits = custom_splits_from_anno(
+            annotation_file=annotation_file, 
+            split_col="custom_splits", 
+            sample_id_col="sample_id")
+    
+        report = Reporter()
+        try:
+            imagix = acx.Imagix(
+                config=imgconfig,
+                custom_splits=custom_splits)
+            imagix.run()
+
+        except RuntimeError as error:
+            import torch
+
+            if "out of memory" in str(error).lower():
+                print(
+                    "CUDA out of memory in this trial. Reporting penalty value.",
+                    flush=True,
+                )
+                torch.cuda.empty_cache()
+
+                oom_metrics = {
+                    "downstream_performance": -1.0,
+                    "reconstruction_loss": 1e9,
+                    "train_reconstruction_loss": 1e9,
+                    "valid_total_loss": 1e9,
+                    "train_total_loss": 1e9,
+                    "valid_var_loss": 1e9,
+                    "recon_generalization_gap": 1e9,
+                }
+            
+                mlflow.set_tag("trial_status", "oom")
+                mlflow.log_metrics(oom_metrics)
+            
+                report(**oom_metrics)
+                return
+        
+            mlflow.set_tag("trial_status", "failed")
+            mlflow.set_tag("error", repr(error)[:5000])
+            raise
+
+        valid_recon_loss = float(
+            np.asarray(
+                imagix.result.sub_losses.get("recon_loss").get(
+                    epoch=-1,
+                    split="valid",
+                )
+            ).item()
+        )
+
+        train_recon_loss = float(
+            np.asarray(
+                imagix.result.sub_losses.get("recon_loss").get(
+                    epoch=-1,
+                    split="train",
+                )
+            ).item()
+        )
+
+        valid_total_loss = float(
+            np.asarray(
+                imagix.result.losses.get(
+                    epoch=-1,
+                    split="valid",
+                )
+            ).item()
+        )
+
+        train_total_loss = float(
+            np.asarray(
+                imagix.result.losses.get(
+                    epoch=-1,
+                    split="train",
+                )
+            ).item()
+        )
+
+        valid_var_loss = float(
+            np.asarray(
+                imagix.result.sub_losses.get("var_loss").get(
+                    epoch=-1,
+                    split="valid",
+                )
+            ).item()
+        )
+
+        sklearn.set_config(enable_metadata_routing=True)
+
+        sklearn_ml_class = linear_model.LogisticRegression(
+            solver="sag",
+            n_jobs=1,
+            class_weight="balanced",
+            max_iter=200,
+        )
+
+        sklearn_ml_regression = linear_model.LinearRegression()
+
+        tasks_list = [task for task in tasks.split("$") if task]
+
+        imagix.evaluate(
+            ml_model_class=sklearn_ml_class,
+            ml_model_regression=sklearn_ml_regression,
+            params=tasks_list,
+            metric_class="roc_auc_ovo",
+            metric_regression="r2",
+            reference_methods=[],
+            split_type="use-split",
+            n_downsample=None,
+        )
+
+        downstream_performance = float(
+            imagix.result.embedding_evaluation.loc[
+                imagix.result.embedding_evaluation.score_split == "valid",
+                "value",
+            ].mean()
+        )
+        #downstream_performance = -1.0
+
+        metrics = {
+            "downstream_performance": downstream_performance,
+            "reconstruction_loss": valid_recon_loss,
+            "train_reconstruction_loss": train_recon_loss,
+            "valid_total_loss": valid_total_loss,
+            "train_total_loss": train_total_loss,
+            "valid_var_loss": valid_var_loss,
+            "recon_generalization_gap": valid_recon_loss - train_recon_loss,
+        }
+    
+        # mlflow
+        mlflow.set_tag("trial_status", "completed")
+        mlflow.log_metrics(metrics)
+    
+        report(**metrics)
+
+
+def run_synetune_hpo(
+    data_path: Path,
+    folder: str = "2D/ncct",
+    anno: str = "ncct_2D_anno_dst.csv",
+    tasks: str = "median_split",
+    metric: str = "downstream_performance",
+    max_wallclock_time: int = 11 * 60 * 60,
+    n_workers: int = 4
+):
+    if metric not in ["reconstruction_loss", "downstream_performance"]:
+        raise ValueError(
+            "metric must be either 'reconstruction_loss' or "
+            "'downstream_performance'."
+        )
+
+    image_root = data_path / folder
+    annotation_file = data_path / anno
+
+    config_space = {
+        # Fixed params
+        "epochs": 250,
+        "checkpoint_interval": 250,
+        "loss_reduction": "mean",
+        "image_root": str(image_root),
+        "annotation_file": str(annotation_file),
+        "tasks": tasks,
+        "anneal_function": "logistic-late",
+        "batch_size": 35,
+        "image_size": 192,
+
+        # Hardware params
+        "device": "cuda",
+        "n_gpus": 1,
+
+        # Tunable params
+        # "batch_size": choice([16, 32, 48]),
+        "learning_rate": loguniform(1e-5, 5e-3),
+        "weight_decay": loguniform(1e-7, 5e-5),
+        "beta": loguniform(5e-7, 1e-5),
+        "latent_dim": choice([64, 80, 96]),
+        "hidden_dim": choice([16, 32]),
+        # "anneal_function": choice(
+        #     [
+        #         "5phase-constant",
+        #         "3phase-linear",
+        #         "3phase-log",
+        #         "logistic-mid",
+        #         "logistic-early",
+        #         "logistic-late",
+        #     ]
+        # ),
+    }
+
+    # No points_to_evaluate are defined yet because no previous Imagix HPO
+    # runs are available from which to select informed anchor configurations.
+    points_to_evaluate = []
+
+    if metric == "downstream_performance":
+        do_minimize = False
+    else:
+        do_minimize = True
+
+    # scheduler = RandomSearch(
+    #     config_space=config_space,
+    #     metrics=[metric],
+    #     do_minimize=do_minimize,
+    #     points_to_evaluate=points_to_evaluate,
+    #     random_seed=42
+    # )
+    
+    scheduler = CQR(
+        config_space=config_space,
+        metric=metric,
+        do_minimize=do_minimize,
+        points_to_evaluate=points_to_evaluate,
+        random_seed=42,
+    )
+    
+    metadata = {
+        "points_to_evaluate": json.dumps(points_to_evaluate),
+        "image_scaling": "NONE",
+        "image_size": 192,
+        "custom_split_column": "custom_splits",
+        "sample_id_column": "sample_id",
+        "folder": folder,
+        "annotation_file": anno,
+        "tasks": tasks,
+        "metric": metric,
+        "epochs": 250,
+        "batch_size": 35,
+    }
+    
+    tuner = Tuner(
+        trial_backend=PythonBackend(
+            tune_function=synetune_objective_function,
+            config_space=config_space,
+            rotate_gpus=True,
+        ),
+        scheduler=scheduler,
+        stop_criterion=StoppingCriterion(
+            max_wallclock_time=max_wallclock_time,
+            #max_num_trials_completed=100,
+        ),
+        n_workers=n_workers,
+        metadata=metadata,
+    )
+    
+    try:
+        tuner.run()
+    except Exception as error:
+        print(
+            "Tuning crashed, attempting to load partial "
+            "Syne Tune experiment."
+        )
+        print(repr(error))
+        return load_experiment(tuner.name)
+
+    return load_experiment(tuner.name)
+
+
+def run_optuna_hpo():
+    raise NotImplementedError("Optuna HPO will be added later.")

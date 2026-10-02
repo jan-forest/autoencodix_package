@@ -23,6 +23,7 @@ nav:
       - Explain Step: tutorials/DeepDives/ExplainStep.ipynb
       - Hyperparameter Optimization: tutorials/DeepDives/HyperparameterOptimizationTutorial.ipynb
       - "Hyperparameter Optimization (Optuna)": tutorials/DeepDives/HyperparameterOptimizationOptunaTutorial.ipynb
+      - Propose Initial Config: tutorials/DeepDives/ProposeInitialConfigTutorial.ipynb
       - Using Pre-Trained Models: tutorials/DeepDives/UsingPreTrainedModels.ipynb
       - Memory-Efficient Saving: tutorials/DeepDives/MemoryEfficientSaving.ipynb
   - Developer Guide: tutorials/DevGuide.ipynb

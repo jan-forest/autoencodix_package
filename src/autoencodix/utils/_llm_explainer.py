@@ -12,6 +12,8 @@ except ImportError:
     from mistralai import Mistral
 from typing import List, Dict, Any
 
+from openai import OpenAI
+
 import requests
 import warnings
 

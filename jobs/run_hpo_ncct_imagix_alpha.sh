@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=hpo_ncct_03_alpha
+#SBATCH --job-name=hpo_ncct_imagix_alpha
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -27,6 +27,9 @@ echo "SLURM_JOB_ID=${SLURM_JOB_ID}"
 echo "CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-not set}"
 echo "SLURM_JOB_GPUS=${SLURM_JOB_GPUS:-not set}"
 
+which python
+python --version
+
 nvidia-smi
 
 srun python - <<'PY'
@@ -49,25 +52,21 @@ PY
 
 export PYTHONUNBUFFERED=1
 
-export DATA_PATH="/data/horse/ws/baeuchl-imagix3d/data/stroke_data"
-export FOLDER="ncct_flat"
-export ANNO="ncct_anno_dst.csv"
+export DATA_PATH="/data/horse/ws/baeuchl-imagix3d/data/stroke_data/2D"
+export FOLDER="ncct"
+export ANNO="ncct_2D_anno_dst.csv"
 export METRIC="downstream_performance"
-export TASKS="median_split"
-export MAX_WALLCLOCK_HOURS=11.5
+export MAX_WALLCLOCK_HOURS=11.75
 export N_WORKERS=4
 
-export MLFLOW_ALLOW_FILE_STORE=true
-export MLFLOW_TRACKING_URI="file:/data/horse/ws/baeuchl-imagix3d/mlruns"
-
 HPO_ROOT="/data/horse/ws/baeuchl-imagix3d/hpo"
-RUN_NAME="ncct_01_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
+RUN_NAME="imagix_ncct_01_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
 OUT_DIR="${HPO_ROOT}/${RUN_NAME}"
 
 mkdir -p "${OUT_DIR}"
 export OUT_DIR
 
-echo "Starting Imagix3D Syne Tune HPO"
+echo "Starting Imagix Syne Tune HPO"
 echo "SLURM job id: ${SLURM_JOB_ID}"
 echo "Repository: $(pwd)"
 echo "Data path: ${DATA_PATH}"
@@ -85,33 +84,26 @@ repo = Path.cwd()
 sys.path.insert(0, str(repo / "scripts"))
 
 # load the hyperparameter optimization function
-from run_hpo_imagix3d import run_synetune_hpo
+from run_hpo_imagix import run_synetune_hpo
 
 data_path = Path(os.environ["DATA_PATH"])
 folder = os.environ["FOLDER"]
 anno = os.environ["ANNO"]
-tasks = os.environ["TASKS"]
 metric = os.environ["METRIC"]
 out_dir = Path(os.environ["OUT_DIR"])
-max_wallclock_hours = float(os.environ.get("MAX_WALLCLOCK_HOURS", "11.5"))
+max_wallclock_hours = float(os.environ.get("MAX_WALLCLOCK_HOURS", "11.75"))
 max_wallclock_time = int(max_wallclock_hours * 60 * 60)
 n_workers = int(os.environ.get("N_WORKERS", "4"))
+out_dir.mkdir(parents=True, exist_ok=True)
 
 tuning_experiment = run_synetune_hpo(
     data_path=data_path,
     folder=folder,
     anno=anno,
-    tasks=tasks,
     metric=metric,
     max_wallclock_time=max_wallclock_time,
     n_workers=n_workers,
 )
-
-if tuning_experiment.results is None:
-    raise RuntimeError(
-        "Syne Tune produced no results. "
-        "All initial trials may have failed. Check the trial stderr/stdout logs."
-    )
 
 results = tuning_experiment.results.copy()
 
@@ -119,7 +111,6 @@ metadata = {
     "scheduler": "CQR",
     "n_workers": n_workers,
     "metric": metric,
-    "tasks": tasks,
     "mode": "minimize" if metric != "downstream_performance" else "maximize",
     "data_path": str(data_path),
     "folder": folder,

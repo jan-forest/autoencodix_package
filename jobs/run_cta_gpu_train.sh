@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_cbf_after_tuning_HP_report
-#SBATCH --account=p_scads_autoencodix
+#SBATCH --job-name=imagix3d_cta_tuned_HP
+#SBATCH --account=p_scads_stroke
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -30,9 +30,9 @@ source "${BASE}/venvs/alpha/bin/activate"
 
 cd "${REPO}"
 
-RUN_NAME="gpu_cbf_after_tuning_HP_report_${SLURM_JOB_ID}"
+RUN_NAME="gpu_cta_tuned_HP_${SLURM_JOB_ID}"
 
-echo "Running NCCT Imagix3D pipeline"
+echo "Running CTA Imagix3D pipeline"
 echo "SLURM job id: ${SLURM_JOB_ID}"
 echo "Run name: ${RUN_NAME}"
 echo "Repository: ${REPO}"
@@ -40,19 +40,19 @@ echo "Workspace: ${BASE}"
 
 python scripts/run_imagix3d.py \
   --workdir "${BASE}" \
-  --images "${BASE}/data/stroke_data/cbf_flat" \
-  --anno "${BASE}/data/stroke_data/cbf_anno_dst.csv" \
+  --images "${BASE}/data/stroke_data/cta_flat" \
+  --anno "${BASE}/data/stroke_data/cta_anno_dst.csv" \
   --run-name "${RUN_NAME}" \
   --target-shape 160 192 160 \
   --epochs 250 \
-  --beta 0.0000000032465959108014116 \
-  --latent-dim 128 \
-  --hidden-dim 32 \
-  --train-normalization "instance" \
+  --beta 0.0956343842447908 \
+  --latent-dim 64 \
+  --hidden-dim 40 \
+  --train-normalization "batch" \
   --anneal-function "logistic-late" \
   --no-keep-mu-positive \
-  --weight-decay 0.00001794364217052906 \
-  --learning-rate 0.000010096108555965044 \
+  --weight-decay 0.0229586852261995 \
+  --learning-rate 0.0006328199633522 \
   --batch-size 35
 
 echo "Pipeline finished."

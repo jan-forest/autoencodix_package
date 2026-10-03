@@ -14,11 +14,12 @@ def synetune_objective_function(
     epochs: int,
     checkpoint_interval: int,
     loss_reduction: str,
-    volume_root: str,
+    image_root: str,
     annotation_file: str,
     tasks: str,
     device: str,
     n_gpus: int,
+    image_size: int,
 
     # Tunable params
     batch_size: int,
@@ -28,8 +29,6 @@ def synetune_objective_function(
     latent_dim: int,
     hidden_dim: int,
     anneal_function: str,
-    train_normalization: str,
-    keep_mu_positive: int,
 ) -> None:
     import numpy as np
     import sklearn
@@ -40,16 +39,16 @@ def synetune_objective_function(
     from syne_tune import Reporter
     from sklearn import linear_model
     from pathlib import Path
-    from autoencodix.configs.imagix3d_config import Imagix3DConfig
-    from autoencodix.utils._utils import custom_splits_from_anno
     from autoencodix.configs.default_config import (
+        DefaultConfig,
         DataConfig,
         DataCase,
         DataInfo,
     )
+    from autoencodix.utils._utils import custom_splits_from_anno
     
     # mlflow
-    modality = Path(volume_root).name.replace("_flat", "")
+    modality = Path(image_root).name.replace("_flat", "")
     os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
     
     mlflow.set_tracking_uri(
@@ -59,16 +58,16 @@ def synetune_objective_function(
         )
     )
 
-    mlflow.set_experiment("imagix3d_hpo")
+    mlflow.set_experiment("imagix_hpo")
 
     with mlflow.start_run(run_name=f"{modality}_trial"):
         mlflow.set_tags(
             {
                 "modality": modality,
                 "slurm_job_id": os.environ.get("SLURM_JOB_ID", "unknown"),
-                "pipeline": "Imagix3D",
+                "pipeline": "Imagix",
                 "hpo_backend": "Syne Tune",
-                "volume_root": volume_root,
+                "image_root": image_root,
                 "annotation_file": annotation_file,
             }
         )
@@ -82,49 +81,42 @@ def synetune_objective_function(
                 "beta": beta,
                 "latent_dim": latent_dim,
                 "hidden_dim": hidden_dim,
-                "train_normalization": train_normalization,
-                "keep_mu_positive": keep_mu_positive,
                 "batch_size": batch_size,
                 "anneal_function": anneal_function,
                 "tasks": tasks,
+                "image_size": image_size,
             }
         )
 
 
-        volconfig = Imagix3DConfig(
+        imgconfig = DefaultConfig(
             # Tunable params
             beta=beta,
             latent_dim=latent_dim,
             hidden_dim=hidden_dim,
             weight_decay=weight_decay,
             learning_rate=learning_rate,
-            train_normalization=train_normalization,
-            keep_mu_positive=bool(keep_mu_positive),
 
             # Fixed params
             data_case=DataCase.IMG_TO_IMG,
             img_path_col="filepath",
-            spatial_shape_policy="crop_or_pad_to_shape",
-            target_shape_3d=(160, 192, 160),
             batch_size=batch_size,
             checkpoint_interval=checkpoint_interval,
             epochs=epochs,
             reconstruction_loss="mse",
             loss_reduction=loss_reduction,
-            scaling="MINMAX",
+            scaling="NONE",
             anneal_function=anneal_function,
-            normalize_nonzero_only=True,
-            clamp_logvar=True,
-            train_norm_groupsize=8,
             device=device,
             n_gpus=n_gpus,
-            volume_scaling_strategy="train_global",
             data_config=DataConfig(
                 data_info={
                     "IMG": DataInfo(
-                        file_path=volume_root,
-                        scaling="MINMAX",
+                        file_path=image_root,
+                        scaling="NONE",
                         data_type="IMG",
+                        img_width_resize=image_size,
+                        img_height_resize=image_size,
                     ),
                     "ANNO": DataInfo(
                         file_path=annotation_file,
@@ -141,10 +133,10 @@ def synetune_objective_function(
     
         report = Reporter()
         try:
-            imagix3d = acx.Imagix3D(
-                config=volconfig,
+            imagix = acx.Imagix(
+                config=imgconfig,
                 custom_splits=custom_splits)
-            imagix3d.run()
+            imagix.run()
 
         except RuntimeError as error:
             import torch
@@ -176,11 +168,50 @@ def synetune_objective_function(
             mlflow.set_tag("error", repr(error)[:5000])
             raise
 
-        valid_recon_loss = float(np.asarray(imagix3d.result.sub_losses.get("recon_loss").get(epoch=-1,split="valid",)).item())
-        train_recon_loss = float(np.asarray(imagix3d.result.sub_losses.get("recon_loss").get(epoch=-1,split="train",)).item())
-        valid_total_loss = float(np.asarray(imagix3d.result.losses.get(epoch=-1,split="valid",)).item())
-        train_total_loss = float(np.asarray(imagix3d.result.losses.get(epoch=-1,split="train",)).item())
-        valid_var_loss = float(np.asarray(imagix3d.result.sub_losses.get("var_loss").get(epoch=-1,split="valid",)).item())
+        valid_recon_loss = float(
+            np.asarray(
+                imagix.result.sub_losses.get("recon_loss").get(
+                    epoch=-1,
+                    split="valid",
+                )
+            ).item()
+        )
+
+        train_recon_loss = float(
+            np.asarray(
+                imagix.result.sub_losses.get("recon_loss").get(
+                    epoch=-1,
+                    split="train",
+                )
+            ).item()
+        )
+
+        valid_total_loss = float(
+            np.asarray(
+                imagix.result.losses.get(
+                    epoch=-1,
+                    split="valid",
+                )
+            ).item()
+        )
+
+        train_total_loss = float(
+            np.asarray(
+                imagix.result.losses.get(
+                    epoch=-1,
+                    split="train",
+                )
+            ).item()
+        )
+
+        valid_var_loss = float(
+            np.asarray(
+                imagix.result.sub_losses.get("var_loss").get(
+                    epoch=-1,
+                    split="valid",
+                )
+            ).item()
+        )
 
         sklearn.set_config(enable_metadata_routing=True)
 
@@ -195,7 +226,7 @@ def synetune_objective_function(
 
         tasks_list = [task for task in tasks.split("$") if task]
 
-        imagix3d.evaluate(
+        imagix.evaluate(
             ml_model_class=sklearn_ml_class,
             ml_model_regression=sklearn_ml_regression,
             params=tasks_list,
@@ -207,8 +238,8 @@ def synetune_objective_function(
         )
 
         downstream_performance = float(
-            imagix3d.result.embedding_evaluation.loc[
-                imagix3d.result.embedding_evaluation.score_split == "valid",
+            imagix.result.embedding_evaluation.loc[
+                imagix.result.embedding_evaluation.score_split == "valid",
                 "value",
             ].mean()
         )
@@ -233,8 +264,8 @@ def synetune_objective_function(
 
 def run_synetune_hpo(
     data_path: Path,
-    folder: str = "ncct_flat",
-    anno: str = "ncct_anno_dst.csv",
+    folder: str = "2D/ncct",
+    anno: str = "ncct_2D_anno_dst.csv",
     tasks: str = "median_split",
     metric: str = "downstream_performance",
     max_wallclock_time: int = 11 * 60 * 60,
@@ -246,7 +277,7 @@ def run_synetune_hpo(
             "'downstream_performance'."
         )
 
-    volume_root = data_path / folder
+    image_root = data_path / folder
     annotation_file = data_path / anno
 
     config_space = {
@@ -254,14 +285,12 @@ def run_synetune_hpo(
         "epochs": 250,
         "checkpoint_interval": 250,
         "loss_reduction": "mean",
-        "volume_root": str(volume_root),
+        "image_root": str(image_root),
         "annotation_file": str(annotation_file),
         "tasks": tasks,
         "anneal_function": "logistic-late",
-        #"train_normalization": "group",
-        #"keep_mu_positive": 0,
         "batch_size": 35,
-        #"hidden_dim": 16,
+        "image_size": 192,
 
         # Hardware params
         "device": "cuda",
@@ -269,12 +298,11 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(1e-5, 5e-3),
-        "weight_decay": loguniform(1e-7, 5e-5),
-        "beta": loguniform(5e-7, 1e-5),
-        "latent_dim": choice([64, 80, 96]),
-        "hidden_dim": choice([16, 32]),
-        "train_normalization": choice(["instance", "batch"]),
+        "learning_rate": loguniform(1e-7, 0.1),
+        "weight_decay": loguniform(1e-7, 0.1),
+        "beta": loguniform(1e-7, 0.1),
+        "latent_dim": choice([16, 24, 32, 40, 48, 64, 80, 96]),
+        "hidden_dim": choice([16, 24, 32]),
         # "anneal_function": choice(
         #     [
         #         "5phase-constant",
@@ -285,47 +313,11 @@ def run_synetune_hpo(
         #         "logistic-late",
         #     ]
         # ),
-        # Encoded as scalar values for Syne Tune compatibility
-        "keep_mu_positive": 0 #choice([0, 1])
     }
 
-    points_to_evaluate = [
-        # Run #1 best:
-        # strongest instance-normalized anchor
-        {
-        "learning_rate": 5.850213438680338e-05,
-        "weight_decay": 1.8316823097080185e-07,
-        "beta": 5e-07,
-        "latent_dim": 64,
-        "hidden_dim": 32,
-        "train_normalization": "instance",
-        "keep_mu_positive": 0,
-        },
-
-        # Run #4 trial 39:
-        # strongest observed batch-normalized / mu=0 point
-        {
-        "learning_rate": 5.772057967011864e-05,
-        "weight_decay": 1.5983225907618665e-07,
-        "beta": 5e-07,
-        "latent_dim": 80,
-        "hidden_dim": 32,
-        "train_normalization": "batch",
-        "keep_mu_positive": 0,
-        },
-
-        # Run #4 trial 22:
-        # introduces latent=96 and intermediate beta
-        {
-        "learning_rate": 7.090097037422294e-05,
-        "weight_decay": 1.346885899362491e-07,
-        "beta": 5e-07,
-        "latent_dim": 96,
-        "hidden_dim": 32,
-        "train_normalization": "batch",
-        "keep_mu_positive": 0,
-        },
-    ]
+    # No points_to_evaluate are defined yet because no previous Imagix HPO
+    # runs are available from which to select informed anchor configurations.
+    points_to_evaluate = []
 
     if metric == "downstream_performance":
         do_minimize = False
@@ -350,7 +342,8 @@ def run_synetune_hpo(
     
     metadata = {
         "points_to_evaluate": json.dumps(points_to_evaluate),
-        "volume_scaling_strategy": "train_global",
+        "image_scaling": "NONE",
+        "image_size": 192,
         "custom_split_column": "custom_splits",
         "sample_id_column": "sample_id",
         "folder": folder,
@@ -379,7 +372,10 @@ def run_synetune_hpo(
     try:
         tuner.run()
     except Exception as error:
-        print("Tuning crashed, attempting to load partial Syne Tune experiment.")
+        print(
+            "Tuning crashed, attempting to load partial "
+            "Syne Tune experiment."
+        )
         print(repr(error))
         return load_experiment(tuner.name)
 

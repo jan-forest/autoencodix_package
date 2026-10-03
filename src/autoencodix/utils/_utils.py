@@ -722,7 +722,6 @@ def custom_splits_from_anno(
 
     if split_col not in df.columns:
         raise ValueError(f"Missing split column: {split_col}")
-
     if sample_id_col not in df.columns:
         raise ValueError(f"Missing sample ID column: {sample_id_col}")
 

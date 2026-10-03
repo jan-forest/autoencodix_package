@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=hpo_ncct_03_alpha
+#SBATCH --job-name=hpo_cbf_01_capella
 #SBATCH --account=p_scads_autoencodix
-#SBATCH --partition=alpha
+#SBATCH --partition=capella
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
@@ -18,7 +18,7 @@ module load release/24.04
 module load GCCcore/12.3.0
 module load Python/3.11.3
 
-source /data/horse/ws/baeuchl-imagix3d/venvs/alpha/bin/activate
+source /data/horse/ws/baeuchl-imagix3d/venvs/capella/bin/activate
 
 cd /home/baeuchl/autoencodix_package
 
@@ -50,18 +50,15 @@ PY
 export PYTHONUNBUFFERED=1
 
 export DATA_PATH="/data/horse/ws/baeuchl-imagix3d/data/stroke_data"
-export FOLDER="ncct_flat"
-export ANNO="ncct_anno_dst.csv"
+export FOLDER="cbf_flat"
+export ANNO="cbf_anno_dst.csv"
 export METRIC="downstream_performance"
 export TASKS="median_split"
 export MAX_WALLCLOCK_HOURS=11.5
 export N_WORKERS=4
 
-export MLFLOW_ALLOW_FILE_STORE=true
-export MLFLOW_TRACKING_URI="file:/data/horse/ws/baeuchl-imagix3d/mlruns"
-
 HPO_ROOT="/data/horse/ws/baeuchl-imagix3d/hpo"
-RUN_NAME="ncct_01_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
+RUN_NAME="cbf_01_synetune_${SLURM_JOB_ID}_$(date +%Y%m%d_%H%M%S)"
 OUT_DIR="${HPO_ROOT}/${RUN_NAME}"
 
 mkdir -p "${OUT_DIR}"
@@ -106,12 +103,6 @@ tuning_experiment = run_synetune_hpo(
     max_wallclock_time=max_wallclock_time,
     n_workers=n_workers,
 )
-
-if tuning_experiment.results is None:
-    raise RuntimeError(
-        "Syne Tune produced no results. "
-        "All initial trials may have failed. Check the trial stderr/stdout logs."
-    )
 
 results = tuning_experiment.results.copy()
 

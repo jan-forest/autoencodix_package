@@ -1,14 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_cbf_report
-#SBATCH --account=p_scads_stroke
-#SBATCH --partition=capella
+#SBATCH --job-name=imagix3d_cbf_after_tuning_HP_report
+#SBATCH --account=p_scads_autoencodix
+#SBATCH --partition=alpha
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:2
 #SBATCH --gpus-per-task=4
-#SBATCH --mem=480G
-#SBATCH --time=00:20:00
+#SBATCH --mem=350G
+#SBATCH --time=02:00:00
 #SBATCH --output=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.out
 #SBATCH --error=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.err
 
@@ -18,14 +18,14 @@ REPO="/home/baeuchl/autoencodix_package"
 BASE="/data/horse/ws/baeuchl-imagix3d"
 
 REGISTRY_DIR="${BASE}/run_registry"
-TEMPLATE_NOTEBOOK="${REPO}/notebooks/ncct_report_template.ipynb"
+TEMPLATE_NOTEBOOK="${REPO}/notebooks/imagix3d_full_report_template.ipynb"
 
 module --force purge
 module load release/24.04
 module load GCCcore/12.3.0
 module load Python/3.11.3
 
-source "${BASE}/venvs/capella/bin/activate"
+source "${BASE}/venvs/alpha/bin/activate"
 
 cd "${REPO}"
 
@@ -76,7 +76,7 @@ echo "Template notebook: ${TEMPLATE_NOTEBOOK}"
 papermill \
   "${TEMPLATE_NOTEBOOK}" \
   "${REPORT_DIR}/cbf_report_executed.ipynb" \
-  -k imagix3d-capella \
+  -k imagix3d-alpha \
 
 jupyter nbconvert \
   --to html \

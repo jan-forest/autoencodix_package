@@ -298,11 +298,11 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(1e-5, 5e-3),
-        "weight_decay": loguniform(1e-7, 5e-5),
-        "beta": loguniform(5e-7, 1e-5),
-        "latent_dim": choice([64, 80, 96]),
-        "hidden_dim": choice([16, 32]),
+        "learning_rate": loguniform(1e-7, 0.1),
+        "weight_decay": loguniform(1e-7, 0.1),
+        "beta": loguniform(1e-7, 0.1),
+        "latent_dim": choice([16, 24, 32, 40, 48, 64, 80, 96]),
+        "hidden_dim": choice([16, 24, 32]),
         # "anneal_function": choice(
         #     [
         #         "5phase-constant",

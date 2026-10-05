@@ -298,10 +298,10 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(1e-5, 5e-1),
-        "weight_decay": loguniform(1e-7, 1e-4),
-        "beta": loguniform(1e-6, 5e-1),
-        "latent_dim": choice([16, 24, 32, 40, 48, 64]),
+        "learning_rate": loguniform(5e-5, 1e-3),
+        "weight_decay": loguniform(1e-6, 5e-3),
+        "beta": loguniform(8e-5, 2e-4),
+        "latent_dim": choice([64, 80, 96, 112]),
         "hidden_dim": choice([16, 32, 40, 48]),
         # "anneal_function": choice(
         #     [
@@ -321,11 +321,11 @@ def run_synetune_hpo(
         # Run #1 best:
         # strongest instance-normalized anchor
         {
-        "learning_rate": 0.0435221481302195,
-        "weight_decay":  1.07706702974446e-06,
-        "beta": 0.0213785360046322,
-        "latent_dim": 64,
-        "hidden_dim": 16,
+        "learning_rate": 0.0002867495428849,
+        "weight_decay":  5.412262284324612e-05,
+        "beta": 8.441216381238142e-06,
+        "latent_dim": 96,
+        "hidden_dim": 32,
         },
     ]
 

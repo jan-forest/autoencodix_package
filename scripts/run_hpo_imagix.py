@@ -298,11 +298,11 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(1e-7, 0.1),
-        "weight_decay": loguniform(1e-7, 0.1),
-        "beta": loguniform(1e-7, 0.1),
-        "latent_dim": choice([16, 24, 32, 40, 48, 64, 80, 96]),
-        "hidden_dim": choice([16, 24, 32]),
+        "learning_rate": loguniform(1e-3, 5e-3),
+        "weight_decay": loguniform(5e-6, 5e-5),
+        "beta": loguniform(1e-4, 1e-1),
+        "latent_dim": choice([32, 48, 64, 80, 96, 112]),
+        "hidden_dim": choice([16, 24, 32, 40]),
         # "anneal_function": choice(
         #     [
         #         "5phase-constant",
@@ -317,7 +317,20 @@ def run_synetune_hpo(
 
     # No points_to_evaluate are defined yet because no previous Imagix HPO
     # runs are available from which to select informed anchor configurations.
-    points_to_evaluate = []
+    points_to_evaluate = [
+        # Run #1 best:
+        # strongest instance-normalized anchor
+        {
+        "learning_rate": 0.0029186579575587,
+        "weight_decay":  1.419008549823615e-05,
+        "beta": 8.171920345884799e-07,
+        "latent_dim": 80,
+        "hidden_dim": 32,
+        "train_normalization": "batch",
+        "keep_mu_positive": 0,
+        },
+    ]
+
 
     if metric == "downstream_performance":
         do_minimize = False

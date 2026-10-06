@@ -297,29 +297,16 @@ def run_synetune_hpo(
         "n_gpus": 1,
 
         # Tunable params
-        # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(5e-6, 1e-3),
-        "weight_decay": loguniform(1e-6, 5e-3),
-        "beta": loguniform(1e-7, 1e-4),
-        "latent_dim": choice([16, 32, 40, 48]),
-        "hidden_dim": choice([16, 32, 40, 48]),
-        # "anneal_function": choice(
-        #     [
-        #         "5phase-constant",
-        #         "3phase-linear",
-        #         "3phase-log",
-        #         "logistic-mid",
-        #         "logistic-early",
-        #         "logistic-late",
-        #     ]
-        # ),
+        "learning_rate": loguniform(5e-05, 0.05),
+        "weight_decay": loguniform(1e-06, 1e-03),
+        "beta": loguniform(1e-07, 1e-04),
+        "latent_dim": choice([16, 24, 32, 40, 48]),
+        "hidden_dim": choice([16, 24, 32, 40, 48]),
     }
 
     # No points_to_evaluate are defined yet because no previous Imagix HPO
     # runs are available from which to select informed anchor configurations.
     points_to_evaluate = [
-        # Run #1 best:
-        # strongest instance-normalized anchor
         {
         "learning_rate": 4.628567801513634e-06,
         "weight_decay":  1.796195765923549e-05,

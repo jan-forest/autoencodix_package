@@ -297,30 +297,30 @@ def run_synetune_hpo(
         "n_gpus": 1,
 
         # Tunable params
-        "learning_rate": loguniform(1e-05, 5e-03),
-        "weight_decay": loguniform(1e-06, 1e-03),
-        "beta": loguniform(9e-07, 1e-02),
-        "latent_dim": choice([80, 96, 112, 128]),
-        "hidden_dim": choice([16, 32, 48]),
+        "learning_rate": loguniform(1e-04, 1e-02),
+        "weight_decay": loguniform(5e-05, 1e-03),
+        "beta": loguniform(1e-06, 1e-01),
+        "latent_dim": choice([16, 32, 48]),
+        "hidden_dim": choice([16, 32]),
     }
 
     # No points_to_evaluate are defined yet because no previous Imagix HPO
     # runs are available from which to select informed anchor configurations.
     points_to_evaluate = [
         {
-        "learning_rate": 0.0002867495428849,
-        "weight_decay":  5.412262284324612e-05,
-        "beta": 8.441216381238142e-06,
-        "latent_dim": 96,
-        "hidden_dim": 32,
+        "learning_rate": 0.0435221481302195,
+        "weight_decay":  1.07706702974446e-06,
+        "beta": 0.0213785360046322,
+        "latent_dim": 64,
+        "hidden_dim": 16,
         },
         
         {
-        "learning_rate": 0.0001234963725838,
-        "weight_decay": 1.0792615318208883e-06,
-        "beta": 8.258413260185633e-05,
-        "latent_dim": 96,
-        "hidden_dim": 40,
+        "learning_rate": 0.0008461662809153,
+        "weight_decay": 5.529589456518004e-05,
+        "beta": 6.619077647025816e-06,
+        "latent_dim": 16,
+        "hidden_dim": 16,
         },
     ]
 

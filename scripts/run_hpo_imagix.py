@@ -297,10 +297,10 @@ def run_synetune_hpo(
         "n_gpus": 1,
 
         # Tunable params
-        "learning_rate": loguniform(5e-05, 0.05),
-        "weight_decay": loguniform(1e-06, 1e-03),
-        "beta": loguniform(1e-07, 1e-04),
-        "latent_dim": choice([16, 24, 32, 40, 48]),
+        "learning_rate": loguniform(1e-03, 3e-03),
+        "weight_decay": loguniform(5e-06, 1e-02),
+        "beta": loguniform(9e-07, 1e-02),
+        "latent_dim": choice([64, 80, 96, 112, 128]),
         "hidden_dim": choice([16, 24, 32, 40, 48]),
     }
 
@@ -308,11 +308,19 @@ def run_synetune_hpo(
     # runs are available from which to select informed anchor configurations.
     points_to_evaluate = [
         {
-        "learning_rate": 4.628567801513634e-06,
-        "weight_decay":  1.796195765923549e-05,
-        "beta": 1.5064578960340553e-05,
-        "latent_dim": 16,
+        "learning_rate": 0.0029186579575587,
+        "weight_decay":  1.419008549823615e-05,
+        "beta": 8.171920345884799e-07,
+        "latent_dim": 80,
         "hidden_dim": 32,
+        },
+        
+        {
+        "learning_rate": 0.0013208241296093,
+        "weight_decay": 2.6188770025433872e-05,
+        "beta": 0.0001750558349734,
+        "latent_dim": 112,
+        "hidden_dim": 24,
         },
     ]
 

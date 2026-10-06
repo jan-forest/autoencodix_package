@@ -300,8 +300,8 @@ def run_synetune_hpo(
         "learning_rate": loguniform(1e-05, 1e-02),
         "weight_decay": loguniform(1e-07, 5e-03),
         "beta": loguniform(1e-07, 1e-04),
-        "latent_dim": choice([32, 48, 64]),
-        "hidden_dim": choice([16, 32, 48]),
+        "latent_dim": choice([32, 40, 48, 64]),
+        "hidden_dim": choice([16, 24, 32, 48]),
     }
 
     # No points_to_evaluate are defined yet because no previous Imagix HPO

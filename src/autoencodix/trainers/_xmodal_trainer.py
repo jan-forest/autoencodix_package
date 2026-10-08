@@ -608,14 +608,30 @@ class XModalTrainer(BaseTrainer):
         from_model = from_modality["model"]
         to_model = to_modality["model"]
         from_model.eval(), to_model.eval()
-        # drop_last handled in custom sampler
-        inference_loader = DataLoader(
-            data,
-            batch_sampler=CoverageEnsuringSampler(
-                multimodal_dataset=data, batch_size=self._config.batch_size
-            ),
-            collate_fn=create_multimodal_collate_fn(multimodal_dataset=data),
+        
+        collate_fn = create_multimodal_collate_fn(
+            multimodal_dataset=data
         )
+
+        if data.is_fully_paired:
+            inference_loader = DataLoader(
+                data,
+                batch_size=self._config.batch_size,
+                shuffle=False,
+                drop_last=False,
+                collate_fn=collate_fn,
+                pin_memory=self._config.pin_memory,
+            )
+        else:
+            inference_loader = DataLoader(
+                data,
+                batch_sampler=CoverageEnsuringSampler(
+                    multimodal_dataset=data, 
+                    batch_size=self._config.batch_size
+                ),
+                collate_fn=collate_fn,
+                pin_memory=self._config.pin_memory,
+            )
         inference_loader = self._fabric.setup_dataloaders(inference_loader)  # type: ignore
         epoch_dynamics: List[Dict] = []
         with (

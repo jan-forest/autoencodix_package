@@ -393,7 +393,7 @@ class XModalTrainer(BaseTrainer):
             0  # because of unpaired training we need to sum the samples instead of using len(dataset)
         )
 
-        # self._grad_clip_warning_sent = False # Reset the warning flag at the start of each epoch
+        self._grad_clip_warning_sent = False # Reset the warning flag at the start of each epoch
 
         for batch in self._trainloader:
             with self._fabric.autocast():
@@ -508,7 +508,8 @@ class XModalTrainer(BaseTrainer):
         for epoch in range(self._config.epochs):
             self._cur_epoch = epoch
             self._is_checkpoint_epoch = self._should_checkpoint(epoch=epoch)
-            self._fabric.print(f"--- Epoch {epoch + 1}/{self._config.epochs} ---")
+            if self._is_checkpoint_epoch:
+                self._fabric.print(f"--- Epoch {epoch + 1}/{self._config.epochs} ---")
             if epoch == 0 and self._config.profiling:
                 print("Profiling enabled for epoch 0")
                 self._train_one_epoch_with_profiling()
@@ -802,7 +803,6 @@ class XModalTrainer(BaseTrainer):
         """
 
         n_samples = max(n_samples, 1)
-        print(f"split: {split}, n_samples: {n_samples}")
         # avg_total_loss = total_loss / n_samples ## Now already normalized
         self._result.losses.add(epoch=self._cur_epoch, split=split, data=total_loss)
 
@@ -814,14 +814,16 @@ class XModalTrainer(BaseTrainer):
             split=split,
             data=sub_losses,
         )
-        self._fabric.print(
-            f"Epoch {self._cur_epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {total_loss:.4f}"
-        )
+        if self._is_checkpoint_epoch:
+            self._fabric.print(
+                f"Epoch {self._cur_epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {total_loss:.4f}"
+            )
         # Detailed sub-loss logging in one line
         sub_loss_str = ", ".join(
             [f"{k}: {v:.4f}" for k, v in sub_losses.items() if "_factor" not in k]
         )
-        self._fabric.print(f"Sub-losses - {sub_loss_str}")
+        if self._is_checkpoint_epoch:
+            self._fabric.print(f"Sub-losses - {sub_loss_str}")
 
     def _store_checkpoint(self, split: str, epoch_dynamics: List[Dict]) -> None:
         """Stores model checkpoints and epoch dynamics into the Result object.

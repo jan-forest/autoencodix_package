@@ -7,6 +7,7 @@ from .varix_config import VarixConfig
 from .xmodalix_config import XModalixConfig
 from .maskix_config import MaskixConfig
 from .imagix3d_config import Imagix3DConfig
+from .xmodalix3d_config import XModalix3DConfig
 
 __all__ = [
     "DataCase",
@@ -20,5 +21,6 @@ __all__ = [
     "VarixConfig",
     "XModalixConfig",
     "MaskixConfig",
-    "Imagix3DConfig"
+    "Imagix3DConfig",
+    "XModalix3DConfig",
 ]

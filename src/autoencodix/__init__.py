@@ -12,6 +12,7 @@ from .stackix import Stackix
 from .ontix import Ontix
 from .disentanglix import Disentanglix
 from .xmodalix import XModalix
+from .xmodalix3d import XModalix3D
 from .imagix import Imagix
 from .imagix3d import Imagix3D
 from .maskix import Maskix
@@ -22,6 +23,7 @@ __all__ = [
     "Stackix",
     "Ontix",
     "XModalix",
+    "XModalix3D",
     "Imagix",
     "Imagix3D",
     "Disentanglix",

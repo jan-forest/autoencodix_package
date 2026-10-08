@@ -10,6 +10,7 @@ from autoencodix.modeling._ontix_architecture import OntixArchitecture
 from autoencodix.modeling._vanillix_architecture import VanillixArchitecture
 from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.modeling._maskix_architecture import MaskixArchitectureVanilla
+from autoencodix.modeling._volumevae_architecture import VolumeVAEArchitecture
 from autoencodix.trainers._general_trainer import GeneralTrainer
 from autoencodix.trainers._ontix_trainer import OntixTrainer
 from autoencodix.trainers._maskix_trainer import MaskixTrainer
@@ -20,4 +21,5 @@ model_trainer_map: Dict[Type, Type] = {
     VanillixArchitecture: GeneralTrainer,
     OntixArchitecture: OntixTrainer,
     MaskixArchitectureVanilla: MaskixTrainer,
+    VolumeVAEArchitecture: GeneralTrainer,
 }

@@ -16,6 +16,7 @@ from ._multimodal_dataset import MultiModalDataset
 from ._image_processor import ImagePreprocessor
 from ._sampler import BalancedBatchSampler
 from ._global_vol_norm import GlobalVolumeNormalizer
+from ._xmodal3d_preprocessor import XModal3DPreprocessor
 
 __all__ = [
     "DataSplitter",
@@ -37,4 +38,5 @@ __all__ = [
     "ImagePreprocessor",
     "BalancedBatchSampler",
     "GlobalVolumeNormalizer",
+    "XModal3DPreprocessor",
 ]

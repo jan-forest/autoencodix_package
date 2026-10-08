@@ -14,7 +14,7 @@ from .disentanglix import Disentanglix
 from .xmodalix import XModalix
 from .imagix import Imagix
 from .maskix import Maskix
-
+from .xontix import XOntix
 __all__ = [
     "Vanillix",
     "Varix",
@@ -24,4 +24,5 @@ __all__ = [
     "Imagix",
     "Disentanglix",
     "Maskix",
+    "XOntix",
 ]

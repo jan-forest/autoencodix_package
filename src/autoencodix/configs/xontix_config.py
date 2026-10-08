@@ -5,7 +5,7 @@ import warnings
 from typing import Optional, Literal
 
 
-class XModalix_Ontix_Config(DefaultConfig):
+class XOntix_Config(DefaultConfig):
     """
     A specialized configuration inheriting from DefaultConfig.
 
@@ -46,7 +46,7 @@ class XModalix_Ontix_Config(DefaultConfig):
         return values
 
     @model_validator(mode="after")
-    def validate_nested_scaling(self) -> "XModalix_Ontix_Config":
+    def validate_nested_scaling(self) -> "XOntix_Config":
         """
         Ensures that any scaling method set within DataInfo is also a valid
         positive-value scaler.

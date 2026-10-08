@@ -16,19 +16,19 @@ from autoencodix.data.datapackage import DataPackage
 from autoencodix.modeling._ontix_architecture import OntixArchitecture
 from autoencodix.data._xmodal_preprocessor import XModalPreprocessor
 from autoencodix.evaluate._xmodalix_evaluator import XModalixEvaluator
-from autoencodix.trainers._xmodal_ontix_trainer import XModalTrainer
+from autoencodix.trainers._xontix_trainer import XModalTrainer
 from autoencodix.utils._result import Result
 from autoencodix.configs.default_config import DefaultConfig
-from autoencodix.configs.xmodalix_ontix_config import XModalix_Ontix_Config
+from autoencodix.configs.xontix_config import XOntix_Config
 from autoencodix.utils._losses import XModalLoss
 from autoencodix.utils._utils import find_translation_keys
-from autoencodix.visualize._xmodal_ontix_visualizer import XModalVisualizer
+from autoencodix.visualize._xontix_visualizer import XModalVisualizer
 
 from mudata import MuData
 import torch  # type: ignore
 
 
-class XModalix_Ontix(BasePipeline):
+class XOntix(BasePipeline):
     """XModalix specific version of the BasePipeline class.
 
     Inherits preprocess, fit, evaluate, and visualize methods from BasePipeline.
@@ -38,7 +38,7 @@ class XModalix_Ontix(BasePipeline):
     of attributes and methods.
 
     Additional Attributes:
-        _default_config: Is set to XModalix_Ontix_Config here.
+        _default_config: Is set to XOntix_Config here.
 
     """
 
@@ -51,7 +51,7 @@ class XModalix_Ontix(BasePipeline):
                 Dict[str, Union[Tuple[Dict[str, list], ...], List[str]]],
             ]
         ] = None,
-        sep: Optional[str] = "\t",  # Addition to XModalix_Ontix, optional to read in ontologies
+        sep: Optional[str] = "\t",  # Addition to XOntix, optional to read in ontologies
         data: Optional[Union[DataPackage, DatasetContainer]] = None,
         trainer_type: Type[BaseTrainer] = XModalTrainer,
         dataset_type: Type[BaseDataset] = MultiModalDataset,
@@ -66,7 +66,7 @@ class XModalix_Ontix(BasePipeline):
         config: Optional[DefaultConfig] = None,
     ) -> None:
         """See base class for full list of Args."""
-        self._default_config = XModalix_Ontix_Config()
+        self._default_config = XOntix_Config()
         self.ontologies = self._normalize_ontologies(ontologies, sep)
 
         super().__init__(
@@ -84,9 +84,9 @@ class XModalix_Ontix(BasePipeline):
             custom_split=custom_splits,
             ontologies=self.ontologies,
         )
-        if not isinstance(self.config, XModalix_Ontix_Config):
+        if not isinstance(self.config, XOntix_Config):
             raise TypeError(
-                f"For XModalix Pipeline, we only allow XModalix_Ontix_Config as type for config, got {type(self.config)}"
+                f"For XModalix Pipeline, we only allow XOntix_Config as type for config, got {type(self.config)}"
             )
 
     def _read_ont_file(self, file_path: str, sep: str = "\t") -> dict:

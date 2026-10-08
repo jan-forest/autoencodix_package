@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
+import warnings
 from torch.utils.data import DataLoader
 
 from autoencodix.base._base_autoencoder import BaseAutoencoder
@@ -172,15 +173,26 @@ class XModalTrainer(BaseTrainer):
         """Initializes DataLoaders with smart sampler selection based on pairing."""
 
         def _build_loader(dataset: MultiModalDataset, is_train: bool):
-            batch_size = self._config.batch_size
+            if len(self._trainset) % self._config.batch_size == 1:
+                corrected_bs = self._config.batch_size + 1
+                while len(self._trainset) % corrected_bs == 1:
+                    corrected_bs = corrected_bs + 1
+                    if len(self._trainset) <= corrected_bs:
+                        break
+                warnings.warn(
+                    f"increased batch_size to {corrected_bs} for trainset, to avoid dropping samples (makes trainingdynamics messy with missing samples per epoch) and having batches of size one (fails for Models with BachNorm)"
+                )
+            else:
+                corrected_bs = self._config.batch_size
+
             collate_fn = create_multimodal_collate_fn(multimodal_dataset=dataset)
 
             if dataset.is_fully_paired:
                 return DataLoader(
                     dataset,
-                    batch_size=batch_size,
+                    batch_size=corrected_bs,
                     shuffle=is_train,
-                    drop_last=is_train,
+                    drop_last=False,
                     collate_fn=collate_fn,
                 )
             else:
@@ -190,7 +202,7 @@ class XModalTrainer(BaseTrainer):
                 )
                 sampler = CoverageEnsuringSampler(
                     multimodal_dataset=dataset,
-                    batch_size=batch_size,
+                    batch_size=corrected_bs,
                 )
                 return DataLoader(
                     dataset,

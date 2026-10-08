@@ -5,6 +5,7 @@ from .stackix_config import StackixConfig
 from .vanillix_config import VanillixConfig
 from .varix_config import VarixConfig
 from .xmodalix_config import XModalixConfig
+from .xontix_config import XOntix_Config
 from .maskix_config import MaskixConfig
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "VanillixConfig",
     "VarixConfig",
     "XModalixConfig",
+    "XOntix_Config",
     "MaskixConfig",
 ]

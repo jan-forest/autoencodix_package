@@ -176,6 +176,17 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):  # type: ignore
         self.unpaired_ids = multimodal_dataset.unpaired_sample_ids
         self.batch_size = batch_size
         self.paired_ratio = paired_ratio
+        
+        n_modalities = len(multimodal_dataset.datasets)
+
+        if batch_size < n_modalities:
+            raise ValueError(
+                "CoverageEnsuringSampler currently requires "
+                "batch_size >= number of modalities. "
+                f"Got batch_size={batch_size} and "
+                f"{n_modalities} modalities. "
+                "For fully paired datasets, use a standard DataLoader instead."
+            )
 
         total_paired = len(self.paired_ids)
         total_unpaired = len(self.unpaired_ids)
@@ -285,6 +296,10 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):  # type: ignore
             len(covered[mod]) == len(self.modality_samples[mod])
             for mod in self.modality_samples.keys()
         ):
+            coverage_before = sum(
+                len(ids) for ids in covered.values()
+            )
+            
             batch = []
             batch_set = set()  # Track unique samples in current batch
 
@@ -344,6 +359,18 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):  # type: ignore
             if len(batch) > self.batch_size:
                 batch = batch[: self.batch_size]
 
+            coverage_after = sum(
+                len(ids) for ids in covered.values()
+            )
+            
+            if coverage_after == coverage_before:
+                raise RuntimeError(
+                    "CoverageEnsuringSampler failed to make progress."
+                    "This would otherwise result in an infinite loop."
+                    f"batch_size={self.batch_size},"
+                    f"n_modalities={len(self.modality_samples)}"
+                )
+            
             if batch:
                 coverage_batches.append(batch)
 

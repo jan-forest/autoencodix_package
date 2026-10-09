@@ -45,6 +45,9 @@ module load Python/3.11.3
 
 source "${BASE}/venvs/alpha/bin/activate"
 
+# Required by PyTorch deterministic algorithms on CUDA/cuBLAS.
+export CUBLAS_WORKSPACE_CONFIG=:4096:8
+
 cd "${REPO}"
 
 echo "Starting full XModalix3D 3-modality alignment run"
@@ -54,6 +57,8 @@ echo "Data root: ${DATA_ROOT}"
 echo "Template: ${TEMPLATE}"
 echo "Result directory: ${RESULT_DIR}"
 echo "Output notebook: ${OUTPUT_NOTEBOOK}"
+echo "Deterministic CUDA configuration:"
+echo "CUBLAS_WORKSPACE_CONFIG=${CUBLAS_WORKSPACE_CONFIG}"
 
 echo
 echo "Repository state:"

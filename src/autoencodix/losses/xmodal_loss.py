@@ -293,12 +293,23 @@ class XModalLoss(BaseLoss):
                     sub_losses[f"{k}.loss"] = v2.item()
         return sub_losses
 
+    # def _calc_adversial_loss(
+    #     self,
+    #     labels: torch.Tensor,
+    #     clf_scores: torch.Tensor,
+    #     clf_loss_fn: torch.nn.Module,
+    # ):
+    #     flipped_labels = flip_labels(labels=labels)
+    #     adversarial_loss = clf_loss_fn(clf_scores, flipped_labels)
+    #     return adversarial_loss
+    
     def _calc_adversial_loss(
         self,
         labels: torch.Tensor,
         clf_scores: torch.Tensor,
         clf_loss_fn: torch.nn.Module,
     ):
-        flipped_labels = flip_labels(labels=labels)
-        adversarial_loss = clf_loss_fn(clf_scores, flipped_labels)
+        n_modalities = clf_scores.shape[1]
+        uniform_target = torch.full_like(clf_scores, 1.0 / n_modalities,)
+        adversarial_loss = clf_loss_fn(clf_scores, uniform_target,)
         return adversarial_loss

@@ -1,0 +1,130 @@
+from .xmodalix_config import XModalixConfig
+from pydantic import Field, model_validator
+from typing import Literal, Optional, Tuple, Union 
+
+
+class XModalix3DConfig(XModalixConfig):
+    """Configuration for 3D XModalix."""
+
+    n_conv_layers_3d: int = Field(
+        default=5,
+        ge=1,
+        description="Number of 3D convolutional layers."
+    )
+
+    # Spatial shape of 3D image configuration --------------------------------------------------
+    spatial_shape_policy: Literal[
+        "pad_to_multiple",
+        "crop_to_multiple",
+        "crop_or_pad_to_shape",
+        "crop_or_pad_to_multiple",
+    ] = Field(
+        default="pad_to_multiple",
+        description="Policy for making input volumes spatially compatible with the 3D CNN."
+    )
+
+    target_multiple: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="If None, derived from 2 ** n_conv_layers_3d."
+    )
+
+    target_shape_3d: Optional[Tuple[int, int, int]] = Field(
+        default=None,
+        description="Optional fixed target shape (D, H, W) for crop/pad workflows."
+    )
+
+    padding_mode_3d: Union[int, str] = Field(
+        default=0,
+        description="Padding mode/value for spatial padding."
+    )
+
+    normalize_nonzero_only: bool = Field(
+        default=True,
+        description="Whether intensity normalization should ignore zero background voxels."
+    )
+    
+    volume_scaling_strategy: Literal["per_volume", "train_global"] = Field(
+        default = "per_volume",
+        description="Whether volumes are scaled individually, or on train/valid/test - set level.")
+    
+    # Model architecture configuration -------------------------------------------
+    clamp_logvar: bool = Field(
+        default=False,
+        description="Whether logvar values in the model architecture should be prevented from being too close to zero"
+    )
+    
+    logvar_range: Optional[Tuple[float, float]] = Field(
+        default=(-10, 20), # previously: (0.1, 20)
+        description="Indicate the range that logvar values can take on"
+    )
+    
+    keep_mu_positive: bool = Field(
+        default=False,
+        description="If True, mu values below 0.000001 will be set to 0"
+    )
+    
+    train_normalization: Literal["batch", "group", "instance"] = Field(
+        default="batch",
+        description="Indicate how the input to the convolutional layers should get normalized"
+    )
+    
+    train_norm_groupsize: Optional[int] = Field(
+        default=8,
+        ge=1,
+        description="Requested size of group for GroupNorm. Will fall back to the gcd if requested size does not divide the number of channels "
+    )
+    
+     ##### VALIDATION ##### -----------------------------------------------------
+    @model_validator(mode="after")
+    def set_target_multiple(self) -> "XModalix3DConfig":
+        """
+        Ensures that targeted 3D image dimensions are compatible with the number of CNN layers.
+        """
+        if self.target_multiple is None:
+            self.target_multiple = 2**self.n_conv_layers_3d
+            return self
+        elif self.target_multiple % 2**self.n_conv_layers_3d != 0:
+            raise ValueError(
+                f"'target_multiple' ({self.target_multiple}) must be divisible by 2^{self.n_conv_layers_3d}"
+                )
+        return self
+
+    @model_validator(mode="after")
+    def check_target_shape_3d(self) -> "XModalix3DConfig":
+        """
+        Ensures that the fixed 3D target image dimensions (if provided) are compatible with the number of CNN layers.
+        """
+        if self.target_shape_3d is not None:
+            if not all(x % 2 ** self.n_conv_layers_3d == 0 for x in self.target_shape_3d):
+                raise ValueError(
+                    f"All dimensions in 'target_shape_3d' ({self.target_shape_3d}) must be divisible by 2^{self.n_conv_layers_3d}"
+                )
+            if len(self.target_shape_3d) != 3:
+                raise ValueError(
+                    "'target_shape_3d' must receive exactly 3 integer values."
+                    f"You have only provided {len(self.target_shape_3d)}"
+                )
+        return self
+    
+    @model_validator(mode="after")
+    def validate_spatial_shape_settings(self):
+        if self.spatial_shape_policy in {
+            "pad_to_multiple", 
+            "crop_to_multiple",
+            "crop_or_pad_to_multiple"
+        }: 
+            if self.target_shape_3d is not None:
+                raise ValueError(
+                "'target_shape_3d' must be None when spatial_shape_policy is "
+                "'pad_to_multiple' or 'crop_to_multiple'."
+            )
+
+        if self.spatial_shape_policy == "crop_or_pad_to_shape":
+            if self.target_shape_3d is None:
+                raise ValueError(
+                    "'target_shape_3d' must be provided when spatial_shape_policy "
+                    "is 'crop_or_pad_to_shape'."
+                )
+
+        return self

@@ -473,34 +473,119 @@ class XModalTrainer(BaseTrainer):
 
         return epoch_dynamics, sub_losses, n_samples_total
 
+    # def _pretraining(self):
+    #     """Pretrain each modality's model if needed."""
+    #     for mod_name, dynamic in self._modality_dynamics.items():
+    #         mytype = dynamic.get("mytype")
+    #         pretrain_epochs = dynamic.get("pretrain_epochs")
+    #         print(f"Check if we need to pretrain: {mod_name}")
+    #         print(f"pretrain epochs : {pretrain_epochs}")
+    #         if not pretrain_epochs:
+    #             print(f"No pretraining for {mod_name}")
+    #             continue
+    #         model_type = self.model_map.get(mytype)
+    #         pretrainer_type = self.model_trainer_map.get(model_type)
+    #         print(f"starting pretraining for: {mod_name} with {pretrainer_type}")
+    #         trainset = self._trainset.datasets.get(mod_name)
+    #         validset = self._validset.datasets.get(mod_name)
+    #         pretrainer = pretrainer_type(
+    #             trainset=trainset,
+    #             validset=validset,
+    #             result=Result(),
+    #             config=self._config,
+    #             model_type=model_type,
+    #             loss_type=self._sub_loss_type,
+    #             ontologies=self.ontologies,
+    #         )
+    #         pretrain_result = pretrainer.train(epochs_overwrite=pretrain_epochs)
+    #         self._result.sub_results[f"pretrain.{mod_name}"] = pretrain_result
+    #         self._modality_dynamics[mod_name]["pretrain_result"] = pretrain_result
+    #         self._modality_dynamics[mod_name]["model"] = pretrain_result.model
+    
     def _pretraining(self):
-        """Pretrain each modality's model if needed."""
+        
+        """Pretrain each modality's model if requested.
+
+        The pretrained weights are copied into the already initialized
+        joint-training model. The model object itself is not replaced,
+        because its optimizer is already bound to its parameters.
+        """
+
         for mod_name, dynamic in self._modality_dynamics.items():
             mytype = dynamic.get("mytype")
             pretrain_epochs = dynamic.get("pretrain_epochs")
-            print(f"Check if we need to pretrain: {mod_name}")
-            print(f"pretrain epochs : {pretrain_epochs}")
+            print(f"Check if we need to pretrain: "f"{mod_name}")
+            print(f"pretrain epochs: "f"{pretrain_epochs}")
+
             if not pretrain_epochs:
                 print(f"No pretraining for {mod_name}")
                 continue
+
+            # Determine model and pretrainer
             model_type = self.model_map.get(mytype)
-            pretrainer_type = self.model_trainer_map.get(model_type)
-            print(f"starting pretraining for: {mod_name} with {pretrainer_type}")
-            trainset = self._trainset.datasets.get(mod_name)
-            validset = self._validset.datasets.get(mod_name)
+            if model_type is None:
+                raise ValueError(
+                    f"No model type registered for "
+                    f"dataset type {mytype}."
+            )
+            pretrainer_type = (self.model_trainer_map.get(model_type))
+            if pretrainer_type is None:
+                raise ValueError(
+                    f"No pretrainer registered for {model_type.__name__}. "
+                    "Add the architecture to model_trainer_map."
+                )
+            print(f"Starting pretraining for {mod_name} with {pretrainer_type.__name__}")
+            trainset = (self._trainset.datasets.get(mod_name))
+            validset = (self._validset.datasets.get(mod_name) if self._validset is not None else None)
+            
+            # Train an independent unimodal AE
+            pretrain_config = self._config.model_copy(deep=True)
+            pretrain_config.epochs = pretrain_epochs
             pretrainer = pretrainer_type(
                 trainset=trainset,
                 validset=validset,
                 result=Result(),
-                config=self._config,
+                config=pretrain_config,
                 model_type=model_type,
                 loss_type=self._sub_loss_type,
                 ontologies=self.ontologies,
             )
-            pretrain_result = pretrainer.train(epochs_overwrite=pretrain_epochs)
+            pretrain_result = pretrainer.train()
+
+            # Copy pretrained weights into the existing joint-training model
+            target_model = dynamic["model"]
+            source_model = pretrain_result.model
+            # Fabric may wrap the models.
+            if isinstance(target_model, _FabricModule,):
+                target_module = (target_model.module)
+            else:
+                target_module = target_model
+            if isinstance(source_model, _FabricModule):
+                source_module = source_model.module
+            else:
+                source_module = source_model
+            target_module.load_state_dict(source_module.state_dict())
+
+            # Verify that the optimizer still belongs to the joint-training model
+            model_param_ids = {id(parameter) for parameter in target_model.parameters()}
+            optimizer_param_ids = {
+                id(parameter)
+                for group
+                in dynamic[
+                    "optim"
+                ].param_groups
+                for parameter
+                in group["params"]
+            }
+            if (model_param_ids != optimizer_param_ids):
+                raise RuntimeError(
+                    f"Optimizer parameters do not match the joint-training model for {mod_name}."
+            )
+
+            # Preserve pretraining diagnostics
             self._result.sub_results[f"pretrain.{mod_name}"] = pretrain_result
-            self._modality_dynamics[mod_name]["pretrain_result"] = pretrain_result
-            self._modality_dynamics[mod_name]["model"] = pretrain_result.model
+            dynamic["pretrain_result"] = pretrain_result
+            print(f"Loaded pretrained weights into joint model for {mod_name}.")
 
     def train(self):
         """Orchestrates the full training process for the cross-modal autoencoder."""

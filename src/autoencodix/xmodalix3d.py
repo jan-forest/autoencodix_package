@@ -15,6 +15,7 @@ from autoencodix.data._multimodal_dataset import MultiModalDataset
 from autoencodix.data._xmodal3d_preprocessor import XModal3DPreprocessor
 from autoencodix.data.datapackage import DataPackage
 from autoencodix.evaluate._xmodalix_evaluator import XModalixEvaluator
+from autoencodix.evaluate._xmodalix3d_evaluator import XModalix3DEvaluator
 from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.modeling._volumevae_architecture import VolumeVAEArchitecture
 from autoencodix.trainers._xmodal_trainer import XModalTrainer
@@ -43,7 +44,7 @@ class XModalix3D(XModalix):
         loss_type: Type[BaseLoss] = XModalLoss,
         preprocessor_type: Type[BasePreprocessor] = XModal3DPreprocessor,
         visualizer: Optional[Type[BaseVisualizer]] = XModal3DVisualizer,
-        evaluator: Optional[Type[XModalixEvaluator]] = XModalixEvaluator,
+        evaluator: Optional[Type[XModalixEvaluator]] = XModalix3DEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
         custom_splits: Optional[Dict[str, np.ndarray]] = None,

@@ -582,10 +582,25 @@ class XModalTrainer(BaseTrainer):
                     f"Optimizer parameters do not match the joint-training model for {mod_name}."
             )
 
+            # Preserve the pretrained result, but its model no longer needs GPU memory
+            source_module.to('cpu')
             # Preserve pretraining diagnostics
             self._result.sub_results[f"pretrain.{mod_name}"] = pretrain_result
             dynamic["pretrain_result"] = pretrain_result
             print(f"Loaded pretrained weights into joint model for {mod_name}.")
+            
+            # Pretrainer and its optimizer are no longer needed
+            del source_model
+            del source_module
+            del pretrainer
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                print(
+                    f"GPU after cleanup of {mod_name}: "
+                    f"allocated={torch.cuda.memory_allocated() / 1024**3:.2f} GiB, "
+                    f"reserved={torch.cuda.memory_reserved() / 1024**3:.2f} GiB"
+                )
 
     def train(self):
         """Orchestrates the full training process for the cross-modal autoencoder."""

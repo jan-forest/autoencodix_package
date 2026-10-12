@@ -253,7 +253,7 @@ class XModalTrainer(BaseTrainer):
             self._modality_dynamics[mod_name] = {
                 "model": model,
                 "optim": optimizer,
-                "sub_losses": sub_loss,
+                "sub_loss": sub_loss,
                 "modality_config": modality_config,
                 "mp": [],
                 "losses": [],

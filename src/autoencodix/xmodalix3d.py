@@ -20,7 +20,7 @@ from autoencodix.modeling._volumevae_architecture import VolumeVAEArchitecture
 from autoencodix.trainers._xmodal_trainer import XModalTrainer
 from autoencodix.utils._losses import XModalLoss
 from autoencodix.utils._result import Result
-from autoencodix.visualize._xmodal_visualizer import XModalVisualizer
+from autoencodix.visualize._xmodal3d_visualizer import XModal3DVisualizer
 from autoencodix.xmodalix import XModalix
 
 
@@ -42,7 +42,7 @@ class XModalix3D(XModalix):
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
         loss_type: Type[BaseLoss] = XModalLoss,
         preprocessor_type: Type[BasePreprocessor] = XModal3DPreprocessor,
-        visualizer: Optional[Type[BaseVisualizer]] = XModalVisualizer,
+        visualizer: Optional[Type[BaseVisualizer]] = XModal3DVisualizer,
         evaluator: Optional[Type[XModalixEvaluator]] = XModalixEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,
@@ -102,4 +102,33 @@ class XModalix3D(XModalix):
         self.visualizer.show_latent_space(
             result=self.result,
             plot_type="2D-scatter",
+        )
+    
+    def show_result(self):
+        """Display the main XModalix3D result visualizations.
+
+        Shows training losses and latent-space visualizations inherited from
+        XModalVisualizer, followed by the 3D cross-modal translation using
+        axial, coronal, and sagittal central views.
+        """
+
+        print("Creating plots ...")
+
+        # Dimension-independent XModalix plots
+        self.visualizer.show_loss(plot_type="absolute")
+        self.visualizer.show_latent_space(result=self.result, plot_type="Ridgeline")
+        self.visualizer.show_latent_space(result=self.result, plot_type="2D-scatter")
+
+        # Determine configured translation direction
+        dm_keys = find_translation_keys(
+            config=self.config,
+            trained_modalities=self._trainer._modality_dynamics.keys(),
+        )
+
+        # XModalix3D-specific volumetric translation visualization
+        self.visualizer.show_image_translation(
+            result=self.result,
+            from_key=dm_keys["from"],
+            to_key=dm_keys["to"],
+            split="test",
         )

@@ -1273,3 +1273,335 @@ class XModal3DVisualizer(XModalVisualizer):
             display_labels,
             param,
         )
+    
+    @no_type_check
+    def show_modality_linear_probe(
+        self,
+        summary_df: pd.DataFrame,
+        confusion_df: pd.DataFrame,
+    ) -> None:
+        """Visualize the result of modality linear probing.
+
+        The visualization contains:
+
+        1. The balanced accuracy of the modality linear probe together with
+            the chance level.
+        2. A row-normalized confusion matrix showing which modalities can be
+            distinguished from each other.
+
+        Args:
+            summary_df:
+                Summary DataFrame returned as the first output of
+                XModalix3DEvaluator.modality_linear_probe().
+
+            confusion_df:
+                Row-normalized confusion matrix returned as the second output
+                of XModalix3DEvaluator.modality_linear_probe().
+        """
+
+        required_summary_columns = {
+            "split",
+            "epoch",
+            "representation",
+            "linear_probe_balanced_accuracy",
+            "chance_level",
+            "n_modalities",
+        }
+
+        missing_columns = required_summary_columns - set(summary_df.columns)
+        if missing_columns:
+            raise ValueError(f"summary_df is missing required column(s): {sorted(missing_columns)}")
+
+        if len(summary_df) != 1:
+            raise ValueError("show_modality_linear_probe() expects the summary output from a single modality_linear_probe() evaluation.")
+
+        if confusion_df.empty:
+            raise ValueError("confusion_df must not be empty.")
+
+        row = summary_df.iloc[0]
+
+        balanced_accuracy = float(row["linear_probe_balanced_accuracy"])
+        chance_level = float(row["chance_level"])
+
+        representation = str(row["representation"])
+        split = str(row["split"])
+        epoch = int(row["epoch"])
+
+        epoch_label = ("final" if epoch == -1 else str(epoch))
+
+        fig, axes = plt.subplots(
+            nrows=1,
+            ncols=2,
+            figsize=(12, 5),
+            constrained_layout=True,
+        )
+
+        # Balanced accuracy
+        ax = axes[0]
+        ax.bar(["Linear probe"], [balanced_accuracy])
+        ax.axhline(chance_level, linestyle="--", label=f"Chance = {chance_level:.3f}")
+        ax.set_ylim(0.0, 1.0)
+        ax.set_ylabel("Balanced accuracy")
+        ax.set_title("Modality linear probe")
+        ax.text(0, min(balanced_accuracy + 0.03, 0.97), f"{balanced_accuracy:.3f}",
+            ha="center",
+            va="bottom",
+        )
+        ax.legend()
+
+
+        # Confusion matrix
+        ax = axes[1]
+        sns.heatmap(
+            confusion_df,
+            annot=True,
+            fmt=".2f",
+            vmin=0.0,
+            vmax=1.0,
+            square=True,
+            cbar_kws={
+                "label": "Proportion",
+            },
+            ax=ax,
+        )
+
+        ax.set_xlabel("Predicted modality")
+        ax.set_ylabel("True modality")
+        ax.set_title("Modality confusion matrix")
+
+        fig.suptitle(
+            (
+                "Cross-modal modality separability "
+                f"({representation}, {split}, epoch {epoch_label})"
+            ),
+            fontsize=14,
+            fontweight="bold",
+        )
+
+        self.plots["Modality-linear-probe"][representation][split][epoch] = fig
+
+        plt.show()
+   
+    
+    @no_type_check
+    def show_matched_unmatched_analysis(
+        self,
+        summary_df: pd.DataFrame,
+        distances_df: Optional[pd.DataFrame] = None,
+    ) -> None:
+        """Visualize matched versus unmatched cross-modal latent distances.
+
+        The first panel shows the matched/unmatched distance ratio for every
+        modality pair. A value below 1 indicates that embeddings belonging
+        to the same sample/patient are closer across modalities than
+        embeddings belonging to different patients.
+
+        The second panel shows either:
+
+        - the distributions of matched and unmatched distances if
+        ``distances_df`` is supplied, or
+        - their mean distances if only ``summary_df`` is supplied.
+
+        Args:
+            summary_df:
+                Summary DataFrame returned by
+                XModalix3DEvaluator.matched_unmatched_analysis().
+
+            distances_df:
+                Optional long-format distance DataFrame returned when
+                matched_unmatched_analysis(..., return_distances=True)
+                is used.
+        """
+
+        required_summary_columns = {
+            "split",
+            "epoch",
+            "representation",
+            "distance_metric",
+            "modality_a",
+            "modality_b",
+            "matched_distance_mean",
+            "unmatched_distance_mean",
+            "matched_unmatched_ratio",
+        }
+
+        missing_columns = (required_summary_columns - set(summary_df.columns))
+
+        if missing_columns:
+            raise ValueError(f"summary_df is missing required column(s): {sorted(missing_columns)}")
+
+        if summary_df.empty:
+            raise ValueError("summary_df must not be empty.")
+
+        representations = summary_df["representation"].astype(str).unique()
+        splits = summary_df["split"].astype(str).unique()
+        epochs = summary_df["epoch"].unique()
+        metrics = summary_df["distance_metric"].astype(str).unique()
+
+        if len(representations) != 1:
+            raise ValueError("summary_df must contain exactly one representation.")
+
+        if len(splits) != 1:
+            raise ValueError("summary_df must contain exactly one split.")
+
+        if len(epochs) != 1:
+            raise ValueError("summary_df must contain exactly one epoch.")
+
+        if len(metrics) != 1:
+            raise ValueError("summary_df must contain exactly one distance metric.")
+
+        representation = representations[0]
+        split = splits[0]
+        epoch = int(epochs[0])
+        distance_metric = metrics[0]
+        epoch_label = ("final" if epoch == -1 else str(epoch))
+        plot_df = summary_df.copy()
+
+        plot_df["modality_pair"] = (
+            plot_df["modality_a"].astype(str) + " ↔ "
+            + plot_df["modality_b"].astype(str)
+        )
+
+        fig, axes = plt.subplots(
+            nrows=1,
+            ncols=2,
+            figsize=(14, 5),
+            constrained_layout=True,
+        )
+
+        # Matched / unmatched ratio
+        ax = axes[0]
+
+        sns.barplot(
+            data=plot_df,
+            x="modality_pair",
+            y="matched_unmatched_ratio",
+            ax=ax,
+        )
+
+        ax.axhline(
+            1.0,
+            linestyle="--",
+            label="No patient-specific alignment",
+        )
+
+        ax.set_xlabel("Modality pair")
+        ax.set_ylabel("Matched / unmatched distance ratio")
+        ax.set_title("Patient-specific cross-modal alignment")
+        ax.tick_params(axis="x", rotation=30)
+        ax.legend()
+
+        # Add numerical ratio above each bar
+        for patch, value in zip(
+            ax.patches,
+            plot_df["matched_unmatched_ratio"],
+        ):
+            ax.text(
+                patch.get_x()
+                + patch.get_width() / 2,
+                patch.get_height(),
+                f"{value:.3f}",
+                ha="center",
+                va="bottom",
+            )
+
+        # Individual distance distributions, if available
+        ax = axes[1]
+
+        if distances_df is not None:
+            required_distance_columns = {
+                "modality_a",
+                "modality_b",
+                "pair_type",
+                "distance",
+            }
+
+            missing_distance_columns = (required_distance_columns - set(distances_df.columns))
+
+            if missing_distance_columns:
+                raise ValueError(
+                    "distances_df is missing required column(s): "
+                    f"{sorted(missing_distance_columns)}"
+                )
+
+            distance_plot_df = distances_df.copy()
+
+            distance_plot_df["modality_pair"] = (
+                distance_plot_df[
+                    "modality_a"
+                ].astype(str)
+                + " ↔ "
+                + distance_plot_df[
+                    "modality_b"
+                ].astype(str)
+            )
+
+            sns.boxplot(
+                data=distance_plot_df,
+                x="modality_pair",
+                y="distance",
+                hue="pair_type",
+                showfliers=False,
+                ax=ax,
+            )
+
+            ax.set_xlabel("Modality pair")
+            ax.set_ylabel(f"{distance_metric.capitalize()} distance")
+            ax.set_title("Matched vs unmatched distances")
+            ax.tick_params(axis="x", rotation=30,)
+            ax.legend(title="Pair type")
+
+        else:
+            mean_distance_df = (
+                plot_df[
+                    [
+                        "modality_pair",
+                        "matched_distance_mean",
+                        "unmatched_distance_mean",
+                    ]
+                ]
+                .melt(
+                    id_vars="modality_pair",
+                    value_vars=[
+                        "matched_distance_mean",
+                        "unmatched_distance_mean",
+                    ],
+                    var_name="pair_type",
+                    value_name="distance",
+                )
+            )
+
+            mean_distance_df["pair_type"] = mean_distance_df["pair_type"].map(
+                {
+                    "matched_distance_mean": "matched",
+                    "unmatched_distance_mean": "unmatched",
+                }
+            )
+
+            sns.barplot(
+                data=mean_distance_df,
+                x="modality_pair",
+                y="distance",
+                hue="pair_type",
+                ax=ax,
+            )
+
+            ax.set_xlabel("Modality pair")
+
+            ax.set_ylabel(f"Mean {distance_metric} distance")
+            ax.set_title("Mean matched vs unmatched distances")
+            ax.tick_params(axis="x", rotation=30)
+            ax.legend(title="Pair type")
+
+        fig.suptitle(
+            (
+                "Cross-modal patient alignment "
+                f"({representation}, {split}, epoch {epoch_label})"
+            ),
+            fontsize=14,
+            fontweight="bold",
+        )
+
+        self.plots["Matched-unmatched-alignment"][representation][split][epoch] = fig
+
+        plt.show()

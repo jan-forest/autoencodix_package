@@ -182,6 +182,26 @@ class XModalTrainer(BaseTrainer):
 
         # Optional: expose for logging
         self._train_is_fully_paired = len(self._trainset.unpaired_sample_ids) == 0
+    
+    def _get_modality_config(self, simple_name: str) -> DefaultConfig:
+        """Return a config with modality-specific overrides applied.
+
+        The XModalix config remains unchanged. Modality-specific learning_rate, weight_decay, 
+        and beta values from DataInfo override global values when provided.
+        """
+        modality_config = self._config.model_copy(deep=True)
+        data_info = self._config.data_config.data_info[simple_name]
+
+        if data_info.learning_rate is not None:
+            modality_config.learning_rate = data_info.learning_rate
+
+        if data_info.weight_decay is not None:
+            modality_config.weight_decay = data_info.weight_decay
+
+        if data_info.beta is not None:
+            modality_config.beta = data_info.beta
+
+        return modality_config
 
     def _init_modality_training(self):
         """Initializes models, optimizers, and training state for each modality."""
@@ -203,13 +223,17 @@ class XModalTrainer(BaseTrainer):
                 if local_epochs is not None
                 else self._config.pretrain_epochs
             )
+            
+            # Create a config for this modality.
+            # Local DataInfo values override global values.
+            modality_config = self._get_modality_config(simple_name)
 
             model_type = self.model_map.get(ds.mytype)
             if model_type is None:
                 raise ValueError(
                     f"No Mapping exists for {ds.mytype}, you passed this mapping: {self.model_map}"
                 )
-            model = model_type(config=self._config, input_dim=ds.get_input_dim())
+            model = model_type(config=modality_config, input_dim=ds.get_input_dim())
             if (
                 Version(torch.__version__) >= Version("2.0")
                 and torch.cuda.is_available()
@@ -218,12 +242,19 @@ class XModalTrainer(BaseTrainer):
                 model = torch.compile(model)
             optimizer = torch.optim.AdamW(
                 params=model.parameters(),
-                lr=self._config.learning_rate,
-                weight_decay=self._config.weight_decay,
+                lr=modality_config.learning_rate,
+                weight_decay=modality_config.weight_decay,
             )
+            
+            # Each modality gets its own VAE loss instance so that
+            # beta can differ between modalities.
+            sub_loss = self._sub_loss_type(config=modality_config)
+            
             self._modality_dynamics[mod_name] = {
                 "model": model,
                 "optim": optimizer,
+                "sub_losses": sub_loss,
+                "modality_config": modality_config,
                 "mp": [],
                 "losses": [],
                 "config_name": simple_name,
@@ -253,8 +284,9 @@ class XModalTrainer(BaseTrainer):
             data = v["data"]
 
             mp = model(data)
+            loss_fn = self._modality_dynamics[k]["sub_loss"]
 
-            loss, loss_stats = self.sub_loss(
+            loss, loss_stats = loss_fn(
                 model_output=mp, targets=data, epoch=self._cur_epoch
             )
 
@@ -539,7 +571,7 @@ class XModalTrainer(BaseTrainer):
             validset = (self._validset.datasets.get(mod_name) if self._validset is not None else None)
             
             # Train an independent unimodal AE
-            pretrain_config = self._config.model_copy(deep=True)
+            pretrain_config = dynamic["modality_config"].model_copy(deep=True)
             pretrain_config.epochs = pretrain_epochs
             pretrainer = pretrainer_type(
                 trainset=trainset,

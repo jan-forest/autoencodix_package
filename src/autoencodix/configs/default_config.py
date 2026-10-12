@@ -130,6 +130,21 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         default=None,
         description="Number of pretraining epochs. This overwrites the global 'pretraining_epochs' in DefaultConfig class to have different number of pretraining epochs for each data modality",
     )
+    learning_rate: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description="Optional modality-specific learning rate. If None, the global learning_rate is used.",
+    )
+    weight_decay: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Optional modality-specific weight decay. If None, the global weight_decay is used.",
+    )
+    beta: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Optional modality-specific beta weighting factor for the VAE loss. If None, the global beta is used.",
+    )
 
     @field_validator("selected_layers")
     @classmethod

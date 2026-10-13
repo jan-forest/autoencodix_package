@@ -95,6 +95,7 @@ class XModalTrainer(BaseTrainer):
         self._n_train_modalities = self._trainset.n_modalities  # type: ignore
         self.model_map = model_map
         self.model_trainer_map = model_trainer_map
+        self._sub_loss_type = sub_loss_type
         self._n_cpus = os.cpu_count()
         if self._n_cpus is None:
             self._n_cpus = 0
@@ -109,7 +110,7 @@ class XModalTrainer(BaseTrainer):
         self.n_valid = len(validset.data) if validset else 0
         self._cur_epoch: int = 0
         self._is_checkpoint_epoch: Optional[bool] = None
-        self._sub_loss_type = sub_loss_type
+        #self._sub_loss_type = sub_loss_type
         self.sub_loss = sub_loss_type(config=self._config)
         self._clf_epoch_loss: float = 0.0
         self._epoch_loss: float = 0.0

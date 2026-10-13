@@ -5,11 +5,17 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, Tuple
+
+import numpy as np
+import pandas as pd
 
 import autoencodix as acx
 from autoencodix.configs import DataCase, DataConfig, DataInfo
 from autoencodix.configs.xmodalix3d_config import XModalix3DConfig
-from autoencodix.utils._utils import custom_splits_from_anno
+
+
+SUPPORTED_VOLUME_EXTENSIONS = (".nii", ".nii.gz")
 
 
 def parse_args() -> argparse.Namespace:
@@ -124,7 +130,219 @@ def _translation_direction(
     return None
 
 
-def build_config(args: argparse.Namespace) -> XModalix3DConfig:
+def _read_available_annotation(
+    *,
+    annotation_file: Path,
+    image_dir: Path,
+    modality: str,
+    img_path_col: str = "filepath",
+    split_col: str = "custom_splits",
+) -> pd.DataFrame:
+    """Read one modality annotation and retain samples with an available volume.
+
+    The file is read with ``index_col=0`` to mirror ``VolumeDataReader``.
+    Therefore the DataFrame index is treated as the sample identifier here,
+    exactly as it is when the 3D reader creates ``ImgData`` objects.
+    """
+
+    if not annotation_file.is_file():
+        raise FileNotFoundError(
+            f"{modality} annotation file does not exist: {annotation_file}"
+        )
+    if not image_dir.is_dir():
+        raise FileNotFoundError(
+            f"{modality} image directory does not exist: {image_dir}"
+        )
+
+    annotation = pd.read_csv(
+        annotation_file,
+        index_col=0,
+        engine="python",
+    )
+    annotation.index = annotation.index.astype(str)
+
+    if annotation.index.has_duplicates:
+        duplicate_ids = annotation.index[
+            annotation.index.duplicated()
+        ].unique().tolist()
+        raise ValueError(
+            f"{modality} annotation contains duplicate index/sample IDs. "
+            f"First duplicates: {duplicate_ids[:10]}"
+        )
+
+    required_columns = {img_path_col, split_col}
+    missing_columns = required_columns - set(annotation.columns)
+    if missing_columns:
+        raise ValueError(
+            f"{modality} annotation is missing required column(s): "
+            f"{sorted(missing_columns)}"
+        )
+
+    split_values = (
+        annotation[split_col]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+    allowed_splits = {"train", "valid", "test"}
+    invalid_splits = set(split_values.unique()) - allowed_splits
+    if invalid_splits:
+        raise ValueError(
+            f"{modality} annotation contains invalid split label(s): "
+            f"{sorted(invalid_splits)}. "
+            f"Allowed values are {sorted(allowed_splits)}."
+        )
+
+    available_files = {
+        path.name
+        for path in image_dir.iterdir()
+        if path.is_file()
+        and path.name.lower().endswith(SUPPORTED_VOLUME_EXTENSIONS)
+    }
+
+    annotation_paths = annotation[img_path_col].astype(str)
+    available_mask = annotation_paths.isin(available_files)
+
+    missing_volume_count = int((~available_mask).sum())
+    if missing_volume_count:
+        print(
+            f"{modality}: ignoring {missing_volume_count} annotation row(s) "
+            "whose volume file is not present in the image directory."
+        )
+
+    annotation = annotation.loc[available_mask].copy()
+
+    if annotation.empty:
+        raise ValueError(
+            f"No usable {modality} samples remain after matching the "
+            f"annotation to {image_dir}."
+        )
+
+    return annotation
+
+
+def _build_common_custom_splits(
+    args: argparse.Namespace,
+    run_dir: Path,
+    *,
+    img_path_col: str = "filepath",
+    split_col: str = "custom_splits",
+) -> Tuple[Dict[str, np.ndarray], Path, Dict[str, int]]:
+    """Build custom split indices on the actual paired three-modality cohort.
+
+    XModalix3D uses only patients available in all three modalities. The split
+    indices must therefore be relative to that common patient set rather than
+    to the complete annotation table of any single modality.
+    """
+
+    modality_sources = {
+        "NCCT": (args.ncct_anno, args.ncct_images),
+        "CBF": (args.cbf_anno, args.cbf_images),
+        "CBV": (args.cbv_anno, args.cbv_images),
+    }
+
+    annotations: Dict[str, pd.DataFrame] = {
+        modality: _read_available_annotation(
+            annotation_file=annotation_file,
+            image_dir=image_dir,
+            modality=modality,
+            img_path_col=img_path_col,
+            split_col=split_col,
+        )
+        for modality, (annotation_file, image_dir)
+        in modality_sources.items()
+    }
+
+    common_ids = sorted(
+        set(annotations["NCCT"].index)
+        & set(annotations["CBF"].index)
+        & set(annotations["CBV"].index)
+    )
+
+    if not common_ids:
+        raise ValueError(
+            "NCCT, CBF and CBV have no common sample IDs after matching "
+            "annotation rows to available volume files."
+        )
+
+    reference_splits = (
+        annotations["NCCT"]
+        .loc[common_ids, split_col]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+
+    # A paired patient must have the same predefined split in every modality.
+    for modality in ("CBF", "CBV"):
+        modality_splits = (
+            annotations[modality]
+            .loc[common_ids, split_col]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+        )
+
+        mismatch_mask = (
+            reference_splits.to_numpy()
+            != modality_splits.to_numpy()
+        )
+
+        if mismatch_mask.any():
+            mismatch_positions = np.flatnonzero(mismatch_mask)
+            examples = [
+                (
+                    common_ids[position],
+                    reference_splits.iloc[position],
+                    modality_splits.iloc[position],
+                )
+                for position in mismatch_positions[:10]
+            ]
+            raise ValueError(
+                f"Custom split assignments differ between NCCT and "
+                f"{modality} for {int(mismatch_mask.sum())} common sample(s). "
+                f"First mismatches (sample_id, NCCT, {modality}): {examples}"
+            )
+
+    # NCCT serves as the canonical clinical annotation. Its rows are ordered
+    # exactly like common_ids. XModal3DPreprocessor uses the same deterministic
+    # common-ID order before invoking the DataSplitter.
+    paired_annotation = annotations["NCCT"].loc[common_ids].copy()
+    paired_annotation_path = run_dir / "paired_annotation.csv"
+    paired_annotation.to_csv(paired_annotation_path)
+
+    split_values = (
+        paired_annotation[split_col]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .to_numpy()
+    )
+
+    custom_splits = {
+        "train": np.where(split_values == "train")[0].astype(int),
+        "valid": np.where(split_values == "valid")[0].astype(int),
+        "test": np.where(split_values == "test")[0].astype(int),
+    }
+
+    split_sizes = {
+        split_name: int(len(indices))
+        for split_name, indices in custom_splits.items()
+    }
+
+    print("Paired three-modality cohort:")
+    print(f"  common samples: {len(common_ids)}")
+    for split_name in ("train", "valid", "test"):
+        print(f"  {split_name}: {split_sizes[split_name]}")
+    print(f"  paired annotation: {paired_annotation_path}")
+
+    return custom_splits, paired_annotation_path, split_sizes
+
+
+def build_config(
+    args: argparse.Namespace,
+    paired_annotation_path: Path,
+) -> XModalix3DConfig:
     if args.from_modality == args.to_modality:
         raise ValueError(
             "--from-modality and --to-modality must refer to different modalities."
@@ -214,7 +432,7 @@ def build_config(args: argparse.Namespace) -> XModalix3DConfig:
                     beta=args.cbv_beta,
                 ),
                 "ANNO": DataInfo(
-                    file_path=str(args.ncct_anno),
+                    file_path=str(paired_annotation_path),
                     data_type="ANNOTATION",
                 ),
             },
@@ -229,7 +447,17 @@ def main() -> None:
     run_dir = args.workdir / "results" / f"{args.run_name}_{timestamp}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    config = build_config(args)
+    custom_splits, paired_annotation_path, split_sizes = (
+        _build_common_custom_splits(
+            args=args,
+            run_dir=run_dir,
+        )
+    )
+
+    config = build_config(
+        args=args,
+        paired_annotation_path=paired_annotation_path,
+    )
 
     # Save a run description for traceability
     run_metadata = {
@@ -263,6 +491,9 @@ def main() -> None:
                 "pretrain_epochs": args.pretrain_epochs,
             },
         },
+
+        "paired_annotation": str(paired_annotation_path),
+        "paired_split_sizes": split_sizes,
 
         "translation_from": args.from_modality,
         "translation_to": args.to_modality,
@@ -311,14 +542,6 @@ def main() -> None:
         f"{args.from_modality} -> {args.to_modality}"
     )
     print(f"SLURM_JOB_ID: {os.environ.get('SLURM_JOB_ID')}")
-
-    # The modalities are paired by patient and use the same predefined
-    # patient-level train / validation / test assignments.
-    custom_splits = custom_splits_from_anno(
-        annotation_file=args.ncct_anno,
-        split_col="custom_splits",
-        sample_id_col="sample_id",
-    )
 
     xmodalix3d = acx.XModalix3D(
         config=config,

@@ -1,5 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
+import pandas as pd
+
 from autoencodix.configs.default_config import DataCase
 from autoencodix.configs.xmodalix3d_config import XModalix3DConfig
 from autoencodix.configs.imagix3d_config import Imagix3DConfig
@@ -39,6 +41,67 @@ class XModal3DPreprocessor(XModalPreprocessor):
         self.data_readers[DataCase.IMG_TO_IMG] = VolumeDataReader(
             config=volume_config
         )
+
+
+    @staticmethod
+    def _make_paired_annotation(
+        annotation: Dict[str, pd.DataFrame],
+        common_ids: List[str],
+    ) -> Dict[str, pd.DataFrame]:
+        """Create one canonical annotation table for a fully paired cohort.
+
+        ``VolumeDataReader`` returns one annotation table per image modality
+        when ``extra_anno_file`` is configured. The pairing-aware DataSplitter
+        currently accepts custom split indices only when exactly one annotation
+        table is present. Once XModalix3D has been restricted to patients that
+        occur in every modality, one common patient-level annotation table is
+        sufficient for splitting and downstream metadata.
+
+        The row order is explicitly set to ``common_ids``. ``DataPackage``
+        returns common IDs in sorted order, and ``run_xmodalix3d.py`` builds
+        custom split indices against that same deterministic order.
+        """
+
+        if not annotation:
+            raise ValueError(
+                "Paired XModalix3D preprocessing requires annotation data."
+            )
+
+        normalized_annotation: Dict[str, pd.DataFrame] = {}
+
+        for modality, annotation_df in annotation.items():
+            current = annotation_df.copy()
+            current.index = current.index.astype(str)
+
+            if current.index.has_duplicates:
+                duplicate_ids = current.index[
+                    current.index.duplicated()
+                ].unique().tolist()
+                raise ValueError(
+                    f"Annotation table '{modality}' contains duplicate "
+                    f"sample IDs. First duplicates: {duplicate_ids[:10]}"
+                )
+
+            missing_ids = set(common_ids) - set(current.index)
+            if missing_ids:
+                raise ValueError(
+                    f"Annotation table '{modality}' is missing "
+                    f"{len(missing_ids)} paired sample ID(s). "
+                    f"First missing IDs: {sorted(missing_ids)[:10]}"
+                )
+
+            normalized_annotation[modality] = current
+
+        # use the first annotation key deterministically.
+        reference_key = sorted(normalized_annotation)[0]
+
+        paired_annotation = (
+            normalized_annotation[reference_key]
+            .loc[common_ids]
+            .copy()
+        )
+
+        return {"paired": paired_annotation}
 
     def _normalize_image_data(
         self,
@@ -181,14 +244,44 @@ class XModal3DPreprocessor(XModalPreprocessor):
 
         if self.config.requires_paired:
             common_ids = data_package.get_common_ids()
+
+            if not common_ids:
+                raise ValueError(
+                    "No common sample IDs were found across the paired "
+                    "XModalix3D modalities."
+                )
+
             images = data_package.img
             if images is None:
                 raise ValueError("Images cannot be None")
 
+            # Keep only patients available in every image modality.
             data_package.img = {
-                key: self.filter_imgdata_list(img_list=value, ids=common_ids)
+                key: self.filter_imgdata_list(
+                    img_list=value,
+                    ids=common_ids,
+                )
                 for key, value in images.items()
             }
+
+            # The generic pairing-aware custom-split logic currently accepts
+            # exactly one annotation table. Collapse the modality-specific
+            # annotations to one canonical paired table after determining the
+            # common patient cohort.
+            if data_package.annotation is None:
+                raise ValueError(
+                    "Paired XModalix3D preprocessing requires annotation data."
+                )
+
+            data_package.annotation = self._make_paired_annotation(
+                annotation=data_package.annotation,
+                common_ids=common_ids,
+            )
+
+            print(
+                "Prepared one paired annotation table for "
+                f"{len(common_ids)} common XModalix3D samples."
+            )
 
         if self.config.volume_scaling_strategy == "per_volume":
 

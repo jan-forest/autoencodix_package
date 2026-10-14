@@ -50,6 +50,16 @@ def parse_args() -> argparse.Namespace:
 
     # Unimodal pretraining
     parser.add_argument("--pretrain-epochs", type=int, default=50)
+    parser.add_argument(
+        "--save-intermediate-recons",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    parser.add_argument(
+        "--pretrain-save-memory",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
 
     parser.add_argument("--latent-dim", type=int, default=64)
     parser.add_argument("--hidden-dim", type=int, default=16)
@@ -357,6 +367,8 @@ def build_config(
         checkpoint_interval=args.checkpoint_interval,
         epochs=args.epochs,
         pretrain_epochs=args.pretrain_epochs,
+        pretrain_save_memory=args.pretrain_save_memory,
+        save_intermediate_recons=args.save_intermediate_recons,
 
         latent_dim=args.latent_dim,
         hidden_dim=args.hidden_dim,
@@ -502,6 +514,7 @@ def main() -> None:
         "epochs": args.epochs,
         "pretrain_epochs": args.pretrain_epochs,
         "latent_dim": args.latent_dim,
+        "save_intermediate_recons": args.save_intermediate_recons,
         "hidden_dim": args.hidden_dim,
         "batch_size": args.batch_size,
 

@@ -5,10 +5,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
-#SBATCH --gres=gpu:2
-#SBATCH --gpus-per-task=2
-#SBATCH --mem=220G
-#SBATCH --time=02:00:00
+#SBATCH --gres=gpu:1
+#SBATCH --gpus-per-task=1
+#SBATCH --mem=50G
+#SBATCH --time=01:00:00
 #SBATCH --output=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.out
 #SBATCH --error=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.err
 
@@ -41,7 +41,7 @@ echo "Workspace: ${BASE}"
 python scripts/run_imagix.py \
   --workdir "${BASE}" \
   --images "${BASE}/data/stroke_data/2D/ncct" \
-  --anno "${BASE}/data/stroke_data/ncct_2D_anno_dst.csv" \
+  --anno "${BASE}/data/stroke_data/2D/ncct_2D_anno_dst.csv" \
   --run-name "${RUN_NAME}" \
   --image-size 192 \
   --epochs 250 \

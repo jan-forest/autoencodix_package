@@ -362,6 +362,13 @@ class XModalTrainer(BaseTrainer):
         n_samples_total: int = 0
         epoch_dynamics: List[Dict] = []
         sub_losses: Dict[str, float] = defaultdict(float)
+        
+        is_final_epoch = self._cur_epoch == self._config.epochs - 1
+        
+        include_inter_recons = (
+            self._config.save_intermediate_recons
+            or is_final_epoch
+        )
 
         with torch.no_grad():
             for batch in self._validloader:
@@ -390,7 +397,10 @@ class XModalTrainer(BaseTrainer):
                     clf_loss = self._clf_loss_fn(clf_scores, labels)
                     total_clf_loss += clf_loss.item()
                     if self._is_checkpoint_epoch:
-                        batch_capture = self._capture_dynamics(batch)
+                        batch_capture = self._capture_dynamics(
+                            batch,
+                            include_inter_recons=include_inter_recons,
+                        )
                         epoch_dynamics.append(batch_capture)
 
         sub_losses["clf_loss"] = total_clf_loss
@@ -428,6 +438,13 @@ class XModalTrainer(BaseTrainer):
 
         self._grad_clip_warning_sent = False # Reset the warning flag at the start of each epoch
 
+        is_final_epoch = self._cur_epoch == self._config.epochs - 1
+        include_inter_recons = (
+            self._config.save_intermediate_recons
+            or is_final_epoch
+        )
+        
+        
         for batch in self._trainloader:
             with self._fabric.autocast():
                 # --- Stage 1: forward for each data modality ---
@@ -493,7 +510,10 @@ class XModalTrainer(BaseTrainer):
                     sub_losses[k] = value_to_add
 
             if self._is_checkpoint_epoch:
-                batch_capture = self._capture_dynamics(batch)
+                batch_capture = self._capture_dynamics(
+                    batch,
+                    include_inter_recons=include_inter_recons
+                )
                 epoch_dynamics.append(batch_capture)
         n_samples_total /= self._n_train_modalities
         sub_losses["clf_loss"] = self._clf_epoch_loss
@@ -574,6 +594,11 @@ class XModalTrainer(BaseTrainer):
             # Train an independent unimodal AE
             pretrain_config = dynamic["modality_config"].model_copy(deep=True)
             pretrain_config.epochs = pretrain_epochs
+            pretrain_config.save_memory = getattr(
+                self._config,
+                "pretrain_save_memory",
+                False,
+            )
             pretrainer = pretrainer_type(
                 trainset=trainset,
                 validset=validset,
@@ -824,23 +849,27 @@ class XModalTrainer(BaseTrainer):
     def _capture_dynamics(
         self,
         batch_data: Union[Dict[str, Dict[str, Any]], Any],
+        include_inter_recons: bool = True,
     ) -> Union[Dict[str, Dict[str, np.ndarray]], Any]:
         """Captures and returns the dynamics (latents, reconstructions, etc.) for each modality in the batch.
 
         Args:
             batch_data: A dictionary where keys are modality names and values are dictionaries containing 'data' tensors
                          and optionally 'sample_ids'.
+            include_inter_recons: A boolean, indicating if all reconstructions during training should be retained
+                        or only the final ones.
         Returns:
             A dictionary with keys 'latentspaces', 'reconstructions', 'mus', 'sigmas', and 'sample_ids',
             each mapping to another dictionary where keys are modality names and values are numpy arrays.
         """
         captured_data: Dict[str, Dict[str, Any]] = {
             "latentspaces": {},
-            "reconstructions": {},
             "mus": {},
             "sigmas": {},
             "sample_ids": {},
         }
+        if include_inter_recons:
+            captured_data["reconstructions"] = {}
         for mod_name, dynamics in self._modality_dynamics.items():
             sample_ids = batch_data[mod_name].get("sample_ids")
             # get index of
@@ -849,9 +878,10 @@ class XModalTrainer(BaseTrainer):
 
             model_output = dynamics["mp"]
             captured_data["latentspaces"][mod_name] = model_output.latentspace.detach()
-            captured_data["reconstructions"][
-                mod_name
-            ] = model_output.reconstruction.detach()
+            if include_inter_recons:
+                captured_data["reconstructions"][
+                    mod_name
+                ] = model_output.reconstruction.detach()
             if model_output.latent_mean is not None:
                 captured_data["mus"][mod_name] = model_output.latent_mean.detach()
             if model_output.latent_logvar is not None:
@@ -907,12 +937,12 @@ class XModalTrainer(BaseTrainer):
             split=split,
             data=deduplicated_data.get("latentspaces", {}),
         )
-
-        self._result.reconstructions.add(
-            epoch=self._cur_epoch,
-            split=split,
-            data=deduplicated_data.get("reconstructions", {}),
-        )
+        if deduplicated_data.get("reconstructions"):
+            self._result.reconstructions.add(
+                epoch=self._cur_epoch,
+                split=split,
+                data=deduplicated_data["reconstructions"],
+            )
 
         if deduplicated_data.get("sample_ids"):
             self._result.sample_ids.add(

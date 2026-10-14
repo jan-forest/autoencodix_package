@@ -50,6 +50,8 @@ python scripts/run_xmodalix3d.py \
   --target-shape 160 192 160 \
   --epochs 50 \
   --pretrain-epochs 50 \
+  --pretrain-save-memory \
+  --no-save-intermediate-recons \
   --latent-dim 64 \
   --hidden-dim 16 \
   --batch-size 12 \

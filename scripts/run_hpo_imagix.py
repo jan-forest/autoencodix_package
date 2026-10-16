@@ -297,27 +297,33 @@ def run_synetune_hpo(
         "n_gpus": 1,
 
         # Tunable params
-        # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(1e-7, 0.1),
-        "weight_decay": loguniform(1e-7, 0.1),
-        "beta": loguniform(1e-7, 0.1),
-        "latent_dim": choice([16, 24, 32, 40, 48, 64, 80, 96]),
-        "hidden_dim": choice([16, 24, 32]),
-        # "anneal_function": choice(
-        #     [
-        #         "5phase-constant",
-        #         "3phase-linear",
-        #         "3phase-log",
-        #         "logistic-mid",
-        #         "logistic-early",
-        #         "logistic-late",
-        #     ]
-        # ),
+        "learning_rate": loguniform(5e-06, 2e-03),
+        "weight_decay": loguniform(1e-06, 1e-04),
+        "beta": loguniform(1e-06, 1e-03),
+        "latent_dim": choice([16, 32, 48, 64, 80, 96, 128]),
+        "hidden_dim": choice([16, 24, 32, 48]),
     }
 
     # No points_to_evaluate are defined yet because no previous Imagix HPO
     # runs are available from which to select informed anchor configurations.
-    points_to_evaluate = []
+    points_to_evaluate = [
+        {
+        "learning_rate": 4.628567801513634e-06,
+        "weight_decay":  1.796195765923549e-05,
+        "beta": 1.5064578960340553e-05,
+        "latent_dim": 16,
+        "hidden_dim": 32,
+        },
+        
+        {
+        "learning_rate": 0.001027797091371,
+        "weight_decay": 0.000352686364518,
+        "beta": 0.0012050259995799,
+        "latent_dim": 128,
+        "hidden_dim": 32,
+        },
+    ]
+
 
     if metric == "downstream_performance":
         do_minimize = False

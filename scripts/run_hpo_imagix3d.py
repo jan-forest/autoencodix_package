@@ -269,12 +269,12 @@ def run_synetune_hpo(
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),
-        "learning_rate": loguniform(1e-5, 5e-3),
-        "weight_decay": loguniform(1e-7, 5e-5),
-        "beta": loguniform(5e-7, 1e-5),
-        "latent_dim": choice([64, 80, 96]),
-        "hidden_dim": choice([16, 32]),
-        "train_normalization": choice(["instance", "batch"]),
+        "learning_rate": loguniform(1e-3, 5e-3),
+        "weight_decay": loguniform(5e-6, 5e-5),
+        "beta": loguniform(1e-4, 1e-1),
+        "latent_dim": choice([32, 48, 64, 80, 96, 112]),
+        "hidden_dim": choice([16, 24, 32, 40]),
+        "train_normalization": choice(["instance", "group", "batch"]),
         # "anneal_function": choice(
         #     [
         #         "5phase-constant",
@@ -286,46 +286,23 @@ def run_synetune_hpo(
         #     ]
         # ),
         # Encoded as scalar values for Syne Tune compatibility
-        "keep_mu_positive": 0 #choice([0, 1])
+        "keep_mu_positive": choice([0, 1])
     }
 
     points_to_evaluate = [
         # Run #1 best:
         # strongest instance-normalized anchor
         {
-        "learning_rate": 5.850213438680338e-05,
-        "weight_decay": 1.8316823097080185e-07,
-        "beta": 5e-07,
-        "latent_dim": 64,
-        "hidden_dim": 32,
-        "train_normalization": "instance",
-        "keep_mu_positive": 0,
-        },
-
-        # Run #4 trial 39:
-        # strongest observed batch-normalized / mu=0 point
-        {
-        "learning_rate": 5.772057967011864e-05,
-        "weight_decay": 1.5983225907618665e-07,
-        "beta": 5e-07,
+        "learning_rate": 0.0029186579575587,
+        "weight_decay":  1.419008549823615e-05,
+        "beta": 8.171920345884799e-07,
         "latent_dim": 80,
         "hidden_dim": 32,
         "train_normalization": "batch",
         "keep_mu_positive": 0,
         },
-
-        # Run #4 trial 22:
-        # introduces latent=96 and intermediate beta
-        {
-        "learning_rate": 7.090097037422294e-05,
-        "weight_decay": 1.346885899362491e-07,
-        "beta": 5e-07,
-        "latent_dim": 96,
-        "hidden_dim": 32,
-        "train_normalization": "batch",
-        "keep_mu_positive": 0,
-        },
     ]
+
 
     if metric == "downstream_performance":
         do_minimize = False

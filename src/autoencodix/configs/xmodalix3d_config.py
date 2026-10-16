@@ -7,22 +7,6 @@ class XModalix3DConfig(XModalixConfig):
     """Configuration for 3D XModalix."""
     
     
-    save_intermediate_recons: bool = Field(
-        default=True,
-        description=(
-            "Whether to store reconstructions at intermediate training checkpoints"
-            "Final-epoch and prediction reconstructions are always retained. "
-        ),
-    )
-    
-    pretrain_save_memory: bool = Field(
-        default=True,
-        description=(
-            "Whether unimodal pretraining should omit training dynamics "
-            "to reduce memory consumption."
-        ),
-    )
-    
     # ------------------------------------------------------------------------------------------
     # Imagix3D specific configurations ---------------------------------------------------------
 

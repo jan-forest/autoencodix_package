@@ -12,6 +12,22 @@ class XModalixConfig(DefaultConfig):
     This class overrides specific training parameters like pretrain_epochs and beta
     for the XModalix model, while inheriting all other settings.
     """
+    
+    save_intermediate_recons: bool = Field(
+        default=True,
+        description=(
+            "Whether to store reconstructions at intermediate training checkpoints"
+            "Final-epoch and prediction reconstructions are always retained. "
+        ),
+    )
+    
+    pretrain_save_memory: bool = Field(
+        default=True,
+        description=(
+            "Whether unimodal pretraining should omit training dynamics "
+            "to reduce memory consumption."
+        ),
+    )
 
     pretrain_epochs: Optional[int] = Field(
         default=None,  # Overridden default (was 0)

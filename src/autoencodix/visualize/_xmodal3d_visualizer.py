@@ -1310,10 +1310,16 @@ class XModal3DVisualizer(XModalVisualizer):
 
         missing_columns = required_summary_columns - set(summary_df.columns)
         if missing_columns:
-            raise ValueError(f"summary_df is missing required column(s): {sorted(missing_columns)}")
+            raise ValueError(
+                "summary_df is missing required column(s): "
+                f"{sorted(missing_columns)}"
+            )
 
         if len(summary_df) != 1:
-            raise ValueError("show_modality_linear_probe() expects the summary output from a single modality_linear_probe() evaluation.")
+            raise ValueError(
+                "show_modality_linear_probe() expects the summary output from "
+                "a single modality_linear_probe() evaluation."
+            )
 
         if confusion_df.empty:
             raise ValueError("confusion_df must not be empty.")
@@ -1327,62 +1333,210 @@ class XModal3DVisualizer(XModalVisualizer):
         split = str(row["split"])
         epoch = int(row["epoch"])
 
-        epoch_label = ("final" if epoch == -1 else str(epoch))
+        epoch_label = "final" if epoch == -1 else str(epoch)
+
+
+        # Visual style
+
+        probe_color = "#4C78A8"
+        chance_color = "#666666"
 
         fig, axes = plt.subplots(
             nrows=1,
             ncols=2,
-            figsize=(12, 5),
+            figsize=(13.0, 5.4),
             constrained_layout=True,
+            gridspec_kw={"width_ratios": [0.9, 1.1]},
         )
 
-        # Balanced accuracy
+        fig.patch.set_facecolor("white")
+
+        for ax in axes:
+            ax.set_facecolor("white")
+            ax.set_axisbelow(True)
+
+            ax.yaxis.grid(
+                True,
+                color="0.90",
+                linewidth=0.8,
+            )
+            ax.xaxis.grid(False)
+
+            ax.tick_params(
+                axis="both",
+                colors="black",
+                labelsize=9,
+            )
+
+            ax.xaxis.label.set_color("black")
+            ax.yaxis.label.set_color("black")
+            ax.title.set_color("black")
+
+            for spine in ax.spines.values():
+                spine.set_color("0.35")
+                spine.set_linewidth(0.8)
+
+        # Panel A: balanced accuracy as lollipop / point-range plot
+
         ax = axes[0]
-        ax.bar(["Linear probe"], [balanced_accuracy])
-        ax.axhline(chance_level, linestyle="--", label=f"Chance = {chance_level:.3f}")
-        ax.set_ylim(0.0, 1.0)
-        ax.set_ylabel("Balanced accuracy")
-        ax.set_title("Modality linear probe")
-        ax.text(0, min(balanced_accuracy + 0.03, 0.97), f"{balanced_accuracy:.3f}",
+
+        x_pos = 0.0
+
+        # Stem
+        ax.vlines(
+            x=x_pos,
+            ymin=0.0,
+            ymax=balanced_accuracy,
+            color=probe_color,
+            linewidth=5,
+            alpha=0.9,
+            zorder=2,
+        )
+
+        # Point
+        ax.scatter(
+            [x_pos],
+            [balanced_accuracy],
+            s=180,
+            color=probe_color,
+            edgecolor="white",
+            linewidth=1.2,
+            zorder=3,
+        )
+
+        # Chance line
+        ax.axhline(
+            chance_level,
+            color=chance_color,
+            linestyle=(0, (5, 3)),
+            linewidth=1.2,
+            zorder=1,
+        )
+
+        # Directly label the chance line
+        ax.text(
+            0.98,
+            chance_level,
+            f"Chance = {chance_level:.3f}",
+            transform=ax.get_yaxis_transform(),
+            ha="right",
+            va="bottom",
+            fontsize=8.5,
+            color=chance_color,
+        )
+
+        # Accuracy value label
+        ax.text(
+            x_pos,
+            min(balanced_accuracy + 0.04, 0.98),
+            f"{balanced_accuracy:.3f}",
             ha="center",
             va="bottom",
+            fontsize=10,
+            fontweight="semibold",
+            color="black",
         )
-        ax.legend()
 
+        ax.set_xlim(-0.6, 0.6)
+        ax.set_ylim(0.0, 1.0)
+        ax.set_xticks([x_pos])
+        ax.set_xticklabels(["Linear probe"])
+        ax.set_ylabel("Balanced accuracy", fontsize=10)
+        ax.set_title(
+            "Modality linear probe",
+            fontsize=11,
+            fontweight="semibold",
+            pad=10,
+        )
 
-        # Confusion matrix
+        # Panel B: confusion matrix with cleaner blue palette
         ax = axes[1]
+.
+        cmap = sns.light_palette(
+            probe_color,
+            as_cmap=True,
+        )
+
         sns.heatmap(
             confusion_df,
             annot=True,
             fmt=".2f",
+            cmap=cmap,
             vmin=0.0,
             vmax=1.0,
             square=True,
+            linewidths=0.8,
+            linecolor="white",
             cbar_kws={
                 "label": "Proportion",
+                "shrink": 0.95,
             },
             ax=ax,
         )
 
-        ax.set_xlabel("Predicted modality")
-        ax.set_ylabel("True modality")
-        ax.set_title("Modality confusion matrix")
+        # Improve annotation readability dynamically
+        values = confusion_df.to_numpy().flatten()
+        for text, value in zip(ax.texts, values):
+            text.set_fontsize(10)
+            text.set_fontweight("semibold" if value >= 0.95 else "normal")
+            text.set_color("white" if value >= 0.55 else "0.15")
+
+        ax.set_xlabel("Predicted modality", fontsize=10)
+        ax.set_ylabel("True modality", fontsize=10)
+        ax.set_title(
+            "Modality confusion matrix",
+            fontsize=11,
+            fontweight="semibold",
+            pad=10,
+        )
+
+        # Panel labels
+
+        axes[0].text(
+            -0.10,
+            1.05,
+            "A",
+            transform=axes[0].transAxes,
+            fontsize=13,
+            fontweight="bold",
+            color="black",
+            ha="right",
+            va="bottom",
+        )
+
+        axes[1].text(
+            -0.10,
+            1.05,
+            "B",
+            transform=axes[1].transAxes,
+            fontsize=13,
+            fontweight="bold",
+            color="black",
+            ha="right",
+            va="bottom",
+        )
+
+        sns.despine(
+            fig=fig,
+            top=True,
+            right=True,
+        )
 
         fig.suptitle(
             (
                 "Cross-modal modality separability "
                 f"({representation}, {split}, epoch {epoch_label})"
             ),
-            fontsize=14,
+            fontsize=13,
             fontweight="bold",
+            color="black",
         )
 
         self.plots["Modality-linear-probe"][representation][split][epoch] = fig
 
         plt.show()
-   
     
+   
     @no_type_check
     def show_matched_unmatched_analysis(
         self,
@@ -1398,9 +1552,12 @@ class XModal3DVisualizer(XModalVisualizer):
 
         The second panel shows either:
 
-        - the distributions of matched and unmatched distances if
-        ``distances_df`` is supplied, or
+        - violin distributions with overlaid boxplots of matched and unmatched
+        distances if ``distances_df`` is supplied, or
         - their mean distances if only ``summary_df`` is supplied.
+
+        The plotting style is specified explicitly to produce consistent,
+        publication-ready figures across different Matplotlib environments.
 
         Args:
             summary_df:
@@ -1425,73 +1582,202 @@ class XModal3DVisualizer(XModalVisualizer):
             "matched_unmatched_ratio",
         }
 
-        missing_columns = (required_summary_columns - set(summary_df.columns))
+        missing_columns = (
+            required_summary_columns - set(summary_df.columns)
+        )
 
         if missing_columns:
-            raise ValueError(f"summary_df is missing required column(s): {sorted(missing_columns)}")
+            raise ValueError(
+                "summary_df is missing required column(s): "
+                f"{sorted(missing_columns)}"
+            )
 
         if summary_df.empty:
             raise ValueError("summary_df must not be empty.")
 
-        representations = summary_df["representation"].astype(str).unique()
+        representations = (
+            summary_df["representation"].astype(str).unique()
+        )
         splits = summary_df["split"].astype(str).unique()
         epochs = summary_df["epoch"].unique()
-        metrics = summary_df["distance_metric"].astype(str).unique()
+        metrics = (
+            summary_df["distance_metric"].astype(str).unique()
+        )
 
         if len(representations) != 1:
-            raise ValueError("summary_df must contain exactly one representation.")
+            raise ValueError(
+                "summary_df must contain exactly one representation."
+            )
 
         if len(splits) != 1:
-            raise ValueError("summary_df must contain exactly one split.")
+            raise ValueError(
+                "summary_df must contain exactly one split."
+            )
 
         if len(epochs) != 1:
-            raise ValueError("summary_df must contain exactly one epoch.")
+            raise ValueError(
+                "summary_df must contain exactly one epoch."
+            )
 
         if len(metrics) != 1:
-            raise ValueError("summary_df must contain exactly one distance metric.")
+            raise ValueError(
+                "summary_df must contain exactly one distance metric."
+            )
 
         representation = representations[0]
         split = splits[0]
         epoch = int(epochs[0])
         distance_metric = metrics[0]
-        epoch_label = ("final" if epoch == -1 else str(epoch))
+        epoch_label = "final" if epoch == -1 else str(epoch)
+
+        # Prepare summary data
+
         plot_df = summary_df.copy()
 
+        # Sort modality pairs by their matched/unmatched ratio.
+        plot_df = plot_df.sort_values(
+            "matched_unmatched_ratio"
+        ).reset_index(drop=True)
+
+        # Multi-line labels are easier to read than strongly rotated labels.
         plot_df["modality_pair"] = (
-            plot_df["modality_a"].astype(str) + " ↔ "
+            plot_df["modality_a"].astype(str)
+            + "\n↔\n"
             + plot_df["modality_b"].astype(str)
         )
+
+        pair_order = plot_df["modality_pair"].tolist()
+
+        # Explicit colors make the figure independent of the active
+        # Matplotlib / Seaborn style.
+        matched_color = "#4C78A8"
+        unmatched_color = "#F58518"
+        adverse_ratio_color = "#D65F5F"
+
+        pair_palette = {
+            "matched": matched_color,
+            "unmatched": unmatched_color,
+        }
+
+        # Figure
 
         fig, axes = plt.subplots(
             nrows=1,
             ncols=2,
-            figsize=(14, 5),
+            figsize=(15.0, 5.6),
             constrained_layout=True,
+            gridspec_kw={
+                "width_ratios": [1.0, 1.2],
+            },
         )
 
-        # Matched / unmatched ratio
+        # Explicit background / axis styling prevents differences caused by
+        # machine-specific Matplotlib themes.
+        fig.patch.set_facecolor("white")
+
+        for ax in axes:
+            ax.set_facecolor("white")
+            ax.set_axisbelow(True)
+
+            ax.yaxis.grid(
+                True,
+                color="0.90",
+                linewidth=0.8,
+            )
+            ax.xaxis.grid(False)
+
+            ax.tick_params(
+                axis="both",
+                colors="black",
+                labelsize=9,
+            )
+
+            ax.xaxis.label.set_color("black")
+            ax.yaxis.label.set_color("black")
+            ax.title.set_color("black")
+
+            for spine in ax.spines.values():
+                spine.set_color("0.35")
+                spine.set_linewidth(0.8)
+
+        # Panel A: matched / unmatched distance ratio
         ax = axes[0]
 
         sns.barplot(
             data=plot_df,
             x="modality_pair",
             y="matched_unmatched_ratio",
+            order=pair_order,
+            color=matched_color,
+            edgecolor="0.25",
+            linewidth=0.8,
             ax=ax,
         )
 
+        # If a ratio >= 1 occurs, highlight the corresponding bar.
+        for patch, value in zip(
+            ax.patches,
+            plot_df["matched_unmatched_ratio"],
+        ):
+            if value >= 1.0:
+                patch.set_facecolor(adverse_ratio_color)
+
+        # Reference line: ratio == 1 means no patient-specific alignment.
         ax.axhline(
             1.0,
-            linestyle="--",
-            label="No patient-specific alignment",
+            color="0.30",
+            linestyle=(0, (5, 3)),
+            linewidth=1.2,
+            zorder=1,
         )
 
-        ax.set_xlabel("Modality pair")
-        ax.set_ylabel("Matched / unmatched distance ratio")
-        ax.set_title("Patient-specific cross-modal alignment")
-        ax.tick_params(axis="x", rotation=30)
-        ax.legend()
+        # Label the reference line directly rather than using a legend.
+        # get_yaxis_transform() means x is in axes coordinates while y is
+        # in data coordinates.
+        ax.text(
+            0.98,
+            1.0,
+            "No patient-specific alignment",
+            transform=ax.get_yaxis_transform(),
+            ha="right",
+            va="bottom",
+            fontsize=8.5,
+            color="0.30",
+        )
 
-        # Add numerical ratio above each bar
+        ax.set_xlabel(
+            "Modality pair",
+            fontsize=10,
+            labelpad=8,
+        )
+        ax.set_ylabel(
+            "Matched / unmatched distance ratio",
+            fontsize=10,
+        )
+        ax.set_title(
+            "Patient-specific cross-modal alignment",
+            fontsize=11,
+            fontweight="semibold",
+            pad=10,
+        )
+
+        # Leave sufficient vertical space for values above the bars.
+        max_ratio = float(
+            np.nanmax(plot_df["matched_unmatched_ratio"])
+        )
+        upper_limit = max(1.10, max_ratio + 0.10)
+
+        ax.set_ylim(
+            0.0,
+            upper_limit,
+        )
+
+        ax.tick_params(
+            axis="x",
+            rotation=0,
+        )
+
+        # Add numerical ratio above each bar.
         for patch, value in zip(
             ax.patches,
             plot_df["matched_unmatched_ratio"],
@@ -1499,13 +1785,16 @@ class XModal3DVisualizer(XModalVisualizer):
             ax.text(
                 patch.get_x()
                 + patch.get_width() / 2,
-                patch.get_height(),
+                patch.get_height() + 0.015,
                 f"{value:.3f}",
                 ha="center",
                 va="bottom",
+                fontsize=9,
+                fontweight="semibold",
+                color="black",
             )
 
-        # Individual distance distributions, if available
+        # Panel B: matched / unmatched distances
         ax = axes[1]
 
         if distances_df is not None:
@@ -1516,7 +1805,10 @@ class XModal3DVisualizer(XModalVisualizer):
                 "distance",
             }
 
-            missing_distance_columns = (required_distance_columns - set(distances_df.columns))
+            missing_distance_columns = (
+                required_distance_columns
+                - set(distances_df.columns)
+            )
 
             if missing_distance_columns:
                 raise ValueError(
@@ -1530,10 +1822,17 @@ class XModal3DVisualizer(XModalVisualizer):
                 distance_plot_df[
                     "modality_a"
                 ].astype(str)
-                + " ↔ "
+                + "\n↔\n"
                 + distance_plot_df[
                     "modality_b"
                 ].astype(str)
+            )
+
+            # Ensure that both panels use exactly the same modality-pair order.
+            distance_plot_df["modality_pair"] = pd.Categorical(
+                distance_plot_df["modality_pair"],
+                categories=pair_order,
+                ordered=True,
             )
 
             sns.boxplot(
@@ -1541,17 +1840,111 @@ class XModal3DVisualizer(XModalVisualizer):
                 x="modality_pair",
                 y="distance",
                 hue="pair_type",
+                order=pair_order,
+                hue_order=[
+                    "matched",
+                    "unmatched",
+                ],
+                palette=pair_palette,
+                width=0.65,
                 showfliers=False,
+                linewidth=1.0,
+                boxprops={
+                    "edgecolor": "0.25",
+                    "linewidth": 1.0,
+                },
+                whiskerprops={
+                    "color": "0.25",
+                    "linewidth": 1.0,
+                },
+                capprops={
+                    "color": "0.25",
+                    "linewidth": 1.0,
+                },
+                medianprops={
+                    "color": "black",
+                    "linewidth": 1.6,
+                },
                 ax=ax,
             )
 
-            ax.set_xlabel("Modality pair")
-            ax.set_ylabel(f"{distance_metric.capitalize()} distance")
-            ax.set_title("Matched vs unmatched distances")
-            ax.tick_params(axis="x", rotation=30,)
-            ax.legend(title="Pair type")
+            ax.set_xlabel(
+                "Modality pair",
+                fontsize=10,
+                labelpad=8,
+            )
+            ax.set_ylabel(
+                f"{distance_metric.capitalize()} distance",
+                fontsize=10,
+            )
+            ax.set_title(
+                "Matched vs unmatched distances",
+                fontsize=11,
+                fontweight="semibold",
+                pad=10,
+            )
+
+            ax.tick_params(
+                axis="x",
+                rotation=0,
+            )
+
+            # Both violinplot() and boxplot() create legend entries.
+            # Deduplicate them explicitly.
+            handles, labels = ax.get_legend_handles_labels()
+
+            unique_handles = {}
+
+            for handle, label in zip(
+                handles,
+                labels,
+            ):
+                if (
+                    label in pair_palette
+                    and label not in unique_handles
+                ):
+                    unique_handles[label] = handle
+
+            legend_order = [
+                label
+                for label in [
+                    "matched",
+                    "unmatched",
+                ]
+                if label in unique_handles
+            ]
+
+            legend = ax.legend(
+                [
+                    unique_handles[label]
+                    for label in legend_order
+                ],
+                [
+                    label.capitalize()
+                    for label in legend_order
+                ],
+                title="Pair type",
+                loc="upper left",
+                bbox_to_anchor=(1.02, 1.0),
+                borderaxespad=0.0,
+                frameon=True,
+            )
+
+            # Explicit legend colors avoid dark-theme differences between
+            # machines / Matplotlib installations.
+            legend.get_frame().set_facecolor("white")
+            legend.get_frame().set_edgecolor("0.80")
+            legend.get_frame().set_alpha(1.0)
+
+            for text in legend.get_texts():
+                text.set_color("black")
+
+            legend.get_title().set_color("black")
 
         else:
+            
+            # Fallback when individual distances were not requested:
+            # plot only mean matched/unmatched distances.
             mean_distance_df = (
                 plot_df[
                     [
@@ -1571,11 +1964,13 @@ class XModal3DVisualizer(XModalVisualizer):
                 )
             )
 
-            mean_distance_df["pair_type"] = mean_distance_df["pair_type"].map(
-                {
-                    "matched_distance_mean": "matched",
-                    "unmatched_distance_mean": "unmatched",
-                }
+            mean_distance_df["pair_type"] = (
+                mean_distance_df["pair_type"].map(
+                    {
+                        "matched_distance_mean": "matched",
+                        "unmatched_distance_mean": "unmatched",
+                    }
+                )
             )
 
             sns.barplot(
@@ -1583,25 +1978,101 @@ class XModal3DVisualizer(XModalVisualizer):
                 x="modality_pair",
                 y="distance",
                 hue="pair_type",
+                order=pair_order,
+                hue_order=[
+                    "matched",
+                    "unmatched",
+                ],
+                palette=pair_palette,
+                edgecolor="0.25",
+                linewidth=0.8,
                 ax=ax,
             )
 
-            ax.set_xlabel("Modality pair")
+            ax.set_xlabel(
+                "Modality pair",
+                fontsize=10,
+                labelpad=8,
+            )
+            ax.set_ylabel(
+                f"Mean {distance_metric} distance",
+                fontsize=10,
+            )
+            ax.set_title(
+                "Mean matched vs unmatched distances",
+                fontsize=11,
+                fontweight="semibold",
+                pad=10,
+            )
 
-            ax.set_ylabel(f"Mean {distance_metric} distance")
-            ax.set_title("Mean matched vs unmatched distances")
-            ax.tick_params(axis="x", rotation=30)
-            ax.legend(title="Pair type")
+            ax.tick_params(
+                axis="x",
+                rotation=0,
+            )
 
+            legend = ax.legend(
+                title="Pair type",
+                loc="upper left",
+                bbox_to_anchor=(1.02, 1.0),
+                borderaxespad=0.0,
+                frameon=True,
+            )
+
+            legend.get_frame().set_facecolor("white")
+            legend.get_frame().set_edgecolor("0.80")
+            legend.get_frame().set_alpha(1.0)
+
+            for text in legend.get_texts():
+                text.set_color("black")
+
+            legend.get_title().set_color("black")
+
+        # Panel labels
+        axes[0].text(
+            -0.10,
+            1.05,
+            "A",
+            transform=axes[0].transAxes,
+            fontsize=13,
+            fontweight="bold",
+            color="black",
+            ha="right",
+            va="bottom",
+        )
+
+        axes[1].text(
+            -0.10,
+            1.05,
+            "B",
+            transform=axes[1].transAxes,
+            fontsize=13,
+            fontweight="bold",
+            color="black",
+            ha="right",
+            va="bottom",
+        )
+
+        # Remove the visually heavier upper/right spines.
+        sns.despine(
+            fig=fig,
+            top=True,
+            right=True,
+        )
+
+        # Overall figure title
         fig.suptitle(
             (
                 "Cross-modal patient alignment "
                 f"({representation}, {split}, epoch {epoch_label})"
             ),
-            fontsize=14,
+            fontsize=13,
             fontweight="bold",
+            color="black",
         )
 
-        self.plots["Matched-unmatched-alignment"][representation][split][epoch] = fig
+        # Preserve the same storage convention as the original implementation.
+        self.plots[
+            "Matched-unmatched-alignment"
+        ][representation][split][epoch] = fig
 
-        plt.show()
+        plt.show()    

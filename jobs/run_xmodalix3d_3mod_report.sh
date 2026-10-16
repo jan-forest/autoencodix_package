@@ -7,8 +7,8 @@
 #SBATCH --cpus-per-task=6
 #SBATCH --gres=gpu:1
 #SBATCH --gpus-per-task=1
-#SBATCH --mem=240G
-#SBATCH --time=03:00:00
+#SBATCH --mem=120G
+#SBATCH --time=02:00:00
 #SBATCH --output=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.out
 #SBATCH --error=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.err
 
@@ -18,7 +18,7 @@ REPO="/home/baeuchl/autoencodix_package"
 BASE="/data/horse/ws/baeuchl-imagix3d"
 
 REGISTRY_DIR="${BASE}/run_registry"
-TEMPLATE_NOTEBOOK="${REPO}/notebooks/xmodalix3d_full_report_template.ipynb"
+TEMPLATE_NOTEBOOK="${REPO}/notebooks/xmodalix3d_short_report_template.ipynb"
 
 module --force purge
 module load release/24.04

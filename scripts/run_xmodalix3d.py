@@ -121,6 +121,17 @@ def parse_args() -> argparse.Namespace:
         choices=("NCCT", "CBF", "CBV"),
         default="CBF",
     )
+    
+    parser.add_argument(
+        "--annotation-columns",
+        nargs="+",
+        type=str,
+        default=None,
+        help=(
+            "Annotation columns to retain as metadata, "
+            "e.g. --annotation-columns median_split"
+        ),
+    )
 
     # Optional downstream evaluation, analogous to run_imagix3d.py.
     parser.add_argument("--evaluate-param", type=str, default=None)
@@ -448,6 +459,7 @@ def build_config(
                     data_type="ANNOTATION",
                 ),
             },
+            annotation_columns=args.annotation_columns,
         ),
     )
 

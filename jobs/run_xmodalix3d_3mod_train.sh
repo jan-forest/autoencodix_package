@@ -79,6 +79,7 @@ python scripts/run_xmodalix3d.py \
   --gamma 10 \
   --delta-pair 5 \
   --delta-class 0 \
+  --annotation-columns median_split \
   --from-modality "NCCT" \
   --to-modality "CBF"
 

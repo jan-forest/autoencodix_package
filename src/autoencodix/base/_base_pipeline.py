@@ -23,7 +23,7 @@ from autoencodix.base._base_evaluator import BaseEvaluator
 from autoencodix.utils._result import Result
 from autoencodix.utils._utils import Loader, Saver, get_dataset
 from autoencodix.utils.adata_converter import AnnDataConverter
-from autoencodix.utils._llm_explainer import LLMExplainer
+# from autoencodix.utils._llm_explainer import LLMExplainer
 from autoencodix.configs.default_config import DataCase, DataInfo, DefaultConfig
 
 from ._base_autoencoder import BaseAutoencoder
@@ -1188,7 +1188,7 @@ class BasePipeline(abc.ABC):
         with torch.no_grad():
             generated = self.decode(latent=latent_prior)
             return generated
-
+"""
     def explain(
         self,
         explainer: Any,
@@ -1245,3 +1245,4 @@ class BasePipeline(abc.ABC):
             print("LLM Explanation:")
             print(explanation)
             return explanation
+"""

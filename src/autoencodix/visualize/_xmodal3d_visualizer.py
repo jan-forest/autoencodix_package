@@ -1451,7 +1451,7 @@ class XModal3DVisualizer(XModalVisualizer):
 
         # Panel B: confusion matrix with cleaner blue palette
         ax = axes[1]
-.
+
         cmap = sns.light_palette(
             probe_color,
             as_cmap=True,

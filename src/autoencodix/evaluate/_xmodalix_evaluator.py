@@ -299,7 +299,11 @@ class XModalixEvaluator(GeneralEvaluator):
     ## New for x-modalix
     @staticmethod
     def _load_input_for_ml(
-        task: str, dataset: DatasetContainer, result: Result
+        task: str, 
+        dataset: DatasetContainer, 
+        result: Result,
+        n_downsample=None,
+        reference_reducer=None
     ) -> pd.DataFrame:
         """Loads and processes input data for various machine learning tasks based on the specified task type.
 

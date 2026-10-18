@@ -247,6 +247,10 @@ class VolumeDataReader:
             annotation = pd.read_csv(anno_file, sep=sep, index_col=0, engine="python")
         else:
             raise ValueError(f"Unsupported file type for: {anno_file}")
+        
+        # Sample IDs are identifiers and should consistently be strings.
+        annotation.index = annotation.index.astype(str)
+        
         return annotation
 
     def read_data(

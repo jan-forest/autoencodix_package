@@ -45,14 +45,14 @@ python scripts/run_imagix3d.py \
   --run-name "${RUN_NAME}" \
   --target-shape 160 192 160 \
   --epochs 250 \
-  --beta 0.05 \
-  --latent-dim 48 \
-  --hidden-dim 16 \
+  --beta 0.0005100320394439 \
+  --latent-dim 32 \
+  --hidden-dim 24 \
   --train-normalization "batch" \
   --anneal-function "logistic-late" \
   --no-keep-mu-positive \
-  --weight-decay 0.001 \
-  --learning-rate 0.001 \
+  --weight-decay 0.00001047386211023889 \
+  --learning-rate 0.0007546103760297 \
   --batch-size 35
 
 echo "Pipeline finished."

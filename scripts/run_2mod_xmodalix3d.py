@@ -286,7 +286,7 @@ def _build_common_custom_splits(
     )
 
     # A paired patient must have the same predefined split in every modality.
-    for modality in ("CBF"):
+    for modality in ("CBF",):
         modality_splits = (
             annotations[modality]
             .loc[common_ids, split_col]

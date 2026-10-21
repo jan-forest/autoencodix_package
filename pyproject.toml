@@ -81,6 +81,7 @@ packages = ["src/autoencodix"]
 [tool.pytest.ini_options]
 markers = [
     "slow: builds/installs a wheel, run explicitly with -m slow",
+    "network: requires access to the Hugging Face Hub",
 ]
 
 [tool.ty.rules]

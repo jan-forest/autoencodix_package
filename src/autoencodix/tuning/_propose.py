@@ -1,25 +1,27 @@
 """Static, transfer-learning-derived initial-config proposals for autoencodix models.
 
-The portfolios returned here were computed *offline* (see
-``benchmarking/tuning/generate_initial_configs.py``) by fitting Syne Tune's
+The portfolios returned here were computed *offline* by fitting Syne Tune's
 ``ZeroShotTransfer`` scheduler against the BBOmix benchmark (105k training runs
 across vanillix/varix/ontix/disentanglix). Since a caller of
 :func:`propose_initial_config` has zero evaluations of their own yet, there is no
-live optimizer state to maintain at call time -- this module is a plain JSON
-lookup plus Pydantic validation, and never imports ``syne-tune``.
+live optimizer state to maintain at call time. This module is a plain JSON
+lookup plus Pydantic validation and never imports ``syne-tune``.
 
-Optional future extension (not implemented here): if a caller wants the proposal
-refined using a handful of their *own* live training runs, that is a distinct
-"suggest next trial" mode requiring a real warm-started online scheduler
-(e.g. Syne Tune's ``BoundingBox`` / ``QuantileBasedSurrogateSearcher``) and
-``syne-tune`` as a genuine runtime dependency (a future ``autoencodix[tuning]``
-extra).
+The JSON lookup table is not bundled with the package. It is hosted as a
+Hugging Face dataset (``autoencodix/initial-configs``) and downloaded on first
+use via ``huggingface_hub``, which caches it locally (so later calls, and calls
+with ``HF_HUB_OFFLINE=1``, need no network). New portfolio versions are
+published there as git tags (``v1``, ``v2``, ...); callers select one via
+``revision``, point at another repo via ``repo_id``, or bypass the Hub entirely
+with ``artifact_path``.
 """
 
 import json
 import warnings
-from importlib import resources
-from typing import Any, Dict, List, Literal, Optional, Union
+from pathlib import Path
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+
+from huggingface_hub import hf_hub_download, list_repo_refs
 
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.configs.disentanglix_config import DisentanglixConfig
@@ -32,7 +34,7 @@ from autoencodix.configs.xmodalix_config import XModalixConfig
 
 Objective = Literal["downstream", "reconstruction"]
 
-# Every architecture that *has* a dedicated Config class, used only as the
+# Every architecture that has a dedicated Config class, used only as the
 # fallback target for `allow_fallback_to_defaults=True`. Whether an architecture
 # additionally has a BBOmix-derived portfolio is determined dynamically from the
 # loaded artifact (see `_covered_architectures`), not hardcoded here.
@@ -46,22 +48,67 @@ _CONFIG_CLASSES: Dict[str, type] = {
     "maskix": MaskixConfig,
 }
 
-_ARTIFACT_PACKAGE = "autoencodix.tuning.data"
-_ARTIFACT_FILENAME = "initial_configs.json"
+DEFAULT_REPO_ID = "autoencodix/initial-configs"
+DEFAULT_FILENAME = "initial_configs.json"
+# "main" always points at the newest published portfolio. Pin a tag (e.g. "v1")
+# or a commit hash for reproducible proposals.
+DEFAULT_REVISION = "main"
 
-_artifact_cache: Optional[Dict[str, Any]] = None
+# Keyed by (repo_id, revision, artifact_path) so different portfolio versions
+# can be used side by side within one session.
+_artifact_cache: Dict[Tuple[str, str, Optional[str]], Dict[str, Any]] = {}
 
 
-def _load_artifact() -> Dict[str, Any]:
-    global _artifact_cache
-    if _artifact_cache is None:
-        data_text = (
-            resources.files(_ARTIFACT_PACKAGE)
-            .joinpath(_ARTIFACT_FILENAME)
-            .read_text(encoding="utf-8")
-        )
-        _artifact_cache = json.loads(data_text)
-    return _artifact_cache
+def _load_artifact(
+    repo_id: str = DEFAULT_REPO_ID,
+    revision: str = DEFAULT_REVISION,
+    artifact_path: Optional[Union[str, Path]] = None,
+) -> Dict[str, Any]:
+    local_key = None if artifact_path is None else str(Path(artifact_path).resolve())
+    cache_key = (repo_id, revision, local_key)
+    if cache_key in _artifact_cache:
+        return _artifact_cache[cache_key]
+
+    if artifact_path is not None:
+        path = Path(artifact_path)
+    else:
+        try:
+            path = Path(
+                hf_hub_download(
+                    repo_id=repo_id,
+                    filename=DEFAULT_FILENAME,
+                    repo_type="dataset",
+                    revision=revision,
+                )
+            )
+        except Exception as e:
+            raise RuntimeError(
+                f"Could not download {DEFAULT_FILENAME!r} from the Hugging Face "
+                f"dataset {repo_id!r} at revision {revision!r}: {e}\n"
+                "If you are offline, either run once with network access (the "
+                "file is then cached and HF_HUB_OFFLINE=1 works), or download "
+                "the JSON manually and pass artifact_path=<path to json>."
+            ) from e
+
+    _artifact_cache[cache_key] = json.loads(path.read_text(encoding="utf-8"))
+    return _artifact_cache[cache_key]
+
+
+def list_portfolio_versions(repo_id: str = DEFAULT_REPO_ID) -> List[str]:
+    """List the tagged portfolio versions available on the Hugging Face Hub.
+
+    Any returned tag can be passed as ``revision`` to
+    :func:`propose_initial_config`. ``"main"`` (the default) is always
+    available as well and points at the newest portfolio.
+
+    Args:
+        repo_id: Hugging Face dataset repository holding the portfolio.
+
+    Returns:
+        Sorted list of tag names, e.g. ``["v1", "v2"]``.
+    """
+    refs = list_repo_refs(repo_id, repo_type="dataset")
+    return sorted(tag.name for tag in refs.tags)
 
 
 def _covered_architectures(artifact: Dict[str, Any]) -> List[str]:
@@ -91,18 +138,21 @@ def propose_initial_config(
     budget_epochs: Optional[int] = None,
     top_k: int = 1,
     allow_fallback_to_defaults: bool = False,
+    revision: str = DEFAULT_REVISION,
+    repo_id: str = DEFAULT_REPO_ID,
+    artifact_path: Optional[Union[str, Path]] = None,
     **overrides: Any,
 ) -> Union[DefaultConfig, List[DefaultConfig]]:
     """Propose a strong initial config for an autoencodix architecture.
 
     The proposal is a ranked portfolio entry derived offline from the BBOmix
-    benchmark via zero-shot transfer learning -- not a config tuned on any
+    benchmark via zero-shot transfer learning. It is not a config tuned on any
     evaluations of your own.
 
     Args:
         architecture: Model architecture, e.g. ``"varix"`` (case-insensitive).
         dataset: Restrict the source portfolio to one BBOmix dataset (whatever
-            datasets happen to be in the shipped artifact, e.g. ``"tcga"`` or
+            datasets happen to be in the loaded artifact, e.g. ``"tcga"`` or
             ``"schc"``). Defaults to ``None``, which uses the ``"combined"``
             portfolio pooling all available source tasks -- this is the
             recommended default, since it is the one expected to generalize to
@@ -119,6 +169,16 @@ def propose_initial_config(
         allow_fallback_to_defaults: If the architecture has no BBOmix-derived
             portfolio but does have a Config class, emit a `UserWarning` and
             return that class's plain schema defaults instead of raising.
+        revision: Version of the portfolio on the Hugging Face Hub: a tag
+            (e.g. ``"v1"``, see :func:`list_portfolio_versions`), a branch, or a
+            commit hash. Defaults to ``"main"``, the newest published
+            portfolio -- note that proposals may change when a new version is
+            published, so pin a tag for reproducibility.
+        repo_id: Hugging Face dataset repository to load the portfolio from.
+            Defaults to ``"autoencodix/initial-configs"``; set this to use your
+            own portfolio with the same JSON layout.
+        artifact_path: Path to a local portfolio JSON. When given, the Hub is
+            not contacted and `revision`/`repo_id` are ignored.
         **overrides: Applied on top of the proposed hyperparameters before
             constructing the Config object; invalid overrides raise
             `pydantic.ValidationError`.
@@ -129,8 +189,11 @@ def propose_initial_config(
     Raises:
         ValueError: Unknown/unsupported architecture, unknown dataset, or an
             invalid combination of `objective`/`budget_epochs`.
+        RuntimeError: The portfolio could not be downloaded from the Hub.
     """
-    artifact = _load_artifact()
+    artifact = _load_artifact(
+        repo_id=repo_id, revision=revision, artifact_path=artifact_path
+    )
     arch_key = architecture.strip().lower()
     covered = _covered_architectures(artifact)
 

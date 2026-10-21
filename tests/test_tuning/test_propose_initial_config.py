@@ -153,7 +153,9 @@ class TestUnsupportedArchitecture:
 
     def test_completely_unknown_architecture_raises_even_with_fallback(self):
         with pytest.raises(ValueError):
-            propose_initial_config("not_a_real_architecture", allow_fallback_to_defaults=True)
+            propose_initial_config(
+                "not_a_real_architecture", allow_fallback_to_defaults=True
+            )
 
 
 class TestHubLoading:
@@ -240,9 +242,7 @@ class TestPackagingSmokeTest:
         ), "initial_configs.json should be fetched from the Hub, not bundled"
 
         venv_dir = tmp_path / "venv"
-        subprocess.run(
-            [sys.executable, "-m", "venv", str(venv_dir)], check=True
-        )
+        subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
         venv_python = venv_dir / "bin" / "python"
         install = subprocess.run(
             [str(venv_python), "-m", "pip", "install", "--quiet", str(wheel_path)],
@@ -256,8 +256,10 @@ class TestPackagingSmokeTest:
             [
                 str(venv_python),
                 "-c",
-                "import autoencodix as acx; "
-                f"print(acx.propose_initial_config('varix', artifact_path={str(FIXTURE_ARTIFACT)!r}).epochs)",
+                (
+                    "import autoencodix as acx; "
+                    f"print(acx.propose_initial_config('varix', artifact_path={str(FIXTURE_ARTIFACT)!r}).epochs)"
+                ),
             ],
             capture_output=True,
             text=True,

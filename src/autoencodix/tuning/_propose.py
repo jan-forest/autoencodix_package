@@ -14,6 +14,11 @@ with ``HF_HUB_OFFLINE=1``, need no network). New portfolio versions are
 published there as git tags (``v1``, ``v2``, ...); callers select one via
 ``revision``, point at another repo via ``repo_id``, or bypass the Hub entirely
 with ``artifact_path``.
+
+Passing ``fixed={...}`` switches from the static lookup to a conditional
+proposal: the free hyperparameters are chosen *given* the fixed ones by a
+surrogate fitted on the raw BBOmix evaluations, which are published in the same
+Hugging Face repository (see ``_conditional.py``).
 """
 
 import json
@@ -21,7 +26,9 @@ import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
+import pandas as pd
 from huggingface_hub import hf_hub_download, list_repo_refs
+from huggingface_hub.utils import EntryNotFoundError
 
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.configs.disentanglix_config import DisentanglixConfig
@@ -31,6 +38,7 @@ from autoencodix.configs.stackix_config import StackixConfig
 from autoencodix.configs.vanillix_config import VanillixConfig
 from autoencodix.configs.varix_config import VarixConfig
 from autoencodix.configs.xmodalix_config import XModalixConfig
+from autoencodix.tuning._conditional import propose_conditional, validate_fixed
 
 Objective = Literal["downstream", "reconstruction"]
 
@@ -53,10 +61,76 @@ DEFAULT_FILENAME = "initial_configs.json"
 # "main" always points at the newest published portfolio. Pin a tag (e.g. "v1")
 # or a commit hash for reproducible proposals.
 DEFAULT_REVISION = "main"
+# Only needed for conditional proposals (`fixed=...`); published from v2 on.
+SEARCH_SPACE_FILENAME = "search_space.json"
+EVALUATIONS_DIR = "evaluations"
 
-# Keyed by (repo_id, revision, artifact_path) so different portfolio versions
-# can be used side by side within one session.
-_artifact_cache: Dict[Tuple[str, str, Optional[str]], Dict[str, Any]] = {}
+# Keyed by (repo_id, revision, artifact_path, filename) so different portfolio
+# versions can be used side by side within one session.
+_artifact_cache: Dict[Tuple[str, str, Optional[str], str], Any] = {}
+
+
+def _fetch(
+    filename: str,
+    repo_id: str,
+    revision: str,
+    artifact_path: Optional[Union[str, Path]],
+) -> Path:
+    """Local path of `filename` from the Hub, or from the same layout next to
+    `artifact_path` when one is given."""
+    if artifact_path is not None:
+        path = Path(artifact_path)
+        if filename != DEFAULT_FILENAME:
+            path = path.parent / filename
+        if not path.exists():
+            raise FileNotFoundError(
+                f"{path} not found. With artifact_path, conditional proposals "
+                f"expect the Hugging Face repository layout next to the JSON "
+                f"({SEARCH_SPACE_FILENAME}, {EVALUATIONS_DIR}/<architecture>.parquet)."
+            )
+        return path
+    try:
+        return Path(
+            hf_hub_download(
+                repo_id=repo_id,
+                filename=filename,
+                repo_type="dataset",
+                revision=revision,
+            )
+        )
+    except EntryNotFoundError as e:
+        raise RuntimeError(
+            f"{filename!r} is not in the Hugging Face dataset {repo_id!r} at "
+            f"revision {revision!r}. Conditional proposals (`fixed=...`) need "
+            "the BBOmix evaluation tables, which portfolio versions before v2 "
+            "don't include; pass a revision that has them (see "
+            "list_portfolio_versions())."
+        ) from e
+    except Exception as e:
+        raise RuntimeError(
+            f"Could not download {filename!r} from the Hugging Face "
+            f"dataset {repo_id!r} at revision {revision!r}: {e}\n"
+            "If you are offline, either run once with network access (the "
+            "file is then cached and HF_HUB_OFFLINE=1 works), or download "
+            "the repository files manually and pass artifact_path=<path to json>."
+        ) from e
+
+
+def _load(
+    filename: str,
+    repo_id: str,
+    revision: str,
+    artifact_path: Optional[Union[str, Path]],
+) -> Any:
+    local_key = None if artifact_path is None else str(Path(artifact_path).resolve())
+    cache_key = (repo_id, revision, local_key, filename)
+    if cache_key not in _artifact_cache:
+        path = _fetch(filename, repo_id, revision, artifact_path)
+        if filename.endswith(".parquet"):
+            _artifact_cache[cache_key] = pd.read_parquet(path)
+        else:
+            _artifact_cache[cache_key] = json.loads(path.read_text(encoding="utf-8"))
+    return _artifact_cache[cache_key]
 
 
 def _load_artifact(
@@ -64,34 +138,7 @@ def _load_artifact(
     revision: str = DEFAULT_REVISION,
     artifact_path: Optional[Union[str, Path]] = None,
 ) -> Dict[str, Any]:
-    local_key = None if artifact_path is None else str(Path(artifact_path).resolve())
-    cache_key = (repo_id, revision, local_key)
-    if cache_key in _artifact_cache:
-        return _artifact_cache[cache_key]
-
-    if artifact_path is not None:
-        path = Path(artifact_path)
-    else:
-        try:
-            path = Path(
-                hf_hub_download(
-                    repo_id=repo_id,
-                    filename=DEFAULT_FILENAME,
-                    repo_type="dataset",
-                    revision=revision,
-                )
-            )
-        except Exception as e:
-            raise RuntimeError(
-                f"Could not download {DEFAULT_FILENAME!r} from the Hugging Face "
-                f"dataset {repo_id!r} at revision {revision!r}: {e}\n"
-                "If you are offline, either run once with network access (the "
-                "file is then cached and HF_HUB_OFFLINE=1 works), or download "
-                "the JSON manually and pass artifact_path=<path to json>."
-            ) from e
-
-    _artifact_cache[cache_key] = json.loads(path.read_text(encoding="utf-8"))
-    return _artifact_cache[cache_key]
+    return _load(DEFAULT_FILENAME, repo_id, revision, artifact_path)
 
 
 def list_portfolio_versions(repo_id: str = DEFAULT_REPO_ID) -> List[str]:
@@ -131,6 +178,64 @@ def _resolve_scope(
     return arch_entry[scope_key]
 
 
+def _choose_budget(available_budgets: List[int], budget_epochs: Optional[int]) -> int:
+    available_budgets = sorted(available_budgets)
+    if budget_epochs is None:
+        return max(available_budgets)
+    chosen_budget = min(available_budgets, key=lambda b: abs(b - budget_epochs))
+    if chosen_budget != budget_epochs:
+        warnings.warn(
+            f"budget_epochs={budget_epochs} is not one of the available "
+            f"budgets {available_budgets}; snapped to {chosen_budget}.",
+            UserWarning,
+            stacklevel=3,
+        )
+    return chosen_budget
+
+
+def _propose_given_fixed(
+    architecture: str,
+    arch_key: str,
+    fixed: Dict[str, Any],
+    dataset: Optional[str],
+    objective: Objective,
+    budget_epochs: Optional[int],
+    top_k: int,
+    repo_id: str,
+    revision: str,
+    artifact_path: Optional[Union[str, Path]],
+) -> List[Dict[str, Any]]:
+    search_space = _load(SEARCH_SPACE_FILENAME, repo_id, revision, artifact_path)
+    space = search_space["architectures"][arch_key]
+    validate_fixed(architecture, fixed, space)
+    table = _load(
+        f"{EVALUATIONS_DIR}/{arch_key}.parquet", repo_id, revision, artifact_path
+    )
+
+    constants = dict(search_space["constants"])
+    if objective == "downstream":
+        target, maximize = "downstream", True
+    else:
+        budget = _choose_budget(search_space["budgets"], budget_epochs)
+        target, maximize = f"reconstruction_{budget}", False
+        constants.update(epochs=budget, checkpoint_interval=budget)
+
+    datasets = [dataset] if dataset is not None else sorted(table["dataset"].unique())
+    local_key = None if artifact_path is None else str(Path(artifact_path).resolve())
+    proposals = propose_conditional(
+        arch_key,
+        fixed,
+        space,
+        table,
+        datasets,
+        target,
+        maximize,
+        top_k,
+        cache_prefix=(repo_id, revision, local_key),
+    )
+    return [{**constants, **hp} for hp in proposals]
+
+
 def propose_initial_config(
     architecture: str,
     dataset: Optional[str] = None,
@@ -141,6 +246,7 @@ def propose_initial_config(
     revision: str = DEFAULT_REVISION,
     repo_id: str = DEFAULT_REPO_ID,
     artifact_path: Optional[Union[str, Path]] = None,
+    fixed: Optional[Dict[str, Any]] = None,
     **overrides: Any,
 ) -> Union[DefaultConfig, List[DefaultConfig]]:
     """Propose a strong initial config for an autoencodix architecture.
@@ -148,6 +254,15 @@ def propose_initial_config(
     The proposal is a ranked portfolio entry derived offline from the BBOmix
     benchmark via zero-shot transfer learning. It is not a config tuned on any
     evaluations of your own.
+
+    To keep some hyperparameters at values of your choice, pass them as
+    ``fixed``: the remaining hyperparameters are then proposed *given* those
+    values, using a surrogate fitted on the raw BBOmix evaluations::
+
+        propose_initial_config("varix", fixed={"latent_dim": 16, "n_layers": 2})
+
+    Keyword ``**overrides`` differ: they only overwrite fields of the proposal
+    afterwards, so the other proposed values stay the ones chosen without them.
 
     Args:
         architecture: Model architecture, e.g. ``"varix"`` (case-insensitive).
@@ -178,17 +293,26 @@ def propose_initial_config(
             Defaults to ``"autoencodix/initial-configs"``; set this to use your
             own portfolio with the same JSON layout.
         artifact_path: Path to a local portfolio JSON. When given, the Hub is
-            not contacted and `revision`/`repo_id` are ignored.
+            not contacted and `revision`/`repo_id` are ignored. With `fixed`,
+            the evaluation files are read from the same layout as the Hub
+            repository next to it.
+        fixed: Hyperparameters to hold at the given values, e.g.
+            ``{"latent_dim": 16}``. The other tuned hyperparameters are proposed
+            conditionally on them (deterministic; the first call per
+            architecture fits a surrogate and takes a few seconds). Only
+            hyperparameters tuned in the BBOmix benchmark can be fixed; values
+            outside the benchmarked range emit a `UserWarning`.
         **overrides: Applied on top of the proposed hyperparameters before
-            constructing the Config object; invalid overrides raise
-            `pydantic.ValidationError`.
+            constructing the Config object, without changing the other proposed
+            values; invalid overrides raise `pydantic.ValidationError`.
 
     Returns:
         A single Config instance, or a list of `top_k` Config instances.
 
     Raises:
-        ValueError: Unknown/unsupported architecture, unknown dataset, or an
-            invalid combination of `objective`/`budget_epochs`.
+        ValueError: Unknown/unsupported architecture, unknown dataset, an
+            invalid combination of `objective`/`budget_epochs`, or a `fixed`
+            key that isn't a tuned hyperparameter of the architecture.
         RuntimeError: The portfolio could not be downloaded from the Hub.
     """
     artifact = _load_artifact(
@@ -232,27 +356,26 @@ def propose_initial_config(
 
     scope = _resolve_scope(artifact, architecture, arch_key, dataset)
 
-    if objective == "downstream":
-        candidates = scope["downstream"]
+    if fixed:
+        selected = _propose_given_fixed(
+            architecture,
+            arch_key,
+            fixed,
+            dataset,
+            objective,
+            budget_epochs,
+            top_k,
+            repo_id,
+            revision,
+            artifact_path,
+        )
+    elif objective == "downstream":
+        selected = scope["downstream"][:top_k]
     else:
         recon = scope["reconstruction"]
-        available_budgets = sorted(int(b) for b in recon)
-        if budget_epochs is None:
-            chosen_budget = max(available_budgets)
-        else:
-            chosen_budget = min(
-                available_budgets, key=lambda b: abs(b - budget_epochs)
-            )
-            if chosen_budget != budget_epochs:
-                warnings.warn(
-                    f"budget_epochs={budget_epochs} is not one of the available "
-                    f"budgets {available_budgets}; snapped to {chosen_budget}.",
-                    UserWarning,
-                    stacklevel=2,
-                )
-        candidates = recon[str(chosen_budget)]
+        chosen_budget = _choose_budget([int(b) for b in recon], budget_epochs)
+        selected = recon[str(chosen_budget)][:top_k]
 
-    selected = candidates[: min(top_k, len(candidates))]
     config_cls = _CONFIG_CLASSES[arch_key]
     configs = [config_cls(**{**hp, **overrides}) for hp in selected]
 

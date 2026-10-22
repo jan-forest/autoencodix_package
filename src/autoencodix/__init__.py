@@ -15,12 +15,9 @@ from .xmodalix import XModalix
 from .imagix import Imagix
 from .imagix3d import Imagix3D
 from .maskix import Maskix
-<<<<<<< HEAD
 from .xontix import XOntix
-=======
 from .tuning import propose_initial_config
 
->>>>>>> 1bd54d5d7412907f8539ac8e3e4f7a7f5104316a
 __all__ = [
     "Vanillix",
     "Varix",
@@ -31,9 +28,6 @@ __all__ = [
     "Imagix3D",
     "Disentanglix",
     "Maskix",
-<<<<<<< HEAD
     "XOntix",
-=======
     "propose_initial_config",
->>>>>>> 1bd54d5d7412907f8539ac8e3e4f7a7f5104316a
 ]

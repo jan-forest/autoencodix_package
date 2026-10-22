@@ -307,21 +307,21 @@ def run_synetune_hpo(
     # No points_to_evaluate are defined yet because no previous Imagix HPO
     # runs are available from which to select informed anchor configurations.
     points_to_evaluate = [
-        {
-        "learning_rate": 4.628567801513634e-06,
-        "weight_decay":  1.796195765923549e-05,
-        "beta": 1.5064578960340553e-05,
-        "latent_dim": 16,
-        "hidden_dim": 32,
-        },
+        # {
+        # "learning_rate": 4.628567801513634e-06,
+        # "weight_decay":  1.796195765923549e-05,
+        # "beta": 1.5064578960340553e-05,
+        # "latent_dim": 80,
+        # "hidden_dim": 32,
+        # },
         
-        {
-        "learning_rate": 0.001027797091371,
-        "weight_decay": 0.000352686364518,
-        "beta": 0.0012050259995799,
-        "latent_dim": 128,
-        "hidden_dim": 32,
-        },
+        # {
+        # "learning_rate": 0.001027797091371,
+        # "weight_decay": 0.000352686364518,
+        # "beta": 0.0012050259995799,
+        # "latent_dim": 128,
+        # "hidden_dim": 32,
+        # },
         
         {
         "learning_rate": 0.0016742418984218,

@@ -297,11 +297,11 @@ def run_synetune_hpo(
         "n_gpus": 1,
 
         # Tunable params
-        "learning_rate": loguniform(5e-06, 2e-03),
-        "weight_decay": loguniform(1e-06, 1e-04),
-        "beta": loguniform(1e-06, 1e-03),
-        "latent_dim": choice([16, 32, 48, 64, 80, 96, 128]),
-        "hidden_dim": choice([16, 24, 32, 48]),
+        "learning_rate": loguniform(1e-03, 1e-02),
+        "weight_decay": loguniform(1e-06, 1e-02),
+        "beta": loguniform(5e-07, 1e-04),
+        "latent_dim": choice([80, 96, 112, 128]),
+        "hidden_dim": choice([16, 24, 32, 40, 48]),
     }
 
     # No points_to_evaluate are defined yet because no previous Imagix HPO
@@ -321,6 +321,14 @@ def run_synetune_hpo(
         "beta": 0.0012050259995799,
         "latent_dim": 128,
         "hidden_dim": 32,
+        },
+        
+        {
+        "learning_rate": 0.0016742418984218,
+        "weight_decay": 0.0049592896581883,
+        "beta": 1.305951678616294e-06,
+        "latent_dim": 96,
+        "hidden_dim": 24,
         },
     ]
 

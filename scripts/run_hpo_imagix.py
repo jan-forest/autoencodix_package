@@ -297,10 +297,10 @@ def run_synetune_hpo(
         "n_gpus": 1,
 
         # Tunable params
-        "learning_rate": loguniform(1e-4, 1e-02),
-        "weight_decay": loguniform(1e-06, 5e-04),
-        "beta": loguniform(5e-04, 5e-02),
-        "latent_dim": choice([16, 24, 32]),
+        "learning_rate": loguniform(5e-4, 5e-03),
+        "weight_decay": loguniform(1e-06, 1e-04),
+        "beta": loguniform(1e-06, 5e-04),
+        "latent_dim": choice([80, 96, 112]),
         "hidden_dim": choice([16, 32]),
     }
 
@@ -317,18 +317,18 @@ def run_synetune_hpo(
         
         # {
         # "learning_rate": 0.001027797091371,
-        # "weight_decay": 0.000352686364518,
-        # "beta": 0.0012050259995799,
+        # "weight_decay": 1e-04,
+        # "beta": 5e-04,
         # "latent_dim": 128,
         # "hidden_dim": 32,
         # },
         
         {
-        "learning_rate": 0.004991969629953,
-        "weight_decay": 5e-04,
+        "learning_rate": 5e-03,
+        "weight_decay": 3.030282283696039e-05,
         "beta": 5e-04,
-        "latent_dim": 32,
-        "hidden_dim": 32,
+        "latent_dim": 96,
+        "hidden_dim": 16,
         },
     ]
 

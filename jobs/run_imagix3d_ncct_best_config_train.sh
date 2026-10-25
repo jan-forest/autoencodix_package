@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_ncct_best_config
+#SBATCH --job-name=imagix3d_ncct_best_config_common_param
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -30,7 +30,7 @@ source "${BASE}/venvs/alpha/bin/activate"
 
 cd "${REPO}"
 
-RUN_NAME="imagix3d_ncct_best_config_${SLURM_JOB_ID}"
+RUN_NAME="imagix3d_ncct_best_config_common_param_${SLURM_JOB_ID}"
 
 echo "Running NCCT Imagix3D pipeline"
 echo "SLURM job id: ${SLURM_JOB_ID}"
@@ -46,9 +46,9 @@ python scripts/run_imagix3d.py \
   --target-shape 160 192 160 \
   --epochs 250 \
   --beta 0.0000006718196015256182 \
-  --latent-dim 96 \
-  --hidden-dim 32 \
-  --train-normalization "instance" \
+  --latent-dim 48 \
+  --hidden-dim 16 \
+  --train-normalization "batch" \
   --anneal-function "logistic-late" \
   --no-keep-mu-positive \
   --weight-decay 0.000007737374408547984 \

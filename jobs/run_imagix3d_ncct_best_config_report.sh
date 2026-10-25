@@ -4,10 +4,10 @@
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=12
+#SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:2
-#SBATCH --gpus-per-task=4
-#SBATCH --mem=350G
+#SBATCH --gpus-per-task=2
+#SBATCH --mem=240G
 #SBATCH --time=02:00:00
 #SBATCH --output=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.out
 #SBATCH --error=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.err

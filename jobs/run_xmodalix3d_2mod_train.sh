@@ -46,21 +46,21 @@ python scripts/run_2mod_xmodalix3d.py \
   --cbf-anno "${BASE}/data/stroke_data/cbf_anno_dst.csv" \
   --run-name "${RUN_NAME}" \
   --target-shape 160 192 160 \
-  --epochs 50 \
+  --epochs 250 \
   --pretrain-epochs 50 \
   --pretrain-save-memory \
   --no-save-intermediate-recons \
-  --latent-dim 64 \
+  --latent-dim 48 \
   --hidden-dim 16 \
-  --batch-size 12 \
+  --batch-size 35 \
   --reconstruction-loss "mse" \
-  --loss-reduction "mean" \
+  --loss-reduction "sum" \
   --scaling "NONE" \
   --anneal-function "logistic-late" \
-  --checkpoint-interval 5 \
-  --clamp-logvar \
+  --checkpoint-interval 10 \
+  --no-clamp-logvar \
   --no-keep-mu-positive \
-  --train-normalization "group" \
+  --train-normalization "batch" \
   --train-norm-groupsize 8 \
   --learning-rate 0.000010 \
   --weight-decay 0.000010 \

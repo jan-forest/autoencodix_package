@@ -79,7 +79,7 @@ def parse_args() -> argparse.Namespace:
         default=False,
     )
 
-    parser.add_argument("--train-normalization", type=str, default="group")
+    parser.add_argument("--train-normalization", type=str, default="batch")
     parser.add_argument("--train-norm-groupsize", type=int, default=8)
 
     # Global fallback / shared XModalix settings

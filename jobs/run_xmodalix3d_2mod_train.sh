@@ -54,7 +54,7 @@ python scripts/run_2mod_xmodalix3d.py \
   --hidden-dim 16 \
   --batch-size 35 \
   --reconstruction-loss "mse" \
-  --loss-reduction "sum" \
+  --loss-reduction "mean" \
   --scaling "NONE" \
   --anneal-function "logistic-late" \
   --checkpoint-interval 10 \
@@ -71,8 +71,8 @@ python scripts/run_2mod_xmodalix3d.py \
   --cbf-learning-rate 0.000010096 \
   --cbf-weight-decay 0.000017943 \
   --cbf-beta 0.0000000032465 \
-  --gamma 10 \
-  --delta-pair 5 \
+  --gamma 0.01 \
+  --delta-pair 0.05 \
   --delta-class 0 \
   --annotation-columns median_split \
   --from-modality "NCCT" \

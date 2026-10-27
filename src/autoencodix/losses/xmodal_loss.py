@@ -76,13 +76,13 @@ class XModalLoss(BaseLoss):
         )
         total_loss = (
             self.config.gamma * adver_loss
-            + aggregated_sub_losses  # beta already applied when calcing sub_loss in train loop (works because of distributive law.)
+            + self.config.lambda_sub * aggregated_sub_losses  # beta already applied when calcing sub_loss in train loop (works because of distributive law.)
             + self.config.delta_pair * paired_loss
             + self.config.delta_class * class_loss
         )
         loss_dict = {
             "adver_loss": self.config.gamma * adver_loss,
-            "aggregated_sub_losses": aggregated_sub_losses,
+            "aggregated_sub_losses": self.config.lambda_sub * aggregated_sub_losses,
             "paired_loss": self.config.delta_pair * paired_loss,
             "class_loss": self.config.delta_class * class_loss,
         }

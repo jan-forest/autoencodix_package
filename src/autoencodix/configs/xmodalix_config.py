@@ -13,6 +13,12 @@ class XModalixConfig(DefaultConfig):
     for the XModalix model, while inheriting all other settings.
     """
     
+    lambda_sub: float = Field(
+        default=1.0,
+        ge=0.0,
+        description="Lambda weighting factor for aggregated loss term",
+    )
+    
     save_intermediate_recons: bool = Field(
         default=True,
         description=(

@@ -38,7 +38,7 @@ echo "Run name: ${RUN_NAME}"
 echo "Repository: ${REPO}"
 echo "Workspace: ${BASE}"
 
-python scripts/run_xmodalix3d.py \
+python scripts/run_3mod_xmodalix3d.py \
   --workdir "${BASE}" \
   --ncct-images "${BASE}/data/stroke_data/ncct_flat" \
   --ncct-anno "${BASE}/data/stroke_data/ncct_anno_dst.csv" \

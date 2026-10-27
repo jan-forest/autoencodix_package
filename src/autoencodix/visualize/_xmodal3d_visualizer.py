@@ -12,6 +12,7 @@ from umap import UMAP
 
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.utils._result import Result
+from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.visualize._xmodal_visualizer import XModalVisualizer
 
 

@@ -33,6 +33,59 @@ class XModal3DVisualizer(XModalVisualizer):
     grid to a configurable maximum number of voxels before applying UMAP, PCA or
     t-SNE.
     """
+    
+    def visualize(self, result: Result, config: DefaultConfig) -> Result:
+        """
+        Overwrites method implemented in XModalVisualizer
+        """
+        
+        ## Make long format of losses
+        loss_df_melt = self._make_loss_format(
+            result=result, 
+            config=config)
+
+        ## X-Modalix specific ##
+        # Filter loss terms which are specific for each modality VAE
+        # Plot only combined loss terms as in old autoencodix framework
+        if not hasattr(result.datasets, "train"):
+            raise ValueError("result.datasets has no attribute train")
+        
+        if result.datasets.train is None:
+            raise ValueError("Train attribute of datasets is None")
+        
+        loss_df_melt = loss_df_melt[
+            ~loss_df_melt["Loss Term"].str.startswith(
+                tuple(result.datasets.train.datasets.keys())
+            )
+        ]
+        if not result.losses._data:
+            import warnings
+
+            warnings.warn(
+                "No loss data: This usually happens if you try to visualize "
+                "after saving and loading the pipeline object with `save_all=False`."
+                "This memory-efficient saving mode does not retain past training loss data."
+            )
+            return result
+        
+        ## Make plot loss absolute
+        self.plots["loss_absolute"] = self._make_loss_plot(
+            df_plot=loss_df_melt, 
+            plot_type="absolute"
+        )
+        
+        ## Relative loss plot without clf_loss
+        loss_df_relative = loss_df_melt[
+            loss_df_melt["Loss Term"] != "clf_loss"
+        ].copy()
+        
+        ## Make plot loss relative
+        self.plots["loss_relative"] = self._make_loss_plot(
+            df_plot=loss_df_relative, 
+            plot_type="relative"
+        )
+
+        return result
 
     @no_type_check
     def show_image_translation(

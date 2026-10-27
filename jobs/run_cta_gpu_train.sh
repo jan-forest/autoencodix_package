@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_cta_tuned_HP
+#SBATCH --job-name=imagix3d_cta_best_config_train
 #SBATCH --account=p_scads_stroke
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -30,7 +30,7 @@ source "${BASE}/venvs/alpha/bin/activate"
 
 cd "${REPO}"
 
-RUN_NAME="gpu_cta_tuned_HP_${SLURM_JOB_ID}"
+RUN_NAME="gpu_cta_best_config_${SLURM_JOB_ID}"
 
 echo "Running CTA Imagix3D pipeline"
 echo "SLURM job id: ${SLURM_JOB_ID}"
@@ -45,14 +45,14 @@ python scripts/run_imagix3d.py \
   --run-name "${RUN_NAME}" \
   --target-shape 160 192 160 \
   --epochs 250 \
-  --beta 0.0956343842447908 \
+  --beta 0.0000000138290188493 \
   --latent-dim 64 \
-  --hidden-dim 40 \
+  --hidden-dim 32 \
   --train-normalization "batch" \
   --anneal-function "logistic-late" \
   --no-keep-mu-positive \
-  --weight-decay 0.0229586852261995 \
-  --learning-rate 0.0006328199633522 \
+  --weight-decay 0.0036422151620167 \
+  --learning-rate 0.0000761270376540526 \
   --batch-size 35
 
 echo "Pipeline finished."

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_cta_tuned_HP_report
+#SBATCH --job-name=imagix3d_cta_best_config_report
 #SBATCH --account=p_scads_stroke
 #SBATCH --partition=alpha
 #SBATCH --nodes=1

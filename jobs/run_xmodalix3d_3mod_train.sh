@@ -48,21 +48,21 @@ python scripts/run_xmodalix3d.py \
   --cbv-anno "${BASE}/data/stroke_data/cbv_anno_dst.csv" \
   --run-name "${RUN_NAME}" \
   --target-shape 160 192 160 \
-  --epochs 50 \
+  --epochs 250 \
   --pretrain-epochs 50 \
   --pretrain-save-memory \
   --no-save-intermediate-recons \
-  --latent-dim 64 \
+  --latent-dim 48 \
   --hidden-dim 16 \
-  --batch-size 12 \
+  --batch-size 35 \
   --reconstruction-loss "mse" \
   --loss-reduction "mean" \
   --scaling "NONE" \
   --anneal-function "logistic-late" \
-  --checkpoint-interval 5 \
+  --checkpoint-interval 10 \
   --clamp-logvar \
   --no-keep-mu-positive \
-  --train-normalization "group" \
+  --train-normalization "batch" \
   --train-norm-groupsize 8 \
   --learning-rate 0.000010 \
   --weight-decay 0.000010 \
@@ -76,8 +76,9 @@ python scripts/run_xmodalix3d.py \
   --cbv-learning-rate 0.00046282 \
   --cbv-weight-decay 0.0000051361 \
   --cbv-beta 0.0000383242 \
-  --gamma 10 \
-  --delta-pair 5 \
+  --lambda-sub 2.0 \
+  --gamma 0.01 \
+  --delta-pair 0.05 \
   --delta-class 0 \
   --annotation-columns median_split \
   --from-modality "NCCT" \

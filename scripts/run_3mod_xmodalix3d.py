@@ -104,6 +104,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cbv-beta", type=float, default=3e-6)
 
     # Cross-modal alignment weights
+    parser.add_argument("--lambda-sub", type=float, default=1.0)
     parser.add_argument("--gamma", type=float, default=30.0)
     parser.add_argument("--delta-pair", type=float, default=5.0)
     parser.add_argument("--delta-class", type=float, default=0.0)
@@ -401,6 +402,7 @@ def build_config(
         train_norm_groupsize=args.train_norm_groupsize,
 
         # Cross-modal losses
+        lambda_sub=args.lambda_sub,
         gamma=args.gamma,
         delta_pair=args.delta_pair,
         delta_class=args.delta_class,
@@ -544,7 +546,8 @@ def main() -> None:
         "global_learning_rate": args.learning_rate,
         "global_weight_decay": args.weight_decay,
         "global_beta": args.beta,
-
+        
+        "lambda_sub": args.lambda_sub,
         "gamma": args.gamma,
         "delta_pair": args.delta_pair,
         "delta_class": args.delta_class,

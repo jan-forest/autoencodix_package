@@ -19,6 +19,7 @@ def synetune_objective_function(
     tasks: str,
     device: str,
     n_gpus: int,
+    save_vram: int,
 
     # Tunable params
     batch_size: int,
@@ -118,6 +119,7 @@ def synetune_objective_function(
             train_norm_groupsize=8,
             device=device,
             n_gpus=n_gpus,
+            save_vram=save_vram,
             volume_scaling_strategy="train_global",
             data_config=DataConfig(
                 data_info={
@@ -265,7 +267,8 @@ def run_synetune_hpo(
 
         # Hardware params
         "device": "cuda",
-        "n_gpus": 1,
+        "n_gpus": 4,
+        "save_vram": 1,
 
         # Tunable params
         # "batch_size": choice([16, 32, 48]),

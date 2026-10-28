@@ -81,6 +81,12 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--train-normalization", type=str, default="batch")
     parser.add_argument("--train-norm-groupsize", type=int, default=8)
+    parser.add_argument("--n-gpus", typ=int, default=1)
+    parser.add_argument(
+        "--save-vram", 
+        action=argparse.BooleanOptionalAction, 
+        default=True
+    )
 
     # Global fallback / shared XModalix settings
     parser.add_argument("--learning-rate", type=float, default=1e-5)
@@ -390,6 +396,8 @@ def build_config(
         keep_mu_positive=args.keep_mu_positive,
         train_normalization=args.train_normalization,
         train_norm_groupsize=args.train_norm_groupsize,
+        n_gpus=args.n_gpus,
+        save_vram=args.save_vram,
 
         # Cross-modal losses
         gamma=args.gamma,
@@ -508,6 +516,9 @@ def main() -> None:
         "keep_mu_positive": args.keep_mu_positive,
         "train_normalization": args.train_normalization,
         "train_norm_groupsize": args.train_norm_groupsize,
+        
+        "n_gpus": args.n_gpus,
+        "save_vram": args.save_vram,
 
         "global_learning_rate": args.learning_rate,
         "global_weight_decay": args.weight_decay,

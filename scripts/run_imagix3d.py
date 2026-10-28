@@ -19,6 +19,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--images", type=Path, required=True)
     parser.add_argument("--anno", type=Path, required=True)
     parser.add_argument("--run-name", type=str, required=True)
+    parser.add_argument("--n-gpus", typ=int, default=1)
+    parser.add_argument(
+        "--save-vram", 
+        action=argparse.BooleanOptionalAction, 
+        default=True
+    )
 
     parser.add_argument(
         "--target-shape",
@@ -56,6 +62,8 @@ def build_config(args: argparse.Namespace) -> Imagix3DConfig:
         spatial_shape_policy="crop_or_pad_to_shape",
         target_shape_3d=tuple(args.target_shape),
         checkpoint_interval=args.checkpoint_interval,
+        n_gpus=args.n_gpus,
+        save_vram=args.save_vram,
         epochs=args.epochs,
         latent_dim=args.latent_dim,
         hidden_dim=args.hidden_dim,
@@ -105,6 +113,8 @@ def main() -> None:
         "annotation": str(args.anno),
         "target_shape": args.target_shape,
         "epochs": args.epochs,
+        "n_gpus": args.n_gpus,
+        "save_vram": args.save_vram,
         "latent_dim": args.latent_dim,
         "hidden_dim": args.hidden_dim,
         "batch_size": args.batch_size,

@@ -60,6 +60,8 @@ python scripts/run_3mod_xmodalix3d.py \
   --scaling "NONE" \
   --anneal-function "logistic-late" \
   --checkpoint-interval 10 \
+  --n-gpus 4 \
+  --save-vram \
   --clamp-logvar \
   --no-keep-mu-positive \
   --train-normalization "batch" \

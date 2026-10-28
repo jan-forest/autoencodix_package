@@ -19,7 +19,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--images", type=Path, required=True)
     parser.add_argument("--anno", type=Path, required=True)
     parser.add_argument("--run-name", type=str, required=True)
-    parser.add_argument("--n-gpus", typ=int, default=1)
+    parser.add_argument("--n-gpus", type=int, default=1)
     parser.add_argument(
         "--save-vram", 
         action=argparse.BooleanOptionalAction, 

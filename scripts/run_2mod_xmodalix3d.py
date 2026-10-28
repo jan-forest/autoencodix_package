@@ -81,7 +81,7 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--train-normalization", type=str, default="batch")
     parser.add_argument("--train-norm-groupsize", type=int, default=8)
-    parser.add_argument("--n-gpus", typ=int, default=1)
+    parser.add_argument("--n-gpus", type=int, default=1)
     parser.add_argument(
         "--save-vram", 
         action=argparse.BooleanOptionalAction, 

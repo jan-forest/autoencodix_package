@@ -889,15 +889,38 @@ class XModalTrainer(BaseTrainer):
                 captured_data["sample_ids"][mod_name] = np.array(sample_ids)
 
             model_output = dynamics["mp"]
-            captured_data["latentspaces"][mod_name] = model_output.latentspace.detach()
-            if include_inter_recons:
-                captured_data["reconstructions"][
-                    mod_name
-                ] = model_output.reconstruction.detach()
-            if model_output.latent_mean is not None:
-                captured_data["mus"][mod_name] = model_output.latent_mean.detach()
-            if model_output.latent_logvar is not None:
-                captured_data["sigmas"][mod_name] = model_output.latent_logvar.detach()
+            if self._config.save_vram:
+                captured_data["latentspaces"][mod_name] = (
+                    model_output.latentspace.detach().cpu()
+                )
+                if include_inter_recons:
+                    captured_data["reconstructions"][mod_name] = (
+                        model_output.reconstruction.detach().cpu()
+                    )
+                if model_output.latent_mean is not None:
+                    captured_data["mus"][mod_name] = (
+                        model_output.latent_mean.detach().cpu()
+                    )
+                if model_output.latent_logvar is not None:
+                    captured_data["sigmas"][mod_name] = (
+                        model_output.latent_logvar.detach().cpu()
+                    )
+            else:
+                captured_data["latentspaces"][mod_name] = (
+                    model_output.latentspace.detach()
+                )
+                if include_inter_recons:
+                    captured_data["reconstructions"][mod_name] = (
+                        model_output.reconstruction.detach()
+                    )
+                if model_output.latent_mean is not None:
+                    captured_data["mus"][mod_name] = (
+                        model_output.latent_mean.detach()
+                    )
+                if model_output.latent_logvar is not None:
+                    captured_data["sigmas"][mod_name] = (
+                        model_output.latent_logvar.detach()
+                    )
 
         return captured_data
 

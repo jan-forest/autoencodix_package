@@ -575,6 +575,18 @@ class XModalTrainer(BaseTrainer):
         joint-training model. The model object itself is not replaced,
         because its optimizer is already bound to its parameters.
         """
+        
+        def _unwrap_model(model):
+            while isinstance(
+                model,
+                (
+                    _FabricModule,
+                    torch.nn.DataParallel,
+                    torch.nn.parallel.DistributedDataParallel,
+                ),
+            ):
+                model = model.module
+            return model
 
         for mod_name, dynamic in self._modality_dynamics.items():
             mytype = dynamic.get("mytype")
@@ -621,19 +633,13 @@ class XModalTrainer(BaseTrainer):
                 ontologies=self.ontologies,
             )
             pretrain_result = pretrainer.train()
-
+            
             # Copy pretrained weights into the existing joint-training model
             target_model = dynamic["model"]
             source_model = pretrain_result.model
-            # Fabric may wrap the models.
-            if isinstance(target_model, _FabricModule,):
-                target_module = (target_model.module)
-            else:
-                target_module = target_model
-            if isinstance(source_model, _FabricModule):
-                source_module = source_model.module
-            else:
-                source_module = source_model
+
+            target_module = _unwrap_model(target_model)
+            source_module = _unwrap_model(source_model)
             target_module.load_state_dict(source_module.state_dict())
 
             # Verify that the optimizer still belongs to the joint-training model

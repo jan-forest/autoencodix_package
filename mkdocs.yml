@@ -13,6 +13,7 @@ nav:
       - Ontix: tutorials/PipelineTutorials/Ontix.ipynb
       - Maskix: tutorials/PipelineTutorials/Maskix.ipynb
       - Imagix: tutorials/PipelineTutorials/Imagix.ipynb
+      - Imagix3D: tutorials/PipelineTutorials/Imagix3D.ipynb
       - X-Modalix: tutorials/PipelineTutorials/XModalix.ipynb
   - Deep Dives:
       - Config: tutorials/DeepDives/ConfigTutorial.ipynb

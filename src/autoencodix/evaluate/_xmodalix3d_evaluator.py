@@ -6,12 +6,15 @@ from typing import Dict, Literal, Tuple, Union
 import numpy as np
 import pandas as pd
 import torch
+import gc
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import balanced_accuracy_score, confusion_matrix, pairwise_distances
 from sklearn.model_selection import GroupKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from umap import UMAP
 
 from autoencodix.evaluate._xmodalix_evaluator import XModalixEvaluator
 from autoencodix.utils._result import Result
@@ -38,6 +41,252 @@ class XModalix3DEvaluator(XModalixEvaluator):
        patient-specific cross-modal alignment.
 
     """
+    
+    @staticmethod
+    def _load_input_for_ml(
+        task,
+        dataset,
+        result,
+        n_downsample=None,
+        reference_reducer=None,
+    ) -> pd.DataFrame:
+        """Load XModalix3D representations for downstream ML evaluation.
+
+        This implementation avoids converting complete
+        volumetric datasets to very large pandas DataFrames.
+
+        PCA and UMAP reference representations are fitted separately for each
+        modality using the training split only. The fitted reducer is then used
+        to transform train, validation, and test data.
+
+        Args:
+            task:
+                Expanded XModalix task name
+            dataset:
+                DatasetContainer containing multimodal train/valid/test splits.
+            result:
+                XModalix3D Result object.
+            n_downsample:
+                Accepted for compatibility with GeneralEvaluator.evaluate().
+                Downsampling itself is performed later by GeneralEvaluator.
+            reference_reducer:
+                Optional dictionary of pre-fitted reducers. For multimodal
+                XModalix3D evaluation, reducers should be keyed by the complete
+                expanded task name
+
+        Returns:
+            DataFrame containing the requested representation for all available
+            splits.
+        """
+
+        if "_$_" not in task:
+            raise ValueError(
+                f"Expected an expanded XModalix task containing '_$_', "
+                f"but received {task!r}."
+            )
+
+        task_type, modality = task.split("_$_", 1)
+
+        # Learned latent representation
+        if task_type == "Latent":
+            latent_dfs = []
+
+            for split in ("train", "valid", "test"):
+                split_dataset = getattr(dataset, split, None)
+
+                if split_dataset is None:
+                    continue
+
+                latent_dfs.append(
+                    result.get_latent_df(
+                        epoch=-1,
+                        split=split,
+                        modality=modality,
+                    )
+                )
+
+            if not latent_dfs:
+                raise ValueError(
+                    f"No latent representations found for modality {modality!r}."
+                )
+
+            return pd.concat(latent_dfs, axis=0)
+
+        # Reference representations
+        if task_type not in ("PCA", "UMAP"):
+            raise ValueError(
+                f"XModalix3D downstream evaluation currently supports "
+                f"'Latent', 'PCA', and 'UMAP', but received {task_type!r}."
+            )
+
+        if dataset.train is None:
+            raise ValueError(
+                "A training split is required to fit PCA/UMAP reference representations."
+            )
+
+        latent_dim = result.get_latent_df(
+            epoch=-1,
+            split="train",
+            modality=modality,
+        ).shape[1]
+
+        def _get_matrix(split_dataset):
+            """Return one modality as a 2D float32 array plus sample IDs."""
+
+            if split_dataset is None:
+                return None, None
+
+            if modality not in split_dataset.datasets:
+                raise ValueError(
+                    f"Modality {modality!r} not found in dataset split. "
+                    f"Available modalities: {list(split_dataset.datasets.keys())}"
+                )
+
+            modality_dataset = split_dataset.datasets[modality]
+            data = modality_dataset.data
+
+            # 3D image data are stored as List[Tensor].
+            if isinstance(data, list):
+                if len(data) == 0:
+                    raise ValueError(
+                        f"No samples found for modality {modality!r}."
+                    )
+
+                first = data[0]
+
+                if isinstance(first, torch.Tensor):
+                    first_flat = (
+                        first.detach()
+                        .cpu()
+                        .numpy()
+                        .reshape(-1)
+                    )
+                else:
+                    first_flat = np.asarray(first).reshape(-1)
+
+                X = np.empty(
+                    (len(data), first_flat.size),
+                    dtype=np.float32,
+                )
+                X[0] = first_flat
+
+                for i in range(1, len(data)):
+                    sample = data[i]
+
+                    if isinstance(sample, torch.Tensor):
+                        sample = (
+                            sample.detach()
+                            .cpu()
+                            .numpy()
+                        )
+                    else:
+                        sample = np.asarray(sample)
+
+                    X[i] = sample.reshape(-1)
+
+            # Numeric/tensor-based modalities.
+            elif isinstance(data, torch.Tensor):
+                X = (
+                    data.detach()
+                    .cpu()
+                    .numpy()
+                    .reshape(data.shape[0], -1)
+                    .astype(np.float32, copy=False)
+                )
+
+            else:
+                X = np.asarray(data)
+
+                if X.ndim < 2:
+                    raise ValueError(
+                        f"Expected at least 2 dimensions for modality "
+                        f"{modality!r}, got shape {X.shape}."
+                    )
+
+                X = X.reshape(X.shape[0], -1)
+                X = X.astype(np.float32, copy=False)
+
+            sample_ids = np.asarray(modality_dataset.sample_ids)
+
+            if X.shape[0] != len(sample_ids):
+                raise ValueError(
+                    f"Number of samples differs from number of sample IDs "
+                    f"for modality {modality!r}: "
+                    f"{X.shape[0]} vs {len(sample_ids)}."
+                )
+
+            return X, sample_ids
+
+        # Fit reducer on training data only
+        X_train, train_ids = _get_matrix(dataset.train)
+
+        if X_train is None:
+            raise ValueError("Training data could not be loaded.")
+
+        reference_reducer = reference_reducer or {}
+
+        # For multimodal data, use the complete expanded task name as key
+        reducer = reference_reducer.get(task)
+
+        if reducer is None:
+            if task_type == "PCA":
+                reducer = PCA(
+                    n_components=latent_dim,
+                    svd_solver="randomized",
+                    random_state=42,
+                )
+
+            elif task_type == "UMAP":
+                reducer = UMAP(
+                    n_components=latent_dim,
+                    random_state=42,
+                )
+
+            X_train_reduced = reducer.fit_transform(X_train)
+
+        else:
+            X_train_reduced = reducer.transform(X_train)
+
+        reduced_dfs = [
+            pd.DataFrame(
+                X_train_reduced,
+                index=train_ids,
+            )
+        ]
+
+        del X_train
+        del X_train_reduced
+        gc.collect()
+
+        # Transform validation and test data separately
+        for split_name in ("valid", "test"):
+            split_dataset = getattr(dataset, split_name, None)
+
+            if split_dataset is None:
+                continue
+
+            X_split, sample_ids = _get_matrix(split_dataset)
+
+            if X_split is None:
+                continue
+
+            X_reduced = reducer.transform(X_split)
+
+            reduced_dfs.append(
+                pd.DataFrame(
+                    X_reduced,
+                    index=sample_ids,
+                )
+            )
+
+            del X_split
+            del X_reduced
+            gc.collect()
+
+        del reducer
+        gc.collect()
+
+        return pd.concat(reduced_dfs, axis=0)
 
     @staticmethod
     def _to_numpy(value) -> np.ndarray:

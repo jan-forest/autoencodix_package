@@ -43,6 +43,463 @@ class XModalix3DEvaluator(XModalixEvaluator):
     """
     
     @staticmethod
+    def refresh_final_representations(
+        result: Result,
+        datasets=None,
+        batch_size: int = 2,
+        device: str | None = None,
+        seed: int = 42,
+    ) -> pd.DataFrame:
+        """Ensure complete final latent representations for all splits/modalities.
+
+        Multi-GPU training can leave training dynamics containing only the samples
+        seen by one distributed rank. This method checks the final stored
+        representations against the actual datasets. Incomplete representations
+        are recomputed from the final trained models using a normal, non-distributed
+        inference pass.
+
+        Only lightweight latent information is refreshed:
+            - latentspaces
+            - mus
+            - sigmas / latent log-variance
+            - sample_ids
+
+        Reconstructions are intentionally not recomputed here.
+
+        Returns
+        -------
+        pd.DataFrame
+            Diagnostic table showing whether each split/modality was taken from
+            stored dynamics or recomputed.
+        """
+
+        if datasets is None:
+            datasets = result.datasets
+
+        if datasets is None:
+            raise ValueError(
+                "No datasets available for final representation extraction."
+            )
+
+        if not isinstance(result.model, dict) or not result.model:
+            raise ValueError(
+                "XModalix3D evaluation requires result.model to contain "
+                "the modality-specific trained models."
+            )
+
+        if batch_size < 1:
+            raise ValueError("batch_size must be >= 1.")
+
+        if device is None:
+            device = "cuda:0" if torch.cuda.is_available() else "cpu"
+
+        target_device = torch.device(device)
+
+        # Determine the joint-training final epoch.
+        first_model = next(iter(result.model.values()))
+
+        while hasattr(first_model, "module"):
+            first_model = first_model.module
+
+        final_epoch = int(first_model.config.epochs) - 1
+
+        diagnostics = []
+
+        split_names = ("train", "valid", "test")
+
+        for split_idx, split_name in enumerate(split_names):
+
+            split_dataset = getattr(datasets, split_name, None)
+
+            if split_dataset is None:
+                continue
+
+            # Existing final data. get(epoch=-1)
+            try:
+                stored_z = result.latentspaces.get(
+                    epoch=-1,
+                    split=split_name,
+                )
+            except Exception:
+                stored_z = None
+
+            try:
+                stored_mu = result.mus.get(
+                    epoch=-1,
+                    split=split_name,
+                )
+            except Exception:
+                stored_mu = None
+
+            try:
+                stored_logvar = result.sigmas.get(
+                    epoch=-1,
+                    split=split_name,
+                )
+            except Exception:
+                stored_logvar = None
+
+            try:
+                stored_ids = result.sample_ids.get(
+                    epoch=-1,
+                    split=split_name,
+                )
+            except Exception:
+                stored_ids = None
+
+            z_out = {}
+            mu_out = {}
+            logvar_out = {}
+            ids_out = {}
+
+            for mod_idx, modality in enumerate(result.model.keys()):
+
+                if modality not in split_dataset.datasets:
+                    raise KeyError(
+                        f"Modality {modality!r} is present in result.model "
+                        f"but not in dataset split {split_name!r}."
+                    )
+
+                modality_dataset = split_dataset.datasets[modality]
+
+                expected_ids = np.asarray(
+                    modality_dataset.sample_ids
+                )
+
+                expected_n = len(expected_ids)
+
+
+                # Check whether the stored representation is complete.
+                stored_mod_ids = None
+
+                if (
+                    isinstance(stored_ids, dict)
+                    and modality in stored_ids
+                ):
+                    stored_mod_ids = np.asarray(
+                        stored_ids[modality]
+                    )
+
+                stored_n = (
+                    len(stored_mod_ids)
+                    if stored_mod_ids is not None
+                    else 0
+                )
+
+                ids_complete = (
+                    stored_mod_ids is not None
+                    and stored_n == expected_n
+                    and len(np.unique(stored_mod_ids)) == expected_n
+                    and set(stored_mod_ids) == set(expected_ids)
+                )
+
+                z_complete = (
+                    ids_complete
+                    and isinstance(stored_z, dict)
+                    and modality in stored_z
+                    and len(stored_z[modality]) == expected_n
+                )
+
+                mu_complete = (
+                    ids_complete
+                    and isinstance(stored_mu, dict)
+                    and modality in stored_mu
+                    and len(stored_mu[modality]) == expected_n
+                )
+
+                logvar_complete = (
+                    ids_complete
+                    and isinstance(stored_logvar, dict)
+                    and modality in stored_logvar
+                    and len(stored_logvar[modality]) == expected_n
+                )
+
+                if z_complete and mu_complete and logvar_complete:
+
+                    # Reorder stored arrays to exactly match dataset order.
+                    id_to_position = {
+                        sample_id: pos
+                        for pos, sample_id
+                        in enumerate(stored_mod_ids)
+                    }
+
+                    order = [
+                        id_to_position[sample_id]
+                        for sample_id in expected_ids
+                    ]
+
+                    z_out[modality] = np.asarray(
+                        stored_z[modality]
+                    )[order]
+
+                    mu_out[modality] = np.asarray(
+                        stored_mu[modality]
+                    )[order]
+
+                    logvar_out[modality] = np.asarray(
+                        stored_logvar[modality]
+                    )[order]
+
+                    ids_out[modality] = expected_ids.copy()
+
+                    diagnostics.append(
+                        {
+                            "split": split_name,
+                            "modality": modality,
+                            "expected_samples": expected_n,
+                            "stored_samples": stored_n,
+                            "final_samples": expected_n,
+                            "source": "stored",
+                        }
+                    )
+
+                    continue
+
+                # Stored dynamics are incomplete -> recompute.
+                print(
+                    f"[XModalix3D evaluation] "
+                    f"{split_name}/{modality}: stored final dynamics "
+                    f"contain {stored_n}/{expected_n} samples. "
+                    f"Recomputing complete final representations..."
+                )
+
+                model = result.model[modality]
+
+                while hasattr(model, "module"):
+                    model = model.module
+
+                try:
+                    original_device = next(
+                        model.parameters()
+                    ).device
+                except StopIteration:
+                    original_device = torch.device("cpu")
+
+                was_training = model.training
+
+                model.to(target_device)
+                model.eval()
+
+                data = modality_dataset.data
+
+                z_parts = []
+                mu_parts = []
+                logvar_parts = []
+
+                # Use a reproducible but different RNG stream for every split/modality. 
+                local_seed = (
+                    seed
+                    + split_idx * 10_000
+                    + mod_idx * 1_000
+                )
+
+                cuda_devices = (
+                    [target_device.index]
+                    if (
+                        target_device.type == "cuda"
+                        and target_device.index is not None
+                    )
+                    else []
+                )
+
+                try:
+                    with torch.random.fork_rng(
+                        devices=cuda_devices
+                    ):
+                        torch.manual_seed(local_seed)
+
+                        if target_device.type == "cuda":
+                            torch.cuda.manual_seed_all(
+                                local_seed
+                            )
+
+                        with torch.inference_mode():
+
+                            for start in range(
+                                0,
+                                expected_n,
+                                batch_size,
+                            ):
+                                stop = min(
+                                    start + batch_size,
+                                    expected_n,
+                                )
+
+                                if isinstance(data, list):
+                                    batch_values = data[start:stop]
+
+                                    if not batch_values:
+                                        continue
+
+                                    if isinstance(
+                                        batch_values[0],
+                                        torch.Tensor,
+                                    ):
+                                        x = torch.stack(
+                                            batch_values,
+                                            dim=0,
+                                        )
+                                    else:
+                                        x = torch.as_tensor(
+                                            np.stack(
+                                                batch_values,
+                                                axis=0,
+                                            )
+                                        )
+
+                                elif isinstance(
+                                    data,
+                                    torch.Tensor,
+                                ):
+                                    x = data[start:stop]
+
+                                else:
+                                    x = torch.as_tensor(
+                                        np.asarray(
+                                            data[start:stop]
+                                        )
+                                    )
+
+                                x = x.to(
+                                    target_device,
+                                    dtype=torch.float32,
+                                )
+
+                                model_output = model(x)
+
+                                z_parts.append(
+                                    model_output
+                                    .latentspace
+                                    .detach()
+                                    .cpu()
+                                    .numpy()
+                                )
+
+                                if (
+                                    model_output.latent_mean
+                                    is None
+                                ):
+                                    raise ValueError(
+                                        f"Model for {modality!r} "
+                                        "did not return latent_mean."
+                                    )
+
+                                mu_parts.append(
+                                    model_output
+                                    .latent_mean
+                                    .detach()
+                                    .cpu()
+                                    .numpy()
+                                )
+
+                                if (
+                                    model_output.latent_logvar
+                                    is None
+                                ):
+                                    raise ValueError(
+                                        f"Model for {modality!r} "
+                                        "did not return latent_logvar."
+                                    )
+
+                                logvar_parts.append(
+                                    model_output
+                                    .latent_logvar
+                                    .detach()
+                                    .cpu()
+                                    .numpy()
+                                )
+
+                                del x
+                                del model_output
+
+                finally:
+                    model.to(original_device)
+                    model.train(was_training)
+
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+
+                    gc.collect()
+
+                z_full = np.concatenate(
+                    z_parts,
+                    axis=0,
+                )
+
+                mu_full = np.concatenate(
+                    mu_parts,
+                    axis=0,
+                )
+
+                logvar_full = np.concatenate(
+                    logvar_parts,
+                    axis=0,
+                )
+
+                if z_full.shape[0] != expected_n:
+                    raise RuntimeError(
+                        f"Recomputed {z_full.shape[0]} latent "
+                        f"vectors for {split_name}/{modality}, "
+                        f"expected {expected_n}."
+                    )
+
+                z_out[modality] = z_full
+                mu_out[modality] = mu_full
+                logvar_out[modality] = logvar_full
+                ids_out[modality] = expected_ids.copy()
+
+                diagnostics.append(
+                    {
+                        "split": split_name,
+                        "modality": modality,
+                        "expected_samples": expected_n,
+                        "stored_samples": stored_n,
+                        "final_samples": z_full.shape[0],
+                        "source": "recomputed",
+                    }
+                )
+
+
+            # Replace the final representations for this split.
+
+            result.latentspaces.add(
+                epoch=final_epoch,
+                split=split_name,
+                data=z_out,
+            )
+
+            result.mus.add(
+                epoch=final_epoch,
+                split=split_name,
+                data=mu_out,
+            )
+
+            result.sigmas.add(
+                epoch=final_epoch,
+                split=split_name,
+                data=logvar_out,
+            )
+
+            result.sample_ids.add(
+                epoch=final_epoch,
+                split=split_name,
+                data=ids_out,
+            )
+
+        diagnostics_df = pd.DataFrame(diagnostics)
+
+        # Final hard validation.
+        for _, row in diagnostics_df.iterrows():
+            if row["final_samples"] != row["expected_samples"]:
+                raise RuntimeError(
+                    "Final XModalix3D representation refresh "
+                    "did not recover every sample."
+                )
+
+        return diagnostics_df
+    
+    
+    @staticmethod
     def _load_input_for_ml(
         task,
         dataset,
@@ -405,6 +862,60 @@ class XModalix3DEvaluator(XModalixEvaluator):
                 "All modalities must have the same latent dimensionality for cross-modal "
                 f"alignment evaluation, found dimensions {sorted(latent_dimensions)}."
             )
+    
+    @staticmethod
+    def _validate_dataset_coverage(
+        result: Result,
+        sample_id_dict,
+        split: str,
+        epoch: int,
+    ) -> None:
+        """Ensure stored representations cover the complete dataset split."""
+
+        datasets = result.datasets
+
+        if datasets is None:
+            return
+
+        split_dataset = getattr(
+            datasets,
+            split,
+            None,
+        )
+
+        if split_dataset is None:
+            return
+
+        for modality, actual_ids in sample_id_dict.items():
+
+            if modality not in split_dataset.datasets:
+                continue
+
+            expected_ids = np.asarray(
+                split_dataset.datasets[
+                    modality
+                ].sample_ids
+            )
+
+            actual_ids = np.asarray(actual_ids)
+
+            complete = (
+                len(actual_ids) == len(expected_ids)
+                and len(np.unique(actual_ids))
+                == len(expected_ids)
+                and set(actual_ids)
+                == set(expected_ids)
+            )
+
+            if not complete:
+                raise ValueError(
+                    f"Incomplete stored dynamics for "
+                    f"{split}/{modality} at epoch {epoch}: "
+                    f"{len(actual_ids)} of "
+                    f"{len(expected_ids)} samples. "
+                    "This checkpoint must not be used for "
+                    "alignment evaluation."
+                )
 
     @staticmethod
     def modality_linear_probe(
@@ -480,6 +991,13 @@ class XModalix3DEvaluator(XModalixEvaluator):
         XModalix3DEvaluator._validate_representation_and_ids(
             representation_dict,
             sample_id_dict,
+        )
+        
+        XModalix3DEvaluator._validate_dataset_coverage(
+            result=result,
+            sample_id_dict=sample_id_dict,
+            split=split,
+            epoch=epoch,
         )
 
         X_parts = []

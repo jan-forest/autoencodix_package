@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_cta_best_config
+#SBATCH --job-name=imagix3d_cta_best_config_common_param_report
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -31,7 +31,7 @@ cd "${REPO}"
 
 if [ -z "${TRAIN_JOBID:-}" ]; then
   echo "ERROR: TRAIN_JOBID environment variable is missing."
-  echo "This report job should be submitted by submit_cta_with_report.sh."
+  echo "This report job should be submitted by submit_imagix3d_cta_best_config_with_report.sh."
   exit 1
 fi
 
@@ -75,18 +75,18 @@ echo "Template notebook: ${TEMPLATE_NOTEBOOK}"
 
 papermill \
   "${TEMPLATE_NOTEBOOK}" \
-  "${REPORT_DIR}/cta_imagix3d_report_best_config.ipynb" \
+  "${REPORT_DIR}/cta_imagix3d_report_best_config_common_param.ipynb" \
   -k imagix3d-alpha \
 
 jupyter nbconvert \
   --to html \
   --output-dir "${REPORT_DIR}" \
-  "${REPORT_DIR}/cta_imagix3d_report_best_config.ipynb"
+  "${REPORT_DIR}/cta_imagix3d_report_best_config_common_param.ipynb"
 
 echo "Report generation finished."
 echo
 echo "Executed notebook:"
-echo "${REPORT_DIR}/cta_imagix3d_report_best_config.ipynb"
+echo "${REPORT_DIR}/cta_imagix3d_report_best_config_common_param.ipynb"
 echo
 echo "HTML report:"
-echo "${REPORT_DIR}/cta_imagix3d_report_best_config.html"
+echo "${REPORT_DIR}/cta_imagix3d_report_best_config_common_param.html"

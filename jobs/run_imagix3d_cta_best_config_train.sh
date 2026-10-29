@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_cta_best_config
+#SBATCH --job-name=imagix3d_cta_best_config_common_param_train
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -30,7 +30,7 @@ source "${BASE}/venvs/alpha/bin/activate"
 
 cd "${REPO}"
 
-RUN_NAME="imagix3d_cta_best_config_${SLURM_JOB_ID}"
+RUN_NAME="imagix3d_cta_best_config_common_param_${SLURM_JOB_ID}"
 
 echo "Running cta Imagix3D pipeline"
 echo "SLURM job id: ${SLURM_JOB_ID}"
@@ -46,8 +46,8 @@ python scripts/run_imagix3d.py \
   --target-shape 160 192 160 \
   --epochs 250 \
   --beta 0.000000013829018849325669 \
-  --latent-dim 64 \
-  --hidden-dim 32 \
+  --latent-dim 48 \
+  --hidden-dim 16 \
   --train-normalization "batch" \
   --anneal-function "logistic-late" \
   --no-keep-mu-positive \

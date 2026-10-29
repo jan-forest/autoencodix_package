@@ -480,11 +480,54 @@ class XModalix3DEvaluator(XModalixEvaluator):
                 data=logvar_out,
             )
 
+            try:
+                existing_sample_ids = result.sample_ids.get(
+                    epoch=-1,
+                    split=split_name,
+                )
+            except Exception:
+                existing_sample_ids = None
+
+            merged_sample_ids = {}
+
+            if isinstance(existing_sample_ids, dict):
+                merged_sample_ids.update(
+                    {
+                        key: np.asarray(value).copy()
+                        for key, value in existing_sample_ids.items()
+                    }
+                )
+
+            # Refreshed modality IDs take precedence over the old
+            # modality-specific entries.
+            merged_sample_ids.update(ids_out)
+
+
             result.sample_ids.add(
                 epoch=final_epoch,
                 split=split_name,
-                data=ids_out,
+                data=merged_sample_ids,
             )
+
+            # result.sample_ids.add(
+            #     epoch=final_epoch,
+            #     split=split_name,
+            #     data=ids_out,
+            # )
+            
+            if isinstance(existing_sample_ids, dict):
+
+                lost_keys = (
+                    set(existing_sample_ids.keys())
+                    - set(merged_sample_ids.keys())
+                )
+
+                if lost_keys:
+                    raise RuntimeError(
+                        "Refreshing final representations unexpectedly "
+                        "removed sample-ID entries: "
+                        f"{sorted(lost_keys)}"
+                    )
 
         diagnostics_df = pd.DataFrame(diagnostics)
 

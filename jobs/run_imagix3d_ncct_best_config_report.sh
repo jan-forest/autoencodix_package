@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_ncct_best_config
+#SBATCH --job-name=imagix3d_ncct_best_config_common_param
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -75,18 +75,18 @@ echo "Template notebook: ${TEMPLATE_NOTEBOOK}"
 
 papermill \
   "${TEMPLATE_NOTEBOOK}" \
-  "${REPORT_DIR}/ncct_imagix3d_report_best_config.ipynb" \
+  "${REPORT_DIR}/ncct_imagix3d_report_best_config_common_param.ipynb" \
   -k imagix3d-alpha \
 
 jupyter nbconvert \
   --to html \
   --output-dir "${REPORT_DIR}" \
-  "${REPORT_DIR}/ncct_imagix3d_report_best_config.ipynb"
+  "${REPORT_DIR}/ncct_imagix3d_report_best_config_common_param.ipynb"
 
 echo "Report generation finished."
 echo
 echo "Executed notebook:"
-echo "${REPORT_DIR}/ncct_imagix3d_report_best_config.ipynb"
+echo "${REPORT_DIR}/ncct_imagix3d_report_best_config_common_param.ipynb"
 echo
 echo "HTML report:"
-echo "${REPORT_DIR}/ncct_imagix3d_report_best_config.html"
+echo "${REPORT_DIR}/ncct_imagix3d_report_best_config_common_param.html"

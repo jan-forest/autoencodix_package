@@ -105,7 +105,7 @@ class OntixArchitecture(BaseAutoencoder):
         missing_features = [f for f in feature_order if f not in all_feature_names]
         if missing_features:
             print(
-                f"Features in feature_order not found in all_feature_names: {missing_features}"
+                f"Features in feature_order not found in all_feature_names, first 5: {missing_features[:5]}..."
             )
         print(f"Feature names without filtering: {len(feature_names)}")
 

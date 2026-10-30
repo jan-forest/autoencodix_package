@@ -225,7 +225,7 @@ class DataFilter:
             feature_order = [f for f in feature_order if f in all_feature_names]
             if missing_features:
                 print(
-                    f"Features in feature_order not found in all_feature_names: {missing_features}"
+                    f"Features in feature_order not found in all_feature_names, first 5: {missing_features[:5]}..."
                 )
 
             filtered_df = filtered_df.loc[:, feature_order]

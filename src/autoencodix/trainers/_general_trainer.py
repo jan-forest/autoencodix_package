@@ -227,7 +227,7 @@ class GeneralTrainer(BaseTrainer):
                 ),  # Pass n_samples for disentangled loss calculations
             )
             self._fabric.backward(loss)
-            self._ontix_hook()
+
             # Gradient clipping if specified in the config
             if self._config.grad_clip_max_norm is not None:
                 total_norm = torch.nn.utils.clip_grad_norm_(
@@ -253,6 +253,7 @@ class GeneralTrainer(BaseTrainer):
                 self._grad_clip_warning_sent = True
 
             self._optimizer.step()
+            self._ontix_hook()
 
             total_loss += loss.item()
             for k, v in batch_sub_losses.items():

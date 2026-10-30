@@ -303,7 +303,6 @@ class PairedUnpairedSplitter:
             config: Split configuration object defining ratios and random seed.
         custom_splits: Optional dictionary with train, valid, and test sample IDs.
 
-
         Raises:
             TypeError: If `data_package` is not a valid DataPackage instance.
         """
@@ -481,7 +480,6 @@ class PairedUnpairedSplitter:
                                 np.array(anno_indices, dtype=int)
                             )
         return final_indices
-
     def _per_modality_splits_from_custom_splits(
         self,
     ) -> Dict[str, Dict[str, Set[str]]]:

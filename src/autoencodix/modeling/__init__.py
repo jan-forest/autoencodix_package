@@ -6,6 +6,8 @@ from ._imagevae_architecture import ImageVAEArchitecture
 from ._classifier import Classifier
 from ._maskix_architecture import MaskixArchitectureVanilla
 from ._imgfast_architecture import ImageVAEFastArchitecture
+from ._volumevae_architecture import VolumeVAEArchitecture
+from ._volfast_architecture import VolumeVAEFastArchitecture
 
 # test done
 __all__ = [
@@ -17,4 +19,6 @@ __all__ = [
     "Classifier",
     "MaskixArchitectureVanilla",
     "ImageVAEFastArchitecture",
+    "VolumeVAEArchitecture",
+    "VolumeVAEFastArchitecture"
 ]

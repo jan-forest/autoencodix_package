@@ -13,6 +13,7 @@ nav:
       - Ontix: tutorials/PipelineTutorials/Ontix.ipynb
       - Maskix: tutorials/PipelineTutorials/Maskix.ipynb
       - Imagix: tutorials/PipelineTutorials/Imagix.ipynb
+      - Imagix3D: tutorials/PipelineTutorials/Imagix3D.ipynb
       - X-Modalix: tutorials/PipelineTutorials/XModalix.ipynb
   - Deep Dives:
       - Config: tutorials/DeepDives/ConfigTutorial.ipynb
@@ -34,6 +35,7 @@ nav:
   - Disentanglix: api/disentanglix.md
   - Evaluate: api/evaluate.md
   - Imagix: api/imagix.md
+  - Imagix3D: api/imagix3d.md
   - Modeling: api/modeling.md
   - Ontix: api/ontix.md
   - Stackix: api/stackix.md

@@ -547,7 +547,11 @@ def run_synetune_hpo(
             f"Missing={sorted(missing_modalities)}, extra={sorted(extra_modalities)}"
         )
 
-    modality_hparams_json = json.dumps(modality_hparams, sort_keys=True)
+    modality_hparams_json = json.dumps(
+        modality_hparams, 
+        sort_keys=True, 
+        separators=(",", ":"),
+    )
 
     config_space = {
         # Fixed parameters

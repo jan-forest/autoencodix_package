@@ -10,186 +10,6 @@ from syne_tune.experiments import load_experiment
 from syne_tune.optimizer.baselines import CQR
 
 
-MODALITY_FILES = {
-    "NCCT": ("ncct_flat", "ncct_anno_dst.csv"),
-    "CBF": ("cbf_flat", "cbf_anno_dst.csv"),
-    "CBV": ("cbv_flat", "cbv_anno_dst.csv"),
-}
-
-SUPPORTED_VOLUME_EXTENSIONS = (".nii", ".nii.gz")
-
-
-def _read_available_annotation(
-    annotation_file: Path,
-    image_dir: Path,
-    modality: str,
-    img_path_col: str = "filepath",
-    split_col: str = "custom_splits",
-):
-    import pandas as pd
-
-    if not annotation_file.is_file():
-        raise FileNotFoundError(
-            f"{modality} annotation file does not exist: {annotation_file}"
-        )
-    if not image_dir.is_dir():
-        raise FileNotFoundError(
-            f"{modality} image directory does not exist: {image_dir}"
-        )
-
-    annotation = pd.read_csv(annotation_file, index_col=0, engine="python")
-    annotation.index = annotation.index.astype(str)
-
-    if annotation.index.has_duplicates:
-        duplicate_ids = annotation.index[
-            annotation.index.duplicated()
-        ].unique().tolist()
-        raise ValueError(
-            f"{modality} annotation contains duplicate sample IDs. "
-            f"First duplicates: {duplicate_ids[:10]}"
-        )
-
-    required_columns = {img_path_col, split_col}
-    missing_columns = required_columns - set(annotation.columns)
-    if missing_columns:
-        raise ValueError(
-            f"{modality} annotation is missing columns: "
-            f"{sorted(missing_columns)}"
-        )
-
-    split_values = annotation[split_col].astype(str).str.strip().str.lower()
-    allowed_splits = {"train", "valid", "test"}
-    invalid_splits = set(split_values.unique()) - allowed_splits
-    if invalid_splits:
-        raise ValueError(
-            f"{modality} annotation contains invalid split labels: "
-            f"{sorted(invalid_splits)}"
-        )
-
-    available_files = {
-        path.name
-        for path in image_dir.iterdir()
-        if path.is_file()
-        and path.name.lower().endswith(SUPPORTED_VOLUME_EXTENSIONS)
-    }
-
-    available_mask = annotation[img_path_col].astype(str).isin(available_files)
-    missing_count = int((~available_mask).sum())
-    if missing_count:
-        print(
-            f"{modality}: ignoring {missing_count} annotation row(s) "
-            "without an available volume.",
-            flush=True,
-        )
-
-    annotation = annotation.loc[available_mask].copy()
-    if annotation.empty:
-        raise ValueError(f"No usable {modality} samples remain.")
-
-    return annotation
-
-
-def _build_common_custom_splits(
-    data_path: Path,
-    paired_annotation_path: Path,
-    img_path_col: str = "filepath",
-    split_col: str = "custom_splits",
-):
-    import numpy as np
-
-    annotations = {}
-    for modality, (folder, anno_name) in MODALITY_FILES.items():
-        annotations[modality] = _read_available_annotation(
-            annotation_file=data_path / anno_name,
-            image_dir=data_path / folder,
-            modality=modality,
-            img_path_col=img_path_col,
-            split_col=split_col,
-        )
-
-    common_ids = sorted(
-        set.intersection(*(set(df.index) for df in annotations.values()))
-    )
-
-    if not common_ids:
-        raise ValueError(
-            "The three modalities have no common sample IDs after matching "
-            "annotations to available volumes."
-        )
-
-    reference_modality = "NCCT"
-    reference_splits = (
-        annotations[reference_modality]
-        .loc[common_ids, split_col]
-        .astype(str)
-        .str.strip()
-        .str.lower()
-    )
-
-    for modality, annotation in annotations.items():
-        if modality == reference_modality:
-            continue
-
-        modality_splits = (
-            annotation.loc[common_ids, split_col]
-            .astype(str)
-            .str.strip()
-            .str.lower()
-        )
-
-        mismatch_mask = (
-            reference_splits.to_numpy() != modality_splits.to_numpy()
-        )
-        if mismatch_mask.any():
-            mismatch_positions = np.flatnonzero(mismatch_mask)
-            examples = [
-                (
-                    common_ids[pos],
-                    reference_splits.iloc[pos],
-                    modality_splits.iloc[pos],
-                )
-                for pos in mismatch_positions[:10]
-            ]
-            raise ValueError(
-                f"Custom split assignments differ between {reference_modality} "
-                f"and {modality} for {int(mismatch_mask.sum())} common sample(s). "
-                f"First mismatches: {examples}"
-            )
-
-    # The canonical annotation is restricted to the patients available in all
-    # three modalities and ordered deterministically by the common sample ID.
-    paired_annotation = annotations[reference_modality].loc[common_ids].copy()
-    paired_annotation.to_csv(paired_annotation_path)
-
-    split_values = (
-        paired_annotation[split_col]
-        .astype(str)
-        .str.strip()
-        .str.lower()
-        .to_numpy()
-    )
-
-    custom_splits = {
-        "train": np.where(split_values == "train")[0].astype(int),
-        "valid": np.where(split_values == "valid")[0].astype(int),
-        "test": np.where(split_values == "test")[0].astype(int),
-    }
-
-    print("Paired three-modality cohort:", flush=True)
-    print(f"  common samples: {len(common_ids)}", flush=True)
-    for split_name in ("train", "valid", "test"):
-        print(
-            f"  {split_name}: {len(custom_splits[split_name])}",
-            flush=True,
-        )
-
-    return custom_splits
-
-
-def _simple_modality_name(name: str) -> str:
-    return str(name).split(".", 1)[-1]
-
-
 def synetune_objective_function(
     # Fixed data / model settings
     data_path: str,
@@ -215,11 +35,14 @@ def synetune_objective_function(
     classifier_learning_rate: float,
     classifier_weight_decay: float,
 ) -> None:
+    import json
     import os
     import tempfile
+    from pathlib import Path
 
     import mlflow
     import numpy as np
+    import pandas as pd
     import torch
     import autoencodix as acx
 
@@ -227,6 +50,186 @@ def synetune_objective_function(
     from autoencodix.configs import DataCase, DataConfig, DataInfo
     from autoencodix.configs.xmodalix3d_config import XModalix3DConfig
     from autoencodix.evaluate._xmodalix3d_evaluator import XModalix3DEvaluator
+    
+    MODALITY_FILES = {
+        "NCCT": ("ncct_flat", "ncct_anno_dst.csv"),
+        "CBF": ("cbf_flat", "cbf_anno_dst.csv"),
+        "CBV": ("cbv_flat", "cbv_anno_dst.csv"),
+    }
+
+    SUPPORTED_VOLUME_EXTENSIONS = (".nii", ".nii.gz")
+
+
+    def _read_available_annotation(
+        annotation_file: Path,
+        image_dir: Path,
+        modality: str,
+        img_path_col: str = "filepath",
+        split_col: str = "custom_splits",
+    ):
+        import pandas as pd
+
+        if not annotation_file.is_file():
+            raise FileNotFoundError(
+                f"{modality} annotation file does not exist: {annotation_file}"
+            )
+        if not image_dir.is_dir():
+            raise FileNotFoundError(
+                f"{modality} image directory does not exist: {image_dir}"
+            )
+
+        annotation = pd.read_csv(annotation_file, index_col=0, engine="python")
+        annotation.index = annotation.index.astype(str)
+
+        if annotation.index.has_duplicates:
+            duplicate_ids = annotation.index[
+                annotation.index.duplicated()
+            ].unique().tolist()
+            raise ValueError(
+                f"{modality} annotation contains duplicate sample IDs. "
+                f"First duplicates: {duplicate_ids[:10]}"
+            )
+
+        required_columns = {img_path_col, split_col}
+        missing_columns = required_columns - set(annotation.columns)
+        if missing_columns:
+            raise ValueError(
+                f"{modality} annotation is missing columns: "
+                f"{sorted(missing_columns)}"
+            )
+
+        split_values = annotation[split_col].astype(str).str.strip().str.lower()
+        allowed_splits = {"train", "valid", "test"}
+        invalid_splits = set(split_values.unique()) - allowed_splits
+        if invalid_splits:
+            raise ValueError(
+                f"{modality} annotation contains invalid split labels: "
+                f"{sorted(invalid_splits)}"
+            )
+
+        available_files = {
+            path.name
+            for path in image_dir.iterdir()
+            if path.is_file()
+            and path.name.lower().endswith(SUPPORTED_VOLUME_EXTENSIONS)
+        }
+
+        available_mask = annotation[img_path_col].astype(str).isin(available_files)
+        missing_count = int((~available_mask).sum())
+        if missing_count:
+            print(
+                f"{modality}: ignoring {missing_count} annotation row(s) "
+                "without an available volume.",
+                flush=True,
+            )
+
+        annotation = annotation.loc[available_mask].copy()
+        if annotation.empty:
+            raise ValueError(f"No usable {modality} samples remain.")
+
+        return annotation
+
+
+    def _build_common_custom_splits(
+        data_path: Path,
+        paired_annotation_path: Path,
+        img_path_col: str = "filepath",
+        split_col: str = "custom_splits",
+    ):
+        import numpy as np
+
+        annotations = {}
+        for modality, (folder, anno_name) in MODALITY_FILES.items():
+            annotations[modality] = _read_available_annotation(
+                annotation_file=data_path / anno_name,
+                image_dir=data_path / folder,
+                modality=modality,
+                img_path_col=img_path_col,
+                split_col=split_col,
+            )
+
+        common_ids = sorted(
+            set.intersection(*(set(df.index) for df in annotations.values()))
+        )
+
+        if not common_ids:
+            raise ValueError(
+                "The three modalities have no common sample IDs after matching "
+                "annotations to available volumes."
+            )
+
+        reference_modality = "NCCT"
+        reference_splits = (
+            annotations[reference_modality]
+            .loc[common_ids, split_col]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+        )
+
+        for modality, annotation in annotations.items():
+            if modality == reference_modality:
+                continue
+
+            modality_splits = (
+                annotation.loc[common_ids, split_col]
+                .astype(str)
+                .str.strip()
+                .str.lower()
+            )
+
+            mismatch_mask = (
+                reference_splits.to_numpy() != modality_splits.to_numpy()
+            )
+            if mismatch_mask.any():
+                mismatch_positions = np.flatnonzero(mismatch_mask)
+                examples = [
+                    (
+                        common_ids[pos],
+                        reference_splits.iloc[pos],
+                        modality_splits.iloc[pos],
+                    )
+                    for pos in mismatch_positions[:10]
+                ]
+                raise ValueError(
+                    f"Custom split assignments differ between {reference_modality} "
+                    f"and {modality} for {int(mismatch_mask.sum())} common sample(s). "
+                    f"First mismatches: {examples}"
+                )
+
+        # The canonical annotation is restricted to the patients available in all
+        # three modalities and ordered deterministically by the common sample ID.
+        paired_annotation = annotations[reference_modality].loc[common_ids].copy()
+        paired_annotation.to_csv(paired_annotation_path)
+
+        split_values = (
+            paired_annotation[split_col]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+            .to_numpy()
+        )
+
+        custom_splits = {
+            "train": np.where(split_values == "train")[0].astype(int),
+            "valid": np.where(split_values == "valid")[0].astype(int),
+            "test": np.where(split_values == "test")[0].astype(int),
+        }
+
+        print("Paired three-modality cohort:", flush=True)
+        print(f"  common samples: {len(common_ids)}", flush=True)
+        for split_name in ("train", "valid", "test"):
+            print(
+                f"  {split_name}: {len(custom_splits[split_name])}",
+                flush=True,
+            )
+
+        return custom_splits
+
+
+    def _simple_modality_name(name: str) -> str:
+        return str(name).split(".", 1)[-1]
+
 
     report = Reporter()
     data_path_obj = Path(data_path)
@@ -519,6 +522,12 @@ def run_synetune_hpo(
     n_workers: int = 4,
     random_seed: int = 42,
 ):
+    
+    MODALITY_FILES = {
+        "NCCT": ("ncct_flat", "ncct_anno_dst.csv"),
+        "CBF": ("cbf_flat", "cbf_anno_dst.csv"),
+        "CBV": ("cbv_flat", "cbv_anno_dst.csv"),
+    }
     supported_metrics = {
         "worst_matched_unmatched_ratio",
         "mean_matched_unmatched_ratio",

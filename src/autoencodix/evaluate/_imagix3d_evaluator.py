@@ -11,13 +11,12 @@ from autoencodix.evaluate._general_evaluator import GeneralEvaluator
 
 class Imagix3DEvaluator(GeneralEvaluator):
     def __init__(self):
-        super().__init__() # just in case GeneralEvaluator should receive new attributes, then we would want to initialize them
-        
+        super().__init__()  # just in case GeneralEvaluator should receive new attributes, then we would want to initialize them
 
     def compute_latent_activity(
         self,
         result: Result,
-        threshold: float = 0.01, # value taken from https://proceedings.neurips.cc/paper_files/paper/2021/file/6c19e0a6da12dc02239312f151072ddd-Paper.pdf
+        threshold: float = 0.01,  # value taken from https://proceedings.neurips.cc/paper_files/paper/2021/file/6c19e0a6da12dc02239312f151072ddd-Paper.pdf
         splits: tuple[str, ...] = ("train", "valid"),
         include_test: bool = True,
     ) -> Result:
@@ -33,11 +32,10 @@ class Imagix3DEvaluator(GeneralEvaluator):
 
         where mu_j(x) is the encoder's posterior mean for latent dimension j.
 
-        The active-units diagnostic is used as a proxy for latent-space utilization 
+        The active-units diagnostic is used as a proxy for latent-space utilization
         and posterior collapse.
         """
-        
-        
+
         if not hasattr(result, "mus") or result.mus is None:
             raise ValueError(
                 "No posterior means found in result.mus. "
@@ -49,11 +47,11 @@ class Imagix3DEvaluator(GeneralEvaluator):
                 "result.mus does not expose a _data attribute. "
                 "Cannot infer stored epochs for latent activity."
             )
-        
+
         stored_epochs = sorted(e for e in result.mus._data.keys() if e != -1)
         summary_rows = []
         dim_rows = []
-        
+
         if len(stored_epochs) == 0 and not include_test:
             raise ValueError(
                 "No stored train/valid posterior means found in result.mus."
@@ -65,7 +63,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
                 if split == "test":
                     # Test is the final prediction split, it is handled down below via epoch = -1
                     continue
-                
+
                 self._append_latent_activity_for_epoch_split(
                     result=result,
                     epoch=epoch,
@@ -75,7 +73,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
                     dim_rows=dim_rows,
                     is_test_prediction=False,
                 )
-        
+
         # Compute final test-set activity once, if requested
         if include_test:
             self._append_latent_activity_for_epoch_split(
@@ -87,10 +85,10 @@ class Imagix3DEvaluator(GeneralEvaluator):
                 dim_rows=dim_rows,
                 is_test_prediction=True,
             )
-        
+
         summary_df = pd.DataFrame(summary_rows)
         dim_df = pd.DataFrame(dim_rows)
-        
+
         # Store results without touching the existing embedding_evaluation table.
         if not hasattr(result, "sub_results") or result.sub_results is None:
             result.sub_results = {}
@@ -99,7 +97,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
         result.sub_results["latent_activity_by_dim"] = dim_df
 
         return result
-    
+
     def _append_latent_activity_for_epoch_split(
         self,
         result: Result,
@@ -210,8 +208,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
                     "mean_kl": float(mean_kl[dim_idx]),
                 }
             )
-            
-            
+
     @staticmethod
     def _get_training_dynamic_array(
         dynamic,
@@ -255,9 +252,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
         if arr is None:
             if allow_missing:
                 return None
-            raise ValueError(
-                f"No {name} found for epoch={epoch}, split={split}."
-            )
+            raise ValueError(f"No {name} found for epoch={epoch}, split={split}.")
 
         if hasattr(arr, "detach"):
             arr = arr.detach().cpu().numpy()
@@ -268,9 +263,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
         if arr.size == 0:
             if allow_missing:
                 return None
-            raise ValueError(
-                f"Empty {name} array for epoch={epoch}, split={split}."
-            )
+            raise ValueError(f"Empty {name} array for epoch={epoch}, split={split}.")
 
         if arr.ndim == 1:
             arr = arr.reshape(-1, 1)
@@ -282,7 +275,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
             )
 
         return arr.astype(np.float64, copy=False)
-    
+
     def compute_latent_traversal(
         self,
         result: Result,
@@ -334,7 +327,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
 
         Returns:
             The modified Result object.
-    """
+        """
 
         if n_values < 2:
             raise ValueError("n_values must be >= 2 for a meaningful traversal.")
@@ -348,15 +341,13 @@ class Imagix3DEvaluator(GeneralEvaluator):
         )
 
         if mu is None:
-            raise ValueError(
-                "No posterior means found!."
-        )
+            raise ValueError("No posterior means found!.")
 
         n_samples, n_total_latent_dims = mu.shape
 
         if n_samples == 0:
             raise ValueError("No samples found for the last epoch, split='test'.")
-      
+
         # Select a random mu vector from samples
         rng = np.random.default_rng(seed=42)
         base_sample_index = int(rng.integers(low=0, high=n_samples))
@@ -409,9 +400,11 @@ class Imagix3DEvaluator(GeneralEvaluator):
                         "value_index": int(value_index),
                         "traversal_value": float(value),
                         "value_mode": value_mode,
-                        "mean_kl": float(mean_kl[latent_dim])
-                        if np.isfinite(mean_kl[latent_dim])
-                        else np.nan,
+                        "mean_kl": (
+                            float(mean_kl[latent_dim])
+                            if np.isfinite(mean_kl[latent_dim])
+                            else np.nan
+                        ),
                     }
                 )
 
@@ -452,7 +445,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
         }
 
         return result
-    
+
     def _compute_mean_kl_for_epoch_split(
         self,
         result: Result,
@@ -508,7 +501,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
         mean_kl = np.nanmean(kl_per_sample_dim, axis=0)
 
         return mean_kl.astype(np.float64, copy=False)
-    
+
     @staticmethod
     def _select_latent_dims_for_traversal(
         latent_dims: Literal["all", "top_kl"] | Sequence[int],
@@ -561,10 +554,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
         if len(selected) == 0:
             raise ValueError("Explicit latent_dims sequence must not be empty.")
 
-        invalid = [
-            dim for dim in selected
-            if dim < 0 or dim >= n_total_latent_dims
-        ]
+        invalid = [dim for dim in selected if dim < 0 or dim >= n_total_latent_dims]
 
         if invalid:
             raise ValueError(
@@ -573,7 +563,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
             )
 
         return selected
-    
+
     @staticmethod
     def _make_traversal_values(
         mu: np.ndarray,
@@ -587,13 +577,11 @@ class Imagix3DEvaluator(GeneralEvaluator):
         Create absolute replacement values for one latent dimension.
         """
 
-        if value_mode == "prior": 
+        if value_mode == "prior":
             low, high = prior_range
 
             if low >= high:
-                raise ValueError(
-                    f"prior_range must be increasing, got {prior_range}."
-                )
+                raise ValueError(f"prior_range must be increasing, got {prior_range}.")
 
             return np.linspace(low, high, n_values, dtype=np.float64)
 
@@ -614,10 +602,9 @@ class Imagix3DEvaluator(GeneralEvaluator):
             ).astype(np.float64, copy=False)
 
         raise ValueError(
-            f"Unknown value_mode={value_mode!r}. "
-            "Expected 'prior' or 'percentile'."
+            f"Unknown value_mode={value_mode!r}. " "Expected 'prior' or 'percentile'."
         )
-        
+
     @staticmethod
     def _unwrap_model(model: torch.nn.Module) -> torch.nn.Module:
         """
@@ -631,7 +618,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
             return model.module
 
         return model
-    
+
     def _decode_latent_vectors(
         self,
         model: torch.nn.Module,
@@ -695,14 +682,12 @@ class Imagix3DEvaluator(GeneralEvaluator):
 
                 decoded_tensor = self._extract_decoded_tensor(decoded)
 
-                decoded_batches.append(
-                    decoded_tensor.detach().cpu().numpy()
-                )
+                decoded_batches.append(decoded_tensor.detach().cpu().numpy())
 
         decoded_array = np.concatenate(decoded_batches, axis=0)
 
         return decoded_array
-    
+
     @staticmethod
     def _extract_decoded_tensor(decoded: Any) -> torch.Tensor:
         """

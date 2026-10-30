@@ -38,5 +38,5 @@ __all__ = [
     "ImagePreprocessor",
     "BalancedBatchSampler",
     "GlobalVolumeNormalizer",
-    "VolumePreprocessor"
+    "VolumePreprocessor",
 ]

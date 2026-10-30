@@ -4,6 +4,7 @@ import numpy as np
 
 ScalingMethod: TypeAlias = Literal["STANDARD", "MINMAX", "ROBUST", "NONE"]
 
+
 @dataclass
 class GlobalVolumeNormalizer:
     """
@@ -28,26 +29,27 @@ class GlobalVolumeNormalizer:
             - STANDARD: "mean", "std"
             - ROBUST: "median", "iqr"
     """
+
     method: ScalingMethod
     normalize_nonzero_only: bool
     stats: Dict[str, np.ndarray]
-    
+
     @classmethod
     def fit(
         cls,
         images: list,
         method: ScalingMethod,
         normalize_nonzero_only: bool,
-        ) -> "GlobalVolumeNormalizer":
+    ) -> "GlobalVolumeNormalizer":
         """
         Fits a GlobalVolumeNormalizer on a list of training images.
 
-        This class method computes normalization statistics across all training images 
+        This class method computes normalization statistics across all training images
         and returns a fitted normalizer object.
 
         Args:
             images: List of image data objects.
-            method: The normalization method to fit. 
+            method: The normalization method to fit.
             normalize_nonzero_only: If True, fit statistics only on nonzero voxels.
 
         Returns:
@@ -60,19 +62,17 @@ class GlobalVolumeNormalizer:
         SUPPORTED_METHODS = {"STANDARD", "MINMAX", "ROBUST", "NONE"}
         if method not in SUPPORTED_METHODS:
             raise ValueError(f"Unsupported normalization method: {method}")
-        
+
         if method == "NONE":
             return cls(
-                method="NONE",
-                normalize_nonzero_only=normalize_nonzero_only,
-                stats={}
+                method="NONE", normalize_nonzero_only=normalize_nonzero_only, stats={}
             )
 
         eps = np.finfo(np.float32).eps
 
         # collect all train voxels
         arrays = [img.img.astype(np.float32, copy=False) for img in images]
-        stacked = np.stack(arrays, axis=0)   # (N, C, D, H, W)
+        stacked = np.stack(arrays, axis=0)  # (N, C, D, H, W)
 
         if normalize_nonzero_only:
             mask = stacked != 0
@@ -114,18 +114,17 @@ class GlobalVolumeNormalizer:
             stats["median"] = np.asarray(medians, dtype=np.float32)
             stats["iqr"] = np.asarray(iqrs, dtype=np.float32)
 
-
         return cls(
             method=method,
             normalize_nonzero_only=normalize_nonzero_only,
             stats=stats,
         )
-    
+
     def transform_volume(self, image: np.ndarray) -> np.ndarray:
         """
         Applies the fitted normalization transform to a single 3D image volume.
         The transformation uses the statistics previously computed by `fit()`.
-        
+
         Args:
             image: Input image volume as a NumPy array.
 

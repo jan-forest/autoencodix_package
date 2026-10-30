@@ -5,9 +5,9 @@ from ._imagix3d_visualizer import Imagix3DVisualizer
 from .visualize import Visualizer
 
 __all__ = [
-    "GeneralVisualizer", 
+    "GeneralVisualizer",
     "XModalVisualizer",
     "ImagixVisualizer",
-    "Imagix3DVisualizer", 
-    "Visualizer"
-    ]
+    "Imagix3DVisualizer",
+    "Visualizer",
+]

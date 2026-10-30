@@ -20,5 +20,5 @@ __all__ = [
     "MaskixArchitectureVanilla",
     "ImageVAEFastArchitecture",
     "VolumeVAEArchitecture",
-    "VolumeVAEFastArchitecture"
+    "VolumeVAEFastArchitecture",
 ]

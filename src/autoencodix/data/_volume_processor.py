@@ -12,26 +12,28 @@ class VolumePreprocessor(ImagePreprocessor):
 
     Attributes:
         data_config: Configuration specific to data handling and preprocessing.
-        config: Complete 3D image-specific configuration 
+        config: Complete 3D image-specific configuration
         dataset_dicts: Dictionary holding datasets for different splits (train/test/valid).
-        data_readers: A dictionary mapping DataCase enum values to data reader instances for 
+        data_readers: A dictionary mapping DataCase enum values to data reader instances for
             different modalities. Overwritten here for 3D images
     """
 
     def __init__(
-        self, 
-        config: Imagix3DConfig, 
-        ontologies: Optional[Union[Tuple, Dict]] = None
+        self, config: Imagix3DConfig, ontologies: Optional[Union[Tuple, Dict]] = None
     ):
         super().__init__(config=config, ontologies=ontologies)
         self.data_config = config.data_config
-        self.config: Imagix3DConfig = config 
+        self.config: Imagix3DConfig = config
         self.volume_scalers: Optional[Dict[str, GlobalVolumeNormalizer]] = None
-        
-        self.data_readers[DataCase.IMG_TO_BULK]["img"] = VolumeDataReader(config=self.config)
-        self.data_readers[DataCase.SINGLE_CELL_TO_IMG]["img"] = VolumeDataReader(config=self.config)
+
+        self.data_readers[DataCase.IMG_TO_BULK]["img"] = VolumeDataReader(
+            config=self.config
+        )
+        self.data_readers[DataCase.SINGLE_CELL_TO_IMG]["img"] = VolumeDataReader(
+            config=self.config
+        )
         self.data_readers[DataCase.IMG_TO_IMG] = VolumeDataReader(config=self.config)
-    
+
     def preprocess(
         self,
         raw_user_data: Optional[DataPackage] = None,
@@ -54,26 +56,34 @@ class VolumePreprocessor(ImagePreprocessor):
             cur_split = self.dataset_dicts.get(split)
             if cur_split is None:
                 print(f"split is None: {split}")
-                datasets[split] = None # NEWLY ADDED: fix ImagePreprocessor bug for splits later!
+                datasets[split] = (
+                    None  # NEWLY ADDED: fix ImagePreprocessor bug for splits later!
+                )
                 continue
-            
+
             cur_data = cur_split.get("data")
-            if cur_data is None: # NEWLY ADDED: fix ImagePreprocessor bug for splits later!
-                datasets[split] = None # NEWLY ADDED: fix ImagePreprocessor bug for splits later!
-                continue # NEWLY ADDED: fix ImagePreprocessor bug for splits later!
-            
+            if (
+                cur_data is None
+            ):  # NEWLY ADDED: fix ImagePreprocessor bug for splits later!
+                datasets[split] = (
+                    None  # NEWLY ADDED: fix ImagePreprocessor bug for splits later!
+                )
+                continue  # NEWLY ADDED: fix ImagePreprocessor bug for splits later!
+
             if not isinstance(cur_data, DataPackage):
                 raise TypeError(
                     f"expected type of cur_data to be DataPackage, got {type(cur_data)}"
                 )
             cur_indices = cur_split.get("indices")
-            datasets[split] = self._process_dp(dp=cur_data, indices=cur_indices) #type: ignore
+            datasets[split] = self._process_dp(dp=cur_data, indices=cur_indices)  # type: ignore
 
         return DatasetContainer(
             train=datasets["train"], test=datasets["test"], valid=datasets["valid"]
         )
 
-    def _normalize_image_data(self, images: List[ImgData], info_key: str) -> List[ImgData]:
+    def _normalize_image_data(
+        self, images: List[ImgData], info_key: str
+    ) -> List[ImgData]:
         """
         Process 3D images with normalization.
 
@@ -91,30 +101,29 @@ class VolumePreprocessor(ImagePreprocessor):
         scaling_method = self.config.data_config.data_info[info_key].scaling
         if scaling_method == "NOTSET":
             scaling_method = self.config.scaling
-        
+
         SUPPORTED_METHODS = {"STANDARD", "MINMAX", "ROBUST", "NONE"}
         if scaling_method not in SUPPORTED_METHODS:
             raise ValueError(
                 f"Scaling method '{scaling_method}' is not supported for 2D/3D image data. "
                 f"Supported methods are: {sorted(SUPPORTED_METHODS)}."
             )
-                        
+
         processed_images = []
         for img in images:
             img.img = VolumeNormalizer.normalize_volume(
-                image=img.img, 
-                method=scaling_method, #type: ignore
-                normalize_nonzero_only=self.config.normalize_nonzero_only
+                image=img.img,
+                method=scaling_method,  # type: ignore
+                normalize_nonzero_only=self.config.normalize_nonzero_only,
             )
             processed_images.append(img)
 
         return processed_images
-    
+
     def _postsplit_volume_data(
         self,
         split_data: Dict[str, Dict[str, Any]],
     ) -> Dict[str, Dict[str, Any]]:
-        
         """
         Fit a volume scaler on the train split only and apply it to all splits.
         This is the 3D-image analogue of _postsplit_multi_bulk().
@@ -145,7 +154,7 @@ class VolumePreprocessor(ImagePreprocessor):
 
                 scaler = GlobalVolumeNormalizer.fit(
                     images=img_list,
-                    method=scaling_method, # type: ignore
+                    method=scaling_method,  # type: ignore
                     normalize_nonzero_only=self.config.normalize_nonzero_only,
                 )
                 self.volume_scalers[modality_key] = scaler
@@ -192,7 +201,7 @@ class VolumePreprocessor(ImagePreprocessor):
             }
 
         return processed_splits
-    
+
     def _process_img_to_img_case(
         self,
         raw_user_data: Optional[DataPackage] = None,
@@ -226,17 +235,30 @@ class VolumePreprocessor(ImagePreprocessor):
             }
 
         if self.config.volume_scaling_strategy == "per_volume":
-            def presplit_processor(modality_data: Dict[str, List[ImgData]]) -> Dict[str, List[ImgData]]:
-                return {k: self._normalize_image_data(v, k) for k, v in modality_data.items()}
 
-            def postsplit_processor(split_data: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+            def presplit_processor(
+                modality_data: Dict[str, List[ImgData]],
+            ) -> Dict[str, List[ImgData]]:
+                return {
+                    k: self._normalize_image_data(v, k)
+                    for k, v in modality_data.items()
+                }
+
+            def postsplit_processor(
+                split_data: Dict[str, Dict[str, Any]],
+            ) -> Dict[str, Dict[str, Any]]:
                 return split_data
 
         elif self.config.volume_scaling_strategy == "train_global":
-            def presplit_processor(modality_data: Dict[str, List[ImgData]]) -> Dict[str, List[ImgData]]:
+
+            def presplit_processor(
+                modality_data: Dict[str, List[ImgData]],
+            ) -> Dict[str, List[ImgData]]:
                 return modality_data
 
-            def postsplit_processor(split_data: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+            def postsplit_processor(
+                split_data: Dict[str, Dict[str, Any]],
+            ) -> Dict[str, Dict[str, Any]]:
                 return self._postsplit_volume_data(split_data=split_data)
 
         else:
@@ -253,4 +275,3 @@ class VolumePreprocessor(ImagePreprocessor):
                 ),
             },
         )
-    

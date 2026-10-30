@@ -20,5 +20,5 @@ __all__ = [
     "VarixConfig",
     "XModalixConfig",
     "MaskixConfig",
-    "Imagix3DConfig"
+    "Imagix3DConfig",
 ]

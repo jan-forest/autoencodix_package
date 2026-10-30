@@ -393,7 +393,9 @@ class XModalTrainer(BaseTrainer):
             0  # because of unpaired training we need to sum the samples instead of using len(dataset)
         )
 
-        self._grad_clip_warning_sent = False # Reset the warning flag at the start of each epoch
+        self._grad_clip_warning_sent = (
+            False  # Reset the warning flag at the start of each epoch
+        )
 
         for batch in self._trainloader:
             with self._fabric.autocast():

@@ -28,7 +28,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
               = X / 2
 
     So in this configuration, each convolutional step halves every spatial dimension independently.
-    
+
     Example:
         input shape:  (D, H, W) = (64, 96, 32)
         after 1 conv: (32, 48, 16)
@@ -69,11 +69,14 @@ class VolumeVAEArchitecture(BaseAutoencoder):
             config = Imagix3DConfig()
         self._config: Imagix3DConfig = config
         super().__init__(
-            config=config, 
+            config=config,
             input_dim=input_dim,
             ontologies=ontologies,
-            feature_order=feature_order)
-        if self._config.n_conv_layers_3d != 5: # this is just a safety measure for now, as # of conv layers are hardcoded
+            feature_order=feature_order,
+        )
+        if (
+            self._config.n_conv_layers_3d != 5
+        ):  # this is just a safety measure for now, as # of conv layers are hardcoded
             raise ValueError(
                 "VolumeVAEArchitecture currently supports exactly 5 convolutional layers."
             )
@@ -83,42 +86,36 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         self.img_shape: Tuple[int, int, int, int] = input_dim
         self.hidden_dim: int = self._config.hidden_dim
         self.norm_3d: str = self._config.train_normalization
-        self.norm_groups: int = self._config.train_norm_groupsize #type: ignore
+        self.norm_groups: int = self._config.train_norm_groupsize  # type: ignore
         self.clamp_logvar: bool = self._config.clamp_logvar
-        self.logvar_range: Tuple[float, float] = self._config.logvar_range #type: ignore
+        self.logvar_range: Tuple[float, float] = self._config.logvar_range  # type: ignore
         self.keep_mu_positive: bool = self._config.keep_mu_positive
         self._build_network()
         self.apply(self._init_weights)
-    
+
     def make_norm_3d(self, num_channels: int) -> nn.Module:
         """Create a 3D normalization layer."""
-        
+
         norm_type = self.norm_3d
-        
+
         if norm_type == "batch":
             return nn.BatchNorm3d(num_channels)
-        
+
         if norm_type == "group":
             num_groups = self._get_num_groups(num_channels)
-            return nn.GroupNorm(
-                num_groups=num_groups,
-                num_channels=num_channels    
-            )
-        
+            return nn.GroupNorm(num_groups=num_groups, num_channels=num_channels)
+
         if norm_type == "instance":
-            return nn.InstanceNorm3d(
-                num_features=num_channels,
-                affine=True
-            )
-        
+            return nn.InstanceNorm3d(num_features=num_channels, affine=True)
+
         raise ValueError(
             f"Unknown normalization_3d={self.normalization_3d!r}. "
             "Expected 'batch', 'group', or 'instance'."
         )
-            
+
     def _get_num_groups(self, num_channels: int) -> int:
         """Return a valid number of groups for GroupNorm."""
-        
+
         requested_groups = min(int(self.norm_groups), num_channels)
 
         if num_channels % requested_groups == 0:
@@ -128,7 +125,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
             if num_channels % num_groups == 0:
                 return num_groups
 
-        return 1 # Fall back -> shouldn't be reached   
+        return 1  # Fall back -> shouldn't be reached
 
     def _build_network(self) -> None:
         """Construct the encoder and decoder networks."""
@@ -195,7 +192,7 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         self.reduced_d = self.d // (2**self.num__encoder_layers)
         self.reduced_h = self.h // (2**self.num__encoder_layers)
         self.reduced_w = self.w // (2**self.num__encoder_layers)
-        
+
         # The encoder output is a 5D tensor of shape:
         #   (batch_size, hidden_dim * 8, reduced_d, reduced_h, reduced_w)
         #
@@ -205,12 +202,14 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         #
         # Therefore, the input size of the linear mu and logvar layers is:
         #   hidden_dim * 8 * reduced_d * reduced_h * reduced_w
-          
+
         self.mu = nn.Linear(
-            self.hidden_dim * 8 * self.reduced_d * self.reduced_h * self.reduced_w, self.latent_dim
+            self.hidden_dim * 8 * self.reduced_d * self.reduced_h * self.reduced_w,
+            self.latent_dim,
         )
         self.logvar = nn.Linear(
-            self.hidden_dim * 8 * self.reduced_d * self.reduced_h * self.reduced_w, self.latent_dim
+            self.hidden_dim * 8 * self.reduced_d * self.reduced_h * self.reduced_w,
+            self.latent_dim,
         )
 
         # The same logic applies at the start of the decoder:
@@ -220,11 +219,11 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         #
         # This reshaped tensor corresponds to the final spatial output shape of the encoder
         # and serves as the input to the first ConvTranspose3d layer.
-        
+
         self.d1 = nn.Sequential(
             nn.Linear(
                 self.latent_dim,
-                self.hidden_dim * 8 * self.reduced_d * self.reduced_h * self.reduced_w
+                self.hidden_dim * 8 * self.reduced_d * self.reduced_h * self.reduced_w,
             ),
             nn.ReLU(inplace=False),
         )
@@ -291,24 +290,26 @@ class VolumeVAEArchitecture(BaseAutoencoder):
             The encoded latent space representation, or mu and logvar for VAEs.
 
         """
-        h = self._encoder(x) # type: ignore
+        h = self._encoder(x)  # type: ignore
         # this makes sure we get the <batchsize, latent_dim> shape for our latent space in the next step
         # because we put all dimensionality in the second dimension of the output shape.
         # By covering all dimensionality here, we are sure that the rest is
-        h = h.view(-1, self.hidden_dim * 8 * self.reduced_d * self.reduced_h * self.reduced_w)
+        h = h.view(
+            -1, self.hidden_dim * 8 * self.reduced_d * self.reduced_h * self.reduced_w
+        )
         logvar = self.logvar(h)
         mu = self.mu(h)
-        
+
         if self.clamp_logvar:
             # prevent  mu and logvar from being too close to zero, this increases numerical stability
-            logvar = torch.clamp(logvar, 
-                                 min=self.logvar_range[0], 
-                                 max=self.logvar_range[1]) 
-        
+            logvar = torch.clamp(
+                logvar, min=self.logvar_range[0], max=self.logvar_range[1]
+            )
+
         if self.keep_mu_positive:
             # replace mu when mu < 0.000001 with 0
             mu = torch.where(mu < 0.000001, torch.zeros_like(mu), mu)
-        
+
         return mu, logvar
 
     def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
@@ -348,8 +349,10 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         # but instead of ensuring the correct dimension for the latent space,
         # we ensure the correct dimension for the first Conv3DTranspose layer
         # so we make sure that the last 4 dimensions are (n_filters, reduced_d, reduced_h, reduced_w)
-        h = h.view(-1, self.hidden_dim * 8, self.reduced_d, self.reduced_h, self.reduced_w)
-        return self._decoder(h) # type: ignore
+        h = h.view(
+            -1, self.hidden_dim * 8, self.reduced_d, self.reduced_h, self.reduced_w
+        )
+        return self._decoder(h)  # type: ignore
 
     def translate(self, z: torch.Tensor) -> torch.Tensor:
         """Reshapes the output to get actual images

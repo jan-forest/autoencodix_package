@@ -13,13 +13,13 @@ class Imagix3DVisualizer(ImagixVisualizer):
 
     @no_type_check
     def show_image_recon_grid(
-        self, 
-        result: Result, 
-        n_samples: int = 3, 
-        selection: str = "random", 
+        self,
+        result: Result,
+        n_samples: int = 3,
+        selection: str = "random",
         metric: str = "mse",
-        chosen_split: str = "test"        
-    ) -> None: 
+        chosen_split: str = "test",
+    ) -> None:
         """
         Plot original, reconstructed, and absolute-error slices for samples of the chosen split.
 
@@ -32,37 +32,37 @@ class Imagix3DVisualizer(ImagixVisualizer):
             metric: Metric used for bmw selection. Options: "mse" or "bce".
             chosen_split: "test", "valid" or "train"
         """
-         
+
         if selection not in ["random", "bmw"]:
             raise ValueError("selection must be either 'random' or 'bmw'.")
-        
+
         if metric not in ["mse", "bce"]:
             raise ValueError("metric must be either 'mse' or 'bce'.")
-        
+
         if chosen_split not in ["test", "valid", "train"]:
             raise ValueError("chosen_split must be either 'test', 'valid' or 'train'.")
-        
+
         def reconstruction_score(orig, recon, metric):
             """Compute reconstruction score for sample selection"""
             if metric == "mse":
                 return float(np.mean((orig - recon) ** 2))
-            
+
             if metric == "bce":
                 # bce assumes target values in [0, 1]
                 # If recon is outside [0, 1] treat it as logits and apply sigmoid.
                 y = np.clip(orig, 0.0, 1.0)
-                
+
                 if np.nanmin(recon) < 0.0 or np.nanmax(recon) > 1.0:
-                    p= 1.0 / (1.0 + np.exp(-recon))
+                    p = 1.0 / (1.0 + np.exp(-recon))
                 else:
                     p = recon
-                
+
                 eps = np.finfo(float).eps
                 p = np.clip(p, eps, 1.0 - eps)
-                
+
                 bce = -(y * np.log(p) + (1.0 - y) * np.log(1.0 - p))
-                return float(np.mean(bce))                          
-                
+                return float(np.mean(bce))
+
         dataset = result.datasets
 
         ## Overwrite original datasets with new_datasets if available
@@ -72,40 +72,44 @@ class Imagix3DVisualizer(ImagixVisualizer):
         new_split_data = getattr(result.new_datasets, chosen_split, None)
         if new_split_data:
             setattr(dataset, chosen_split, new_split_data)
-            
+
         # if result.new_datasets.test:
         #     dataset.test = result.new_datasets.test
-        
+
         split_data = getattr(dataset, chosen_split, None)
 
         # if dataset.test is None:
         #     raise ValueError("test of dataset is None")
-        
+
         if split_data is None:
             raise ValueError(f"dataset is None for split '{chosen_split}'")
-        
-        #all_sample_order = dataset.test.sample_ids
+
+        # all_sample_order = dataset.test.sample_ids
         all_sample_order = split_data.sample_ids
-        
+
         if chosen_split == "test":
             epoch = -1
         else:
             stored_epochs = [e for e in result.reconstructions._data.keys()]
             epoch = max(stored_epochs)
-        
+
         # get reconstructed images
         recons = result.reconstructions.get(split=chosen_split, epoch=epoch)
-        if recons is None: 
-                raise ValueError("No reconstructions found in result")
-        
+        if recons is None:
+            raise ValueError("No reconstructions found in result")
+
         n_indices = len(recons)
         indices = list(range(n_indices))
-        
+
         if selection == "random":
             n_samples = min(n_samples, n_indices)
-            
+
             rng = np.random.default_rng(42)
-            chosen_indices = rng.choice(indices, size=n_samples, replace=False,)
+            chosen_indices = rng.choice(
+                indices,
+                size=n_samples,
+                replace=False,
+            )
 
             selected = [
                 {
@@ -116,51 +120,44 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 }
                 for idx in chosen_indices
             ]
-        
+
         else:
             # bmw: best, median and worst by reconstruction score
             scored_samples = []
-            
+
             for idx in indices:
                 sid = all_sample_order[idx]
-                
+
                 # original volume
                 orig = split_data.raw_data[idx].img.squeeze()
-                
+
                 # reconstructed volume
-                recon = recons[idx].squeeze()           
-                score = reconstruction_score(orig, recon, metric)        
-                scored_samples.append(
-                    {
-                        "idx": idx,
-                        "sample_id": sid,
-                        "score": score
-                    }
-                )
-        
+                recon = recons[idx].squeeze()
+                score = reconstruction_score(orig, recon, metric)
+                scored_samples.append({"idx": idx, "sample_id": sid, "score": score})
+
             scored_samples = sorted(scored_samples, key=lambda x: x["score"])
-            
-            best = scored_samples[0]    # first entry in ordered samples
+
+            best = scored_samples[0]  # first entry in ordered samples
             median = scored_samples[len(scored_samples) // 2]
             worst = scored_samples[-1]  # last entry in ordered samples
-        
-            selected =   [
+
+            selected = [
                 {**worst, "label": "worst"},
                 {**median, "label": "median"},
-                {**best, "label": "best"}
+                {**best, "label": "best"},
             ]
-                  
-            n_samples = len(selected) # i.e. 3
-            
-        
+
+            n_samples = len(selected)  # i.e. 3
+
         fig, axes = plt.subplots(
             ncols=n_samples,
             nrows=9,  # Original [ax., cor., sag.], Reconstructed [ax., cor., sag.]
             figsize=(n_samples * 4, 9 * 4),
             squeeze=False,
-            constrained_layout=True
+            constrained_layout=True,
         )
-             
+
         row_labels = [
             "Original\nAxial",
             "Recon\nAxial",
@@ -174,46 +171,46 @@ class Imagix3DVisualizer(ImagixVisualizer):
         ]
 
         for c, item in enumerate(selected):
-            
+
             idx = item["idx"]
             sample_id = item["sample_id"]
-            
+
             # original volume
             orig = split_data.raw_data[idx].img.squeeze()
 
             # reconstructed volume
             recon = recons[idx].squeeze()
-            
+
             error = np.abs(orig - recon)
-            
+
             # index for the middle slice of every dimension
             d_mid, h_mid, w_mid = [s // 2 for s in orig.shape]
-                               
-            # extract slices            
+
+            # extract slices
             axial_slices = [
-                orig[d_mid, :, :],   # axial
+                orig[d_mid, :, :],  # axial
                 recon[d_mid, :, :],  # axial
                 error[d_mid, :, :],  # axial
             ]
-            
+
             coronal_slices = [
-                orig[:, h_mid, :],   # coronal
+                orig[:, h_mid, :],  # coronal
                 recon[:, h_mid, :],  # coronal
                 error[:, h_mid, :],  # coronal
             ]
-            
+
             sagittal_slices = [
-                orig[:, :, w_mid],   # sagittal
+                orig[:, :, w_mid],  # sagittal
                 recon[:, :, w_mid],  # sagittal
                 error[:, :, w_mid],  # sagittal
             ]
-            
+
             all_slices = axial_slices + coronal_slices + sagittal_slices
-            
+
             # Use same intensity range for orig and recon of this sample
             image_min = min(np.nanmin(orig), np.nanmin(recon))
             image_max = max(np.nanmax(orig), np.nanmax(recon))
-            
+
             # Error map range
             error_min = 0.0
             error_max = np.nanpercentile(error, 99)
@@ -221,12 +218,24 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 error_max = np.nanmax(error)
 
             for r in range(9):
-                
+
                 if r in [0, 1, 3, 4, 6, 7]:
-                    axes[r, c].imshow(all_slices[r], cmap="gray", origin="lower", vmin=image_min, vmax=image_max)
+                    axes[r, c].imshow(
+                        all_slices[r],
+                        cmap="gray",
+                        origin="lower",
+                        vmin=image_min,
+                        vmax=image_max,
+                    )
                 else:
-                    axes[r, c].imshow(all_slices[r], cmap="magma", origin="lower", vmin=error_min, vmax=error_max)
-                    
+                    axes[r, c].imshow(
+                        all_slices[r],
+                        cmap="magma",
+                        origin="lower",
+                        vmin=error_min,
+                        vmax=error_max,
+                    )
+
                 axes[r, c].axis("off")
 
                 # title only on top row
@@ -252,18 +261,14 @@ class Imagix3DVisualizer(ImagixVisualizer):
                     )
 
         self.plots["Image_recon_grid"] = fig
-        
+
         # show_figure(fig)
         plt.show()
-    
-    
+
     def show_latent_corr(
-        self,
-        result: Result,
-        show_table: bool = False,
-        show_corrmat: bool = False
+        self, result: Result, show_table: bool = False, show_corrmat: bool = False
     ) -> None:
-    
+
         rows = []
         stored_epochs = [e for e in result.latentspaces._data.keys() if e != -1]
 
@@ -282,14 +287,16 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 # upper triangle (because corr matrices are symmetric), excluding diagonal (k=1)
                 tri = corr[np.triu_indices_from(corr, k=1)]
 
-                rows.append({
-                    "epoch": epoch + 1,
-                    "split": split,
-                    "mean_abs_pairwise_corr": np.nanmean(np.abs(tri)),
-                    "max_abs_pairwise_corr": np.nanmax(np.abs(tri)),
-                    "n_samples": latent.shape[0],
-                    "n_latent_dims": latent.shape[1],
-                })
+                rows.append(
+                    {
+                        "epoch": epoch + 1,
+                        "split": split,
+                        "mean_abs_pairwise_corr": np.nanmean(np.abs(tri)),
+                        "max_abs_pairwise_corr": np.nanmax(np.abs(tri)),
+                        "n_samples": latent.shape[0],
+                        "n_latent_dims": latent.shape[1],
+                    }
+                )
 
         df_corr = pd.DataFrame(rows)
 
@@ -302,7 +309,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
             hue="split",
             marker="o",
         )
-        
+
         legend = ax.get_legend()
         if legend is not None:
             legend.get_frame().set_facecolor("white")
@@ -312,7 +319,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
 
             for text in legend.get_texts():
                 text.set_color("black")
-        
+
         plt.title("Mean absolute pairwise correlation between latent dimensions")
         plt.xlabel("Epoch")
         plt.ylabel("Mean absolute pairwise correlation")
@@ -328,7 +335,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
             hue="split",
             marker="o",
         )
-        
+
         legend = ax.get_legend()
         if legend is not None:
             legend.get_frame().set_facecolor("white")
@@ -338,13 +345,13 @@ class Imagix3DVisualizer(ImagixVisualizer):
 
             for text in legend.get_texts():
                 text.set_color("black")
-        
+
         plt.title("Maximum absolute pairwise correlation between latent dimensions")
         plt.xlabel("Epoch")
         plt.ylabel("Max absolute pairwise correlation")
         plt.tight_layout()
         plt.show()
-        
+
         if show_corrmat:
             # Use the final stored train/valid epoch.
             final_epoch = max(stored_epochs)
@@ -414,16 +421,16 @@ class Imagix3DVisualizer(ImagixVisualizer):
 
             self.plots["LatentCorrelationMatrix"] = fig
             plt.show()
-        
+
         # Print results table (using display for notebook, if possible)
         if show_table:
             try:
                 from IPython.display import display
+
                 display(df_corr)
             except ImportError:
                 print(df_corr.to_string(index=False))
-    
-    
+
     def show_latent_activity(
         self,
         result: Result,
@@ -502,20 +509,23 @@ class Imagix3DVisualizer(ImagixVisualizer):
 
         # Ensure predictable order.
         summary_df = summary_df.sort_values(["epoch", "split"]).reset_index(drop=True)
-        dim_df = dim_df.sort_values(["epoch", "split", "latent_dim"]).reset_index(drop=True)
-
+        dim_df = dim_df.sort_values(["epoch", "split", "latent_dim"]).reset_index(
+            drop=True
+        )
 
         # Optional table output
         if show_table:
             try:
                 from IPython.display import display
+
                 display(summary_df)
             except ImportError:
                 print(summary_df.to_string(index=False))
 
-
         # Plot 1: active units over training epochs
-        train_valid_summary = summary_df.loc[~summary_df["is_test_prediction"].astype(bool)].copy()
+        train_valid_summary = summary_df.loc[
+            ~summary_df["is_test_prediction"].astype(bool)
+        ].copy()
 
         if not train_valid_summary.empty:
             fig, ax = plt.subplots(figsize=(8, 5))
@@ -528,7 +538,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 marker="o",
                 ax=ax,
             )
-            
+
             legend = ax.get_legend()
             if legend is not None:
                 legend.get_frame().set_facecolor("white")
@@ -566,7 +576,6 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 "Skipping active-units-over-training plot."
             )
 
-
         # Select final epoch for per-dimension plots
         if final_epoch is None:
             if train_valid_summary.empty:
@@ -576,7 +585,10 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 )
             final_epoch = int(train_valid_summary["epoch"].max())
 
-        final_epoch_rows = dim_df.loc[(dim_df["epoch"] == final_epoch) & (~dim_df["is_test_prediction"].astype(bool))].copy()
+        final_epoch_rows = dim_df.loc[
+            (dim_df["epoch"] == final_epoch)
+            & (~dim_df["is_test_prediction"].astype(bool))
+        ].copy()
 
         if include_test:
             test_rows = dim_df.loc[dim_df["is_test_prediction"].astype(bool)].copy()
@@ -592,7 +604,9 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 f"No per-dimension latent-activity rows found for final_epoch={final_epoch}."
             )
 
-        display_epoch = final_epoch_rows.loc[final_epoch_rows["epoch"] == final_epoch, "epoch_display"]
+        display_epoch = final_epoch_rows.loc[
+            final_epoch_rows["epoch"] == final_epoch, "epoch_display"
+        ]
 
         if len(display_epoch) > 0:
             display_epoch = int(display_epoch.iloc[0])
@@ -602,10 +616,10 @@ class Imagix3DVisualizer(ImagixVisualizer):
         if show_dim_table:
             try:
                 from IPython.display import display
+
                 display(final_epoch_rows)
             except ImportError:
                 print(final_epoch_rows.to_string(index=False))
-
 
         # Plot 2: activity per latent dimension at final epoch
         fig, ax = plt.subplots(figsize=(10, 5))
@@ -638,9 +652,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
             label=f"activity threshold = {threshold:g}",
         )
 
-        ax.set_title(
-            f"Latent-dimension activity at epoch {display_epoch}"
-        )
+        ax.set_title(f"Latent-dimension activity at epoch {display_epoch}")
         ax.set_xlabel("Latent dimension")
         ax.set_ylabel("Activity: variance of posterior mean")
 
@@ -657,16 +669,23 @@ class Imagix3DVisualizer(ImagixVisualizer):
                     "Keeping linear y-axis for activity plot."
                 )
 
-        ax.legend(title="Split / active", bbox_to_anchor=(1.02, 1), loc="upper left", frameon=True, facecolor="white")
+        ax.legend(
+            title="Split / active",
+            bbox_to_anchor=(1.02, 1),
+            loc="upper left",
+            frameon=True,
+            facecolor="white",
+        )
         fig.tight_layout()
 
         self.plots["LatentActivityPerDimension"] = fig
         plt.show()
 
-
         # Plot 3: KL contribution per latent dimension at final epoch
         if "mean_kl" in final_epoch_rows.columns:
-            kl_plot_df = final_epoch_rows.loc[np.isfinite(final_epoch_rows["mean_kl"])].copy()
+            kl_plot_df = final_epoch_rows.loc[
+                np.isfinite(final_epoch_rows["mean_kl"])
+            ].copy()
 
             if not kl_plot_df.empty:
                 fig, ax = plt.subplots(figsize=(10, 5))
@@ -679,7 +698,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
                     marker="o",
                     ax=ax,
                 )
-                
+
                 legend = ax.get_legend()
                 if legend is not None:
                     legend.get_frame().set_facecolor("white")
@@ -702,15 +721,14 @@ class Imagix3DVisualizer(ImagixVisualizer):
                 plt.show()
             else:
                 warnings.warn(
-                    "No finite mean_kl values found. "
-                    "Skipping KL-per-dimension plot."
+                    "No finite mean_kl values found. " "Skipping KL-per-dimension plot."
                 )
         else:
             warnings.warn(
                 "Column 'mean_kl' not found in latent-activity table. "
                 "Skipping KL-per-dimension plot."
             )
-            
+
     def show_latent_traversal(
         self,
         result: Result,
@@ -722,8 +740,8 @@ class Imagix3DVisualizer(ImagixVisualizer):
 
         This method expects that the evaluator method
             compute_latent_traversal(...)
-        has already been called. 
-        
+        has already been called.
+
         The evaluator stores the decoded traversal volumes and metadata in:
             result.sub_results["latent_traversal"]
 
@@ -815,8 +833,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
 
         if view not in {"axial", "coronal", "sagittal"}:
             raise ValueError(
-                f"Unknown view={view!r}. "
-                "Expected 'axial', 'coronal', or 'sagittal'."
+                f"Unknown view={view!r}. " "Expected 'axial', 'coronal', or 'sagittal'."
             )
 
         # Preserve the evaluator's latent-dimension order if available.
@@ -824,18 +841,11 @@ class Imagix3DVisualizer(ImagixVisualizer):
             latent_dim_order = [int(dim) for dim in settings["latent_dims"]]
         else:
             latent_dim_order = (
-                metadata["latent_dim"]
-                .drop_duplicates()
-                .astype(int)
-                .tolist()
+                metadata["latent_dim"].drop_duplicates().astype(int).tolist()
             )
 
         value_indices = (
-            metadata["value_index"]
-            .drop_duplicates()
-            .astype(int)
-            .sort_values()
-            .tolist()
+            metadata["value_index"].drop_duplicates().astype(int).sort_values().tolist()
         )
 
         n_rows = len(latent_dim_order)
@@ -912,10 +922,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
                     mean_kl = row.get("mean_kl", np.nan)
 
                     if np.isfinite(mean_kl):
-                        row_label = (
-                            f"{row['latent_dim_label']}\n"
-                            f"KL={mean_kl:.3g}"
-                        )
+                        row_label = f"{row['latent_dim_label']}\n" f"KL={mean_kl:.3g}"
                     else:
                         row_label = f"{row['latent_dim_label']}"
 
@@ -941,10 +948,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
             else None
         )
 
-        title = (
-            f"Latent traversal "
-            f"({view}, {value_mode} values)"
-        )
+        title = f"Latent traversal " f"({view}, {value_mode} values)"
 
         if base_sample_index is not None:
             title += f"\nBase sample index: {base_sample_index}"
@@ -958,7 +962,7 @@ class Imagix3DVisualizer(ImagixVisualizer):
         self.plots["LatentTraversal"] = fig
 
         plt.show()
-    
+
     @staticmethod
     def _get_middle_slice_from_decoded_volume(
         volume: np.ndarray,
@@ -1013,6 +1017,5 @@ class Imagix3DVisualizer(ImagixVisualizer):
             return volume_3d[:, :, w_mid]
 
         raise ValueError(
-            f"Unknown view={view!r}. "
-            "Expected 'axial', 'coronal', or 'sagittal'."
+            f"Unknown view={view!r}. " "Expected 'axial', 'coronal', or 'sagittal'."
         )

@@ -29,12 +29,12 @@ cd "${BASE}"
 TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
 
 export RESULT_DIR
-export PKL_PATH="${RESULT_DIR}/imagix3d.pkl"
+export PKL_PATH="${RESULT_DIR}/xmodalix3d.pkl"
 export REPORT_DIR="${RESULT_DIR}/report_only_${TIMESTAMP}"
 export TEMPLATE
 
 REPORT_NOTEBOOK="${REPORT_DIR}/xmodalix3d_3mod_report_executed.ipynb"
-REPORT_HTML="${REPORT_DIR}/xmodalix3d_3mod_report_report.html"
+REPORT_HTML="${REPORT_DIR}/xmodalix3d_3mod_report.html"
 
 mkdir -p "${REPORT_DIR}"
 
@@ -63,7 +63,7 @@ python -m jupyter nbconvert \
   --to notebook \
   --execute "${TEMPLATE}" \
   --output-dir "${REPORT_DIR}" \
-  --output "cta_report_executed" \
+  --output "xmodalix3d_3mod_executed" \
   --ExecutePreprocessor.timeout=-1 \
   --ExecutePreprocessor.kernel_name=python3
 
@@ -77,7 +77,7 @@ python -m jupyter nbconvert \
   --to html \
   "${REPORT_NOTEBOOK}" \
   --output-dir "${REPORT_DIR}" \
-  --output "cta_report"
+  --output "xmodalix3d_3mod_report"
 
 echo "Checking HTML report:"
 test -s "${REPORT_HTML}"

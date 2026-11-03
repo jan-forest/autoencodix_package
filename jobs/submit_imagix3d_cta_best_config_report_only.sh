@@ -5,14 +5,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 BASE="/home/h2/baeuchl/autoencodix_package"
 
-RESULT_DIR="/data/horse/ws/baeuchl-imagix3d/results/imagix3d_cta_best_config_common_param_report-2387307"
-TEMPLATE="${BASE}/notebooks/ncct_report_template.ipynb"
+RESULT_DIR="/data/horse/ws/baeuchl-imagix3d/results/imagix3d_cta_best_config_common_param_report-2387197"
+TEMPLATE="${BASE}/notebooks/imagix3d_full_report_template.ipynb"
 
 echo "Submitting report-only job..."
 echo "Result directory: ${RESULT_DIR}"
 echo "Template: ${TEMPLATE}"
-echo "Job script: ${SCRIPT_DIR}/run_ncct_report_only.sh"
+echo "Job script: ${SCRIPT_DIR}/run_cta_report_only.sh"
 
 sbatch \
   --export=ALL,BASE="${BASE}",RESULT_DIR="${RESULT_DIR}",TEMPLATE="${TEMPLATE}" \
-  "${SCRIPT_DIR}/run_ncct_report_only.sh"
+  "${SCRIPT_DIR}/run_cta_report_only.sh"

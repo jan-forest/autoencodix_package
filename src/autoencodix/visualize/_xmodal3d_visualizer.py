@@ -653,36 +653,60 @@ class XModal3DVisualizer(XModalVisualizer):
         reducer: str = "UMAP",
         max_voxels: int = 20000,
         random_state: int = 42,
-        channel: int = 0,
+        include_self_reconstruction: bool = False,
     ) -> None:
-        """Compare original and translated 3D volumes in a 2D embedding.
+        """Compare original, translated, and optionally self-reconstructed
+        3D target volumes in a 2D embedding.
 
-        This overrides the XModalix implementation because flattening complete
-        3D volumes can require very large amounts of memory. The same uniformly
-        sampled voxel positions are used for original and translated volumes,
-        after which UMAP, PCA or t-SNE reduces the vectors to two dimensions.
+        Complete 3D volumes can require very large amounts of memory when
+        flattened. Therefore, the same uniformly sampled voxel positions are
+        retained for all volumes before dimensionality reduction with UMAP,
+        PCA, or t-SNE.
 
-        The name ``show_2D_translation`` is retained for compatibility with the
-        XModalix API; "2D" refers to the final embedding, not to 2D input images.
+        The name ``show_2D_translation`` is retained for compatibility with
+        the XModalix API; "2D" refers to the final embedding, not to 2D input
+        images.
+
+        By default, the method compares:
+
+        - original target-modality volumes,
+        - cross-modal translations into the target modality.
+
+        If ``include_self_reconstruction=True``, the target modality's own
+        VAE reconstructions are included as a third group. This makes it
+        possible to distinguish discrepancies caused by cross-modal
+        translation from discrepancies caused by the target decoder's
+        reconstruction quality itself.
 
         Args:
             result:
                 XModalix3D result object.
+
             translated_modality:
-                Target modality whose real and translated volumes are compared.
+                Target modality whose real and generated volumes are compared,
+                e.g. ``"img.CBF"``.
+
             split:
-                Currently translation output is normally available for ``"test"``.
+                Currently translation output is normally available for
+                ``"test"``.
+
             param:
-                Optional metadata column used as hue.
+                Optional metadata column used as hue. If None, points are
+                colored by volume type.
+
             reducer:
                 ``"UMAP"``, ``"PCA"`` or ``"TSNE"``.
+
             max_voxels:
                 Maximum number of voxel features retained per volume before
                 dimensionality reduction.
+
             random_state:
                 Random seed used by UMAP/t-SNE where supported.
-            channel:
-                Channel to use for multi-channel 3D volumes.
+
+            include_self_reconstruction:
+                If True, additionally include within-modality target
+                reconstructions, i.e. target -> target reconstructions.
         """
 
         if split != "test":
@@ -694,7 +718,10 @@ class XModal3DVisualizer(XModalVisualizer):
         if max_voxels < 1:
             raise ValueError("max_voxels must be >= 1.")
 
-        split_data = self._get_split_dataset(result=result, split=split)
+        split_data = self._get_split_dataset(
+            result=result,
+            split=split,
+        )
 
         if not hasattr(split_data, "datasets"):
             raise TypeError(
@@ -709,23 +736,61 @@ class XModal3DVisualizer(XModalVisualizer):
 
         dataset = split_data.datasets[translated_modality]
 
-        reconstructions = result.reconstructions.get(epoch=-1, split=split)
-        sample_ids_result = result.sample_ids.get(epoch=-1, split=split)
+        reconstructions = result.reconstructions.get(
+            epoch=-1,
+            split=split,
+        )
+        sample_ids_result = result.sample_ids.get(
+            epoch=-1,
+            split=split,
+        )
 
-        if not isinstance(reconstructions, dict) or "translation" not in reconstructions:
+        if (
+            not isinstance(reconstructions, dict)
+            or "translation" not in reconstructions
+        ):
             raise ValueError(
                 "No translated volumes found. Run predict() before calling "
                 "show_2D_translation()."
             )
 
-        if not isinstance(sample_ids_result, dict) or "translation" not in sample_ids_result:
+        if (
+            not isinstance(sample_ids_result, dict)
+            or "translation" not in sample_ids_result
+        ):
             raise ValueError(
                 "No sample IDs for translated volumes were found."
             )
 
-        original_ids = [str(sample_id) for sample_id in dataset.sample_ids]
+        translation_key = "translation"
+
+        # Target-modality self-reconstruction produced during prediction.
+        reference_key = (
+            f"reference_{translated_modality}_to_{translated_modality}"
+        )
+
+        if include_self_reconstruction:
+            if reference_key not in reconstructions:
+                raise KeyError(
+                    "Self-reconstruction requested, but reconstruction key "
+                    f"{reference_key!r} was not found."
+                )
+
+            if reference_key not in sample_ids_result:
+                raise KeyError(
+                    "Self-reconstruction requested, but no sample IDs were "
+                    f"found for key {reference_key!r}."
+                )
+
+        # Resolve sample IDs
+        original_ids = [
+            str(sample_id)
+            for sample_id in dataset.sample_ids
+        ]
+
         translated_ids = [
-            str(sample_id) for sample_id in sample_ids_result["translation"]
+            str(sample_id)
+            for sample_id in sample_ids_result[translation_key]
         ]
 
         original_lookup = self._make_id_lookup(original_ids)
@@ -737,16 +802,33 @@ class XModal3DVisualizer(XModalVisualizer):
             if sample_id in translated_lookup
         ]
 
+        if include_self_reconstruction:
+            self_recon_ids = [
+                str(sample_id)
+                for sample_id in sample_ids_result[reference_key]
+            ]
+
+            self_recon_lookup = self._make_id_lookup(
+                self_recon_ids
+            )
+
+            common_ids = [
+                sample_id
+                for sample_id in common_ids
+                if sample_id in self_recon_lookup
+            ]
+
         if len(common_ids) < 2:
             raise ValueError(
                 "At least two shared samples are required for 2D translation "
                 "visualization."
             )
 
+        # Select the same voxel positions from every volume
         first_original = self._extract_dataset_volume(
             dataset=dataset,
             index=original_lookup[common_ids[0]],
-            channel=channel,
+            channel=0,
         ).reshape(-1)
 
         n_voxels = first_original.size
@@ -764,35 +846,97 @@ class XModal3DVisualizer(XModalVisualizer):
 
         original_rows = []
         translated_rows = []
+        self_reconstructed_rows = []
 
         for sample_id in common_ids:
+
             original = self._extract_dataset_volume(
                 dataset=dataset,
                 index=original_lookup[sample_id],
-                channel=channel,
+                channel=0,
             ).reshape(-1)
 
             translated = self._as_3d_volume(
-                reconstructions["translation"][
+                reconstructions[translation_key][
                     translated_lookup[sample_id]
                 ],
-                channel=channel,
+                channel=0,
             ).reshape(-1)
 
-            if original.size != n_voxels or translated.size != n_voxels:
+            if (
+                original.size != n_voxels
+                or translated.size != n_voxels
+            ):
                 raise ValueError(
                     "All original and translated volumes must have the same "
                     "spatial shape for this visualization."
                 )
 
-            original_rows.append(original[voxel_indices])
-            translated_rows.append(translated[voxel_indices])
+            original_rows.append(
+                original[voxel_indices]
+            )
 
-        original_matrix = np.asarray(original_rows, dtype=np.float32)
-        translated_matrix = np.asarray(translated_rows, dtype=np.float32)
+            translated_rows.append(
+                translated[voxel_indices]
+            )
 
-        X = np.vstack([original_matrix, translated_matrix])
+            if include_self_reconstruction:
 
+                self_reconstructed = self._as_3d_volume(
+                    reconstructions[reference_key][
+                        self_recon_lookup[sample_id]
+                    ],
+                    channel=0,
+                ).reshape(-1)
+
+                if self_reconstructed.size != n_voxels:
+                    raise ValueError(
+                        "All self-reconstructed target volumes must have the "
+                        "same spatial shape as the original target volumes."
+                    )
+
+                self_reconstructed_rows.append(
+                    self_reconstructed[voxel_indices]
+                )
+
+        original_matrix = np.asarray(
+            original_rows,
+            dtype=np.float32,
+        )
+
+        translated_matrix = np.asarray(
+            translated_rows,
+            dtype=np.float32,
+        )
+
+        # Construct joint matrix
+        matrices = [
+            original_matrix,
+            translated_matrix,
+        ]
+
+        volume_types = [
+            "original",
+            "translated",
+        ]
+
+        if include_self_reconstruction:
+            self_reconstructed_matrix = np.asarray(
+                self_reconstructed_rows,
+                dtype=np.float32,
+            )
+
+            matrices.append(
+                self_reconstructed_matrix
+            )
+
+            volume_types.append(
+                "self-reconstruction"
+            )
+
+        X = np.vstack(matrices)
+
+        # Dimensionality reduction
         reducer_upper = reducer.upper()
 
         if reducer_upper == "UMAP":
@@ -800,13 +944,21 @@ class XModal3DVisualizer(XModalVisualizer):
                 n_components=2,
                 random_state=random_state,
             )
+
         elif reducer_upper == "PCA":
-            reducer_model = PCA(n_components=2)
+            reducer_model = PCA(
+                n_components=2,
+            )
+
         elif reducer_upper == "TSNE":
             perplexity = min(
                 30.0,
-                max(1.0, float(X.shape[0] - 1) / 3.0),
+                max(
+                    1.0,
+                    float(X.shape[0] - 1) / 3.0,
+                ),
             )
+
             reducer_model = TSNE(
                 n_components=2,
                 random_state=random_state,
@@ -814,6 +966,7 @@ class XModal3DVisualizer(XModalVisualizer):
                 init="pca",
                 learning_rate="auto",
             )
+
         else:
             raise ValueError(
                 "reducer must be one of 'UMAP', 'PCA' or 'TSNE'."
@@ -821,25 +974,42 @@ class XModal3DVisualizer(XModalVisualizer):
 
         embedding = reducer_model.fit_transform(X)
 
+
+        # Build plotting DataFrame
+        n_samples = len(common_ids)
+        n_groups = len(volume_types)
+
         embedding_df = pd.DataFrame(
             embedding,
             columns=["DIM1", "DIM2"],
         )
-        embedding_df["origin"] = (
-            ["input"] * len(common_ids)
-            + ["translated"] * len(common_ids)
-        )
-        embedding_df["sample_id"] = common_ids + common_ids
 
-        metadata = getattr(dataset, "metadata", None)
+        embedding_df["volume_type"] = [
+            volume_type
+            for volume_type in volume_types
+            for _ in range(n_samples)
+        ]
+
+        embedding_df["sample_id"] = (
+            common_ids * n_groups
+        )
+
+        # Optional metadata coloring
+        metadata = getattr(
+            dataset,
+            "metadata",
+            None,
+        )
 
         if param is None:
-            hue = "origin"
+            hue = "volume_type"
             style = None
+
         else:
             if metadata is None:
                 raise ValueError(
-                    f"param={param!r} was requested, but no metadata are available."
+                    f"param={param!r} was requested, "
+                    "but no metadata are available."
                 )
 
             metadata = metadata.copy()
@@ -852,14 +1022,23 @@ class XModal3DVisualizer(XModalVisualizer):
                 )
 
             label_lookup = metadata[param].to_dict()
+
             embedding_df[param] = [
-                label_lookup.get(sample_id, np.nan)
+                label_lookup.get(
+                    sample_id,
+                    np.nan,
+                )
                 for sample_id in embedding_df["sample_id"]
             ]
-            hue = param
-            style = "origin"
 
-        fig, ax = plt.subplots(figsize=(8, 7))
+            hue = param
+            style = "volume_type"
+
+
+        # Plot
+        fig, ax = plt.subplots(
+            figsize=(8, 7)
+        )
 
         sns.scatterplot(
             data=embedding_df,
@@ -872,18 +1051,34 @@ class XModal3DVisualizer(XModalVisualizer):
             ax=ax,
         )
 
+        if include_self_reconstruction:
+            comparison_text = (
+                "original vs translated vs self-reconstructed"
+            )
+        else:
+            comparison_text = (
+                "original vs translated"
+            )
+
         ax.set_title(
-            f"{reducer_upper}: original vs translated {translated_modality}"
+            f"{reducer_upper}: {comparison_text} "
+            f"{translated_modality}"
         )
+
         ax.set_xlabel(f"{reducer_upper} dimension 1")
         ax.set_ylabel(f"{reducer_upper} dimension 2")
-
         fig.tight_layout()
 
-        plot_param = param if param is not None else "origin"
-        self.plots["2D-translation-3D"][translated_modality][split][
-            plot_param
-        ] = fig
+        # Keep the existing plot-storage convention for compatibility.
+        plot_param = (
+            param
+            if param is not None
+            else "origin"
+        )
+
+        self.plots[
+            "2D-translation-3D"
+        ][translated_modality][split][plot_param] = fig
 
         plt.show()
 

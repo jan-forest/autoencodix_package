@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=xmodalix3d_3mod_report
+#SBATCH --job-name=xmodalix3d_3mod_best_config_report
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1

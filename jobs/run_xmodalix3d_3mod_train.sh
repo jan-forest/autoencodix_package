@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=xmodalix3d_3mod_train
+#SBATCH --job-name=xmodalix3d_3mod_best_config_train
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -66,8 +66,8 @@ python scripts/run_3mod_xmodalix3d.py \
   --no-keep-mu-positive \
   --train-normalization "batch" \
   --train-norm-groupsize 8 \
-  --learning-rate 0.000010 \
-  --weight-decay 0.000010 \
+  --learning-rate  0.0000004759885464107164 \
+  --weight-decay 0.0009531544828003 \
   --beta 0.000010 \
   --ncct-learning-rate 0.000031484 \
   --ncct-weight-decay 0.0000077837 \
@@ -78,9 +78,9 @@ python scripts/run_3mod_xmodalix3d.py \
   --cbv-learning-rate 0.00046282 \
   --cbv-weight-decay 0.0000051361 \
   --cbv-beta 0.0000383242 \
-  --lambda-sub 2.0 \
-  --gamma 0.01 \
-  --delta-pair 0.05 \
+  --lambda-sub 1.0 \
+  --gamma 20.78268316339812 \
+  --delta-pair 0.0173255337449234 \
   --delta-class 0 \
   --annotation-columns median_split \
   --from-modality "NCCT" \

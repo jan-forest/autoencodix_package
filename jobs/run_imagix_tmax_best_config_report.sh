@@ -76,7 +76,7 @@ echo "Template notebook: ${TEMPLATE_NOTEBOOK}"
 papermill \
   "${TEMPLATE_NOTEBOOK}" \
   "${REPORT_DIR}/tmax_imagix_report_best_config.ipynb" \
-  -k imagix-alpha \
+  -k imagix3d-alpha \
 
 jupyter nbconvert \
   --to html \

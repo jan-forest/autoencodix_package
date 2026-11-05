@@ -1,14 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_tmax_best_config_common_param_report
+#SBATCH --job-name=imagix3d_tmax_best_config_report
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=6
 #SBATCH --gres=gpu:2
 #SBATCH --gpus-per-task=2
-#SBATCH --mem=240G
-#SBATCH --time=02:00:00
+#SBATCH --mem=200G
+#SBATCH --time=01:30:00
 #SBATCH --output=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.out
 #SBATCH --error=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.err
 
@@ -75,18 +75,18 @@ echo "Template notebook: ${TEMPLATE_NOTEBOOK}"
 
 papermill \
   "${TEMPLATE_NOTEBOOK}" \
-  "${REPORT_DIR}/tmax_imagix3d_report_best_config_common_param.ipynb" \
+  "${REPORT_DIR}/tmax_imagix3d_report_best_config.ipynb" \
   -k imagix3d-alpha \
 
 jupyter nbconvert \
   --to html \
   --output-dir "${REPORT_DIR}" \
-  "${REPORT_DIR}/tmax_imagix3d_report_best_config_common_param.ipynb"
+  "${REPORT_DIR}/tmax_imagix3d_report_best_config.ipynb"
 
 echo "Report generation finished."
 echo
 echo "Executed notebook:"
-echo "${REPORT_DIR}/tmax_imagix3d_report_best_config_common_param.ipynb"
+echo "${REPORT_DIR}/tmax_imagix3d_report_best_config.ipynb"
 echo
 echo "HTML report:"
-echo "${REPORT_DIR}/tmax_imagix3d_report_best_config_common_param.html"
+echo "${REPORT_DIR}/tmax_imagix3d_report_best_config.html"

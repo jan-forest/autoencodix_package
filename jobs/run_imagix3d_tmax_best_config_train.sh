@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_tmax_best_config_common_param_train
+#SBATCH --job-name=imagix3d_tmax_best_config_train
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -8,7 +8,7 @@
 #SBATCH --gres=gpu:4
 #SBATCH --gpus-per-task=4
 #SBATCH --mem=480G
-#SBATCH --time=01:30:00
+#SBATCH --time=01:00:00
 #SBATCH --output=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.out
 #SBATCH --error=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.err
 
@@ -30,7 +30,7 @@ source "${BASE}/venvs/alpha/bin/activate"
 
 cd "${REPO}"
 
-RUN_NAME="imagix3d_tmax_best_config_common_param_${SLURM_JOB_ID}"
+RUN_NAME="imagix3d_tmax_best_config_${SLURM_JOB_ID}"
 
 echo "Running tmax Imagix3D pipeline"
 echo "SLURM job id: ${SLURM_JOB_ID}"
@@ -46,7 +46,7 @@ python scripts/run_imagix3d.py \
   --target-shape 160 192 160 \
   --epochs 250 \
   --beta 0.0000005204130835911565 \
-  --latent-dim 48 \
+  --latent-dim 96 \
   --hidden-dim 16 \
   --train-normalization "batch" \
   --anneal-function "logistic-late" \

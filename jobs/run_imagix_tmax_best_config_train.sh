@@ -45,7 +45,7 @@ python scripts/run_imagix.py \
   --run-name "${RUN_NAME}" \
   --image-size 192 \
   --epochs 250 \
-  --beta 0.000000.948490822782539 \
+  --beta 0.000000948490822782539 \
   --latent-dim 112 \
   --hidden-dim 16 \
   --reconstruction-loss "mse" \

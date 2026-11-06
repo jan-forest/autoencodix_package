@@ -47,7 +47,7 @@ python scripts/run_imagix.py \
   --epochs 250 \
   --beta 0.00004838465177015428 \
   --latent-dim 96 \
-  --hidden-dim 32 \
+  --hidden-dim 16 \
   --reconstruction-loss "mse" \
   --loss-reduction "mean" \
   --scaling "NONE" \

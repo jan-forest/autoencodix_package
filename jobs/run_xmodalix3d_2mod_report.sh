@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=xmodalix3d_2mod_report
+#SBATCH --job-name=xmodalix3d_2mod_after_HPO1_report
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -75,18 +75,18 @@ echo "Template notebook: ${TEMPLATE_NOTEBOOK}"
 
 papermill \
   "${TEMPLATE_NOTEBOOK}" \
-  "${REPORT_DIR}/xmodalix3d_2mod_report_executed.ipynb" \
+  "${REPORT_DIR}/xmodalix3d_2mod_after_HPO1_report.ipynb" \
   -k imagix3d-alpha
 
 jupyter nbconvert \
   --to html \
   --output-dir "${REPORT_DIR}" \
-  "${REPORT_DIR}/xmodalix3d_2mod_report_executed.ipynb"
+  "${REPORT_DIR}/xmodalix3d_2mod_after_HPO1_report.ipynb"
 
 echo "Report generation finished."
 echo
 echo "Executed notebook:"
-echo "${REPORT_DIR}/xmodalix3d_2mod_report_executed.ipynb"
+echo "${REPORT_DIR}/xmodalix3d_2mod_after_HPO1_report.ipynb"
 echo
 echo "HTML report:"
-echo "${REPORT_DIR}/xmodalix3d_2mod_report_executed.html"
+echo "${REPORT_DIR}/xmodalix3d_2mod_after_HPO1_report.html"

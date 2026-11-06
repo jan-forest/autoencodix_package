@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=xmodalix3d_2mod_train
+#SBATCH --job-name=xmodalix3d_2mod_after_HPO1_train
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -50,7 +50,7 @@ python scripts/run_2mod_xmodalix3d.py \
   --pretrain-epochs 50 \
   --pretrain-save-memory \
   --no-save-intermediate-recons \
-  --latent-dim 48 \
+  --latent-dim 128 \
   --hidden-dim 16 \
   --batch-size 35 \
   --reconstruction-loss "mse" \
@@ -60,10 +60,10 @@ python scripts/run_2mod_xmodalix3d.py \
   --checkpoint-interval 10 \
   --no-clamp-logvar \
   --no-keep-mu-positive \
-  --train-normalization "batch" \
+  --train-normalization "instance" \
   --train-norm-groupsize 8 \
-  --learning-rate 0.000010 \
-  --weight-decay 0.000010 \
+  --learning-rate 0.0000073270908684112625 \
+  --weight-decay 0.000000222535819075678 \
   --beta 0.000010 \
   --ncct-learning-rate 0.000031484 \
   --ncct-weight-decay 0.0000077837 \
@@ -71,8 +71,8 @@ python scripts/run_2mod_xmodalix3d.py \
   --cbf-learning-rate 0.000010096 \
   --cbf-weight-decay 0.000017943 \
   --cbf-beta 0.0000000032465 \
-  --gamma 0.01 \
-  --delta-pair 0.05 \
+  --gamma 5.538829155656279 \
+  --delta-pair 0.0117900035575196 \
   --delta-class 0 \
   --annotation-columns median_split \
   --from-modality "NCCT" \

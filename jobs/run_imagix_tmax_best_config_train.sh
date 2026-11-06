@@ -45,16 +45,16 @@ python scripts/run_imagix.py \
   --run-name "${RUN_NAME}" \
   --image-size 192 \
   --epochs 250 \
-  --beta 0.0000005204130835911565 \
-  --latent-dim 96 \
+  --beta 0.000000.948490822782539 \
+  --latent-dim 112 \
   --hidden-dim 16 \
   --reconstruction-loss "mse" \
   --loss-reduction "mean" \
   --scaling "NONE" \
   --anneal-function "logistic-late" \
   --checkpoint-interval 10 \
-  --weight-decay 0.000005556031400381415 \
-  --learning-rate 0.00003870542212703669 \
+  --weight-decay 0.0000014840618276930595 \
+  --learning-rate 0.00002154436001702761 \
   --batch-size 35
 
 echo "Pipeline finished."

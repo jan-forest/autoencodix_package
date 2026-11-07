@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=hpo_xmodalix3d_3mod_01
+#SBATCH --job-name=hpo_xmodalix3d_3mod_02
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -49,11 +49,11 @@ export DATA_PATH="/data/horse/ws/baeuchl-imagix3d/data/stroke_data"
 # FIXED SETTINGS FOR THE THREE-MODALITY XModalix3D MODEL
 # -----------------------------------------------------------------------------
 
-export LATENT_DIM=48
+export LATENT_DIM=96
 
 # These are shared by all three 3D VAEs in the current XModalix3D implementation.
-export HIDDEN_DIM=16
-export TRAIN_NORMALIZATION="batch"
+export HIDDEN_DIM=32
+export TRAIN_NORMALIZATION="instance"
 export BATCH_SIZE=35
 export EPOCHS=250
 export PRETRAIN_EPOCHS=50
@@ -97,7 +97,7 @@ done
 export METRIC="alignment_score"
 
 # Run 3 independent HPO procedures with the same settings but different seeds
-export HPO_RUN_INDEX="01"
+export HPO_RUN_INDEX="02"
 export HPO_RANDOM_SEED=42
 
 export MAX_WALLCLOCK_HOURS=11.75

@@ -567,26 +567,26 @@ def run_synetune_hpo(
         "hidden_dim": int(hidden_dim),
         "train_normalization": train_normalization,
         "anneal_function": "logistic-late",
-        "scaling": "None",
+        "scaling": "NONE",
         "loss_reduction": "mean",
         "device": "cuda",
         "n_gpus": 1,
         "training_seed": int(random_seed),
 
         # XModalix3D HPO parameters
-        "gamma": loguniform(1e-2, 1e2),
-        "delta_pair": loguniform(1e-2, 1e2),
-        "classifier_learning_rate": loguniform(1e-6, 1e-2),
-        "classifier_weight_decay": loguniform(1e-7, 1e-2),
+        "gamma": loguniform(3, 60),
+        "delta_pair": loguniform(1e-3, 2e-1),
+        "classifier_learning_rate": loguniform(1e-6, 1e-4),
+        "classifier_weight_decay": loguniform(1e-4, 5e-3),
     }
 
     # Existing hand-selected settings are included as an anchor point.
     points_to_evaluate = [
         {
-            "gamma": 10.0,
-            "delta_pair": 5.0,
-            "classifier_learning_rate": 1e-5,
-            "classifier_weight_decay": 1e-5,
+            "gamma": 20.7827,
+            "delta_pair": 0.01733,
+            "classifier_learning_rate": 4.7599e-6,
+            "classifier_weight_decay": 0.0009531544828003,
         }
     ]
 

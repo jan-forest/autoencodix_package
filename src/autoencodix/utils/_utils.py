@@ -697,58 +697,127 @@ def custom_splits_from_anno(
     split_col: str = "split",
     sample_id_col: str = "sample_id",
 ) -> dict[str, np.ndarray]:
-    """Create custom split indices from an annotation table.
+    """Create custom train/validation/test splits from sample IDs.
 
-    Reads an annotation file and converts a column containing split labels
-    into the dictionary format expected by the DataSplitter.
-    The split column must contain the labels "train", "valid", and "test".
+    The returned values are sample identifiers, not row positions.
+    Therefore the custom split is independent of annotation ordering,
+    filesystem ordering, and any reordering that occurs while loading
+    or preprocessing the data.
 
     Args:
-        annotation_file: Path to the annotation CSV file.
-        split_col: Name of the column containing split assignments.
-        sample_id_col: Name of the column containing sample identifiers.
+        annotation_file:
+            Path to the annotation CSV file.
+        split_col:
+            Name of the column containing split assignments.
+        sample_id_col:
+            Name of the column containing sample identifiers.
 
     Returns:
-        A dictionary with three entries:
-            - "train": Row indices assigned to the training split.
-            - "valid": Row indices assigned to the validation split.
-            - "test": Row indices assigned to the test split.
+        Dictionary with keys "train", "valid", and "test".
+        Each value is a one-dimensional NumPy object array containing
+        sample IDs as strings.
 
     Raises:
-        ValueError: If the split column is missing, or if it contains labels
-        other than "train", "valid", or "test".
+        ValueError:
+            If required columns are missing, split labels are invalid,
+            or sample IDs are missing, empty, or duplicated.
     """
-    df = pd.read_csv(annotation_file).reset_index(drop=True)
+
+    # Explicit string dtype prevents identifiers such as "0012"
+    # from being converted to integers.
+    df = pd.read_csv(
+        annotation_file,
+        dtype={sample_id_col: str},
+    )
 
     if split_col not in df.columns:
-        raise ValueError(f"Missing split column: {split_col}")
-    if sample_id_col not in df.columns:
-        raise ValueError(f"Missing sample ID column: {sample_id_col}")
-
-    # Anno (df) gets sorted by sample_id, since Anno gets later sorted during prep as well
-    # Hence, if df does not get sorted here, custom_splits indices would mismatch the order of samples during prep
-    df = df.sort_values(by=sample_id_col)
-    split_values = df[split_col].astype(str).str.strip().str.lower()
-
-    allowed = {"train", "valid", "test"}
-    observed = set(split_values.unique())
-
-    invalid = observed - allowed
-    if invalid:
         raise ValueError(
-            f"Invalid split labels found: {invalid}. " f"Allowed values are: {allowed}"
+            f"Missing split column: {split_col}"
         )
 
-    # sample_ids = df[sample_id_col].astype(str)
+    if sample_id_col not in df.columns:
+        raise ValueError(
+            f"Missing sample ID column: {sample_id_col}"
+        )
+
+    if df[sample_id_col].isna().any():
+        raise ValueError(
+            f"Missing sample IDs found in column "
+            f"'{sample_id_col}'."
+        )
+
+    sample_ids = (
+        df[sample_id_col]
+        .astype(str)
+        .str.strip()
+    )
+
+    if (sample_ids == "").any():
+        raise ValueError(
+            f"Empty sample IDs found in column "
+            f"'{sample_id_col}'."
+        )
+
+    duplicated = sample_ids[
+        sample_ids.duplicated(keep=False)
+    ]
+
+    if not duplicated.empty:
+        examples = (
+            duplicated
+            .drop_duplicates()
+            .tolist()[:10]
+        )
+
+        raise ValueError(
+            "Duplicate sample IDs found in annotation. "
+            "Each sample ID must occur exactly once. "
+            f"Examples: {examples}"
+        )
+
+    split_values = (
+        df[split_col]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+
+    allowed = {
+        "train",
+        "valid",
+        "test",
+    }
+
+    observed = set(
+        split_values.unique()
+    )
+
+    invalid = observed - allowed
+
+    if invalid:
+        raise ValueError(
+            f"Invalid split labels found: {invalid}. "
+            f"Allowed values are: {allowed}"
+        )
 
     custom_splits = {
-        "train": np.where(split_values == "train")[0].astype(int),
-        "valid": np.where(split_values == "valid")[0].astype(int),
-        "test": np.where(split_values == "test")[0].astype(int),
+        split_name: sample_ids[
+            split_values == split_name
+        ].to_numpy(dtype=object)
+        for split_name in (
+            "train",
+            "valid",
+            "test",
+        )
     }
 
     print("Custom split sizes:")
-    for split, ids in custom_splits.items():
-        print(split, len(ids), ids[:10])
+
+    for split_name, ids in custom_splits.items():
+        print(
+            split_name,
+            len(ids),
+            ids[:10],
+        )
 
     return custom_splits

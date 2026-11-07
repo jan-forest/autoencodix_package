@@ -209,17 +209,25 @@ def synetune_objective_function(
             .to_numpy()
         )
 
+        sample_ids = (
+            paired_annotation.index
+            .astype(str)
+            .to_numpy(dtype=object)
+        )
+
         custom_splits = {
-            "train": np.where(split_values == "train")[0].astype(int),
-            "valid": np.where(split_values == "valid")[0].astype(int),
-            "test": np.where(split_values == "test")[0].astype(int),
+            "train": sample_ids[split_values == "train"],
+            "valid": sample_ids[split_values == "valid"],
+            "test": sample_ids[split_values == "test"],
         }
 
-        print("Paired two-modality cohort:", flush=True)
+        print("Paired three-modality cohort:", flush=True)
         print(f"  common samples: {len(common_ids)}", flush=True)
+
         for split_name in ("train", "valid", "test"):
             print(
-                f"  {split_name}: {len(custom_splits[split_name])}",
+                f"  {split_name}: {len(custom_splits[split_name])} "
+                f"first IDs: {custom_splits[split_name][:5].tolist()}",
                 flush=True,
             )
 
@@ -564,26 +572,26 @@ def run_synetune_hpo(
         "hidden_dim": int(hidden_dim),
         "train_normalization": train_normalization,
         "anneal_function": "logistic-late",
-        "scaling": "None",
+        "scaling": "NONE",
         "loss_reduction": "mean",
         "device": "cuda",
         "n_gpus": 1,
         "training_seed": int(random_seed),
 
         # XModalix3D HPO parameters
-        "gamma": loguniform(1e-2, 1e2),
-        "delta_pair": loguniform(1e-2, 1e2),
-        "classifier_learning_rate": loguniform(1e-6, 1e-2),
-        "classifier_weight_decay": loguniform(1e-7, 1e-2),
+        "gamma": loguniform(1.0, 30.0),
+        "delta_pair": loguniform(1e-3, 1e-1),
+        "classifier_learning_rate": loguniform(1e-6, 1e-4),
+        "classifier_weight_decay": loguniform(1e-8, 1e-5),
     }
 
     # Existing hand-selected settings are included as an anchor point.
     points_to_evaluate = [
         {
-            "gamma": 10.0,
-            "delta_pair": 5.0,
-            "classifier_learning_rate": 1e-5,
-            "classifier_weight_decay": 1e-5,
+            "gamma": 5.5388,
+            "delta_pair": 0.01179,
+            "classifier_learning_rate": 7.327e-6,
+            "classifier_weight_decay": 2.225e-7,
         }
     ]
 

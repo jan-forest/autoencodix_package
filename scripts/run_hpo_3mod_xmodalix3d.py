@@ -210,17 +210,25 @@ def synetune_objective_function(
             .to_numpy()
         )
 
+        sample_ids = (
+            paired_annotation.index
+            .astype(str)
+            .to_numpy(dtype=object)
+        )
+
         custom_splits = {
-            "train": np.where(split_values == "train")[0].astype(int),
-            "valid": np.where(split_values == "valid")[0].astype(int),
-            "test": np.where(split_values == "test")[0].astype(int),
+            "train": sample_ids[split_values == "train"],
+            "valid": sample_ids[split_values == "valid"],
+            "test": sample_ids[split_values == "test"],
         }
 
         print("Paired three-modality cohort:", flush=True)
         print(f"  common samples: {len(common_ids)}", flush=True)
+
         for split_name in ("train", "valid", "test"):
             print(
-                f"  {split_name}: {len(custom_splits[split_name])}",
+                f"  {split_name}: {len(custom_splits[split_name])} "
+                f"first IDs: {custom_splits[split_name][:5].tolist()}",
                 flush=True,
             )
 

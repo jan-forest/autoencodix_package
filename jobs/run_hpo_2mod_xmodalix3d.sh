@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=hpo_xmodalix3d_2mod_01
+#SBATCH --job-name=hpo_xmodalix3d_2mod_02
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -93,7 +93,7 @@ done
 export METRIC="alignment_score"
 
 # Run 3 independent HPO procedures with the same settings but different seeds
-export HPO_RUN_INDEX="01"
+export HPO_RUN_INDEX="02"
 export HPO_RANDOM_SEED=42
 
 export MAX_WALLCLOCK_HOURS=11.75

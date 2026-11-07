@@ -17,6 +17,8 @@ from .imagix import Imagix
 from .imagix3d import Imagix3D
 from .maskix import Maskix
 from .xontix import XOntix
+from .tuning import propose_initial_config
+
 __all__ = [
     "Vanillix",
     "Varix",
@@ -29,4 +31,5 @@ __all__ = [
     "Disentanglix",
     "Maskix",
     "XOntix",
+    "propose_initial_config",
 ]

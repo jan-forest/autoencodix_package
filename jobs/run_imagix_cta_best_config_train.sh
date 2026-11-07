@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=imagix_cta_best_config_train
 #SBATCH --account=p_scads_autoencodix
-#SBATCH --partition=capella
+#SBATCH --partition=alpha
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
@@ -26,7 +26,7 @@ module load release/24.04
 module load GCCcore/12.3.0
 module load Python/3.11.3
 
-source "${BASE}/venvs/capella/bin/activate"
+source "${BASE}/venvs/alpha/bin/activate"
 
 cd "${REPO}"
 

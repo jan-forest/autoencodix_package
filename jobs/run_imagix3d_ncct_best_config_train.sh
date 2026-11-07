@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_ncct_best_config__train
+#SBATCH --job-name=imagix3d_ncct_best_config_common_param_train
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -46,8 +46,8 @@ python scripts/run_imagix3d.py \
   --target-shape 160 192 160 \
   --epochs 250 \
   --beta 0.0000006718196015256182 \
-  --latent-dim 96 \
-  --hidden-dim 32 \
+  --latent-dim 128 \
+  --hidden-dim 16 \
   --train-normalization "instance" \
   --anneal-function "logistic-late" \
   --no-keep-mu-positive \

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=imagix3d_cbf_best_config_train
+#SBATCH --job-name=imagix3d_cbf_best_config_common_param_train
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1
@@ -47,7 +47,7 @@ python scripts/run_imagix3d.py \
   --epochs 250 \
   --beta 0.0000000032465959108014116 \
   --latent-dim 128 \
-  --hidden-dim 32 \
+  --hidden-dim 16 \
   --train-normalization "instance" \
   --anneal-function "logistic-late" \
   --no-keep-mu-positive \

@@ -38,7 +38,7 @@ echo "Run name: ${RUN_NAME}"
 echo "Repository: ${REPO}"
 echo "Workspace: ${BASE}"
 
-python scripts/run_imagix.py \
+python scripts/run_imagix_new.py \
   --workdir "${BASE}" \
   --images "${BASE}/data/stroke_data/2D/ncct" \
   --anno "${BASE}/data/stroke_data/2D/ncct_2D_anno_dst.csv" \

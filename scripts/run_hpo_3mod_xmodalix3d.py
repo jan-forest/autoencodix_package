@@ -567,7 +567,7 @@ def run_synetune_hpo(
         "hidden_dim": int(hidden_dim),
         "train_normalization": train_normalization,
         "anneal_function": "logistic-late",
-        "scaling": "MINMAX",
+        "scaling": "None",
         "loss_reduction": "mean",
         "device": "cuda",
         "n_gpus": 1,

@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-module load rclone
+RCLONE="${HOME}/.local/bin/rclone"
 
 SOURCE="/data/horse/ws/baeuchl-imagix3d/hpo/xmodalix3d_3mod_01_synetune_4496124_20261030_154011"
 DESTINATION="scads_nextcloud:FromHPC"
@@ -14,7 +14,7 @@ echo "Destination: ${DESTINATION}"
 echo "Started:     $(date)"
 echo "================================================"
 
-rclone copy "${SOURCE}" "${DESTINATION}" \
+"${RCLONE}" copy "${SOURCE}" "${DESTINATION}" \
     --progress \
     --transfers 4 \
     --checkers 8 \

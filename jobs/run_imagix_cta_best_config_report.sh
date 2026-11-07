@@ -8,7 +8,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --gpus-per-task=1
 #SBATCH --mem=160G
-#SBATCH --time=02:00:00
+#SBATCH --time=01:30:00
 #SBATCH --output=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.out
 #SBATCH --error=/data/horse/ws/baeuchl-imagix3d/logs/%x-%j.err
 
@@ -75,18 +75,18 @@ echo "Template notebook: ${TEMPLATE_NOTEBOOK}"
 
 papermill \
   "${TEMPLATE_NOTEBOOK}" \
-  "${REPORT_DIR}/imagix_cta_report_best_config_executed.ipynb" \
+  "${REPORT_DIR}/imagix_cta_report_best_config.ipynb" \
   -k imagix3d-capella
 
 jupyter nbconvert \
   --to html \
   --output-dir "${REPORT_DIR}" \
-  "${REPORT_DIR}/imagix_cta_report_best_config_executed.ipynb"
+  "${REPORT_DIR}/imagix_cta_report_best_config.ipynb"
 
 echo "Report generation finished."
 echo
 echo "Executed notebook:"
-echo "${REPORT_DIR}/imagix_cta_report_best_config_executed.ipynb"
+echo "${REPORT_DIR}/imagix_cta_report_best_config.ipynb"
 echo
 echo "HTML report:"
-echo "${REPORT_DIR}/imagix_cta_report_best_config_executed.html"
+echo "${REPORT_DIR}/imagix_cta_report_best_config.html"

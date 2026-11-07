@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=imagix_cbf_report
+#SBATCH --job-name=imagix_cbf_best_config_report
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1

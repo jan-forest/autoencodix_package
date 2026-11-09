@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=hpo_xmodalix3d_3mod_02
 #SBATCH --account=p_scads_autoencodix
-#SBATCH --partition=alpha
+#SBATCH --partition=capella
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
@@ -18,7 +18,7 @@ module load release/24.04
 module load GCCcore/12.3.0
 module load Python/3.11.3
 
-source /data/horse/ws/baeuchl-imagix3d/venvs/alpha/bin/activate
+source /data/horse/ws/baeuchl-imagix3d/venvs/capella/bin/activate
 
 cd /home/baeuchl/autoencodix_package
 

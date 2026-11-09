@@ -63,7 +63,7 @@ class Supervisix(BasePipeline):
 
         """
         self._default_config = SupervisixConfig.model_construct()
-        
+
         super().__init__(
             data=data,
             dataset_type=dataset_type,

@@ -75,7 +75,9 @@ class TestSupervisixTrainerHooks:
         )
 
     @pytest.fixture
-    def single_class_trainer(self, single_class_train_dataset, valid_dataset, default_config, filled_result):
+    def single_class_trainer(
+        self, single_class_train_dataset, valid_dataset, default_config, filled_result
+    ):
         return SupervisixTrainer(
             trainset=single_class_train_dataset,
             validset=valid_dataset,
@@ -96,9 +98,7 @@ class TestSupervisixTrainerHooks:
 
     def test_capture_hook_computes_per_class_batch_mean(self, trainer):
         # rows 0,1 -> class A ; rows 2,3 -> class B (matches train_dataset fixture order)
-        latentspace = torch.tensor(
-            [[1.0, 1.0], [3.0, 3.0], [10.0, 10.0], [20.0, 20.0]]
-        )
+        latentspace = torch.tensor([[1.0, 1.0], [3.0, 3.0], [10.0, 10.0], [20.0, 20.0]])
         model_output = self._model_output(latentspace)
         batch_class_means: dict = {}
 
@@ -115,7 +115,9 @@ class TestSupervisixTrainerHooks:
     def test_capture_hook_stacks_across_batches(self, trainer):
         batch_class_means: dict = {}
 
-        first_latents = torch.tensor([[1.0, 1.0], [3.0, 3.0], [10.0, 10.0], [20.0, 20.0]])
+        first_latents = torch.tensor(
+            [[1.0, 1.0], [3.0, 3.0], [10.0, 10.0], [20.0, 20.0]]
+        )
         trainer.supervisix_capture_hook(
             model_output=self._model_output(first_latents),
             sample_ids=(0, 1, 2, 3),
@@ -123,12 +125,14 @@ class TestSupervisixTrainerHooks:
             batch_class_means=batch_class_means,
         )
 
-        second_latents = torch.tensor([[5.0, 5.0], [7.0, 7.0], [30.0, 30.0], [40.0, 40.0]])
+        second_latents = torch.tensor(
+            [[5.0, 5.0], [7.0, 7.0], [30.0, 30.0], [40.0, 40.0]]
+        )
         trainer.supervisix_capture_hook(
             model_output=self._model_output(second_latents),
             sample_ids=(0, 1, 2, 3),
             dataset_type="train",
-            batch_class_means=batch_class_means
+            batch_class_means=batch_class_means,
         )
 
         # second call should stack the new per-batch mean onto the first, not overwrite it
@@ -136,7 +140,9 @@ class TestSupervisixTrainerHooks:
         assert torch.equal(batch_class_means["A"][0], torch.tensor([2.0, 2.0]))
         assert torch.equal(batch_class_means["A"][1], torch.tensor([6.0, 6.0]))
 
-    def test_capture_hook_only_adds_new_class_if_not_present(self, single_class_trainer, trainer):
+    def test_capture_hook_only_adds_new_class_if_not_present(
+        self, single_class_trainer, trainer
+    ):
         batch_class_means: dict = {}
 
         first_latents = torch.tensor([[1.0, 1.0], [1.0, 1.0], [3.0, 3.0], [3.0, 3.0]])
@@ -153,7 +159,9 @@ class TestSupervisixTrainerHooks:
         assert batch_class_means["A"].shape == (1, self.LATENT_DIM)
         assert torch.equal(batch_class_means["A"][0], torch.tensor([2.0, 2.0]))
 
-        second_latents = torch.tensor([[1.0, 1.0], [3.0, 3.0], [10.0, 10.0], [20.0, 20.0]])
+        second_latents = torch.tensor(
+            [[1.0, 1.0], [3.0, 3.0], [10.0, 10.0], [20.0, 20.0]]
+        )
         trainer.supervisix_capture_hook(
             model_output=self._model_output(second_latents),
             sample_ids=(0, 1, 2, 3),
@@ -179,8 +187,12 @@ class TestSupervisixTrainerHooks:
 
         trainer.supervisix_update_hook(batch_class_means, "train")
 
-        assert torch.equal(trainer.epoch_class_means_train["A"], torch.tensor([4.0, 4.0]))
-        assert torch.equal(trainer.epoch_class_means_train["B"], torch.tensor([25.0, 25.0]))
+        assert torch.equal(
+            trainer.epoch_class_means_train["A"], torch.tensor([4.0, 4.0])
+        )
+        assert torch.equal(
+            trainer.epoch_class_means_train["B"], torch.tensor([25.0, 25.0])
+        )
         # valid means must be untouched
         assert trainer.epoch_class_means_valid == {}
 
@@ -189,7 +201,9 @@ class TestSupervisixTrainerHooks:
 
         trainer.supervisix_update_hook(batch_class_means, "valid")
 
-        assert torch.equal(trainer.epoch_class_means_valid["A"], torch.tensor([2.0, 2.0]))
+        assert torch.equal(
+            trainer.epoch_class_means_valid["A"], torch.tensor([2.0, 2.0])
+        )
         assert trainer.epoch_class_means_train == {}
 
     # -- supervisix_get_hook -------------------------------------------------

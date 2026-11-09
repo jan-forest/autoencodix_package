@@ -21,7 +21,7 @@ class SupervisixVisualizer(GeneralVisualizer):
     """
     Defines the interface for visualizing training results for the Supervisix architecture.
 
-    Attributes: 
+    Attributes:
         plots: A nested dictionary to store various plots.
     """
 
@@ -33,7 +33,7 @@ class SupervisixVisualizer(GeneralVisualizer):
         self.plots = nested_dict()
 
     def __setitem__(self, key, elem):
-        self.plots[key] = elem   
+        self.plots[key] = elem
 
     @staticmethod
     def _make_loss_plot(
@@ -144,5 +144,4 @@ class SupervisixVisualizer(GeneralVisualizer):
 
             # plt.close()
 
-        return fig  
-     
+        return fig

@@ -9,12 +9,13 @@ from autoencodix.utils._result import Result
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.utils._model_output import ModelOutput
 
+
 class SupervisixTrainer(GeneralTrainer):
     """
     Specialized trainer for Supervisix (supervised) autoencoders.
 
-    Handles retaining and passing on the mean loss per class in the data set for the previous epoch. 
-    Uses most of the functionality from the GeneralTrainer class and supervisix-specific functionality 
+    Handles retaining and passing on the mean loss per class in the data set for the previous epoch.
+    Uses most of the functionality from the GeneralTrainer class and supervisix-specific functionality
     is added via a hook.
 
     Attributes:
@@ -56,11 +57,11 @@ class SupervisixTrainer(GeneralTrainer):
         self.epoch_class_means_valid: Dict[str, torch.Tensor] = {}
 
     def supervisix_capture_hook(
-            self, 
-            model_output: ModelOutput, 
-            sample_ids: List[str], 
-            dataset_type: str,
-            batch_class_means: Dict[str, torch.Tensor]
+        self,
+        model_output: ModelOutput,
+        sample_ids: List[str],
+        dataset_type: str,
+        batch_class_means: Dict[str, torch.Tensor],
     ):
         """
         Capture latent representations for each class in the dataset per batch in the current epoch.
@@ -75,14 +76,17 @@ class SupervisixTrainer(GeneralTrainer):
         """
 
         # Get the column name that contains the class labels
-        class_col = self._config.class_param # Has to be set in config
+        class_col = self._config.class_param  # Has to be set in config
 
         if class_col is None:
             raise ValueError("config.class_param must be set for Supervisix losses")
-        
+
         # Get the class labels for all samples in the batch
-        class_labels = (self._trainset.metadata.loc[list(sample_ids), class_col].to_numpy() if dataset_type == "train" 
-                        else self._validset.metadata.loc[list(sample_ids), class_col].to_numpy())
+        class_labels = (
+            self._trainset.metadata.loc[list(sample_ids), class_col].to_numpy()
+            if dataset_type == "train"
+            else self._validset.metadata.loc[list(sample_ids), class_col].to_numpy()
+        )
 
         # Get the classes and the class indexes
         classes, group_idxs = np.unique(class_labels, return_inverse=True)
@@ -98,17 +102,22 @@ class SupervisixTrainer(GeneralTrainer):
             class_latents = latent_representation[class_idx]
 
             # Calculate the mean latent representation
-            class_mean = class_latents.mean(dim=0).cpu().detach() if self._config.save_vram else class_latents.mean(dim=0).detach()
+            class_mean = (
+                class_latents.mean(dim=0).cpu().detach()
+                if self._config.save_vram
+                else class_latents.mean(dim=0).detach()
+            )
 
             if class_label not in batch_class_means.keys():
-                batch_class_means[class_label] = class_mean.unsqueeze(0)  # Add a new dimension for stacking
+                batch_class_means[class_label] = class_mean.unsqueeze(
+                    0
+                )  # Add a new dimension for stacking
             else:
-                batch_class_means[class_label] = torch.cat([batch_class_means[class_label], class_mean.unsqueeze(0)], dim=0)
-                
-    def supervisix_get_hook(
-            self,
-            dataset_type: str
-    ) -> Dict[str, torch.Tensor]:
+                batch_class_means[class_label] = torch.cat(
+                    [batch_class_means[class_label], class_mean.unsqueeze(0)], dim=0
+                )
+
+    def supervisix_get_hook(self, dataset_type: str) -> Dict[str, torch.Tensor]:
         """
         Get the last epoch class means for the current dataset type.
 
@@ -120,20 +129,24 @@ class SupervisixTrainer(GeneralTrainer):
             During the first training epoch, this will return an emtpy dictionary, wich is handled by the loss function.
         """
         if dataset_type == "train":
-            return {key: value.to(self.device) for key, value in self.epoch_class_means_train.items()}
+            return {
+                key: value.to(self.device)
+                for key, value in self.epoch_class_means_train.items()
+            }
         elif dataset_type == "valid":
-            return {key: value.to(self.device) for key, value in self.epoch_class_means_valid.items()}
+            return {
+                key: value.to(self.device)
+                for key, value in self.epoch_class_means_valid.items()
+            }
         else:
             raise ValueError(f"Unknown dataset type: {dataset_type}")
 
     def supervisix_update_hook(
-            self, 
-            batch_class_means: Dict[str, torch.Tensor], 
-            dataset_type: str
+        self, batch_class_means: Dict[str, torch.Tensor], dataset_type: str
     ):
         """
         Update epoch class means at the end of each epoch.
-        
+
         Args:
             batch_class_means: A dictionary containing the mean latent representations for each class in the current batch.
             dataset_type: A string indicating whether the data is from 'train' or 'valid'.
@@ -175,9 +188,13 @@ class SupervisixTrainer(GeneralTrainer):
 
         if epoch != 0:
             if split == "train":
-               self._result.class_means.add(epoch=epoch, data=self.epoch_class_means_train, split="train")
+                self._result.class_means.add(
+                    epoch=epoch, data=self.epoch_class_means_train, split="train"
+                )
             elif split == "valid":
-                self._result.class_means.add(epoch=epoch, data=self.epoch_class_means_valid, split="valid")
+                self._result.class_means.add(
+                    epoch=epoch, data=self.epoch_class_means_valid, split="valid"
+                )
 
         maybe_add(self._mu_buffer, self._result.mus)
         maybe_add(self._sigma_buffer, self._result.sigmas)

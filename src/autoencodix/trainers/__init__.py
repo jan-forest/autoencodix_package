@@ -5,9 +5,9 @@ from ._xmodal_trainer import XModalTrainer
 from ._supervisix_trainer import SupervisixTrainer
 
 __all__ = [
-    "GeneralTrainer", 
-    "StackixTrainer", 
-    "StackixOrchestrator", 
-    "XModalTrainer", 
-    "SupervisixTrainer"
-    ]
+    "GeneralTrainer",
+    "StackixTrainer",
+    "StackixOrchestrator",
+    "XModalTrainer",
+    "SupervisixTrainer",
+]

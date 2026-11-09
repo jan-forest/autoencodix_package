@@ -107,8 +107,7 @@ class BasePipeline(abc.ABC):
             TypeError: If inputs have incorrect types.
         """
         if not hasattr(self, "_default_config"):
-            raise ValueError(
-                """
+            raise ValueError("""
                             The _default_config attribute has not been specified in your pipeline class.
 
                             Example:
@@ -118,8 +117,7 @@ class BasePipeline(abc.ABC):
                             _default_config in its corresponding pipeline class.
 
                             For more details, please refer to the 'how to add a new architecture' section in our documentation.
-                            """
-            )
+                            """)
         self.model_map = kwargs.pop("model_map", None)
         self._validate_config(config=config)
         self._validate_user_input(data=data)
@@ -1220,7 +1218,7 @@ class BasePipeline(abc.ABC):
         llm_model: str = "mistral-large-latest",
         top_n_genes: int = 40,
         prompt: str = PROMPT,
-        save: Union[str, Path, None] = None
+        save: Union[str, Path, None] = None,
     ) -> pd.DataFrame:
         """Runs the feature-importance explainer and returns gene-by-latent-dimension attribution scores.
 
@@ -1241,7 +1239,7 @@ class BasePipeline(abc.ABC):
             top_n_genes: How many top (contribution to embedding) genes to consider for LLM explanation.
             prompt: Prompt to pass to the LLM when explaining a latent dimension.
             save: Path to directory with or without filename to save the generated .md file to. If set to None the file will be saved to the current working directory as "latent explanations.md".
-            
+
         Returns:
             pd.DataFrame: The generated samples in the input space.
                 A DataFrame of attribution scores with genes as the index and latent dimensions as columns.

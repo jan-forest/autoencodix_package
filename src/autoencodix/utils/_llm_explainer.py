@@ -200,7 +200,9 @@ class LLMExplainer:
 
             markdown_sections.append("\n---\n")
         # Add model name and client to end of markdown file
-        markdown_sections.append(f"Summary generated with client {self._client_name}, model: {self._model}")
+        markdown_sections.append(
+            f"Summary generated with client {self._client_name}, model: {self._model}"
+        )
 
         # ---- WRITE ONE SINGLE FILE ----
         if not self.save:

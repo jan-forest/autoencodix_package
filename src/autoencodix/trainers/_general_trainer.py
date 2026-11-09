@@ -198,26 +198,21 @@ class GeneralTrainer(BaseTrainer):
         return X
 
     def supervisix_capture_hook(
-            self, 
-            model_output: ModelOutput, 
-            sample_ids: list[str], 
-            dataset_type: str,
-            batch_class_means: dict[str, torch.Tensor],
+        self,
+        model_output: ModelOutput,
+        sample_ids: list[str],
+        dataset_type: str,
+        batch_class_means: dict[str, torch.Tensor],
     ):
         """Only active when override from SupervisixTrainer is used"""
         pass
 
-    def supervisix_get_hook(
-            self,
-            dataset_type: str
-    ):
+    def supervisix_get_hook(self, dataset_type: str):
         """Only active when override from SupervisixTrainer is used"""
         pass
 
     def supervisix_update_hook(
-            self, 
-            batch_class_means: dict[str, torch.Tensor], 
-            dataset_type: str
+        self, batch_class_means: dict[str, torch.Tensor], dataset_type: str
     ):
         """Only active when override from SupervisixTrainer is used"""
         pass
@@ -254,9 +249,11 @@ class GeneralTrainer(BaseTrainer):
                 n_samples=len(
                     self._trainloader.dataset
                 ),  # Pass n_samples for disentangled loss calculations
-                sample_ids=sample_ids, # Pass sample IDs for class separation loss calculations
-                metadata=self._trainset.metadata, # Pass metadata for class separation loss calculations
-                last_epoch_class_means=self.supervisix_get_hook("train"), # Pass last epoch class means for class separation loss calculations
+                sample_ids=sample_ids,  # Pass sample IDs for class separation loss calculations
+                metadata=self._trainset.metadata,  # Pass metadata for class separation loss calculations
+                last_epoch_class_means=self.supervisix_get_hook(
+                    "train"
+                ),  # Pass last epoch class means for class separation loss calculations
             )
             self._fabric.backward(loss)
 
@@ -295,8 +292,10 @@ class GeneralTrainer(BaseTrainer):
                     sub_losses[k] = v.item()
 
             # Only active when override from SupervisixTrainer is used
-            self.supervisix_capture_hook(model_outputs, sample_ids, "train", batch_class_means)
-                    
+            self.supervisix_capture_hook(
+                model_outputs, sample_ids, "train", batch_class_means
+            )
+
             if should_checkpoint:
                 self._capture_dynamics(model_outputs, "train", indices, sample_ids)
 
@@ -323,7 +322,7 @@ class GeneralTrainer(BaseTrainer):
         Args:
             should_checkpoint: Whether to checkpoint this epoch.
             epoch: The current epoch number.
-        
+
         Returns:
             total_loss: The total loss for the epoch.
             sub_losses: A dictionary of sub-losses accumulated over the epoch.
@@ -332,7 +331,7 @@ class GeneralTrainer(BaseTrainer):
         sub_losses: Dict[str, float] = defaultdict(float)
         self._model.eval()
         # Initialize batch class means collector for supervisix trainer
-        batch_class_means: Dict[str, torch.Tensor] = {} 
+        batch_class_means: Dict[str, torch.Tensor] = {}
 
         with torch.no_grad():
             for indices, features, sample_ids in self._validloader:
@@ -346,9 +345,11 @@ class GeneralTrainer(BaseTrainer):
                     n_samples=len(
                         self._validloader.dataset
                     ),  # Pass n_samples for disentangled loss calculations
-                    sample_ids=sample_ids, # Pass sample IDs for class separation loss calculations
-                    metadata=self._validset.metadata, # Pass metadata for class separation loss calculations
-                    last_epoch_class_means=self.supervisix_get_hook("valid"), # Pass last epoch class means for class separation loss calculations
+                    sample_ids=sample_ids,  # Pass sample IDs for class separation loss calculations
+                    metadata=self._validset.metadata,  # Pass metadata for class separation loss calculations
+                    last_epoch_class_means=self.supervisix_get_hook(
+                        "valid"
+                    ),  # Pass last epoch class means for class separation loss calculations
                 )
 
                 total_loss += loss.item()
@@ -359,8 +360,10 @@ class GeneralTrainer(BaseTrainer):
                         sub_losses[k] = v.item()
 
                 # Only active when override from SupervisixTrainer is used
-                self.supervisix_capture_hook(model_outputs, sample_ids, "valid", batch_class_means)
-                                    
+                self.supervisix_capture_hook(
+                    model_outputs, sample_ids, "valid", batch_class_means
+                )
+
                 if should_checkpoint:
                     self._capture_dynamics(model_outputs, "valid", indices, sample_ids)
 

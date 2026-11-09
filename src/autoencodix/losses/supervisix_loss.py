@@ -11,7 +11,7 @@ from autoencodix.configs.default_config import DefaultConfig
 class SupervisixLoss(BaseLoss):
     """
     Implements loss for supervised variational autoencoder with unified interface.
-    
+
     Attributes:
         config: Configuration object
     """
@@ -27,12 +27,12 @@ class SupervisixLoss(BaseLoss):
         super().__init__(config, annealing_scheduler=annealing_scheduler)
 
     def _compute_losses(
-        self, 
-        model_output: ModelOutput, 
+        self,
+        model_output: ModelOutput,
         targets: torch.Tensor,
         sample_ids: Tuple[str],
         metadata: Union[pd.DataFrame, pd.Series],
-        last_epoch_class_means: Dict[str, torch.Tensor]
+        last_epoch_class_means: Dict[str, torch.Tensor],
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Compute reconstruction, variational and class-based losses.
@@ -45,12 +45,12 @@ class SupervisixLoss(BaseLoss):
             last_epoch_class_means: Dictionary containing the mean latent representations for each class from the last epoch.
 
         Returns:
-            Tuple of torch.Tensors: reconstruction loss, variational loss, class separation loss and 
+            Tuple of torch.Tensors: reconstruction loss, variational loss, class separation loss and
             class cohesion loss
         """
         # Get random folating-point sample from a standard normal distribution in the
         # shape of batch_size x Latent_dim
-        true_samples = torch.randn( 
+        true_samples = torch.randn(
             self.config.batch_size, self.config.latent_dim, requires_grad=False
         )
 
@@ -71,14 +71,14 @@ class SupervisixLoss(BaseLoss):
             model_output=model_output,
             sample_ids=sample_ids,
             metadata=metadata,
-            last_epoch_class_means=last_epoch_class_means
+            last_epoch_class_means=last_epoch_class_means,
         )
 
         class_cohesion_loss = self._compute_class_cohesion_loss(
             model_output=model_output,
             sample_ids=sample_ids,
             metadata=metadata,
-            last_epoch_class_means=last_epoch_class_means
+            last_epoch_class_means=last_epoch_class_means,
         )
 
         return recon_loss, var_loss, class_sep_loss, class_cohesion_loss
@@ -91,7 +91,7 @@ class SupervisixLoss(BaseLoss):
         """
         Function as defined in utils.py of the autoencodix pipeline package.
 
-        Computes the euclidean distance between two vectors or groups of vectors in the latent space, 
+        Computes the euclidean distance between two vectors or groups of vectors in the latent space,
         then calculates the mean of the absolute distances across all latent dimensions and
         applies the reduction function (mean or sum) across samples to get a single value representing
         the distance between the two vectors.
@@ -99,28 +99,30 @@ class SupervisixLoss(BaseLoss):
         Args:
             latent_a: The first latent vector.
             latent_b: The second latent vector.
-        
+
         Returns:
             torch.Tensor: A single value representing the distance between the two latent vectors.
         """
         # Calculate vector a - vector b and apply the reduction function
-        return self.reduction_fn( # Mean or sum across samples
-            torch.mean(torch.abs(latent_a - latent_b), dim=1) # Mean across latent dimensions
+        return self.reduction_fn(  # Mean or sum across samples
+            torch.mean(
+                torch.abs(latent_a - latent_b), dim=1
+            )  # Mean across latent dimensions
         )
-        
+
     def _compute_class_separation_loss(
-            self,
-            model_output: ModelOutput,
-            sample_ids: Tuple[str],
-            metadata: Union[pd.DataFrame, pd.Series],
-            last_epoch_class_means: Dict[str, torch.Tensor]
+        self,
+        model_output: ModelOutput,
+        sample_ids: Tuple[str],
+        metadata: Union[pd.DataFrame, pd.Series],
+        last_epoch_class_means: Dict[str, torch.Tensor],
     ) -> torch.Tensor:
         """
         Compute class separation loss.
 
-        Formula: L_sep = ((-||latents samples class 1 - latent mean class 2|| - ||latents samples class 1 - latent mean class 3|| - ...) / n_classes) 
+        Formula: L_sep = ((-||latents samples class 1 - latent mean class 2|| - ||latents samples class 1 - latent mean class 3|| - ...) / n_classes)
                          + ((-||latents samples class 2 - latent mean class 1|| - ||latents samples class 2 - latent mean class 3|| - ...) / n_classes)
-        
+
         The latent mean of a class is calcuated by summing up the mean value over
         samples of a group per latent dimension. For this the mean of the last
         training epoch per class is used, if available. If not, the loss for this class is set to 0.
@@ -135,7 +137,7 @@ class SupervisixLoss(BaseLoss):
             torch.Tensor: class separation loss
         """
         # Get the column name that contains the class labels
-        class_col = self.config.class_param # Has to be set in config
+        class_col = self.config.class_param  # Has to be set in config
 
         # Get the class labels for all classes in the data set
         classes_all = metadata.loc[:, class_col].unique()
@@ -150,8 +152,9 @@ class SupervisixLoss(BaseLoss):
         latent_representation = model_output.latentspace
 
         # Set up class separation loss for the batch
-        class_sep_loss_batch = torch.zeros((), device=latent_representation.device, 
-                                           dtype=latent_representation.dtype)
+        class_sep_loss_batch = torch.zeros(
+            (), device=latent_representation.device, dtype=latent_representation.dtype
+        )
 
         for class_label_a, idx in zip(classes_batch, np.unique(group_idxs)):
             # Get indices for samples belonging to current group/class
@@ -162,31 +165,42 @@ class SupervisixLoss(BaseLoss):
 
             # Get classes to iterate over for distance calcuation
             # Takes classes missing in current batch into account
-            classes = classes_batch if len(classes_batch) == len(classes_all) else classes_all
+            classes = (
+                classes_batch if len(classes_batch) == len(classes_all) else classes_all
+            )
 
             # Set loss for class a
-            class_a_loss = torch.zeros((), device=latent_representation.device, 
-                                       dtype=latent_representation.dtype)
+            class_a_loss = torch.zeros(
+                (),
+                device=latent_representation.device,
+                dtype=latent_representation.dtype,
+            )
 
             for class_label_b in classes:
                 if class_label_b != class_label_a:
                     # Calculate distance between class a latent representation and
                     # last epoch class mean of class b
                     if class_label_b in last_epoch_class_means.keys():
-                        class_a_loss = class_a_loss - self._distance_latent(latent_a=class_a_latent, 
-                                                                            latent_b=last_epoch_class_means[class_label_b])
+                        class_a_loss = class_a_loss - self._distance_latent(
+                            latent_a=class_a_latent,
+                            latent_b=last_epoch_class_means[class_label_b],
+                        )
 
             # Average over all classes in the dataset - 1 before adding to the batch loss
-            class_sep_loss_batch = class_sep_loss_batch + (class_a_loss / (len(classes_all) - 1)) 
+            class_sep_loss_batch = class_sep_loss_batch + (
+                class_a_loss / (len(classes_all) - 1)
+            )
 
-        return class_sep_loss_batch / len(classes_all) # Average over all classes in the data set
+        return class_sep_loss_batch / len(
+            classes_all
+        )  # Average over all classes in the data set
 
     def _compute_class_cohesion_loss(
-            self,
-            model_output: ModelOutput,
-            sample_ids: Tuple[str],
-            metadata: Union[pd.DataFrame, pd.Series],
-            last_epoch_class_means: Dict[str, torch.Tensor]
+        self,
+        model_output: ModelOutput,
+        sample_ids: Tuple[str],
+        metadata: Union[pd.DataFrame, pd.Series],
+        last_epoch_class_means: Dict[str, torch.Tensor],
     ) -> torch.Tensor:
         """
         Compute class cohesion loss.
@@ -201,8 +215,8 @@ class SupervisixLoss(BaseLoss):
             torch.Tensor: class cohesion loss
         """
         # Get the column name that contains the class labels
-        class_col = self.config.class_param # Has to be set in config
-        
+        class_col = self.config.class_param  # Has to be set in config
+
         # Get the class labels for all classes in the data set
         classes_all = metadata.loc[:, class_col].unique()
 
@@ -216,8 +230,9 @@ class SupervisixLoss(BaseLoss):
         latent_representation = model_output.latentspace
 
         # Set up class cohesion loss for the batch
-        class_cohesion_loss_batch = torch.zeros((), device=latent_representation.device, 
-                                           dtype=latent_representation.dtype)
+        class_cohesion_loss_batch = torch.zeros(
+            (), device=latent_representation.device, dtype=latent_representation.dtype
+        )
 
         for class_label, idx in zip(classes_batch, np.unique(group_idxs)):
             if class_label in last_epoch_class_means.keys():
@@ -228,19 +243,24 @@ class SupervisixLoss(BaseLoss):
                 class_latent = latent_representation[class_idxs]
 
                 # Get loss for class a
-                class_loss = self._distance_latent(latent_a=class_latent, 
-                                                   latent_b=last_epoch_class_means[class_label])
+                class_loss = self._distance_latent(
+                    latent_a=class_latent, latent_b=last_epoch_class_means[class_label]
+                )
 
                 # Add current class loss to batch loss
                 class_cohesion_loss_batch = class_cohesion_loss_batch + class_loss
 
-        return class_cohesion_loss_batch / len(classes_all) # Average over all classes in the data set
+        return class_cohesion_loss_batch / len(
+            classes_all
+        )  # Average over all classes in the data set
 
     def forward(
         self,
         model_output: ModelOutput,
         targets: torch.Tensor,
-        sample_ids: Tuple[str], # Is torch.LongTensor of ints (row indices) if data has no real sample IDs
+        sample_ids: Tuple[
+            str
+        ],  # Is torch.LongTensor of ints (row indices) if data has no real sample IDs
         metadata: Union[pd.DataFrame, pd.Series],
         last_epoch_class_means: Dict[str, torch.Tensor],
         epoch: Optional[int] = None,
@@ -267,11 +287,11 @@ class SupervisixLoss(BaseLoss):
 
         """
         # NOTE: Add handling for sample_ids int torch case?
-        recon_loss, var_loss, class_sep_loss, class_cohesion_loss = self._compute_losses(model_output, 
-                                                                                         targets, 
-                                                                                         sample_ids, 
-                                                                                         metadata, 
-                                                                                         last_epoch_class_means)
+        recon_loss, var_loss, class_sep_loss, class_cohesion_loss = (
+            self._compute_losses(
+                model_output, targets, sample_ids, metadata, last_epoch_class_means
+            )
+        )
 
         # if are pretraining, we pass total_epochs, otherwise, we use 'epochs' from config
         calc_epochs: int = self.config.epochs
@@ -290,16 +310,23 @@ class SupervisixLoss(BaseLoss):
             )
             effective_beta = self.config.beta * anneal_factor
 
-        total_loss = recon_loss + effective_beta * var_loss + self.config.gamma_class_separation * class_sep_loss + self.config.delta_class_cohesion * class_cohesion_loss
+        total_loss = (
+            recon_loss
+            + effective_beta * var_loss
+            + self.config.gamma_class_separation * class_sep_loss
+            + self.config.delta_class_cohesion * class_cohesion_loss
+        )
 
         # NOTE: Do I need to have gamma and delta in there?
         return total_loss, {
             "recon_loss": recon_loss,
             "var_loss": var_loss * effective_beta,
-            "class_separation_loss": class_sep_loss * self.config.gamma_class_separation,
-            "class_cohesion_loss": class_cohesion_loss * self.config.delta_class_cohesion,
+            "class_separation_loss": class_sep_loss
+            * self.config.gamma_class_separation,
+            "class_cohesion_loss": class_cohesion_loss
+            * self.config.delta_class_cohesion,
             "anneal_factor": torch.tensor(anneal_factor),
             "effective_beta_factor": torch.tensor(effective_beta),
-            #"gamma_factor": torch.tensor(self.config.gamma_class_separation),
-            #"delta_factor": torch.tensor(self.config.delta_class_cohesion),
+            # "gamma_factor": torch.tensor(self.config.gamma_class_separation),
+            # "delta_factor": torch.tensor(self.config.delta_class_cohesion),
         }

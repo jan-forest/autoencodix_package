@@ -16,13 +16,13 @@ from autoencodix.data.datapackage import DataPackage
 from autoencodix.data._numeric_dataset import NumericDataset
 from autoencodix.data.general_preprocessor import GeneralPreprocessor
 from autoencodix.evaluate._general_evaluator import GeneralEvaluator
+from autoencodix.visualize._general_visualizer import GeneralVisualizer
 from autoencodix.modeling._varix_architecture import VarixArchitecture
 from autoencodix.trainers._supervisix_trainer import SupervisixTrainer
 from autoencodix.utils._result import Result
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.configs.supervisix_config import SupervisixConfig
 from autoencodix.utils._losses import SupervisixLoss
-from autoencodix.visualize._supervisix_visualizer import SupervisixVisualizer
 
 
 class Supervisix(BasePipeline):
@@ -45,7 +45,7 @@ class Supervisix(BasePipeline):
         model_type: Type[BaseAutoencoder] = VarixArchitecture,
         loss_type: Type[BaseLoss] = SupervisixLoss,
         preprocessor_type: Type[BasePreprocessor] = GeneralPreprocessor,
-        visualizer: Type[BaseVisualizer] = SupervisixVisualizer,
+        visualizer: Type[BaseVisualizer] = GeneralVisualizer,
         evaluator: Optional[Type[BaseEvaluator]] = GeneralEvaluator,
         result: Optional[Result] = None,
         datasplitter_type: Type[DataSplitter] = DataSplitter,

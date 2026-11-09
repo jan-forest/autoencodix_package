@@ -20,6 +20,7 @@ import torch
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
+import numpy as np
 
 from autoencodix.configs.default_config import DefaultConfig
 
@@ -618,7 +619,7 @@ def find_translation_keys(
             if from_key == simple_name or from_key == name:
                 from_key_final = name
             # use if instead of elif to allow for reference prediciton where from_key == to_key
-            if to_key == simple_name or from_key == name:
+            if to_key == simple_name or to_key == name:
                 to_key_final = name
         # if the users passes from_key and to_key and we don't find them, we raise an error
         if not (from_key_final and to_key_final):
@@ -721,7 +722,6 @@ def custom_splits_from_anno(
 
     if split_col not in df.columns:
         raise ValueError(f"Missing split column: {split_col}")
-
     if sample_id_col not in df.columns:
         raise ValueError(f"Missing sample ID column: {sample_id_col}")
 

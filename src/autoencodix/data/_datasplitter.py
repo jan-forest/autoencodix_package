@@ -303,7 +303,6 @@ class PairedUnpairedSplitter:
             config: Split configuration object defining ratios and random seed.
         custom_splits: Optional dictionary with train, valid, and test sample IDs.
 
-
         Raises:
             TypeError: If `data_package` is not a valid DataPackage instance.
         """

@@ -284,14 +284,32 @@ class XModalixEvaluator(GeneralEvaluator):
         Returns:
             list: A list of expanded reference method names, each suffixed with a key from the latent space.
         """
-        if not isinstance(result.latentspaces.get(epoch=-1, split="train"), dict):
+        # Check if latentspace is available for train or test split
+        train_available = False
+        test_available = False
+        try:
+            train_latent = result.latentspaces.get(epoch=-1, split="train")
+            if isinstance(train_latent, dict):
+                train_available = True
+        except Exception:
+            pass
+        try:
+            test_latent = result.latentspaces.get(epoch=-1, split="test")
+            if isinstance(test_latent, dict):
+                test_available = True
+        except Exception:
+            pass
+
+        if not (train_available and test_available):
             raise NotImplementedError(
-                "This evaluate feature does not support .save(save_all=False) results."
+                "Neither train nor test latentspace is available in the result object. Please ensure that the result object contains latent space information for at least one of these splits."
             )
+
+        split_to_use = "train" if train_available else "test"
         reference_methods = [
             f"{method}_$_{key}"
             for method in reference_methods
-            for key in result.latentspaces.get(epoch=-1, split="train").keys()
+            for key in result.latentspaces.get(epoch=-1, split=split_to_use).keys()
         ]
 
         return reference_methods

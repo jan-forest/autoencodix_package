@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=xmodalix3d_2mod_after_HPO1_train
+#SBATCH --job-name=xmodalix3d_2mod_after_HPO3_train
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=alpha
 #SBATCH --nodes=1

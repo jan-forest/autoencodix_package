@@ -588,10 +588,10 @@ def run_synetune_hpo(
         "training_seed": int(random_seed),
 
         # XModalix3D HPO parameters
-        "gamma": loguniform(3, 60),
-        "delta_pair": loguniform(1e-3, 2e-1),
-        "classifier_learning_rate": loguniform(1e-6, 1e-4),
-        "classifier_weight_decay": loguniform(1e-4, 5e-3),
+        "gamma": loguniform(8.0, 50.0),
+        "delta_pair": loguniform(5e-3, 5e-2),
+        "classifier_learning_rate": loguniform(3e-6, 8e-5),
+        "classifier_weight_decay": loguniform(3e-5, 2e-3),
     }
 
     # Existing hand-selected settings are included as an anchor point.

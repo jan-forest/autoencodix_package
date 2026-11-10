@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=hpo_xmodalix3d_3mod_02
+#SBATCH --job-name=hpo_xmodalix3d_3mod_03
 #SBATCH --account=p_scads_autoencodix
 #SBATCH --partition=capella
 #SBATCH --nodes=1

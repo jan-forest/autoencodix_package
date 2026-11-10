@@ -10,6 +10,7 @@ from autoencodix.losses.varix_loss import VarixLoss
 from autoencodix.losses.xmodal_loss import XModalLoss
 from autoencodix.losses.disentanglix_loss import DisentanglixLoss
 from autoencodix.losses.maskix_loss import MaskixLoss
+from autoencodix.losses.supervisix_loss import SupervisixLoss
 
 __all__ = [
     "VanillixLoss",
@@ -17,4 +18,5 @@ __all__ = [
     "XModalLoss",
     "DisentanglixLoss",
     "MaskixLoss",
+    "SupervisixLoss",
 ]

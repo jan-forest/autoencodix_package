@@ -321,6 +321,11 @@ class BaseVisualizer(abc.ABC):
             plt.close()
 
         if plot_type == "relative":
+            # If model architecture is supervisix get the absolute values for the
+            # class separation loss to plot (loss is negative)
+            mask = df_plot["Loss Term"] == "class_separation_loss"
+            df_plot.loc[mask, "Loss Value"] = df_plot.loc[mask, "Loss Value"].abs()
+
             # Check if loss values are positive
             if (df_plot["Loss Value"] < 0).any():
                 # Warning

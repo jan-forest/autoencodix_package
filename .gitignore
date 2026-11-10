@@ -10,3 +10,4 @@ Tutorials/DeepDives/TutData/*
 *.pth
 *.h5ad
 *.pyc
+uv.lock

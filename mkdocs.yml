@@ -12,6 +12,7 @@ nav:
       - Stackix: tutorials/PipelineTutorials/Stackix.ipynb
       - Ontix: tutorials/PipelineTutorials/Ontix.ipynb
       - Maskix: tutorials/PipelineTutorials/Maskix.ipynb
+      - Supervisix: tutorials/PipelineTutorials/Supervisix.ipynb
       - Imagix: tutorials/PipelineTutorials/Imagix.ipynb
       - Imagix3D: tutorials/PipelineTutorials/Imagix3D.ipynb
       - X-Modalix: tutorials/PipelineTutorials/XModalix.ipynb
@@ -36,14 +37,17 @@ nav:
   - Evaluate: api/evaluate.md
   - Imagix: api/imagix.md
   - Imagix3D: api/imagix3d.md
+  - Maskix: api/maskix.md
   - Modeling: api/modeling.md
   - Ontix: api/ontix.md
   - Stackix: api/stackix.md
+  - Supervisix: api/supervisix.md
   - Trainers: api/trainers.md
   - Utils: api/utils.md
   - Vanillix: api/vanillix.md
   - Varix: api/varix.md
   - Visualize: api/visualize.md
+  - XModalix: api/xmodalix.md
 
 plugins:
 - search

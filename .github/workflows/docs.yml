@@ -33,7 +33,7 @@ jobs:
       run: |
         uv pip install --upgrade pip
         uv pip install -e .
-        uv pip install mkdocs mkdocs-material "mkdocstrings[python]==0.26.2" mkdocs-jupyter
+        uv pip install mkdocs mkdocs-material "mkdocstrings[python]>=1.0" mkdocs-jupyter mkdocs-llmstxt
     # Copy the hand-picked tutorial notebooks into the docs tree so
     # mkdocs-jupyter (and the nav paths in mkdocs.yml) can find them.
     - name: Stage tutorial notebooks

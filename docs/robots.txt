@@ -1,2 +1,6 @@
+# Crawlers (search engines, LLM retrieval) are welcome.
+# Agent-friendly docs: https://jan-forest.github.io/autoencodix_package/llms.txt
 User-agent: *
-Disallow: /
+Allow: /
+
+Sitemap: https://jan-forest.github.io/autoencodix_package/sitemap.xml

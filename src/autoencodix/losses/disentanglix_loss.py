@@ -39,12 +39,16 @@ class DisentanglixLoss(BaseLoss):
         n_samples: int,
         **kwargs,
     ) -> Tuple[torch.Tensor, dict]:
-        """Calls forward_impl method.
+        """Compute the total loss and its components (dispatches to ``_forward_impl``).
 
         Args:
             model_output: instance that stores model outputs like reconstructions, mus, sigma, etc...
             targets: groundtruth tensor.
-            n_samples: number of samples.
+            epoch: Current epoch, used for beta annealing.
+            n_samples: Number of samples in the training set, needed to estimate
+                the aggregated posterior.
+            **kwargs: Ignored; accepted for a uniform trainer interface.
+
         Returns:
             Tuple containing the total loss and a Dict with loss type as key and corresponding subloss as value.
         """
@@ -93,6 +97,18 @@ class DisentanglixLoss(BaseLoss):
         use_mss: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute decomposed VAE loss terms.
+
+        Splits the KL divergence into mutual information, total correlation and
+        dimension-wise KL (beta-TCVAE, Chen et al. 2018) using minibatch estimates
+        of the aggregated posterior.
+
+        Args:
+            z: Sampled latent vectors.
+            mu: Posterior means.
+            logvar: Posterior log-variances.
+            n_samples: Number of samples in the training set.
+            use_mss: If True, use minibatch stratified sampling instead of
+                minibatch weighted sampling.
 
         Returns:
             A tuple of three scalar tensors:
@@ -154,7 +170,17 @@ class DisentanglixLoss(BaseLoss):
         n_samples: int,
         epoch: Optional[int] = None,
     ) -> Tuple[torch.Tensor, dict]:
-        """Forward pass without annealing - uses constant beta (ignores epoch)."""
+        """Forward pass without annealing - uses constant betas (ignores epoch).
+
+        Args:
+            model_output: Model output with reconstruction and latent statistics.
+            targets: Ground-truth tensor.
+            n_samples: Number of samples in the training set.
+            epoch: Ignored.
+
+        Returns:
+            Tuple of the total loss and a dict of the (weighted) sub-losses.
+        """
         recon_loss, mut_info_loss, tot_corr_loss, dimwise_kl_loss = (
             self._compute_losses(model_output, targets, n_samples)
         )
@@ -178,7 +204,17 @@ class DisentanglixLoss(BaseLoss):
         n_samples: int,
         epoch: int,
     ) -> Tuple[torch.Tensor, dict]:
-        """Forward pass with annealing - calculates annealing factor from epoch."""
+        """Forward pass with annealing - scales all betas by an epoch-dependent factor.
+
+        Args:
+            model_output: Model output with reconstruction and latent statistics.
+            targets: Ground-truth tensor.
+            n_samples: Number of samples in the training set.
+            epoch: Current epoch.
+
+        Returns:
+            Tuple of the total loss and a dict of the (weighted) sub-losses.
+        """
         recon_loss, mut_info_loss, tot_corr_loss, dimwise_kl_loss = (
             self._compute_losses(model_output, targets, n_samples)
         )

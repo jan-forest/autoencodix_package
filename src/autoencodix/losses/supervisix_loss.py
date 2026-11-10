@@ -268,6 +268,7 @@ class SupervisixLoss(BaseLoss):
         **kwargs,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """Forward pass with conditional annealing.
+
         Args:
             model_output: custom class that stores model output like latentspaces and reconstructions.
             targets: original data to compare with reconstruction
@@ -276,15 +277,12 @@ class SupervisixLoss(BaseLoss):
             last_epoch_class_means: Dictionary containing the mean latent representations for each class from the last epoch
             epoch: current training epoch
             total_epochs: number of total epochs
-            **kwargs
-        Returns:
-            Tuple consisting of:
-            - tensor of the total loss
+            **kwargs: Ignored; accepted for a uniform trainer interface.
+
         Returns:
             Tuple consisting of:
             - tensor of the total loss
             - Dict with loss_type as key and sub_loss value.
-
         """
         # NOTE: Add handling for sample_ids int torch case?
         recon_loss, var_loss, class_sep_loss, class_cohesion_loss = (

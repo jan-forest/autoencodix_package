@@ -10,6 +10,14 @@ from autoencodix.utils._result import Result
 
 
 class Imagix3DVisualizer(ImagixVisualizer):
+    """Visualizer for 3D volume pipelines (``Imagix3D``).
+
+    Adds slice-based reconstruction grids, latent correlation, latent activity
+    and latent traversal plots (see ``Imagix3DEvaluator`` for the underlying
+    diagnostics).
+
+    (LLM-generated docstring, pending human review.)
+    """
 
     @no_type_check
     def show_image_recon_grid(
@@ -268,7 +276,20 @@ class Imagix3DVisualizer(ImagixVisualizer):
     def show_latent_corr(
         self, result: Result, show_table: bool = False, show_corrmat: bool = False
     ) -> None:
+        """Show how correlated the latent dimensions are over training.
 
+        For each stored epoch and the train/valid splits, computes the mean and
+        maximum absolute pairwise correlation between latent dimensions (near-zero
+        variance dimensions are excluded) and plots them per epoch.
+
+        Args:
+            result: Result object with stored latent spaces.
+            show_table: If True, also display the summary table.
+            show_corrmat: If True, also show the correlation matrix of the last
+                epoch.
+
+        (LLM-generated docstring, pending human review.)
+        """
         rows = []
         stored_epochs = [e for e in result.latentspaces._data.keys() if e != -1]
 

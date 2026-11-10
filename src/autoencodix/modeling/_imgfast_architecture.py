@@ -46,12 +46,19 @@ class ImageVAEFastArchitecture(BaseAutoencoder):
         feature_order: Optional[Union[Tuple, Dict]] = None,
         # the input_dim is the number of channels in the image, e.g. 3
     ):
-        """Initialize the ImageVAEArchitecture with the given configuration.
+        """Initialize the ImageVAEFastArchitecture with the given configuration.
+
+        The number of filters in the first convolutional layer is taken from
+        ``config.hidden_dim``.
 
         Args:
-            input_dim: (C,W,H) the input image shape
-            config: Configuration object containing model parameters.
-            hidden_dim: number of filters in the first convolutional layer
+            input_dim: (C, W, H) the input image shape.
+            config: Configuration object containing model parameters; defaults are
+                used if None.
+            ontologies: Accepted for a uniform constructor interface across
+                architectures; not used.
+            feature_order: Accepted for a uniform constructor interface across
+                architectures; not used.
         """
         if config is None:
             config = DefaultConfig()

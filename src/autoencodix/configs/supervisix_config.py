@@ -24,6 +24,16 @@ class SupervisixConfig(VarixConfig):
     # NOTE: Adding this validator means running config=SupervisixConfig(); config.print_schema() does not work
     @model_validator(mode="after")
     def _check_class_param_is_set(self):
+        """Ensure ``class_param`` (the metadata column with class labels) is set.
+
+        Returns:
+            The validated config.
+
+        Raises:
+            ValueError: If ``class_param`` is None.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if self.class_param is None:
             raise ValueError(
                 "The class_param parameter must be set for Supervisix losses. "

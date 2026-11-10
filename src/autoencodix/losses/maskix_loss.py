@@ -8,6 +8,21 @@ from typing import Tuple, Dict
 
 
 class MaskixLoss(BaseLoss):
+    """Loss of the masked autoencoder ``Maskix``, following scMAE (Fang et al. 2024).
+
+    Combines a mask-prediction loss (binary cross-entropy: which entries were
+    corrupted) with a weighted MSE reconstruction loss that gives corrupted
+    entries more weight:
+
+        total = delta_mask_predictor * mask_loss
+                + (1 - delta_mask_predictor) * weighted_recon_loss
+
+    Corrupted entries are weighted with ``delta_mask_corrupted``, uncorrupted
+    ones with ``1 - delta_mask_corrupted``.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     def __init__(self, config: DefaultConfig, annealing_scheduler=None):
         """Inits MaskixLoss
         Args:
@@ -18,6 +33,18 @@ class MaskixLoss(BaseLoss):
         self._validate_loss_config()
 
     def _validate_model_output(self, model_output: ModelOutput):
+        """Ensure the model output contains the predicted mask.
+
+        Args:
+            model_output: Output of the Maskix architecture.
+
+        Raises:
+            ValueError: If ``additional_info`` is missing or has no
+                "predicted_mask".
+            TypeError: If ``additional_info`` is not a dict.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if model_output.additional_info is None:
             raise ValueError(
                 "For Maskix, we need to provide an 'additional_info' attribute in the ModelOutput, this likely went wrong in the architecture's forward method"
@@ -32,6 +59,10 @@ class MaskixLoss(BaseLoss):
             )
 
     def _validate_loss_config(self):
+        """Warn if the config deviates from the published setup (mean reduction, MSE).
+
+        (LLM-generated docstring, pending human review.)
+        """
         if not self.config.loss_reduction == "mean":
             import warnings
 
@@ -52,6 +83,26 @@ class MaskixLoss(BaseLoss):
         corrupted_input: torch.Tensor,
         **kwargs,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+        """Compute the total Maskix loss and its components.
+
+        Args:
+            model_output: Model output with ``reconstruction`` and
+                ``additional_info["predicted_mask"]`` (logits).
+            targets: Original, uncorrupted input.
+            corrupted_input: Masked input fed to the model; entries that differ
+                from ``targets`` count as masked.
+            **kwargs: Ignored; accepted for a uniform trainer interface.
+
+        Returns:
+            Tuple of the total loss and a dict with "recon_loss" (unweighted, for
+            monitoring), "recon_loss_weighted" and "mask_loss" (both as weighted
+            in the total).
+
+        Raises:
+            ValueError: If the predicted mask and the true mask differ in shape.
+
+        (LLM-generated docstring, pending human review.)
+        """
         self._validate_model_output(model_output)
         predicted_mask = model_output.additional_info["predicted_mask"]  # ty: ignore
 

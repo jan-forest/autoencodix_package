@@ -33,9 +33,17 @@ class LLMExplainer:
     ):
         """Initialize LLM client.
 
+        API keys and hosts are read from the environment or a ``.env`` file (see
+        ``LLM_Setup.md``).
+
         Args:
-            client_name: Name of the LLM client.
+            client_name: Name of the LLM client ("mistral", "ollama", "openrouter"
+                or "scads-llm").
             model_name: Name of the model to use.
+            genes_to_latent: Top features (e.g. genes) per latent dimension, as
+                produced by the feature attribution step.
+            prompt: Prompt template sent to the LLM for each latent dimension.
+            save: Path to save the explanations to, or None to not save them.
         """
         load_dotenv(find_dotenv())
         self._client_name = client_name

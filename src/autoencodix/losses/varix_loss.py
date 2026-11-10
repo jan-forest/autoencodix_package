@@ -56,21 +56,19 @@ class VarixLoss(BaseLoss):
         **kwargs,
     ) -> Tuple[torch.Tensor, dict]:
         """Forward pass with conditional annealing.
+
         Args:
             model_output: custom class that stores model output like latentspaces and reconstructions.
             targets: original data to compare with reconstruction
             epoch: current training epoch
-            total_epochs: number of total epochs
-            **kwargs
-        Returns:
-            Tuple consisting of:
-            - tensor of the total loss
-        Returns:
-            Tuple consisting of:
-            - tensor of the total loss
-            - Dict with loss_type as key and sub_loss value.
-            - Dict with loss_type as key and sub_loss value.
+            total_epochs: number of total epochs (set during pretraining; otherwise
+                ``config.epochs`` is used)
+            **kwargs: Ignored; accepted for a uniform trainer interface.
 
+        Returns:
+            Tuple consisting of:
+            - tensor of the total loss
+            - Dict with loss_type as key and sub_loss value.
         """
 
         recon_loss, var_loss = self._compute_losses(model_output, targets)

@@ -220,6 +220,13 @@ class OntixArchitecture(BaseAutoencoder):
         self._decoder = nn.Sequential(*decoder_layers)
 
     def _positive_dec(self, m):
+        """Clamp the weights of a linear layer to be non-negative (applied to the decoder).
+
+        Args:
+            m (nn.Module): Layer to modify in place; non-linear layers are ignored.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if isinstance(m, nn.Linear):
             m.weight.data = m.weight.data.clamp(min=0)
 

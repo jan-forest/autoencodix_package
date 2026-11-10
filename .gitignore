@@ -11,3 +11,5 @@ Tutorials/DeepDives/TutData/*
 *.h5ad
 *.pyc
 uv.lock
+# Jupyter checkpoints
+.ipynb_checkpoints/

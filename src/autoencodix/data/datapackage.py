@@ -12,7 +12,35 @@ T = TypeVar("T")  # For generic type hints
 
 @dataclass
 class DataPackage:
-    """Represents a data package containing multiple types of data."""
+    """Container for all input data of a pipeline, grouped by data type.
+
+    Every attribute is a dict that maps a modality name (your choice, e.g.
+    "rna") to the data of that modality. One or more modalities per attribute
+    are allowed. Samples are matched across modalities by their IDs (DataFrame
+    index, AnnData ``obs_names`` or ``ImgData.sample_id``).
+
+    Example:
+        >>> DataPackage(
+        ...     multi_bulk={"rna": rna_df, "protein": protein_df},
+        ...     annotation={"paired": clinical_df},
+        ... )
+
+    Attributes:
+        multi_sc: Single-cell data as ``MuData`` objects (one ``AnnData`` per
+            modality inside).
+        multi_bulk: Tabular data (samples x features) as DataFrames; use this
+            for any non-single-cell numeric data.
+        annotation: Sample metadata as DataFrames. Use the key "paired" for one
+            table shared by all modalities, or the same keys as the data
+            modalities for one table per modality.
+        img: Images as lists of ``ImgData``.
+        from_modality: Source modality for cross-modal translation; filled
+            automatically for translation data cases.
+        to_modality: Target modality for cross-modal translation; filled
+            automatically for translation data cases.
+
+    (LLM-generated docstring, pending human review.)
+    """
 
     multi_sc: Optional[Dict[str, MuData]] = None  # # ty: ignore[invalid-type-form]
     multi_bulk: Optional[Dict[str, pd.DataFrame]] = None
@@ -332,7 +360,7 @@ class DataPackage:
     def _get_shape_from_dict(self, data_dict: Dict) -> Dict[str, Any]:
         """Recursively process dictionary to extract shapes of contained data objects.
 
-        Args::
+        Args:
             data_dict: Dictionary containing data objects
 
         Returns:

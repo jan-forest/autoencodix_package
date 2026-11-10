@@ -23,6 +23,15 @@ sklearn.set_config(enable_metadata_routing=True)
 
 
 class XModalixEvaluator(GeneralEvaluator):
+    """Evaluator for cross-modal (``XModalix``) results.
+
+    Extends ``GeneralEvaluator`` so that each modality's latent space is
+    evaluated separately, and adds ``pure_vae_comparison`` to compare
+    translation quality against a single-modality VAE.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     def __init__(self):
         # super().__init__()
         pass
@@ -254,6 +263,21 @@ class XModalixEvaluator(GeneralEvaluator):
         task: str,
         sub: str,
     ) -> pd.DataFrame:
+        """Add model, modality and task columns to a results table.
+
+        Args:
+            results: Scores of one evaluation run.
+            sklearn_ml: The estimator used.
+            ml_type: "classification" or "regression".
+            task: Combined name "<feature set>_$_<modality>".
+            sub: Annotation parameter that was predicted.
+
+        Returns:
+            The results with the columns "ML_ALG", "ML_TYPE", "MODALITY",
+            "ML_TASK" and "ML_SUBTASK".
+
+        (LLM-generated docstring, pending human review.)
+        """
         res_ml_alg = [str(sklearn_ml) for x in range(0, results.shape[0])]
         res_ml_type = [ml_type for x in range(0, results.shape[0])]
         res_ml_subtask = [sub for x in range(0, results.shape[0])]

@@ -122,6 +122,19 @@ def _load(
     revision: str,
     artifact_path: Optional[Union[str, Path]],
 ) -> Any:
+    """Load a portfolio artifact (JSON or Parquet), caching it per source and revision.
+
+    Args:
+        filename: File inside the artifact repository or directory.
+        repo_id: Hugging Face dataset repository.
+        revision: Repository revision (tag, branch or commit).
+        artifact_path: Local directory to read from instead of the Hub.
+
+    Returns:
+        Parsed JSON content, or a DataFrame for Parquet files.
+
+    (LLM-generated docstring, pending human review.)
+    """
     local_key = None if artifact_path is None else str(Path(artifact_path).resolve())
     cache_key = (repo_id, revision, local_key, filename)
     if cache_key not in _artifact_cache:
@@ -138,6 +151,10 @@ def _load_artifact(
     revision: str = DEFAULT_REVISION,
     artifact_path: Optional[Union[str, Path]] = None,
 ) -> Dict[str, Any]:
+    """Load the main portfolio file ``initial_configs.json``.
+
+    (LLM-generated docstring, pending human review.)
+    """
     return _load(DEFAULT_FILENAME, repo_id, revision, artifact_path)
 
 
@@ -159,12 +176,32 @@ def list_portfolio_versions(repo_id: str = DEFAULT_REPO_ID) -> List[str]:
 
 
 def _covered_architectures(artifact: Dict[str, Any]) -> List[str]:
+    """Return the architectures that are both in the portfolio and supported here.
+
+    (LLM-generated docstring, pending human review.)
+    """
     return sorted(set(artifact) & set(_CONFIG_CLASSES))
 
 
 def _resolve_scope(
     artifact: Dict[str, Any], architecture: str, arch_key: str, dataset: Optional[str]
 ) -> Dict[str, Any]:
+    """Select the portfolio for one dataset, or the combined cross-dataset one.
+
+    Args:
+        artifact: Loaded portfolio.
+        architecture: Architecture name as given by the caller (for messages).
+        arch_key: Normalized architecture key.
+        dataset: Benchmark dataset name, or None for the combined portfolio.
+
+    Returns:
+        The portfolio entry for the selected scope.
+
+    Raises:
+        ValueError: If the dataset is not part of the portfolio.
+
+    (LLM-generated docstring, pending human review.)
+    """
     arch_entry = artifact[arch_key]
     scope_key = "combined" if dataset is None else dataset
     if scope_key not in arch_entry:
@@ -179,6 +216,17 @@ def _resolve_scope(
 
 
 def _choose_budget(available_budgets: List[int], budget_epochs: Optional[int]) -> int:
+    """Snap the requested training budget to the nearest benchmarked budget.
+
+    Args:
+        available_budgets: Benchmarked numbers of epochs.
+        budget_epochs: Requested epochs; None selects the largest budget.
+
+    Returns:
+        The chosen number of epochs (warns if it differs from the request).
+
+    (LLM-generated docstring, pending human review.)
+    """
     available_budgets = sorted(available_budgets)
     if budget_epochs is None:
         return max(available_budgets)
@@ -205,6 +253,28 @@ def _propose_given_fixed(
     revision: str,
     artifact_path: Optional[Union[str, Path]],
 ) -> List[Dict[str, Any]]:
+    """Propose configs for the free hyperparameters given the fixed ones.
+
+    Loads the search space and raw evaluations, then runs the surrogate-based
+    conditional search (see ``propose_conditional``).
+
+    Args:
+        architecture: Architecture name as given by the caller.
+        arch_key: Normalized architecture key.
+        fixed: Hyperparameters held at the caller's values.
+        dataset: Benchmark dataset, or None to use all datasets.
+        objective: "downstream" or "reconstruction".
+        budget_epochs: Training budget for the reconstruction objective.
+        top_k: Number of configs to return.
+        repo_id: Hugging Face dataset repository.
+        revision: Repository revision.
+        artifact_path: Local directory to read from instead of the Hub.
+
+    Returns:
+        Config dicts (constants plus proposed hyperparameters), best first.
+
+    (LLM-generated docstring, pending human review.)
+    """
     search_space = _load(SEARCH_SPACE_FILENAME, repo_id, revision, artifact_path)
     space = search_space["architectures"][arch_key]
     validate_fixed(architecture, fixed, space)

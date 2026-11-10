@@ -60,10 +60,17 @@ class VolumeVAEArchitecture(BaseAutoencoder):
     ):
         """Initialize the VolumeVAEArchitecture with the given configuration.
 
+        The number of filters in the first convolutional layer is taken from
+        ``config.hidden_dim``.
+
         Args:
-            input_dim: (C, D, H, W) the input image shape
-            config: Configuration object containing model parameters.
-            hidden_dim: number of filters in the first convolutional layer
+            input_dim: (C, D, H, W) the input volume shape.
+            config: Configuration object containing model parameters; defaults are
+                used if None.
+            ontologies: Accepted for a uniform constructor interface across
+                architectures; not used.
+            feature_order: Accepted for a uniform constructor interface across
+                architectures; not used.
         """
         if config is None:
             config = Imagix3DConfig()
@@ -94,7 +101,18 @@ class VolumeVAEArchitecture(BaseAutoencoder):
         self.apply(self._init_weights)
 
     def make_norm_3d(self, num_channels: int) -> nn.Module:
-        """Create a 3D normalization layer."""
+        """Create a 3D normalization layer of the configured type.
+
+        Args:
+            num_channels: Number of channels to normalize.
+
+        Returns:
+            A BatchNorm3d, GroupNorm or InstanceNorm3d layer.
+
+        Raises:
+            ValueError: If the normalization type is not "batch", "group" or
+                "instance".
+        """
 
         norm_type = self.norm_3d
 
@@ -109,12 +127,22 @@ class VolumeVAEArchitecture(BaseAutoencoder):
             return nn.InstanceNorm3d(num_features=num_channels, affine=True)
 
         raise ValueError(
-            f"Unknown normalization_3d={self.normalization_3d!r}. "
+            f"Unknown normalization_3d={self.norm_3d!r}. "
             "Expected 'batch', 'group', or 'instance'."
         )
 
     def _get_num_groups(self, num_channels: int) -> int:
-        """Return a valid number of groups for GroupNorm."""
+        """Return a valid number of groups for GroupNorm.
+
+        Uses the configured number of groups if it divides ``num_channels``,
+        otherwise the largest smaller divisor.
+
+        Args:
+            num_channels: Number of channels to normalize.
+
+        Returns:
+            Number of groups.
+        """
 
         requested_groups = min(int(self.norm_groups), num_channels)
 

@@ -30,6 +30,17 @@ class BaseVisualizer(abc.ABC):
     ### Abstract Methods ###
     @abc.abstractmethod
     def visualize(self, result: Result, config: DefaultConfig) -> Result:
+        """Create all standard plots for a pipeline run and store them in the result.
+
+        Args:
+            result: Result object with losses, latent spaces and model.
+            config: Configuration of the pipeline run.
+
+        Returns:
+            The result object (plots are stored in ``self.plots``).
+
+        (LLM-generated docstring, pending human review.)
+        """
         pass
 
     @abc.abstractmethod
@@ -42,10 +53,26 @@ class BaseVisualizer(abc.ABC):
         epoch: Optional[Union[int, None]] = None,
         split: str = "all",
     ) -> None:
+        """Display the latent space, colored by annotation parameters.
+
+        Args:
+            result: Result object containing the latent spaces.
+            plot_type: Type of plot, e.g. "2D-scatter" or "Ridgeline".
+            labels: Optional explicit labels per sample used for coloring.
+            param: Annotation column(s) used for coloring, or "all".
+            epoch: Epoch to plot; defaults to the last stored epoch.
+            split: Data split to plot ("train", "valid", "test" or "all").
+
+        (LLM-generated docstring, pending human review.)
+        """
         pass
 
     @abc.abstractmethod
     def show_weights(self) -> None:
+        """Display heatmaps of the encoder and decoder weights of the trained model.
+
+        (LLM-generated docstring, pending human review.)
+        """
         pass
 
     ### General Functions used by all Visualizers in similar way ###
@@ -213,6 +240,18 @@ class BaseVisualizer(abc.ABC):
 
     @staticmethod
     def _make_loss_format(result: Result, config: DefaultConfig) -> pd.DataFrame:
+        """Convert total and sub-losses of a result into a long-format DataFrame.
+
+        Args:
+            result: Result object with ``losses`` and ``sub_losses``.
+            config: Configuration of the pipeline run.
+
+        Returns:
+            DataFrame with columns "Epoch", "Loss Term", "Split" and "Loss Value",
+            as expected by ``_make_loss_plot``.
+
+        (LLM-generated docstring, pending human review.)
+        """
         loss_df_melt = pd.DataFrame()
         for term in result.sub_losses.keys():
             # Get the loss values and ensure it's a dictionary
@@ -389,15 +428,17 @@ class BaseVisualizer(abc.ABC):
 
     @staticmethod
     def _plot_model_weights(model: torch.nn.Module) -> matplotlib.figure.Figure:  # type: ignore
-        """
-        Visualization of model weights in encoder and decoder layers as heatmap for each layer as subplot.
-        Handles non-symmetrical autoencoder architectures.
-        Plots _mu layer for encoder as well.
-        Uses node_names for decoder layers if model has ontologies.
-        ARGS:
-            model (torch.nn.Module): PyTorch model instance.
-        RETURNS:
-            fig (matplotlib.figure): Figure handle (of last plot)
+        """Plot encoder and decoder weights as one heatmap per layer.
+
+        Handles non-symmetrical autoencoder architectures and includes the ``_mu``
+        layer of the encoder. Uses ontology node names as decoder axis labels if the
+        model has ontologies.
+
+        Args:
+            model: PyTorch model instance.
+
+        Returns:
+            Figure handle of the last plot.
         """
         all_weights = []
         names = []
@@ -514,6 +555,20 @@ class BaseVisualizer(abc.ABC):
 
     @staticmethod
     def _collect_all_metadata(result):
+        """Collect sample metadata from all splits and modalities of a result.
+
+        Gathers metadata from ``result.datasets`` and ``result.new_datasets`` (data
+        passed to ``predict``) for train, valid and test splits, including
+        per-modality metadata of multi-modal datasets.
+
+        Args:
+            result: Result object holding the datasets.
+
+        Returns:
+            DataFrame of metadata indexed by sample ID, without duplicate samples.
+
+        (LLM-generated docstring, pending human review.)
+        """
         all_metadata = pd.DataFrame()
 
         # 1) collect metadata from results.datasets

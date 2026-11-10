@@ -29,6 +29,22 @@ class MaskixArchitectureVanilla(BaseAutoencoder):
         ontologies: Optional[Union[Tuple, Dict]] = None,
         feature_order: Optional[Union[Tuple, Dict]] = None,
     ):
+        """Build the Maskix encoder, mask predictor and decoder.
+
+        Args:
+            config: Configuration (``maskix_architecture``, ``maskix_hidden_dim``,
+                ``latent_dim``, ``drop_p``, ...); defaults are used if None.
+            input_dim: Number of input features.
+            ontologies: Accepted for a uniform constructor interface across
+                architectures; not used.
+            feature_order: Accepted for a uniform constructor interface across
+                architectures; not used.
+
+        Raises:
+            TypeError: If ``input_dim`` is not an int.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if config is None:
             config = DefaultConfig()
         self._config: DefaultConfig = config
@@ -47,6 +63,13 @@ class MaskixArchitectureVanilla(BaseAutoencoder):
         self.apply(self._init_weights)
 
     def _build_network(self):
+        """Build the network variant selected by ``config.maskix_architecture``.
+
+        Raises:
+            ValueError: If the variant is neither "scMAE" nor "custom".
+
+        (LLM-generated docstring, pending human review.)
+        """
         if self._config.maskix_architecture == "scMAE":
             self._build_scMAE()
         elif self._config.maskix_architecture == "custom":
@@ -58,6 +81,13 @@ class MaskixArchitectureVanilla(BaseAutoencoder):
             )
 
     def _build_custom(self):
+        """Build a configurable variant with ``n_layers`` and ``enc_factor`` from the config.
+
+        Encoder and decoder use Linear-LayerNorm-Mish blocks; the decoder maps the
+        concatenated latent vector and predicted mask back to the input space.
+
+        (LLM-generated docstring, pending human review.)
+        """
         self._mask_predictor = nn.Linear(self.latent_dim, self.input_dim)  # ty: ignore
 
         enc_dim = LayerFactory.get_layer_dimensions(
@@ -128,6 +158,14 @@ class MaskixArchitectureVanilla(BaseAutoencoder):
         self._decoder = nn.Sequential(*decoder_layers)
 
     def _build_scMAE(self):
+        """Build the network exactly as in scMAE (Fang et al. 2024).
+
+        The encoder has one hidden layer of size ``maskix_hidden_dim``; the decoder
+        is a single linear layer applied to the latent vector concatenated with the
+        predicted mask.
+
+        (LLM-generated docstring, pending human review.)
+        """
         self._encoder = nn.Sequential(
             nn.Dropout(p=self.config.drop_p),
             nn.Linear(self.input_dim, self._config.maskix_hidden_dim),  # ty: ignore
@@ -179,6 +217,18 @@ class MaskixArchitectureVanilla(BaseAutoencoder):
         return self._decoder(x)
 
     def forward(self, x: torch.Tensor) -> ModelOutput:
+        """Encode the (masked) input, predict the mask and reconstruct the input.
+
+        Args:
+            x: Input batch (typically corrupted by the trainer's masking function).
+
+        Returns:
+            ModelOutput with ``reconstruction``, ``latentspace`` and
+            ``additional_info["predicted_mask"]`` (mask logits). Latent mean and
+            log-variance are None, since Maskix is not variational.
+
+        (LLM-generated docstring, pending human review.)
+        """
         latent: torch.Tensor = self.encode(x=x)
         predicted_mask: torch.Tensor = self._mask_predictor(latent)
         return ModelOutput(

@@ -11,6 +11,7 @@ from autoencodix.utils._utils import flip_labels
 
 class XModalLoss(BaseLoss):
     """Implements Loss for XModalix.
+
     The loss of the XModalix consists of 4 parts:
     - Combined (mean) Reconstruction loss over all sub modalities.
     - Combined Distribution loss over all sub modalities (KL or MMD)
@@ -25,13 +26,25 @@ class XModalLoss(BaseLoss):
     The reconstruction and distribution loss are calculated, combined, and weighted
     (with hyperparam beta) for each sub-modality first. In this class we grab this
     loss from the modality_dynamics and combine them for all sub-modalities with the mean.
+
     Attributes:
-        class_means_train:
-        class_means_valid:
-        sample_to_class_map:
+        class_means_train: Running mean latent vector per class (train split).
+        class_means_valid: Running mean latent vector per class (valid split).
+        sample_to_class_map: Class label per sample ID.
+        class_mean_momentum: Momentum of the exponential moving average used to
+            update the class means.
     """
 
     def __init__(self, config: DefaultConfig, annealing_scheduler=None):
+        """Initialize empty class means and the class-mean momentum.
+
+        Args:
+            config: Pipeline configuration (loss weights ``gamma``,
+                ``delta_pair``, ``delta_class``, ``class_param``).
+            annealing_scheduler: Accepted for interface compatibility; not used.
+
+        (LLM-generated docstring, pending human review.)
+        """
         super().__init__(config)
         self.class_means_train: Dict[str, torch.Tensor] = {}
         self.class_means_valid: Dict[str, torch.Tensor] = {}
@@ -50,6 +63,7 @@ class XModalLoss(BaseLoss):
         **kwargs,
     ):
         """Forward pass of XModal loss.
+
         Args:
             batch: data from custom dataset
             modality_dynamics: trainingdynamics such as losses, reconstructions for each data modality.
@@ -57,7 +71,13 @@ class XModalLoss(BaseLoss):
             labels: indicator to which datamodality which latentspace belongs (for adver. loss).
             clf_loss_fn: loss for clf, passed in xmodal_trainer.py, defaults Crossentropy.
             is_training: indicator if we're in training, false for valid and test loop. Used for class loss calc.
+            epoch: Current epoch; not used by this loss.
             **kwargs: addtional keyword arguments.
+
+        Returns:
+            Tuple of the total loss and a dict with the weighted "adver_loss",
+            "aggregated_sub_losses", "paired_loss" and "class_loss", plus the
+            per-modality sub-losses as floats ("<modality>.<loss>").
         """
         adver_loss = self._calc_adversial_loss(
             labels=labels, clf_loss_fn=clf_loss_fn, clf_scores=clf_scores
@@ -95,8 +115,7 @@ class XModalLoss(BaseLoss):
         modality_dynamics: Dict[str, Dict[str, Any]],
         is_training: bool,
     ) -> torch.Tensor:
-        """
-        Optimized, vectorized version of the original _calc_class_loss.
+        """Compute the class loss: distance of latents to their running class mean.
 
         Notes:
         - Handles arbitrary (hashable) class labels (e.g., strings or ints).
@@ -104,6 +123,15 @@ class XModalLoss(BaseLoss):
         - Initializes new class means from the batch means (detached).
         - Updates existing class means using in-place EMA under torch.no_grad().
         - Preserves original return semantics (avg across modalities that have metadata).
+
+        Args:
+            batch: Batch data per modality, including sample IDs and metadata.
+            modality_dynamics: Model outputs (latent spaces) per modality.
+            is_training: If True, update the train class means; otherwise the
+                valid class means.
+
+        Returns:
+            Scalar class loss (0 if ``config.class_param`` is not set).
         """
 
         if not self.config.class_param:
@@ -273,7 +301,14 @@ class XModalLoss(BaseLoss):
     def _combine_sub_losses(
         self, modality_dynamics: Dict[str, Dict[str, Any]]
     ) -> torch.Tensor:
-        """Combines the sub losses total loss for all modalities."""
+        """Combine the per-modality losses into one value (mean or sum, per config).
+
+        Args:
+            modality_dynamics: Per-modality dicts containing a "loss" tensor.
+
+        Returns:
+            The combined loss tensor.
+        """
         losses = [helper["loss"] for helper in modality_dynamics.values()]
         if self.config.loss_reduction == "mean":
             return torch.stack(losses).mean()
@@ -282,6 +317,17 @@ class XModalLoss(BaseLoss):
     def _store_sub_losses(
         self, modality_dynamics: Dict[str, Dict[str, Any]]
     ) -> Dict[str, float]:
+        """Flatten all per-modality losses into a dict of floats for logging.
+
+        Args:
+            modality_dynamics: Per-modality dicts with a "loss" tensor and nested
+                dicts of sub-loss tensors.
+
+        Returns:
+            Losses keyed as "<modality>.<loss name>".
+
+        (LLM-generated docstring, pending human review.)
+        """
         sub_losses = {}
         for k, v in modality_dynamics.items():
             for k2, v2 in v.items():
@@ -299,6 +345,21 @@ class XModalLoss(BaseLoss):
         clf_scores: torch.Tensor,
         clf_loss_fn: torch.nn.Module,
     ):
+        """Compute the adversarial loss that makes latent spaces indistinguishable.
+
+        The latent classifier's predictions are scored against flipped modality
+        labels, so minimizing this loss pushes the encoders to fool the classifier.
+
+        Args:
+            labels: Modality label of each latent vector.
+            clf_scores: Latent classifier outputs.
+            clf_loss_fn: Classification loss (e.g. cross-entropy).
+
+        Returns:
+            Scalar adversarial loss.
+
+        (LLM-generated docstring, pending human review.)
+        """
         flipped_labels = flip_labels(labels=labels)
         adversarial_loss = clf_loss_fn(clf_scores, flipped_labels)
         return adversarial_loss

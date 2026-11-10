@@ -20,12 +20,15 @@ warnings.filterwarnings("ignore")
 
 
 class FeatureImportanceExplainer:
-    """
-    More complete version with:
-      - method selection (DeepLiftShap, IG, etc.)
-      - baseline construction (mean / random / grouped)
-      - subset sampling
-      - reproducible randomness
+    """Attribute latent dimensions to input features with Captum.
+
+    Computes, for each selected latent dimension, the mean absolute attribution
+    of every input feature (e.g. gene) using DeepLIFT-SHAP or Integrated
+    Gradients. Inputs and baselines can be all samples, random samples or a
+    specific annotation group, which allows contrasting groups (e.g. "Male"
+    inputs against a "Female" baseline). Used by ``BasePipeline.explain``.
+
+    (LLM-generated docstring, pending human review.)
     """
 
     def __init__(
@@ -46,6 +49,34 @@ class FeatureImportanceExplainer:
         baseline_group: str = None,  # column in .obs for grouping inputs must be provided if input_type is "grouped", optional for "mean", ignored for "random"
         anno_col: Optional[str] = None,  # column in .obs for grouping
     ):
+        """Configure the attribution method, inputs and baselines.
+
+        Seeds torch and NumPy with ``seed_int`` for reproducible sampling.
+
+        Args:
+            adata (AnnData): Data to explain (features in ``var_names``,
+                annotation in ``obs``).
+            model (BaseAutoencoder): Trained autoencoder.
+            method: "DeepLiftShap" or "IntegratedGradients".
+            sel_latent_dim: Latent dimension index or list of indices to explain;
+                all dimensions if None.
+            n_subset: Number of input and baseline samples drawn for efficiency;
+                all samples if None.
+            seed_int: Random seed.
+            input_type: "random" (all samples) or "grouped" (only samples with
+                ``obs[anno_col] == input_group``).
+            input_group: Group used as input when ``input_type="grouped"``.
+            baseline_type: "random" (one random sample), "mean" (mean profile)
+                or "grouped" (one random sample of ``baseline_group``).
+            baseline_group: Group used for the baseline; for "mean", None or "all"
+                means all samples.
+            anno_col: Column in ``adata.obs`` used for grouping.
+
+        Raises:
+            ValueError: If ``method`` is not supported.
+
+        (LLM-generated docstring, pending human review.)
+        """
         super(FeatureImportanceExplainer, self).__init__()
         self.adata_ACX = adata
         self.model = model
@@ -67,6 +98,18 @@ class FeatureImportanceExplainer:
         np.random.seed(seed_int)
 
     def explain(self):
+        """Compute feature attributions for the selected latent dimensions.
+
+        Returns:
+            pd.DataFrame: Mean absolute attribution per feature (rows) and latent
+            dimension (columns). Columns are ontology terms for ``Ontix`` models,
+            otherwise "Latent_Dim_<i>".
+
+        Raises:
+            ValueError: If ``sel_latent_dim`` has an invalid type.
+
+        (LLM-generated docstring, pending human review.)
+        """
         adata_ACX = self.adata_ACX
         gene_names = adata_ACX.var_names
         inputs, baselines = return_inputs_baseline(
@@ -144,6 +187,27 @@ class FeatureImportanceExplainer:
 def return_inputs_baseline(
     adata, baseline_group, baseline_type, anno_col, input_type, input_group
 ):
+    """Build the input and baseline tensors for feature attribution.
+
+    Args:
+        adata (AnnData): Data with annotation in ``obs``.
+        baseline_group (str | None): Group used for "grouped" baselines, or
+            to restrict the "mean" baseline (None or "all" means all samples).
+        baseline_type (str): "random", "mean" or "grouped".
+        anno_col (str | None): Column in ``adata.obs`` used for grouping.
+        input_type (str): "random" (all samples) or "grouped".
+        input_group (str | None): Group used as input for "grouped".
+
+    Returns:
+        tuple[torch.Tensor, torch.Tensor]: Inputs and baselines (samples x
+        features); baselines repeat one reference profile per row.
+
+    Raises:
+        ValueError: If a grouping is requested without ``anno_col`` or group,
+            or ``baseline_type`` is unknown.
+
+    (LLM-generated docstring, pending human review.)
+    """
     baseline_torch_all = torch.tensor(
         adata.X.toarray() if scipy.sparse.issparse(adata.X) else adata.X
     )
@@ -192,7 +256,7 @@ def return_inputs_baseline(
             np.tile(baseline_grouped, (base_adata_filtered.shape[0], 1))
         )
     elif baseline_type == "mean":
-        if baseline_group == None:
+        if baseline_group is None or baseline_group == "all":
             baseline_mean = baseline_torch_all.mean(axis=0)  # gene_means
         else:
             if anno_col is None:

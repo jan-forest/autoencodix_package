@@ -31,8 +31,10 @@ class StackixPreprocessor(BasePreprocessor):
         self, config: DefaultConfig, ontologies: Optional[Union[Tuple, Dict]] = None
     ) -> None:
         """Initialize the StackixPreprocessor with the given configuration.
+
         Args:
-            config: Configuration parameters for preprocessing
+            config: Configuration parameters for preprocessing.
+            ontologies: Accepted for interface compatibility; not used by Stackix.
         """
         super().__init__(config=config)
         self._datapackage: Optional[Dict[str, Any]] = None
@@ -43,14 +45,17 @@ class StackixPreprocessor(BasePreprocessor):
     ) -> DatasetContainer:
         """Execute preprocessing steps for Stackix architecture.
 
-        Args
-        raw_user_data: Raw user data to preprocess, or None to use self._datapackage
+        Args:
+            raw_user_data: Raw user data to preprocess, or None to read the data
+                defined in the config.
+            predict_new_data: If True, treat all data as test data and reuse the
+                fitted preprocessing (used by ``predict``).
 
         Returns:
-            Container with MultiModalDataset for each split
+            Container with MultiModalDataset for each split.
 
         Raises:
-            TypeError: If datapackage is None after preprocessing
+            TypeError: If datapackage is None after preprocessing.
         """
         self._datapackage = self._general_preprocess(
             raw_user_data, predict_new_data=predict_new_data
@@ -76,6 +81,10 @@ class StackixPreprocessor(BasePreprocessor):
         return self._dataset_container
 
     def _extract_primary_data(self, modality_data: Any) -> np.ndarray:
+        """Return the main matrix (``X``) of an AnnData as a dense array.
+
+        (LLM-generated docstring, pending human review.)
+        """
         primary_data = modality_data.X
         if issparse(primary_data):
             primary_data = primary_data.toarray()
@@ -238,6 +247,20 @@ class StackixPreprocessor(BasePreprocessor):
     def _format_multi_bulk(
         self, reconstructions: Dict[str, torch.Tensor]
     ) -> DataPackage:
+        """Convert per-modality reconstructions of the test split into DataFrames.
+
+        Args:
+            reconstructions: Reconstructed tensors keyed by modality.
+
+        Returns:
+            DataPackage with ``multi_bulk`` DataFrames and per-modality annotation.
+
+        Raises:
+            TypeError: If a reconstruction is not a tensor.
+            ValueError: If no test dataset is available.
+
+        (LLM-generated docstring, pending human review.)
+        """
         multi_bulk_dict = {}
         annotation_dict = {}
         dp = DataPackage()
@@ -271,10 +294,13 @@ class StackixPreprocessor(BasePreprocessor):
         back into the original layers.
 
         Args:
-        reconstruction: Dictionary of reconstructed tensors for each modality
+            reconstructions: Dictionary of reconstructed tensors for each modality.
 
         Returns:
-            DataPackage containing the reconstructed MuData object
+            DataPackage containing the reconstructed MuData object.
+
+        Raises:
+            ValueError: If no test dataset or layer indices are available.
         """
         import mudata as md
 

@@ -61,13 +61,14 @@ class GeneralTrainer(BaseTrainer):
         """Initializes the GeneralTrainer.
 
         Args:
-                trainset: The dataset used for training.
-                validset: The dataset used for validation, if provided.
-                result: An object to store and manage training results.
-                config: Configuration object containing training hyperparameters and settings.
-                model_type: The autoencoder model class to be trained.
-                loss_type: The loss function class to be used for training.
-                ontologies: Ontology information, if provided for Ontix
+            trainset: The dataset used for training.
+            validset: The dataset used for validation, if provided.
+            result: An object to store and manage training results.
+            config: Configuration object containing training hyperparameters and settings.
+            model_type: The autoencoder model class to be trained.
+            loss_type: The loss function class specific to the model.
+            ontologies: Ontology information, if provided for Ontix.
+            **kwargs: Additional keyword arguments passed to ``BaseTrainer``.
         """
         self._n_cpus = os.cpu_count()
         if self._n_cpus is None:
@@ -94,6 +95,17 @@ class GeneralTrainer(BaseTrainer):
         self._init_buffers()
 
     def _init_buffers(self, input_data: Optional[BaseDataset] = None) -> None:
+        """Pre-allocate buffers for latent spaces, reconstructions, means and log-variances.
+
+        Buffers are created per split; with ``save_memory`` only the test split is
+        buffered, and with ``save_vram`` buffers live on the CPU instead of the GPU.
+
+        Args:
+            input_data: Dataset used to determine the number of features; the
+                previously set ``n_features`` is kept if None.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if input_data:
             self.n_features = input_data.get_input_dim()
 
@@ -141,6 +153,10 @@ class GeneralTrainer(BaseTrainer):
         self._sigma_buffer = make_split_buffers(self.latent_dim)
 
     def _ontix_hook(self):
+        """Hook called after each optimizer step; no-op here, overridden by ``OntixTrainer``.
+
+        (LLM-generated docstring, pending human review.)
+        """
         pass
 
     def train(self, epochs_overwrite=None) -> Result:

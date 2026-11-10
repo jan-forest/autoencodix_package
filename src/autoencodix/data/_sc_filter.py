@@ -42,12 +42,16 @@ class SingleCellFilter:
         self.config = config
 
     def _get_data_info_for_modality(self, mod_key: str) -> DataInfo:
-        """
-        Get the data_info configuration for a specific modality.
+        """Get the data_info configuration for a specific modality.
+
         Args:
-            mod_key: The modality key (e.g., "RNA", "METH")
-        Returns
-            The data_info configuration for the modality
+            mod_key: The modality key (e.g., "RNA", "METH").
+
+        Returns:
+            The data_info configuration for the modality.
+
+        Raises:
+            ValueError: If no data info exists for the modality.
         """
         if self._is_data_info_dict:
             info = self.data_info.get(mod_key)  # type: ignore
@@ -57,13 +61,17 @@ class SingleCellFilter:
         return self.data_info  # type: ignore
 
     def _get_layers_for_modality(self, mod_key: str, mod_data) -> List[str]:
-        """
-        Get the layers to process for a specific modality.
-        Args
-            mod_key: The modality key (e.g., "RNA", "METH")
-            mod_data: The AnnData object for the modality
-        Returns
-            List of layer names to process. If None or empty, returns ['X'] for default layer.
+        """Get the layers to process for a specific modality.
+
+        Layers that do not exist in the data are skipped with a warning.
+
+        Args:
+            mod_key: The modality key (e.g., "RNA", "METH").
+            mod_data (AnnData): The AnnData object for the modality.
+
+        Returns:
+            List of layer names to process; ["X"] if none of the selected layers
+            is available.
         """
         data_info = self._get_data_info_for_modality(mod_key)
         selected_layers = data_info.selected_layers
@@ -90,10 +98,16 @@ class SingleCellFilter:
         self,
         mudata: MuData,  # type: ignore[invalid-type-form]
     ) -> MuData:  # type: ignore[invalid-type-form]
-        """
-        Preprocess the data using modality-specific configurations.
+        """Filter cells and log-transform layers per modality before splitting.
+
+        Applies ``min_genes`` cell filtering and, if ``log_transform`` is set, log1p
+        to all selected layers of each modality.
+
+        Args:
+            mudata: Single-cell data with one AnnData per modality.
+
         Returns:
-            Preprocessed data
+            The preprocessed MuData (modified in place).
         """
         print(f"mudata: {mudata}")
         for mod_key, mod_data in mudata.mod.items():
@@ -264,12 +278,37 @@ class SingleCellFilter:
     def _apply_general_filtering(
         self, df: pd.DataFrame, data_info: DataInfo, gene_list: Optional[List]
     ) -> Tuple[Union[pd.Series, pd.DataFrame], List]:
+        """Apply the configured feature filtering to one layer.
+
+        Args:
+            df: Data of one layer (cells x genes).
+            data_info: Settings of the modality.
+            gene_list: Genes selected on the train split; if given, these are kept
+                instead of computing a new selection.
+
+        Returns:
+            Tuple of the filtered data and the list of kept genes.
+
+        (LLM-generated docstring, pending human review.)
+        """
         data_processor = DataFilter(data_info=data_info, config=self.config)
         return data_processor.filter(df=df, genes_to_keep=gene_list)
 
     def _apply_scaling(
         self, df: pd.DataFrame, data_info: DataInfo, scaler: Any
     ) -> Tuple[Union[pd.Series, pd.DataFrame], Any]:
+        """Scale one layer, fitting a new scaler if none is given.
+
+        Args:
+            df: Data of one layer (cells x genes).
+            data_info: Settings of the modality (scaling method).
+            scaler: Scaler fitted on the train split, or None to fit one on ``df``.
+
+        Returns:
+            Tuple of the scaled data and the scaler used.
+
+        (LLM-generated docstring, pending human review.)
+        """
         data_processor = DataFilter(data_info=data_info, config=self.config)
         if scaler is None:
             scaler = data_processor.fit_scaler(df=df)

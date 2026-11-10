@@ -31,8 +31,8 @@ class DataSplitter:
         _config: Configuration object containing split ratios
 
         _custom_splits: Optional pre-defined split indices
-        _test_ratio
-        _valid_ratio
+        _test_ratio: Fraction of samples in the test split.
+        _valid_ratio: Fraction of samples in the validation split.
 
     """
 
@@ -134,7 +134,8 @@ class DataSplitter:
         required_keys = {"train", "valid", "test"}
         if not all(key in splits for key in required_keys):
             raise ValueError(
-                f"Custom splits must contain all of: {required_keys} \ Got: {splits.keys()} \ if you want to pass empty splits, pass an empty array"
+                f"Custom splits must contain all of: {required_keys}. Got: {set(splits.keys())}. "
+                "If you want to pass empty splits, pass an empty array."
             )
 
         # check for index out of bounds
@@ -298,13 +299,15 @@ class PairedUnpairedSplitter:
         """Initializes the splitter and computes modality membership groups.
 
         Args:
-            data_package: The full data package to split. Must implement
-                `_get_sample_ids` and iterable access yielding (key, object) pairs.
-            config: Split configuration object defining ratios and random seed.
-        custom_splits: Optional dictionary with train, valid, and test sample IDs.
+            data_package (DataPackage): The full data package to split. Must
+                implement ``_get_sample_ids`` and iterable access yielding
+                (key, object) pairs.
+            config (DefaultConfig): Split configuration object defining ratios and
+                random seed.
+            custom_splits: Optional dictionary with train, valid, and test sample IDs.
 
         Raises:
-            TypeError: If `data_package` is not a valid DataPackage instance.
+            TypeError: If ``data_package`` is not a valid DataPackage instance.
         """
         if not hasattr(data_package, "_get_sample_ids"):
             raise TypeError("data_package must be an instance of DataPackage.")

@@ -70,7 +70,8 @@ class StackixTrainer(GeneralTrainer):
             orchestrator_type: Type to use for orchestrating modality training (default is StackixOrchestrator)
             trainer_type: Type to use for training each modality model (default is GeneralTrainer)
             workdir: Directory to save intermediate models and results (default is "./stackix_work")
-            onotologies: Ontology information, if provided for Ontix compatibility
+            ontologies: Ontology information, if provided for Ontix compatibility
+            **kwargs: Additional keyword arguments passed to ``BaseTrainer``.
         """
         self._workdir = workdir
         self._result = result

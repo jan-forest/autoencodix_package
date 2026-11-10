@@ -14,6 +14,15 @@ class Classifier(nn.Module):
     """
 
     def __init__(self, input_dim: int, n_modalities: int, n_hidden: int = 64) -> None:
+        """Build a three-layer MLP classifier with dropout.
+
+        Args:
+            input_dim: Dimension of the input features (latent dimension).
+            n_modalities: Number of modalities (output classes).
+            n_hidden: Units in the first hidden layer; the second has half as many.
+
+        (LLM-generated docstring, pending human review.)
+        """
         super().__init__()
         self.input_dim = input_dim
         self.n_modalities = n_modalities
@@ -39,6 +48,10 @@ class Classifier(nn.Module):
         return self.classifier(x)
 
     def _init_weights(self, m: nn.Module) -> None:
+        """Apply Xavier-uniform weights and a small constant bias to linear layers.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if isinstance(m, nn.Linear):
             nn.init.xavier_uniform_(m.weight)
             if m.bias is not None:

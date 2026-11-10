@@ -23,14 +23,27 @@ class XModalixConfig(DefaultConfig):
         ge=0,
         description="Beta weighting factor for VAE loss",
     )
-    requires_paired: bool = Field(default=False)
+    requires_paired: bool = Field(
+        default=False,
+        description="Whether samples must be present in all modalities; XModalix supports unpaired data, so this defaults to False",
+    )
     save_memory: bool = Field(
         default=False,
-        description="Always False — not supported for Stackix.",
+        description="Always False — not supported for XModalix.",
     )
 
     @model_validator(mode="before")
     def _force_save_memory_false(cls, values):
+        """Disable ``save_memory`` (unsupported for XModalix) with a warning.
+
+        Args:
+            values (dict): Raw config values before validation.
+
+        Returns:
+            dict: The values with ``save_memory`` set to False.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if values.get("save_memory") is True:
             warnings.warn(
                 "`save_memory=True` is not supported for XModalixConfig — forcing to False., Set the checkpoint_interval to number of epochs if you want to save memory",

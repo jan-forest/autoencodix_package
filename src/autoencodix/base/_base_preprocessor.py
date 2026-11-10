@@ -172,7 +172,7 @@ class BasePreprocessor(abc.ABC):
         including splitting the data package, removing NaNs, and applying
         modality-specific processors.
 
-        Args::
+        Args:
             data_package: The DataPackage object to be processed.
             modality_processors: A dictionary mapping modality keys (e.g., 'multi_sc', 'from_modality')
                 to callable processor functions that will be applied to the corresponding modality data.
@@ -351,6 +351,21 @@ class BasePreprocessor(abc.ABC):
     def _calc_k_filter(
         self, i: int, remainder: int, base_features: int
     ) -> Optional[int]:
+        """Compute the number of features to keep for the i-th modality.
+
+        The global ``config.k_filter`` is split evenly across modalities; the first
+        ``remainder`` modalities get one extra feature.
+
+        Args:
+            i: Index of the modality.
+            remainder: Number of features left over after even division.
+            base_features: Features per modality after even division.
+
+        Returns:
+            Feature count for this modality, or None if ``k_filter`` is not set.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if self.config.k_filter is None:
             return None
         extra = 1 if i < remainder else 0
@@ -1002,6 +1017,20 @@ class BasePreprocessor(abc.ABC):
         return from_key, to_key
 
     def _get_user_translation_keys(self, raw_user_data: DataPackage):
+        """Return the source and target modality keys for cross-modal translation.
+
+        Args:
+            raw_user_data: DataPackage with ``from_modality`` and ``to_modality``.
+
+        Returns:
+            Tuple ``(from_key, to_key)``, or ``(None, None)`` if either side is
+            empty or the keys cannot be determined.
+
+        Raises:
+            TypeError: If ``from_modality`` or ``to_modality`` is None.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if len(raw_user_data.from_modality) == 0:  # type: ignore
             return None, None
         elif len(raw_user_data.to_modality) == 0:  # type: ignore
@@ -1025,9 +1054,32 @@ class BasePreprocessor(abc.ABC):
     def format_reconstruction(
         self, reconstruction: Dict[str, torch.Tensor], result: Optional[Result] = None
     ) -> DataPackage:
+        """Convert reconstructed tensors back into the user's input data format.
+
+        Args:
+            reconstruction: Reconstructed tensors, keyed by modality.
+            result: Result object providing sample and feature IDs, if needed.
+
+        Returns:
+            A DataPackage with reconstructions in the original data structure
+            (e.g. DataFrames or AnnData).
+
+        (LLM-generated docstring, pending human review.)
+        """
         pass
 
     def filter_imgdata_list(self, img_list, ids):
+        """Keep only the images whose sample ID is in ``ids``.
+
+        Args:
+            img_list (list[ImgData]): Images to filter.
+            ids (Collection): Sample IDs to keep.
+
+        Returns:
+            list[ImgData]: The filtered images, in their original order.
+
+        (LLM-generated docstring, pending human review.)
+        """
         filtered = []
         for imgdata in img_list:
             if imgdata.sample_id in ids:

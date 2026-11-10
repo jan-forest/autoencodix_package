@@ -11,6 +11,11 @@ from autoencodix.data._imgdataclass import ImgData
 
 
 class DataSetTypes(str, Enum):
+    """Kind of data a dataset holds: numeric/tabular ("NUM") or images ("IMG").
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     NUM = "NUM"
     IMG = "IMG"
 
@@ -35,12 +40,13 @@ class BaseDataset(abc.ABC, Dataset):
     ):
         """Initializes the dataset.
 
+        Subclasses must set ``self.mytype`` to a ``DataSetTypes`` value.
+
         Args:
             data: The data to be used by the dataset.
             config: Optional configuration parameters.
             sample_ids: Optional identifiers for each sample.
             feature_ids: Optional identifiers for each feature.
-            mytype: Enum indicating the dataset type (should be set in subclasses).
         """
         self.data = data
         self.raw_data = data  # for child class ImageDataset
@@ -49,7 +55,7 @@ class BaseDataset(abc.ABC, Dataset):
         self.feature_ids = feature_ids
         self.mytype: Enum  # Should be set in subclasses to indicate the dataset type (e.g., DataSetTypes.NUM or DataSetTypes.IMG)
 
-        self.metadata: Optional[Union[pd.Series, pd.DataFrame]] = (None,)
+        self.metadata: Optional[Union[pd.Series, pd.DataFrame]] = None
         self.datasets: Dict[str, BaseDataset] = {}  # for xmodalix child
 
     def __len__(self) -> int:

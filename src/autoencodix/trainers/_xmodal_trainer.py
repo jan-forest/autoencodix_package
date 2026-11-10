@@ -87,9 +87,10 @@ class XModalTrainer(BaseTrainer):
             config: Configuration parameters for training and model architecture
             model_type: Type of autoencoder model to use for each modality (not used directly)
             loss_type: Type of loss function to use for training the stacked model
-            sub_loss_type: Type of loss function to use for individual modality autoencoders
             model_map: Mapping from DataSetTypes to specific autoencoder architectures
+            sub_loss_type: Type of loss function to use for individual modality autoencoders
             ontologies: Ontology information, for compatibility with Ontix
+            **kwargs: Additional keyword arguments passed to ``BaseTrainer``.
         """
         self._trainset = trainset
         self._n_train_modalities = self._trainset.n_modalities  # type: ignore
@@ -125,7 +126,12 @@ class XModalTrainer(BaseTrainer):
         pass
 
     def _setup_fabric(self, old_model=None):
-        """Sets up the models, optimizers, and data loaders with Lightning Fabric."""
+        """Sets up the models, optimizers, and data loaders with Lightning Fabric.
+
+        Args:
+            old_model: Previously trained models to reuse; new models are built
+                if None.
+        """
 
         self._fabric.launch()
         self._init_adversarial_training()
@@ -572,6 +578,9 @@ class XModalTrainer(BaseTrainer):
 
         Args:
             data: A MultiModalDataset containing the input data for the 'from' modality.
+            model: Trained models per modality (e.g. after loading a saved
+                pipeline); the trainer's own models are used if None.
+            **kwargs: Ignored; accepted for interface compatibility.
 
         Returns:
             The Result object populated with prediction results.

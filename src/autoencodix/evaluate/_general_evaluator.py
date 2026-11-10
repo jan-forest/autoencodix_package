@@ -23,6 +23,17 @@ sklearn.set_config(enable_metadata_routing=True)
 
 
 class GeneralEvaluator(BaseEvaluator):
+    """Evaluate embeddings by training scikit-learn models on annotation tasks.
+
+    Used by ``BasePipeline.evaluate`` for tabular and single-cell pipelines. For
+    each annotation parameter, a classifier (categorical) or regressor (numeric)
+    is trained on the latent space and optional reference embeddings (PCA,
+    UMAP, t-SNE, random features). Scores are appended to
+    ``result.embedding_evaluation``.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     def __init__(self):
         # super().__init__()
         pass
@@ -265,6 +276,7 @@ class GeneralEvaluator(BaseEvaluator):
                             metric=metric,
                             ml_type=ml_type,
                             top_k_classes=top_k_classes,
+                            exclude_classes=exclude_classes,
                         )
                     elif split_type.startswith("CV-"):
                         cv_folds = int(split_type.split("-")[1])
@@ -435,6 +447,21 @@ class GeneralEvaluator(BaseEvaluator):
         task: str,
         sub: str,
     ) -> pd.DataFrame:
+        """Add model, task type and task name columns to a results table.
+
+        Args:
+            results: Scores of one evaluation run.
+            sklearn_ml: The estimator used (its class name is stored).
+            ml_type: "classification" or "regression".
+            task: Name of the feature set evaluated (e.g. "Latent", "PCA").
+            sub: Annotation parameter that was predicted.
+
+        Returns:
+            The results with the columns "ML_ALG", "ML_TYPE", "ML_TASK" and
+            "ML_SUBTASK".
+
+        (LLM-generated docstring, pending human review.)
+        """
         res_ml_alg = [str(sklearn_ml).split("(")[0] for x in range(0, results.shape[0])]
         res_ml_type = [ml_type for x in range(0, results.shape[0])]
         res_ml_task = [task for x in range(0, results.shape[0])]
@@ -461,6 +488,7 @@ class GeneralEvaluator(BaseEvaluator):
         metric: str,
         ml_type: str,
         top_k_classes: Union[int, None] = 20,
+        exclude_classes: Union[list, None] = None,
     ):
         """Trains the provided sklearn model on the training split and evaluates it on train, valid, and test splits using the specified metric.
 
@@ -473,6 +501,7 @@ class GeneralEvaluator(BaseEvaluator):
             metric: Scoring metric compatible with sklearn's get_scorer.
             ml_type: Type of machine learning task ("classification" or "regression").
             top_k_classes: If provided, restrict classification tasks to the top k classes, combining others into "other" (default: 20).
+            exclude_classes: Classes to drop from all splits before training and scoring (default: None).
 
         Returns:
             DataFrame containing evaluation scores for each split (train, valid, test) and the specified metric.
@@ -488,8 +517,12 @@ class GeneralEvaluator(BaseEvaluator):
         score_df["metric"] = list()
         score_df["value"] = list()
 
+        if exclude_classes is not None:
+            keep = ~clin_data.loc[df.index, task_param].isin(exclude_classes)
+            df = df.loc[keep.to_numpy()]
+
         X_train = df.loc[
-            sample_split.loc[sample_split.SPLIT == "train", "SAMPLE_ID"], :
+            df.index.isin(sample_split.loc[sample_split.SPLIT == "train", "SAMPLE_ID"])
         ]
         train_samples = [s for s in X_train.index]
         Y_train = clin_data.loc[train_samples, task_param]
@@ -510,7 +543,9 @@ class GeneralEvaluator(BaseEvaluator):
             # eval on all splits
             for split in split_list:
                 X = df.loc[
-                    sample_split.loc[sample_split.SPLIT == split, "SAMPLE_ID"], :
+                    df.index.isin(
+                        sample_split.loc[sample_split.SPLIT == split, "SAMPLE_ID"]
+                    )
                 ]
                 if X.shape[0] == 0:
                     # No samples in this split, skip

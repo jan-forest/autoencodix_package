@@ -4,6 +4,15 @@ from autoencodix.utils._result import Result
 
 
 class BaseEvaluator(abc.ABC):
+    """Interface for evaluating learned embeddings on downstream ML tasks.
+
+    Subclasses implement ``evaluate``, which trains machine-learning models on
+    latent spaces (and reference embeddings) and stores the scores in the
+    ``Result``. Used by ``BasePipeline.evaluate``.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     @abc.abstractmethod
     def evaluate(self, *args):
         """

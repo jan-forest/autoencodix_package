@@ -16,10 +16,7 @@ class SupervisixTrainer(GeneralTrainer):
 
     Handles retaining and passing on the mean loss per class in the data set for the previous epoch.
     Uses most of the functionality from the GeneralTrainer class and supervisix-specific functionality
-    is added via a hook.
-
-    Attributes:
-        Inherits all attributes from GeneralTrainer.
+    is added via a hook. Inherits all attributes from GeneralTrainer.
     """
 
     def __init__(
@@ -32,9 +29,7 @@ class SupervisixTrainer(GeneralTrainer):
         loss_type: Type[BaseLoss],
         **kwargs,
     ):
-        """
-        Initializes the SupervisixTrainer with the given datasets, model, and configuration.
-
+        """Initializes the SupervisixTrainer with the given datasets, model, and configuration.
 
         Args:
             trainset: The dataset used for training.
@@ -43,6 +38,7 @@ class SupervisixTrainer(GeneralTrainer):
             config: Configuration object containing training hyperparameters and settings.
             model_type: The autoencoder model class to be trained.
             loss_type: The loss function class specific to the model.
+            **kwargs: Additional keyword arguments passed to ``BaseTrainer``.
         """
         super().__init__(
             trainset=trainset,
@@ -63,16 +59,13 @@ class SupervisixTrainer(GeneralTrainer):
         dataset_type: str,
         batch_class_means: Dict[str, torch.Tensor],
     ):
-        """
-        Capture latent representations for each class in the dataset per batch in the current epoch.
+        """Capture latent representations for each class in the dataset per batch in the current epoch.
 
         Args:
-            model_outputs: The output from the model's forward pass.
+            model_output: The output from the model's forward pass.
             sample_ids: The identifiers for the samples in the current batch.
             dataset_type: A string indicating whether the data is from 'train' or 'valid'.
             batch_class_means: A dictionary to store the mean latent representation for each class in the current batch.
-            batch: The current batch number.
-            dataset_type: A string indicating whether the data is from 'train' or 'valid'.
         """
 
         # Get the column name that contains the class labels

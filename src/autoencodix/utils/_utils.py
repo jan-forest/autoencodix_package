@@ -6,6 +6,7 @@ Use of OOP would be overkill for the simple functions in this module.
 from pathlib import Path
 
 # import zipfile
+import copy
 import inspect
 import os
 from collections import defaultdict
@@ -274,7 +275,11 @@ class Saver:
         """Initializes the Saver with the base file path.
 
         Args:
-            file_path: The base file path (without extensions).
+            file_path: Path of the pickled pipeline file; preprocessor and model
+                weights are saved next to it as ``<stem>_preprocessor.pkl`` and
+                ``<stem>_model.pth``.
+            save_all: If False, strip data and most results before saving (see
+                ``BasePipeline.save``).
         """
 
         self.save_all = save_all
@@ -301,6 +306,19 @@ class Saver:
 
         self._save_preprocessor(pipeline._preprocessor)  # type: ignore
         self._save_model_state(pipeline)
+
+        # Strip shallow copies, so saving never changes the caller's pipeline
+        # (trained model, results and data stay usable after .save()).
+        pipeline = copy.copy(pipeline)
+        pipeline.result = copy.copy(pipeline.result)
+        if pipeline._trainer is not None:
+            pipeline._trainer = copy.copy(pipeline._trainer)
+            if hasattr(pipeline._trainer, "_modality_dynamics"):
+                # XModalTrainer.purge deletes entries of these dicts in place
+                pipeline._trainer._modality_dynamics = {
+                    mod: dict(dyn)
+                    for mod, dyn in pipeline._trainer._modality_dynamics.items()
+                }
         self.pipeline = pipeline
 
         self.pipeline._trainer.purge()
@@ -339,6 +357,13 @@ class Saver:
         #     os.remove(model_state_path)
 
     def _save_pipeline_object(self, pipeline: "BasePipeline"):
+        """Pickle the pipeline object to ``file_path``.
+
+        Args:
+            pipeline: The pipeline to save.
+
+        (LLM-generated docstring, pending human review.)
+        """
         try:
             with open(self.file_path, "wb") as f:
                 pickle.dump(pipeline, f)
@@ -348,6 +373,13 @@ class Saver:
             raise e
 
     def _save_preprocessor(self, preprocessor):
+        """Pickle the fitted preprocessor (scalers, feature selection) separately.
+
+        Args:
+            preprocessor: The pipeline's preprocessor; nothing is saved if None.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if preprocessor is not None:
             try:
                 with open(self.preprocessor_path, "wb") as f:
@@ -359,6 +391,19 @@ class Saver:
 
     @no_type_check
     def _save_model_state(self, pipeline: "BasePipeline"):
+        """Save the model weights (state dict) on the CPU.
+
+        Multi-model pipelines (``Stackix``, ``XModalix``) store one file per model
+        as ``<model name>_<stem>_model.pth``.
+
+        Args:
+            pipeline: The pipeline whose ``result.model`` is saved.
+
+        Raises:
+            TypeError: If ``result.model`` is neither a module nor a dict of modules.
+
+        (LLM-generated docstring, pending human review.)
+        """
         self.model_state_paths: List[str] = []
         if pipeline.result is not None and pipeline.result.model is not None:  # type: ignore
             if isinstance(pipeline.result.model, torch.nn.Module):
@@ -389,6 +434,20 @@ class Saver:
 
     @no_type_check
     def reset_to_defaults(self, obj):
+        """Reset all result fields except core ones to their defaults, in place.
+
+        Keeps ``adata_latent``, ``losses`` and ``sub_losses``. The model is replaced
+        by a freshly initialized instance of the same class (weights are saved
+        separately), so it can be rebuilt on load.
+
+        Args:
+            obj (Result): The result dataclass to reset.
+
+        Raises:
+            ValueError: If ``obj`` is not a dataclass.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if not is_dataclass(obj):
             raise ValueError("Object must be a dataclass")
 
@@ -409,11 +468,11 @@ class Saver:
                             model = model.module
                         empty_models[model_name] = type(model)(**model.init_args)
                 elif isinstance(obj.model, torch.nn.Module):
-                    obj.model.init_args["ontologies"] = self.pipeline.ontologies
-                    obj.model.init_args["feature_order"] = (
-                        self.pipeline._trainer.feature_order
-                    )
-                    obj.model = type(obj.model)(**obj.model.init_args)
+                    # copy, so the caller's trained model is not modified
+                    init_args = dict(obj.model.init_args)
+                    init_args["ontologies"] = self.pipeline.ontologies
+                    init_args["feature_order"] = self.pipeline._trainer.feature_order
+                    obj.model = type(obj.model)(**init_args)
                 continue
             if f.default_factory is not MISSING:
                 setattr(obj, f.name, f.default_factory())
@@ -477,6 +536,17 @@ class Loader:
         return loaded_obj
 
     def _load_pipeline_object(self) -> Any:
+        """Unpickle the pipeline object from ``file_path``.
+
+        Warning:
+            Unpickling can execute arbitrary code. Only load files from sources
+            you trust.
+
+        Returns:
+            The loaded pipeline, or None if the file is missing or unreadable.
+
+        (LLM-generated docstring, pending human review.)
+        """
         print(f"Attempting to load a pipeline from {self.file_path}...")
         try:
             if not os.path.exists(self.file_path):
@@ -493,6 +563,13 @@ class Loader:
             return None
 
     def _load_preprocessor(self):
+        """Unpickle the preprocessor saved next to the pipeline file.
+
+        Returns:
+            The preprocessor, or None if the file is missing or unreadable.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if os.path.exists(self.preprocessor_path):
             try:
                 with open(self.preprocessor_path, "rb") as f:
@@ -508,6 +585,21 @@ class Loader:
 
     @no_type_check
     def _load_model_state(self, loaded_obj: "BasePipeline"):
+        """Load the saved model weights into the loaded pipeline's model(s) on the CPU.
+
+        Args:
+            loaded_obj: Pipeline restored by ``_load_pipeline_object``.
+
+        Returns:
+            The model, or a dict of models for multi-model pipelines.
+
+        Raises:
+            ValueError: If the pipeline has no result or model.
+            FileNotFoundError: If a weights file is missing.
+            TypeError: If the model is neither a module nor a dict of modules.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if loaded_obj.result is None:  # type: ignore:
             raise ValueError("Loaded pipeline has no result attribute")
         if loaded_obj.result.model is None:

@@ -112,6 +112,19 @@ class Imagix3DConfig(DefaultConfig):
 
     @model_validator(mode="after")
     def validate_spatial_shape_settings(self):
+        """Check that ``target_shape_3d`` matches the chosen ``spatial_shape_policy``.
+
+        ``target_shape_3d`` must be None for the "*_to_multiple" policies and must
+        be set for "crop_or_pad_to_shape".
+
+        Returns:
+            The validated config.
+
+        Raises:
+            ValueError: If ``target_shape_3d`` and the policy are inconsistent.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if self.spatial_shape_policy in {
             "pad_to_multiple",
             "crop_to_multiple",

@@ -9,9 +9,6 @@ from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.data.datapackage import DataPackage
 from collections import defaultdict
 
-
-# internal check done
-# write tests: done
 class DataSplitter:
     """
     Splits data into train, validation, and test sets. And validates the splits.

@@ -2,12 +2,15 @@ import itertools
 import pandas as pd
 from typing import Dict, Optional, Any, Set, List, Sequence, Tuple
 
+# import warnings
+
 import numpy as np
 from sklearn.model_selection import train_test_split  # type: ignore
 
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.data.datapackage import DataPackage
 from collections import defaultdict
+
 
 class DataSplitter:
     """
@@ -413,7 +416,9 @@ class PairedUnpairedSplitter:
             parent_key, child_key = full_key.split(".")
             if parent_key == "annotation":
                 continue  # Handle annotations separately below
-            original_ids = [str(sid).strip() for sid in self.datapackage._get_sample_ids(data_obj)]
+            original_ids = [
+                str(sid).strip() for sid in self.datapackage._get_sample_ids(data_obj)
+            ]
 
             id_to_pos = {sid: i for i, sid in enumerate(original_ids)}
             final_indices.setdefault(parent_key, {})[child_key] = {}
@@ -432,8 +437,7 @@ class PairedUnpairedSplitter:
                 anno_ids = [str(sid).strip() for sid in anno_df.index]
                 if len(anno_ids) != len(set(anno_ids)):
                     raise ValueError(
-                        f"Duplicate sample IDs found in "
-                        f"annotation '{anno_key}'."
+                        f"Duplicate sample IDs found in " f"annotation '{anno_key}'."
                     )
                 anno_id_to_pos = {sid: i for i, sid in enumerate(anno_ids)}
                 final_indices.setdefault("annotation", {})[anno_key] = {}
@@ -486,7 +490,7 @@ class PairedUnpairedSplitter:
                                 np.array(anno_indices, dtype=int)
                             )
         return final_indices
-    
+
     def _per_modality_splits_from_custom_splits(
         self,
     ) -> Dict[str, Dict[str, Set[str]]]:
@@ -514,9 +518,7 @@ class PairedUnpairedSplitter:
         """
 
         if self.custom_splits is None:
-            raise ValueError(
-                "No custom_splits were provided."
-            )
+            raise ValueError("No custom_splits were provided.")
 
         required_keys = {
             "train",
@@ -524,9 +526,7 @@ class PairedUnpairedSplitter:
             "test",
         }
 
-        provided_keys = set(
-            self.custom_splits.keys()
-        )
+        provided_keys = set(self.custom_splits.keys())
 
         if provided_keys != required_keys:
             raise ValueError(
@@ -558,18 +558,11 @@ class PairedUnpairedSplitter:
                     f"got shape {raw_ids.shape}."
                 )
 
-            ids = [
-                str(sid).strip()
-                for sid in raw_ids.tolist()
-            ]
+            ids = [str(sid).strip() for sid in raw_ids.tolist()]
 
-            if any(
-                sid == ""
-                for sid in ids
-            ):
+            if any(sid == "" for sid in ids):
                 raise ValueError(
-                    f"custom_splits['{split_name}'] "
-                    "contains an empty sample ID."
+                    f"custom_splits['{split_name}'] " "contains an empty sample ID."
                 )
 
             if len(ids) != len(set(ids)):
@@ -577,10 +570,7 @@ class PairedUnpairedSplitter:
                 duplicates: List[str] = []
 
                 for sid in ids:
-                    if (
-                        sid in seen
-                        and sid not in duplicates
-                    ):
+                    if sid in seen and sid not in duplicates:
                         duplicates.append(sid)
 
                     seen.add(sid)
@@ -593,10 +583,7 @@ class PairedUnpairedSplitter:
 
             split_ids = set(ids)
 
-            overlap = (
-                assigned_ids
-                & split_ids
-            )
+            overlap = assigned_ids & split_ids
 
             if overlap:
                 raise ValueError(
@@ -606,13 +593,9 @@ class PairedUnpairedSplitter:
                     f"{sorted(overlap)[:10]}"
                 )
 
-            split_id_sets[
-                split_name
-            ] = split_ids
+            split_id_sets[split_name] = split_ids
 
-            assigned_ids.update(
-                split_ids
-            )
+            assigned_ids.update(split_ids)
 
         # Only actual data modalities are handled here.
         # Annotation tables are converted to integer positions
@@ -635,41 +618,24 @@ class PairedUnpairedSplitter:
                 continue
 
             modality_id_list = [
-                str(sid).strip()
-                for sid
-                in self.datapackage._get_sample_ids(
-                    data_obj
-                )
+                str(sid).strip() for sid in self.datapackage._get_sample_ids(data_obj)
             ]
 
-            if (
-                len(modality_id_list)
-                != len(set(modality_id_list))
-            ):
+            if len(modality_id_list) != len(set(modality_id_list)):
                 raise ValueError(
                     "Duplicate sample IDs found "
                     f"in loaded modality '{full_key}'. "
                     "Custom splitting requires "
                     "unique sample IDs within "
                     "each modality."
-                )
+                )  #
 
-            modality_ids = set(
-                modality_id_list
-            )
+            modality_ids = set(modality_id_list)
 
-            all_modality_ids.update(
-                modality_ids
-            )
+            all_modality_ids.update(modality_ids)
 
-            per_modality_splits[
-                full_key
-            ] = {
-                split_name:
-                    split_id_sets[
-                        split_name
-                    ]
-                    & modality_ids
+            per_modality_splits[full_key] = {
+                split_name: split_id_sets[split_name] & modality_ids
                 for split_name in (
                     "train",
                     "valid",
@@ -677,29 +643,47 @@ class PairedUnpairedSplitter:
                 )
             }
 
-        # IDs requested by the annotation but absent
-        # from all loaded data are almost certainly
-        # a data/configuration error.
-        missing_ids = (
-            assigned_ids
-            - all_modality_ids
-        )
+        # Check if any IDs from the custom split are missing
+        # from all data modalities
+        missing_ids = assigned_ids - all_modality_ids
 
         if missing_ids:
-            raise ValueError(
-                "Some custom split sample IDs were "
-                "not found in any loaded data modality. "
-                f"Examples: "
-                f"{sorted(missing_ids)[:10]}"
-            )
+            # If no pre-processing has happened the user has likely given faulty split IDs
+            if self.config.skip_preprocessing:
+                raise ValueError(
+                    "Some custom split sample IDs were "
+                    "not found in any loaded data modality. "
+                    f"Examples: "
+                    f"{sorted(missing_ids)[:10]}"
+                )
+            # If pre-processing has happened the missing IDs are likely due to Samples removed in this step
+            # Remove the missing IDs from the splits and carry on
+            else:
+                for full_key, data_obj in self.datapackage:
+
+                    parent_key, _ = full_key.split(
+                        ".",
+                        1,
+                    )
+
+                    if parent_key == "annotation":
+                        continue
+
+                    per_modality_splits[full_key] = {
+                        split_name: (
+                            per_modality_splits[full_key][split_name] - missing_ids
+                        )
+                        for split_name in (
+                            "train",
+                            "valid",
+                            "test",
+                        )
+                    }
 
         # Conversely, no loaded sample should silently
         # disappear merely because it was omitted from
         # the custom split definition.
-        unassigned_ids = (
-            all_modality_ids
-            - assigned_ids
-        )
+        unassigned_ids = all_modality_ids - assigned_ids
 
         if unassigned_ids:
             raise ValueError(

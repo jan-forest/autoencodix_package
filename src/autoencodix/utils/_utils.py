@@ -823,43 +823,23 @@ def custom_splits_from_anno(
     )
 
     if split_col not in df.columns:
-        raise ValueError(
-            f"Missing split column: {split_col}"
-        )
+        raise ValueError(f"Missing split column: {split_col}")
 
     if sample_id_col not in df.columns:
-        raise ValueError(
-            f"Missing sample ID column: {sample_id_col}"
-        )
+        raise ValueError(f"Missing sample ID column: {sample_id_col}")
 
     if df[sample_id_col].isna().any():
-        raise ValueError(
-            f"Missing sample IDs found in column "
-            f"'{sample_id_col}'."
-        )
+        raise ValueError(f"Missing sample IDs found in column " f"'{sample_id_col}'.")
 
-    sample_ids = (
-        df[sample_id_col]
-        .astype(str)
-        .str.strip()
-    )
+    sample_ids = df[sample_id_col].astype(str).str.strip()
 
     if (sample_ids == "").any():
-        raise ValueError(
-            f"Empty sample IDs found in column "
-            f"'{sample_id_col}'."
-        )
+        raise ValueError(f"Empty sample IDs found in column " f"'{sample_id_col}'.")
 
-    duplicated = sample_ids[
-        sample_ids.duplicated(keep=False)
-    ]
+    duplicated = sample_ids[sample_ids.duplicated(keep=False)]
 
     if not duplicated.empty:
-        examples = (
-            duplicated
-            .drop_duplicates()
-            .tolist()[:10]
-        )
+        examples = duplicated.drop_duplicates().tolist()[:10]
 
         raise ValueError(
             "Duplicate sample IDs found in annotation. "
@@ -867,12 +847,7 @@ def custom_splits_from_anno(
             f"Examples: {examples}"
         )
 
-    split_values = (
-        df[split_col]
-        .astype(str)
-        .str.strip()
-        .str.lower()
-    )
+    split_values = df[split_col].astype(str).str.strip().str.lower()
 
     allowed = {
         "train",
@@ -880,22 +855,17 @@ def custom_splits_from_anno(
         "test",
     }
 
-    observed = set(
-        split_values.unique()
-    )
+    observed = set(split_values.unique())
 
     invalid = observed - allowed
 
     if invalid:
         raise ValueError(
-            f"Invalid split labels found: {invalid}. "
-            f"Allowed values are: {allowed}"
+            f"Invalid split labels found: {invalid}. " f"Allowed values are: {allowed}"
         )
 
     custom_splits = {
-        split_name: sample_ids[
-            split_values == split_name
-        ].to_numpy(dtype=object)
+        split_name: sample_ids[split_values == split_name].to_numpy(dtype=object)
         for split_name in (
             "train",
             "valid",

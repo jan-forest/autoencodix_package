@@ -483,11 +483,7 @@ class PairedUnpairedSplitter:
                                 np.array(anno_indices, dtype=int)
                             )
         return final_indices
-<<<<<<< HEAD
-
-=======
     
->>>>>>> f6a9e30 (implementation of custom_splits approach using sample_ids)
     def _per_modality_splits_from_custom_splits(
         self,
     ) -> Dict[str, Dict[str, Set[str]]]:

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=xmodalix3d_3mod_best_config_train
 #SBATCH --account=p_scads_autoencodix
-#SBATCH --partition=alpha
+#SBATCH --partition=capella
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
@@ -26,7 +26,7 @@ module load release/24.04
 module load GCCcore/12.3.0
 module load Python/3.11.3
 
-source "${BASE}/venvs/alpha/bin/activate"
+source "${BASE}/venvs/capella/bin/activate"
 
 cd "${REPO}"
 
@@ -52,8 +52,8 @@ python scripts/run_3mod_xmodalix3d.py \
   --pretrain-epochs 50 \
   --pretrain-save-memory \
   --no-save-intermediate-recons \
-  --latent-dim 48 \
-  --hidden-dim 16 \
+  --latent-dim 96 \
+  --hidden-dim 32 \
   --batch-size 35 \
   --reconstruction-loss "mse" \
   --loss-reduction "mean" \
@@ -66,8 +66,8 @@ python scripts/run_3mod_xmodalix3d.py \
   --no-keep-mu-positive \
   --train-normalization "batch" \
   --train-norm-groupsize 8 \
-  --learning-rate  0.0000004759885464107164 \
-  --weight-decay 0.0009531544828003 \
+  --learning-rate  0.00003776938126246836 \
+  --weight-decay 0.0005034350035619 \
   --beta 0.000010 \
   --ncct-learning-rate 0.000031484 \
   --ncct-weight-decay 0.0000077837 \
@@ -79,8 +79,8 @@ python scripts/run_3mod_xmodalix3d.py \
   --cbv-weight-decay 0.0000051361 \
   --cbv-beta 0.0000383242 \
   --lambda-sub 1.0 \
-  --gamma 20.78268316339812 \
-  --delta-pair 0.0173255337449234 \
+  --gamma 8.451105974072629 \
+  --delta-pair 0.0077161372205998 \
   --delta-class 0 \
   --annotation-columns median_split \
   --from-modality "NCCT" \

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=xmodalix3d_3mod_best_config_report
 #SBATCH --account=p_scads_autoencodix
-#SBATCH --partition=alpha
+#SBATCH --partition=capella
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
@@ -25,7 +25,7 @@ module load release/24.04
 module load GCCcore/12.3.0
 module load Python/3.11.3
 
-source "${BASE}/venvs/alpha/bin/activate"
+source "${BASE}/venvs/capella/bin/activate"
 
 cd "${REPO}"
 
@@ -76,7 +76,7 @@ echo "Template notebook: ${TEMPLATE_NOTEBOOK}"
 papermill \
   "${TEMPLATE_NOTEBOOK}" \
   "${REPORT_DIR}/xmodalix3d_3mod_report_executed.ipynb" \
-  -k imagix3d-alpha
+  -k imagix3d-capella
 
 jupyter nbconvert \
   --to html \

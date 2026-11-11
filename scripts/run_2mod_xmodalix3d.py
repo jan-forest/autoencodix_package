@@ -338,9 +338,10 @@ def _build_common_custom_splits(
     )
 
     custom_splits = {
-        "train": np.where(split_values == "train")[0].astype(int),
-        "valid": np.where(split_values == "valid")[0].astype(int),
-        "test": np.where(split_values == "test")[0].astype(int),
+        split_name: paired_annotation.index[
+            split_values == split_name
+        ].astype(str).to_numpy(dtype=object)
+        for split_name in ("train", "valid", "test")
     }
 
     split_sizes = {

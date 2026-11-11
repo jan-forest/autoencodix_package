@@ -150,7 +150,6 @@ class NumericDataset(TensorAwareDataset):
             feature_ids: Optional feature identifiers
             metadata: Optional metadata
             split_indices: Optional split indices
-            Optional split indices
         """
         super().__init__(
             data=data, sample_ids=sample_ids, config=config, feature_ids=feature_ids

@@ -21,6 +21,14 @@ class VolumePreprocessor(ImagePreprocessor):
     def __init__(
         self, config: Imagix3DConfig, ontologies: Optional[Union[Tuple, Dict]] = None
     ):
+        """Initialize the preprocessor and register 3D volume readers.
+
+        Args:
+            config: Imagix3D configuration (scaling strategy, target shapes).
+            ontologies: Accepted for interface compatibility; not used.
+
+        (LLM-generated docstring, pending human review.)
+        """
         super().__init__(config=config, ontologies=ontologies)
         self.data_config = config.data_config
         self.config: Imagix3DConfig = config
@@ -124,9 +132,19 @@ class VolumePreprocessor(ImagePreprocessor):
         self,
         split_data: Dict[str, Dict[str, Any]],
     ) -> Dict[str, Dict[str, Any]]:
-        """
-        Fit a volume scaler on the train split only and apply it to all splits.
-        This is the 3D-image analogue of _postsplit_multi_bulk().
+        """Fit a volume scaler on the train split only and apply it to all splits.
+
+        This is the 3D-image analogue of ``_postsplit_multi_bulk()``. Scalers are
+        fitted once and reused for later calls (e.g. predicting new data).
+
+        Args:
+            split_data: DataPackage and indices per split.
+
+        Returns:
+            The split data with normalized volumes.
+
+        Raises:
+            ValueError: If the train split or its images are missing.
         """
         processed_splits: Dict[str, Dict[str, Any]] = {}
 
@@ -217,6 +235,25 @@ class VolumePreprocessor(ImagePreprocessor):
         self,
         raw_user_data: Optional[DataPackage] = None,
     ) -> Dict[str, Dict[str, Union[Any, DataPackage]]]:
+        """Read, pair-filter, split and normalize 3D volumes.
+
+        Depending on ``volume_scaling_strategy``, volumes are normalized
+        individually before splitting ("per_volume") or with a scaler fitted on the
+        train split after splitting.
+
+        Args:
+            raw_user_data: DataPackage with volumes; if None, volumes are read as
+                defined in the config.
+
+        Returns:
+            DataPackage and indices per split.
+
+        Raises:
+            ValueError: If the DataPackage contains no images or the
+                ``volume_scaling_strategy`` is unsupported.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if raw_user_data is None:
             imgreader = self.data_readers[DataCase.IMG_TO_IMG]
             images, annotation = imgreader.read_data(config=self.config)

@@ -10,6 +10,16 @@ from autoencodix.evaluate._general_evaluator import GeneralEvaluator
 
 
 class Imagix3DEvaluator(GeneralEvaluator):
+    """Evaluator for ``Imagix3D`` with latent-space diagnostics for 3D VAEs.
+
+    In addition to the downstream ML evaluation of ``GeneralEvaluator``, it
+    offers ``compute_latent_activity`` (active units / posterior collapse) and
+    ``compute_latent_traversal`` (decode volumes while varying one latent
+    dimension). Results are stored in ``result.sub_results``.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     def __init__(self):
         super().__init__()  # just in case GeneralEvaluator should receive new attributes, then we would want to initialize them
 
@@ -20,8 +30,7 @@ class Imagix3DEvaluator(GeneralEvaluator):
         splits: tuple[str, ...] = ("train", "valid"),
         include_test: bool = True,
     ) -> Result:
-        """
-        Latent-space diagnostics.
+        """Compute the activity of each latent dimension (active units).
 
         The latent activity diagnostic follows the common "active units" idea:
         a latent dimension is considered active if the variance of its posterior
@@ -34,6 +43,22 @@ class Imagix3DEvaluator(GeneralEvaluator):
 
         The active-units diagnostic is used as a proxy for latent-space utilization
         and posterior collapse.
+
+        Args:
+            result: Result object with stored posterior means (``result.mus``)
+                and, optionally, log-variances (``result.sigmas``).
+            threshold: Variance above which a dimension counts as active (0.01 as
+                in Burda et al. 2015 and Sinha & Dieng 2021).
+            splits: Training splits evaluated for every stored epoch.
+            include_test: If True, also evaluate the final test prediction.
+
+        Returns:
+            The result object with the DataFrames
+            ``sub_results["latent_activity_summary"]`` (per epoch and split) and
+            ``sub_results["latent_activity_by_dim"]`` (per latent dimension).
+
+        Raises:
+            ValueError: If no posterior means are stored.
         """
 
         if not hasattr(result, "mus") or result.mus is None:
@@ -108,9 +133,19 @@ class Imagix3DEvaluator(GeneralEvaluator):
         dim_rows: list[dict],
         is_test_prediction: bool = False,
     ) -> None:
-        """
-        Compute latent activity for one epoch/split and append rows.
-        Mutates summary_rows and dim_rows in place.
+        """Compute latent activity for one epoch/split and append rows.
+
+        Mutates ``summary_rows`` and ``dim_rows`` in place. Splits with fewer than
+        two samples are skipped with a warning.
+
+        Args:
+            result: Result object with stored posterior means.
+            epoch: Epoch to evaluate (-1 for the final test prediction).
+            split: Data split to evaluate.
+            threshold: Variance above which a dimension counts as active.
+            summary_rows: List collecting one summary row per epoch/split.
+            dim_rows: List collecting one row per latent dimension.
+            is_test_prediction: Whether this is the final test prediction.
         """
         mu = self._get_training_dynamic_array(
             dynamic=result.mus,
@@ -286,11 +321,12 @@ class Imagix3DEvaluator(GeneralEvaluator):
         prior_range: tuple[float, float] = (-2.0, 2.0),
         percentile_range: tuple[float, float] = (5.0, 95.0),
     ) -> Result:
-        """
-        Compute latent traversal.
+        """Compute latent traversal.
 
         Latent traversal varies one latent dimension at a time while keeping all
         other latent dimensions fixed at the posterior mean of one selected sample.
+        Uses the test split of the last epoch; latent vectors are decoded in
+        batches of ``config.batch_size``.
 
         Args:
             result:
@@ -322,11 +358,12 @@ class Imagix3DEvaluator(GeneralEvaluator):
             percentile_range:
                 Lower and upper percentile for data-adaptive traversal values.
 
-            decode_batch_size:
-                Number of modified latent vectors decoded at once.
-
         Returns:
-            The modified Result object.
+            The modified Result object; the decoded volumes and settings are stored
+            in ``result.sub_results["latent_traversal"]``.
+
+        Raises:
+            ValueError: If ``n_values`` < 2 or no test posterior means are stored.
         """
 
         if n_values < 2:
@@ -451,11 +488,21 @@ class Imagix3DEvaluator(GeneralEvaluator):
         result: Result,
         mu: np.ndarray,
     ) -> np.ndarray:
-        """
-        Compute mean KL contribution per latent dimension for one the last epoch and test split.
+        """Compute the mean KL contribution per latent dimension for the last epoch and test split.
 
         Uses result.sigmas as latent log-variance, consistent with the existing
         compute_latent_activity() implementation.
+
+        Args:
+            result: Result object with stored log-variances.
+            mu: Posterior means of the test split (samples x latent dims).
+
+        Returns:
+            Mean KL per latent dimension; NaN values if no log-variances are
+            available.
+
+        Raises:
+            ValueError: If ``mu`` and the log-variances differ in shape.
         """
 
         n_latent_dims = mu.shape[1]
@@ -509,8 +556,20 @@ class Imagix3DEvaluator(GeneralEvaluator):
         n_total_latent_dims: int,
         mean_kl: np.ndarray,
     ) -> list[int]:
-        """
-        Select latent dimensions for traversal.
+        """Select latent dimensions for traversal.
+
+        Args:
+            latent_dims: "all", "top_kl" or explicit dimension indices.
+            n_latent_dims: Number of dimensions for "top_kl".
+            n_total_latent_dims: Size of the latent space.
+            mean_kl: Mean KL per dimension, used for the "top_kl" ranking.
+
+        Returns:
+            Indices of the dimensions to traverse.
+
+        Raises:
+            ValueError: If the selection is invalid or "top_kl" is requested but
+                all KL values are NaN.
         """
 
         if isinstance(latent_dims, str):
@@ -573,8 +632,22 @@ class Imagix3DEvaluator(GeneralEvaluator):
         prior_range: tuple[float, float],
         percentile_range: tuple[float, float],
     ) -> np.ndarray:
-        """
-        Create absolute replacement values for one latent dimension.
+        """Create absolute replacement values for one latent dimension.
+
+        Args:
+            mu: Posterior means (samples x latent dims).
+            latent_dim: Dimension to create values for.
+            value_mode: "prior" (evenly spaced over ``prior_range``) or
+                "percentile" (empirical percentiles of ``mu[:, latent_dim]``).
+            n_values: Number of values.
+            prior_range: Value range for "prior" mode.
+            percentile_range: Percentile range for "percentile" mode.
+
+        Returns:
+            Array of ``n_values`` traversal values.
+
+        Raises:
+            ValueError: If a range is invalid or ``value_mode`` is unknown.
         """
 
         if value_mode == "prior":
@@ -607,8 +680,13 @@ class Imagix3DEvaluator(GeneralEvaluator):
 
     @staticmethod
     def _unwrap_model(model: torch.nn.Module) -> torch.nn.Module:
-        """
-        Unwrap common model wrappers if needed.
+        """Return the underlying model of a Fabric or DataParallel wrapper.
+
+        Args:
+            model: Possibly wrapped model.
+
+        Returns:
+            The unwrapped model (or the input if it is not wrapped).
         """
 
         if hasattr(model, "_forward_module"):
@@ -690,12 +768,20 @@ class Imagix3DEvaluator(GeneralEvaluator):
 
     @staticmethod
     def _extract_decoded_tensor(decoded: Any) -> torch.Tensor:
-        """
-        Convert the output of model.decode(...) into a tensor.
+        """Convert the output of model.decode(...) into a tensor.
 
         The expected case is that decode() returns a torch.Tensor. This helper is
         slightly defensive in case a future implementation returns an object with a
         reconstruction attribute.
+
+        Args:
+            decoded: Output of ``model.decode``.
+
+        Returns:
+            The decoded tensor.
+
+        Raises:
+            TypeError: If no tensor can be extracted.
         """
 
         if isinstance(decoded, torch.Tensor):

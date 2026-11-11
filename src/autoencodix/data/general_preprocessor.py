@@ -31,6 +31,15 @@ class GeneralPreprocessor(BasePreprocessor):
     def __init__(
         self, config: DefaultConfig, ontologies: Optional[Union[Tuple, Dict]] = None
     ) -> None:
+        """Initialize the preprocessor and empty reverse mappings per split.
+
+        Args:
+            config: Pipeline configuration.
+            ontologies: Ontology definitions (``Ontix``), used for feature
+                filtering.
+
+        (LLM-generated docstring, pending human review.)
+        """
         super().__init__(config=config, ontologies=ontologies)
         self._datapackage_dict: Optional[Dict[str, Any]] = None
         self._dataset_container: Optional[DatasetContainer] = None
@@ -45,6 +54,18 @@ class GeneralPreprocessor(BasePreprocessor):
     def _combine_layers(
         self, modality_name: str, modality_data: Any
     ) -> List[np.ndarray]:
+        """Collect the selected AnnData layers of one single-cell modality.
+
+        Args:
+            modality_name: Name of the modality in the data config.
+            modality_data (AnnData): Data of this modality.
+
+        Returns:
+            The matrices of the selected layers, in config order ("X" is the main
+            matrix).
+
+        (LLM-generated docstring, pending human review.)
+        """
         layer_list: List[np.ndarray] = []
         selected_layers = self.config.data_config.data_info[
             modality_name
@@ -61,6 +82,19 @@ class GeneralPreprocessor(BasePreprocessor):
         mudata: md.MuData,  # ty: ignore[invalid-type-form]
     ) -> Union[np.ndarray, sp.sparse.spmatrix]:  # ty: ignore[invalid-type-form]
         # Reset single-cell reverse mapping
+        """Concatenate all modalities and selected layers of a MuData feature-wise.
+
+        Records which columns belong to which modality and layer, so that
+        reconstructions can be split back later (see ``_reverse_multi_sc``).
+
+        Args:
+            mudata: Single-cell data with one AnnData per modality.
+
+        Returns:
+            Combined matrix (cells x features); sparse if all inputs are sparse.
+
+        (LLM-generated docstring, pending human review.)
+        """
         modality_data_list: List[np.ndarray] = []
         start_idx = 0
 
@@ -109,6 +143,21 @@ class GeneralPreprocessor(BasePreprocessor):
         feature_ids: List[str],
     ) -> NumericDataset:
         # keep sparse data sparse until batch level in training for memory efficency
+        """Build a ``NumericDataset``; sparse input stays sparse until batching.
+
+        Args:
+            data: Feature matrix (samples x features).
+            config: Pipeline configuration.
+            split_ids: Indices of the samples in this split.
+            metadata: Sample metadata.
+            ids: Sample IDs.
+            feature_ids: Feature IDs.
+
+        Returns:
+            The dataset for one split.
+
+        (LLM-generated docstring, pending human review.)
+        """
         ds = NumericDataset(
             data=data,
             config=config,
@@ -120,6 +169,26 @@ class GeneralPreprocessor(BasePreprocessor):
         return ds
 
     def _process_data_package(self, data_dict: Dict[str, Any]) -> BaseDataset:
+        """Turn the DataPackage of one split into a single numeric dataset.
+
+        Multi-bulk modalities are concatenated column-wise, single-cell modalities
+        and layers via ``_combine_modality_data``. Column ranges per modality are
+        stored for reverting reconstructions.
+
+        Args:
+            data_dict: Dict with the split's DataPackage ("data") and sample
+                indices ("indices").
+
+        Returns:
+            The combined dataset of this split.
+
+        Raises:
+            ValueError: If a multi-bulk entry is not a DataFrame.
+            NotImplementedError: If multi-bulk modalities have different numbers
+                of samples.
+
+        (LLM-generated docstring, pending human review.)
+        """
         data, split_ids = data_dict["data"], data_dict["indices"]
         # MULTI-BULK
         if data.multi_bulk is not None:
@@ -216,6 +285,27 @@ class GeneralPreprocessor(BasePreprocessor):
         # self._reverse_mapping_multi_bulk.clear()
         # self._reverse_mapping_multi_sc.clear()
 
+        """Run the full preprocessing and return one dataset per split.
+
+        Reads, filters, scales and splits the data (see
+        ``BasePreprocessor._general_preprocess``) and combines all modalities of a
+        split into one ``NumericDataset``.
+
+        Args:
+            raw_user_data: Input data. If None, data is read as defined in the
+                config.
+            predict_new_data: If True, treat all data as test data and reuse the
+                fitted scalers and feature selection (used by ``predict``).
+
+        Returns:
+            Container with "train", "valid" and "test" datasets (None for
+            empty splits).
+
+        Raises:
+            TypeError: If preprocessing produced no data.
+
+        (LLM-generated docstring, pending human review.)
+        """
         self._datapackage_dict = self._general_preprocess(
             raw_user_data=raw_user_data, predict_new_data=predict_new_data
         )
@@ -239,6 +329,22 @@ class GeneralPreprocessor(BasePreprocessor):
     def format_reconstruction(
         self, reconstruction: torch.Tensor, result: Optional[Result] = None
     ) -> DataPackage:
+        """Split a combined reconstruction back into the original modalities.
+
+        Args:
+            reconstruction: Reconstructed data (samples x combined features).
+            result: Unused; kept for interface compatibility.
+
+        Returns:
+            DataPackage with DataFrames (multi-bulk) or a MuData (single-cell)
+            per modality, plus the sample metadata.
+
+        Raises:
+            NotImplementedError: For data cases other than multi-bulk and
+                multi-single-cell.
+
+        (LLM-generated docstring, pending human review.)
+        """
         self._split = self._match_split(n_samples=reconstruction.shape[0])
         if self.config.data_case == DataCase.MULTI_BULK:
             return self._reverse_multi_bulk(reconstruction)
@@ -250,7 +356,17 @@ class GeneralPreprocessor(BasePreprocessor):
             )
 
     def _match_split(self, n_samples: int) -> str:
-        """Match the split based on the number of samples."""
+        """Match the split based on the number of samples.
+
+        Args:
+            n_samples: Number of samples in the reconstruction.
+
+        Returns:
+            Name of the first split with the same number of samples.
+
+        Raises:
+            ValueError: If no split has this number of samples.
+        """
         print(f"n_samples in format recon: {n_samples}")
         for split, split_data in self._datapackage_dict.items():
             print(split)
@@ -268,6 +384,16 @@ class GeneralPreprocessor(BasePreprocessor):
     def _reverse_multi_bulk(
         self, reconstruction: Union[np.ndarray, torch.Tensor]
     ) -> DataPackage:
+        """Rebuild one DataFrame per multi-bulk modality from a reconstruction.
+
+        Args:
+            reconstruction: Reconstructed data of the current split.
+
+        Returns:
+            DataPackage with ``multi_bulk`` DataFrames and the split's metadata.
+
+        (LLM-generated docstring, pending human review.)
+        """
         data_package = DataPackage(
             multi_bulk={},
             multi_sc=None,
@@ -298,6 +424,20 @@ class GeneralPreprocessor(BasePreprocessor):
     def _slice_tensor(
         self, reconstruction: Union[np.ndarray, torch.Tensor], indices: List[int]
     ) -> np.ndarray:
+        """Select feature columns from a reconstruction as a NumPy array.
+
+        Args:
+            reconstruction: Reconstructed data.
+            indices: Column indices to select.
+
+        Returns:
+            The selected columns.
+
+        Raises:
+            TypeError: If the input is neither a tensor nor an array.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if isinstance(reconstruction, torch.Tensor):
             arr = reconstruction[:, indices].detach().cpu().numpy()
         elif isinstance(reconstruction, np.ndarray):
@@ -309,6 +449,16 @@ class GeneralPreprocessor(BasePreprocessor):
         return arr
 
     def _reverse_multi_sc(self, reconstruction: torch.Tensor) -> DataPackage:
+        """Rebuild a MuData (one AnnData per modality and layer) from a reconstruction.
+
+        Args:
+            reconstruction: Reconstructed data of the current split.
+
+        Returns:
+            DataPackage with ``multi_sc={"multi_sc": MuData}`` and the metadata.
+
+        (LLM-generated docstring, pending human review.)
+        """
         data_package = DataPackage(
             multi_bulk=None,
             multi_sc=None,

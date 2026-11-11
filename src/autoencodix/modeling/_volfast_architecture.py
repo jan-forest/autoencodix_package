@@ -63,12 +63,19 @@ class VolumeVAEFastArchitecture(BaseAutoencoder):
         feature_order: Optional[Union[Tuple, Dict]] = None,
         # the input_dim is the number of channels in the image, e.g. 4
     ):
-        """Initialize the ImageVAEArchitecture with the given configuration.
+        """Initialize the VolumeVAEFastArchitecture with the given configuration.
+
+        The number of filters in the first convolutional layer is taken from
+        ``config.hidden_dim``.
 
         Args:
-            input_dim: (C, D, H, W) the input image shape
-            config: Configuration object containing model parameters.
-            hidden_dim: number of filters in the first convolutional layer
+            input_dim: (C, D, H, W) the input volume shape.
+            config: Configuration object containing model parameters; defaults are
+                used if None.
+            ontologies: Accepted for a uniform constructor interface across
+                architectures; not used.
+            feature_order: Accepted for a uniform constructor interface across
+                architectures; not used.
         """
         if config is None:
             config = Imagix3DConfig()

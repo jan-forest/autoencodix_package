@@ -13,6 +13,11 @@ SUPPORTED_EXTENSIONS = (".nii", ".nii.gz")  # for now
 
 
 class ImageProcessingError(Exception):
+    """Raised when a 3D volume cannot be read or has an unsupported format.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     pass
 
 
@@ -28,10 +33,15 @@ class VolumeSizeFinder:
     """
 
     def __init__(self, config: Imagix3DConfig, dims: Tuple[int, int, int]):
-        """Inits the VolumeSizeFinder
+        """Inits the VolumeSizeFinder.
 
         Args:
-            config: Configuration object.
+            config: Configuration object (target multiple, target shape and shape
+                policy for 3D volumes).
+            dims: Spatial dimensions (D, H, W) of the input volumes.
+
+        Raises:
+            ValueError: If no modality with data type "IMG" is configured.
         """
         self.config = config
         found_image_type = False

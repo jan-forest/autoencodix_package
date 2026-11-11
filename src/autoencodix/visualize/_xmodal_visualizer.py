@@ -18,6 +18,17 @@ from autoencodix.data._datasetcontainer import DatasetContainer
 
 
 class XModalVisualizer(BaseVisualizer):
+    """Visualizer for cross-modal translation (``XModalix``).
+
+    Adds per-modality latent space plots, image translation grids and 2D
+    embeddings of translated versus original data to the standard plots.
+
+    Attributes:
+        plots: Nested dict of created figures, keyed by plot name.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     plots: Dict[str, Any] = field(
         default_factory=nested_dict
     )  ## Nested dictionary of plots as figure handles
@@ -35,6 +46,17 @@ class XModalVisualizer(BaseVisualizer):
         # self.plots["ModelWeights"] = self._plot_model_weights(model=result.model)
 
         ## Make long format of losses
+        """Create the loss curves (absolute and relative) and store them in ``self.plots``.
+
+        Args:
+            result: Result object with losses.
+            config: Configuration of the pipeline run.
+
+        Returns:
+            The unchanged result object.
+
+        (LLM-generated docstring, pending human review.)
+        """
         loss_df_melt = self._make_loss_format(result=result, config=config)
 
         ## X-Modalix specific ##
@@ -76,6 +98,18 @@ class XModalVisualizer(BaseVisualizer):
         epoch: Optional[Union[int, None]] = None,
         split: str = "all",
     ) -> None:
+        """Display the latent spaces of all modalities, colored by annotation.
+
+        Args:
+            result: Result object containing the latent spaces.
+            plot_type: "2D-scatter", "Ridgeline" or "Coverage-Correlation".
+            labels: Optional explicit labels per sample used for coloring.
+            param: Annotation column(s) used for coloring, or "all".
+            epoch: Epoch to plot; defaults to the last stored epoch.
+            split: Data split to plot ("train", "valid", "test" or "all").
+
+        (LLM-generated docstring, pending human review.)
+        """
         plt.ioff()
         if plot_type == "Coverage-Correlation":
             print("TODO: Implement Coverage-Correlation plot for X-Modalix")
@@ -286,6 +320,13 @@ class XModalVisualizer(BaseVisualizer):
 
     def show_weights(self) -> None:
         ## TODO
+        """Not implemented for XModalix.
+
+        Raises:
+            NotImplementedError: Always.
+
+        (LLM-generated docstring, pending human review.)
+        """
         raise NotImplementedError(
             "Weight visualization for X-Modalix is not implemented."
         )
@@ -301,16 +342,18 @@ class XModalVisualizer(BaseVisualizer):
     ) -> None:  # ty: ignore
         """Visualizes image translation results for a given dataset.
 
-        Split by displaying a grid of original, translated, and reference images,grouped by class values.
+        Shows a grid of original, translated, and reference images, grouped by
+        class values. Only the test split is supported.
+
         Args:
-            result:The result object containing datasets and reconstructions.
+            result: The result object containing datasets and reconstructions.
             from_key: The source modality key (not directly used in visualization, but relevant for context).
-            to_key: The target modality key. Must correspond to an image dataset (must contain "IMG").
-            split: The dataset split to visualize ("test", "train", or "valid"). Default is "test".
+            to_key: The target modality key. Must correspond to an image dataset (must contain "img").
             n_sample_per_class: Number of samples to display per class value. Default is 3.
             param: The metadata column name used to group samples by class.
-        Raises
-            ValueError: If `to_key` does not correspond to an image dataset.
+
+        Raises:
+            ValueError: If ``to_key`` does not correspond to an image dataset.
         """
 
         if "img" not in to_key:
@@ -488,6 +531,24 @@ class XModalVisualizer(BaseVisualizer):
         reducer: str = "UMAP",
     ) -> None:
         ## TODO add similar labels/param logic from other visualizations
+        """Plot a 2D embedding of translated samples next to the original target data.
+
+        Reduces original and translated data of the target modality to 2D (UMAP,
+        PCA or t-SNE) and shows both in one scatter plot.
+
+        Args:
+            result: Result object with test-split translations.
+            translated_modality: Key of the target modality.
+            split: Data split; currently only "test" is supported.
+            param: Annotation column used for coloring.
+            reducer: Dimension reduction method: "UMAP", "PCA" or "TSNE".
+
+        Raises:
+            ValueError: If the split is unknown or no test data is available.
+            NotImplementedError: For splits other than "test".
+
+        (LLM-generated docstring, pending human review.)
+        """
         dataset = result.datasets
 
         ## Overwrite original datasets with new_datasets if available after predict with other data
@@ -596,13 +657,14 @@ class XModalVisualizer(BaseVisualizer):
         style_param=None,
     ):
         """Creates a 2D visualization of the 2D embedding of the latent space.
+
         Args:
             embedding: embedding on which is visualized. Assumes prior 2D dimension reduction.
-            color_params: Clinical parameter to color scatter plot
+            color_param: Clinical parameter to color scatter plot
             style_param: Parameter e.g. "Translate" to facet scatter plot
+
         Returns:
             fig: Figure handle
-
         """
         labels = list(embedding[color_param])
         # logger = getlogger(cfg)
@@ -666,10 +728,13 @@ class XModalVisualizer(BaseVisualizer):
         param: Optional[Union[str, None]] = None,
     ) -> sns.FacetGrid:
         """Creates a ridge line plot of latent space dimension where each row shows the density of a latent dimension and groups (ridges).
+
         Args:
             lat_space: DataFrame containing the latent space intensities for samples (rows) and latent dimensions (columns)
+            modality: Name of the column in ``lat_space`` that holds the modality of each sample.
             labels: List of labels for each sample. If None, all samples are considered as one group.
             param: Clinical parameter to create groupings and coloring of ridges. Must be a column name (str) of clin_data
+
         Returns:
             g (sns.FacetGrid): FacetGrid object containing the ridge line plot
         """

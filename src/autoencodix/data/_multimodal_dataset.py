@@ -57,8 +57,16 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
     def _to_df(self, modality: Optional[str] = None) -> pd.DataFrame:
         """Convert the dataset to a pandas DataFrame.
 
+        Args:
+            modality: Modality to convert; all modalities are concatenated if None.
+                Images are flattened to one row per sample.
+
         Returns:
-            DataFrame representation of the dataset
+            DataFrame representation of the dataset.
+
+        Raises:
+            ValueError: If ``modality`` is unknown.
+            TypeError: If image data is not a list of tensors.
         """
         if modality is None:
             all_modality = list(self.datasets.keys())
@@ -112,6 +120,13 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
         return df_all
 
     def _build_sample_map(self):
+        """Map each sample ID to the set of modalities that contain it.
+
+        Returns:
+            dict[str, set[str]]: Modalities per sample ID.
+
+        (LLM-generated docstring, pending human review.)
+        """
         sample_to_mods = {}
         for modality, dataset in self.datasets.items():
             for sid in dataset.sample_ids:
@@ -119,6 +134,13 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
         return sample_to_mods
 
     def _get_paired_sample_ids(self):
+        """Return the IDs of samples that are present in all modalities.
+
+        Returns:
+            list[str]: Paired sample IDs.
+
+        (LLM-generated docstring, pending human review.)
+        """
         return [
             sid
             for sid, mods in self.sample_to_modalities.items()
@@ -129,6 +151,16 @@ class MultiModalDataset(BaseDataset, torch.utils.data.Dataset):  # type: ignore
         return len(self.paired_sample_ids)
 
     def __getitem__(self, idx: Union[int, str]):
+        """Return the data of one sample across all modalities.
+
+        Args:
+            idx: Position in the paired sample IDs (int) or a sample ID (str).
+
+        Returns:
+            dict: ``{"sample_id": id, <modality>: data or None if missing}``.
+
+        (LLM-generated docstring, pending human review.)
+        """
         sid = self.paired_sample_ids[idx] if isinstance(idx, int) else idx
         out = {"sample_id": sid}
         for mod in self.modalities:
@@ -196,6 +228,20 @@ class CoverageEnsuringSampler(torch.utils.data.Sampler):  # type: ignore
             ].sample_ids
 
     def __iter__(self):
+        """Yield batches of sample IDs for one epoch.
+
+        Coverage batches first guarantee that every sample of every modality is seen
+        once; random batches mixing paired and unpaired samples follow. Single-sample
+        batches are padded with a random sample to avoid BatchNorm errors.
+
+        Yields:
+            list[str]: Sample IDs of one batch.
+
+        Raises:
+            ValueError: If the dataset contains only one sample.
+
+        (LLM-generated docstring, pending human review.)
+        """
         coverage_batches = self._generate_coverage_batches()
         random_batches = self._generate_random_batches(coverage_batches)
         all_batches = coverage_batches + random_batches

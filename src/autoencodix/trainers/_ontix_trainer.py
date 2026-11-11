@@ -32,7 +32,6 @@ class OntixTrainer(GeneralTrainer):
     ):
         """Initializes the OntixTrainer with the given datasets, model, and configuration.
 
-
         Args:
             trainset: The dataset used for training.
             validset: The dataset used for validation, if provided.
@@ -41,6 +40,7 @@ class OntixTrainer(GeneralTrainer):
             model_type: The autoencoder model class to be trained.
             loss_type: The loss function class specific to the model.
             ontologies: Ontology information required for Ontix.
+            **kwargs: Additional keyword arguments passed to ``BaseTrainer``.
         """
         super().__init__(
             trainset=trainset,

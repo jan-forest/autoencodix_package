@@ -10,6 +10,11 @@ from autoencodix.data._imgdataclass import ImgData
 
 
 class ImageProcessingError(Exception):
+    """Raised when an image cannot be read or has an unsupported format.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     pass
 
 

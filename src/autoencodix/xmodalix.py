@@ -255,11 +255,17 @@ class XModalix(BasePipeline):
             config: Optional custom configuration for prediction.
             from_key: string indicator of 'from' translation direction.
             to_key: string indicator of 'to' translation direction.
+            predict_all: If True, also predict the train and valid splits of the
+                preprocessed data (not only the test split).
             **kwargs: Additional configuration parameters as keyword arguments.
+
+        Returns:
+            The updated ``Result`` object.
 
         Raises:
             NotImplementedError: If required components aren't initialized.
-            ValueError: If no test data is available or data format is invalid.
+            ValueError: If no test data is available or data format is invalid,
+                or ``predict_all`` is set without train/valid data.
         """
         self._validate_prediction_requirements()
 
@@ -313,6 +319,18 @@ class XModalix(BasePipeline):
         split: str = "test",
         epoch: int = -1,
     ) -> torch.Tensor:
+        """Not supported for XModalix.
+
+        Args:
+            n_samples: Number of samples to draw.
+            split: Data split to sample from.
+            epoch: Epoch to sample from.
+
+        Raises:
+            NotImplementedError: Always.
+
+        (LLM-generated docstring, pending human review.)
+        """
         raise NotImplementedError(
             "Sampling latent space is not implemented for XModalix."
         )

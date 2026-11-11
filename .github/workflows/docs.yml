@@ -33,7 +33,7 @@ jobs:
       run: |
         uv pip install --upgrade pip
         uv pip install -e .
-        uv pip install mkdocs mkdocs-material "mkdocstrings[python]==0.26.2" mkdocs-jupyter
+        uv pip install mkdocs mkdocs-material "mkdocstrings[python]>=1.0" mkdocs-jupyter mkdocs-llmstxt
     # Copy the hand-picked tutorial notebooks into the docs tree so
     # mkdocs-jupyter (and the nav paths in mkdocs.yml) can find them.
     - name: Stage tutorial notebooks
@@ -47,6 +47,17 @@ jobs:
         rm -f docs/tutorials/PipelineTutorials/*.yaml
         rm -rf docs/tutorials/PipelineTutorials/tutorial_res
         rm -f docs/tutorials/DeepDives/*.yaml
+
+    # Use the README as the docs front page. On GitHub the README links to the
+    # notebooks in the repo; on the docs site those links should open the
+    # rendered tutorial pages instead, so rewrite them in the docs copy only.
+    - name: Sync README to docs front page
+      run: |
+        cp README.md docs/index.md
+        # notebook links -> relative .ipynb paths (mkdocs turns them into page URLs)
+        sed -E -i 's#https://github\.com/jan-forest/autoencodix_package/blob/main/Tutorials/([A-Za-z0-9_./-]+\.ipynb)#tutorials/\1#g' docs/index.md
+        # tutorial folder links have no docs page -> tutorial overview on the front page
+        sed -E -i 's#https://github\.com/jan-forest/autoencodix_package/tree/main/Tutorials[A-Za-z0-9_/]*#\#tutorials#g' docs/index.md
 
     # Build the documentation
     - name: Build docs

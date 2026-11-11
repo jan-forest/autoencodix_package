@@ -62,6 +62,18 @@ class LayerFactory:
 
     @staticmethod
     def create_maskix_layer(in_features: int, out_features: int, last_layer: bool):
+        """Create one block of the Maskix network (Linear, LayerNorm, Mish).
+
+        Args:
+            in_features: Number of input features.
+            out_features: Number of output features.
+            last_layer: If True, return only the linear layer.
+
+        Returns:
+            list[nn.Module]: Layers of the block.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if last_layer:
             return [nn.Linear(in_features, out_features)]
         return [

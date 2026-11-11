@@ -29,8 +29,7 @@ class MaskixTrainer(GeneralTrainer):
         masking_fn_kwargs: Optional[Dict[str, Any]] = {},
         **kwargs,
     ):
-        """Initializes the OntixTrainer with the given datasets, model, and configuration.
-
+        """Initializes the MaskixTrainer with the given datasets, model, and configuration.
 
         Args:
             trainset: The dataset used for training.
@@ -39,6 +38,13 @@ class MaskixTrainer(GeneralTrainer):
             config: Configuration object containing training hyperparameters and settings.
             model_type: The autoencoder model class to be trained.
             loss_type: The loss function class specific to the model.
+            ontologies: Accepted for interface compatibility; not used by Maskix.
+            masking_fn: Custom function that corrupts an input batch,
+                ``masking_fn(X, **masking_fn_kwargs) -> corrupted X`` of the same
+                shape. If None, the scMAE default (column-wise swapping of values
+                between samples) is used.
+            masking_fn_kwargs: Keyword arguments passed to ``masking_fn``.
+            **kwargs: Additional keyword arguments passed to ``BaseTrainer``.
         """
         super().__init__(
             trainset=trainset,
@@ -99,6 +105,20 @@ class MaskixTrainer(GeneralTrainer):
         self, X: torch.Tensor
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         # expand probablities for bernoulli sampling to match input shape
+        """Default masking: replace random entries with values from other samples.
+
+        Each entry is swapped with probability given by the per-feature masking
+        probabilities; replacement values come from the same feature (column) of a
+        randomly chosen other sample, as in scMAE.
+
+        Args:
+            X: Input batch (samples x features).
+
+        Returns:
+            The corrupted batch.
+
+        (LLM-generated docstring, pending human review.)
+        """
         probs = self._mask_probas.expand(X.shape)
 
         # Create the Boolean Mask (1 = Swap, 0 = Keep)

@@ -75,6 +75,10 @@ class XModalPreprocessor(GeneralPreprocessor):
         )
 
     def format_reconstruction(self, reconstruction, result=None):
+        """Not used for XModalix; reconstructions stay in tensor form.
+
+        (LLM-generated docstring, pending human review.)
+        """
         pass
 
     def _process_dp(self, dp: DataPackage, indices: Dict[str, Any]):
@@ -178,6 +182,13 @@ class XModalPreprocessor(GeneralPreprocessor):
         return dataset_dict
 
     def _validate_layers(self, data_name: str):
+        """Warn if layers other than "X" are selected; XModalix only uses "X".
+
+        Args:
+            data_name: Modality name in the data config.
+
+        (LLM-generated docstring, pending human review.)
+        """
         selected_layers = self.config.data_config.data_info[data_name].selected_layers
         if not selected_layers[0] == "X" and len(selected_layers) != 1:
             import warnings

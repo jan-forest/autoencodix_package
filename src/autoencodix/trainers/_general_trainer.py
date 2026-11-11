@@ -61,13 +61,14 @@ class GeneralTrainer(BaseTrainer):
         """Initializes the GeneralTrainer.
 
         Args:
-                trainset: The dataset used for training.
-                validset: The dataset used for validation, if provided.
-                result: An object to store and manage training results.
-                config: Configuration object containing training hyperparameters and settings.
-                model_type: The autoencoder model class to be trained.
-                loss_type: The loss function class to be used for training.
-                ontologies: Ontology information, if provided for Ontix
+            trainset: The dataset used for training.
+            validset: The dataset used for validation, if provided.
+            result: An object to store and manage training results.
+            config: Configuration object containing training hyperparameters and settings.
+            model_type: The autoencoder model class to be trained.
+            loss_type: The loss function class specific to the model.
+            ontologies: Ontology information, if provided for Ontix.
+            **kwargs: Additional keyword arguments passed to ``BaseTrainer``.
         """
         self._n_cpus = os.cpu_count()
         if self._n_cpus is None:
@@ -94,6 +95,17 @@ class GeneralTrainer(BaseTrainer):
         self._init_buffers()
 
     def _init_buffers(self, input_data: Optional[BaseDataset] = None) -> None:
+        """Pre-allocate buffers for latent spaces, reconstructions, means and log-variances.
+
+        Buffers are created per split; with ``save_memory`` only the test split is
+        buffered, and with ``save_vram`` buffers live on the CPU instead of the GPU.
+
+        Args:
+            input_data: Dataset used to determine the number of features; the
+                previously set ``n_features`` is kept if None.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if input_data:
             self.n_features = input_data.get_input_dim()
 
@@ -141,6 +153,10 @@ class GeneralTrainer(BaseTrainer):
         self._sigma_buffer = make_split_buffers(self.latent_dim)
 
     def _ontix_hook(self):
+        """Hook called after each optimizer step; no-op here, overridden by ``OntixTrainer``.
+
+        (LLM-generated docstring, pending human review.)
+        """
         pass
 
     def train(self, epochs_overwrite=None) -> Result:
@@ -197,6 +213,26 @@ class GeneralTrainer(BaseTrainer):
         """Only active when override from MaskixTrainer is used"""
         return X
 
+    def supervisix_capture_hook(
+        self,
+        model_output: ModelOutput,
+        sample_ids: list[str],
+        dataset_type: str,
+        batch_class_means: dict[str, torch.Tensor],
+    ):
+        """Only active when override from SupervisixTrainer is used"""
+        pass
+
+    def supervisix_get_hook(self, dataset_type: str):
+        """Only active when override from SupervisixTrainer is used"""
+        pass
+
+    def supervisix_update_hook(
+        self, batch_class_means: dict[str, torch.Tensor], dataset_type: str
+    ):
+        """Only active when override from SupervisixTrainer is used"""
+        pass
+
     def _train_epoch(
         self, should_checkpoint: bool, epoch: int
     ) -> Tuple[float, Dict[str, float]]:
@@ -212,10 +248,14 @@ class GeneralTrainer(BaseTrainer):
         total_loss = 0.0
         sub_losses: Dict[str, float] = defaultdict(float)
         current_batch = 0
+        # Initialize batch class means collector for supervisix trainer
+        batch_class_means: Dict[str, torch.Tensor] = {}
+
         for indices, features, sample_ids in self._trainloader:
             current_batch += 1
             self._optimizer.zero_grad()
             X: torch.Tensor = self.maskix_hook(features)
+            # _model(x) runs the model (autoencoder type)'s forward method
             model_outputs = self._model(X)
             loss, batch_sub_losses = self._loss_fn(
                 model_output=model_outputs,
@@ -225,6 +265,11 @@ class GeneralTrainer(BaseTrainer):
                 n_samples=len(
                     self._trainloader.dataset
                 ),  # Pass n_samples for disentangled loss calculations
+                sample_ids=sample_ids,  # Pass sample IDs for class separation loss calculations
+                metadata=self._trainset.metadata,  # Pass metadata for class separation loss calculations
+                last_epoch_class_means=self.supervisix_get_hook(
+                    "train"
+                ),  # Pass last epoch class means for class separation loss calculations
             )
             self._fabric.backward(loss)
 
@@ -262,10 +307,18 @@ class GeneralTrainer(BaseTrainer):
                 else:
                     sub_losses[k] = v.item()
 
+            # Only active when override from SupervisixTrainer is used
+            self.supervisix_capture_hook(
+                model_outputs, sample_ids, "train", batch_class_means
+            )
+
             if should_checkpoint:
                 self._capture_dynamics(model_outputs, "train", indices, sample_ids)
 
         # self._grad_clip_warning_sent = False  # Reset the warning flag for gradient clipping
+
+        # Only active when override from SupervisixTrainer is used
+        self.supervisix_update_hook(batch_class_means, "train")
 
         for k, v in sub_losses.items():
             if "_factor" not in k:
@@ -285,6 +338,7 @@ class GeneralTrainer(BaseTrainer):
         Args:
             should_checkpoint: Whether to checkpoint this epoch.
             epoch: The current epoch number.
+
         Returns:
             total_loss: The total loss for the epoch.
             sub_losses: A dictionary of sub-losses accumulated over the epoch.
@@ -292,6 +346,8 @@ class GeneralTrainer(BaseTrainer):
         total_loss = 0.0
         sub_losses: Dict[str, float] = defaultdict(float)
         self._model.eval()
+        # Initialize batch class means collector for supervisix trainer
+        batch_class_means: Dict[str, torch.Tensor] = {}
 
         with torch.no_grad():
             for indices, features, sample_ids in self._validloader:
@@ -305,15 +361,30 @@ class GeneralTrainer(BaseTrainer):
                     n_samples=len(
                         self._validloader.dataset
                     ),  # Pass n_samples for disentangled loss calculations
+                    sample_ids=sample_ids,  # Pass sample IDs for class separation loss calculations
+                    metadata=self._validset.metadata,  # Pass metadata for class separation loss calculations
+                    last_epoch_class_means=self.supervisix_get_hook(
+                        "valid"
+                    ),  # Pass last epoch class means for class separation loss calculations
                 )
+
                 total_loss += loss.item()
                 for k, v in batch_sub_losses.items():
                     if "_factor" not in k:  # Skip factor losses
                         sub_losses[k] += v.item()
                     else:
                         sub_losses[k] = v.item()
+
+                # Only active when override from SupervisixTrainer is used
+                self.supervisix_capture_hook(
+                    model_outputs, sample_ids, "valid", batch_class_means
+                )
+
                 if should_checkpoint:
                     self._capture_dynamics(model_outputs, "valid", indices, sample_ids)
+
+        # Only active when override from SupervisixTrainer is used
+        self.supervisix_update_hook(batch_class_means, "valid")
 
         for k, v in sub_losses.items():
             if "_factor" not in k:

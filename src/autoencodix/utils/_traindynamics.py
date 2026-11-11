@@ -49,18 +49,17 @@ class TrainingDynamics:
         data: Optional[Union[float, np.ndarray, Dict]],
         split: str = "train",
     ) -> None:
-        """
-        Add a numpy array for a specific epoch and split.
+        """Add a value for a specific epoch and split.
 
-        Parameters:
-        ----------
-        epoch : int
-            The epoch number.
-        value : np.ndarray
-            The numpy array to store.
-        split : str, optional
-            The data split (default: 'train').
+        Args:
+            epoch: The epoch number.
+            data: The value to store: a number (converted to a NumPy array), a
+                NumPy array or a dict (e.g. per modality). None is ignored.
+            split: The data split ("train", "valid" or "test").
 
+        Raises:
+            KeyError: If ``split`` is not "train", "valid" or "test".
+            TypeError: If ``data`` is not a number, array or dict.
         """
         if data is None:
             return

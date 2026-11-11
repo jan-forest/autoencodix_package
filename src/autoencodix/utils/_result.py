@@ -40,23 +40,59 @@ class LossRegistry:
         return all(self._losses[key] == other._losses[key] for key in self._losses)
 
     def add(self, data: Dict, split: str, epoch: int) -> None:
+        """Store several losses of one epoch and split at once.
+
+        Args:
+            data: Loss values keyed by loss name; unknown names create a new
+                ``TrainingDynamics`` entry.
+            split: Data split ("train", "valid" or "test").
+            epoch: Epoch index.
+
+        (LLM-generated docstring, pending human review.)
+        """
         for key, value in data.items():
             if key not in self._losses:
                 self._losses[key] = TrainingDynamics()
             self._losses[key].add(epoch=epoch, data=value, split=split)
 
     def get(self, key: str) -> TrainingDynamics:
+        """Return the training dynamics of one loss, creating an empty one if missing.
+
+        Args:
+            key: Loss name.
+
+        Returns:
+            The ``TrainingDynamics`` of this loss.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if key not in self._losses:
             self._losses[key] = TrainingDynamics()
         return self._losses[key]
 
     def losses(self):
+        """Return all (loss name, ``TrainingDynamics``) pairs.
+
+        (LLM-generated docstring, pending human review.)
+        """
         return self._losses.items()
 
     def set(self, key: str, value: TrainingDynamics) -> None:
+        """Replace the training dynamics stored for one loss.
+
+        Args:
+            key: Loss name.
+            value: Training dynamics to store.
+
+        (LLM-generated docstring, pending human review.)
+        """
         self._losses[key] = value
 
     def keys(self):
+        """Return the names of all stored losses.
+
+        (LLM-generated docstring, pending human review.)
+        """
         return self._losses.keys()
 
 
@@ -82,6 +118,7 @@ class Result:
         sub_results: Optional[Dict[str, Any]] containing sub-results for multi-task or multi-modal models.
         sub_reconstructions: Optional[Dict[str, Any]] containing sub-reconstructions for multi-task or multi-modal models.
         embedding_evaluation: pd.DataFrame containing embedding evaluation results.
+        class_means: Optional[Dict[str, Any]] containing the class means of the last epoch.
     """
 
     latentspaces: TrainingDynamics = field(default_factory=TrainingDynamics)
@@ -96,6 +133,8 @@ class Result:
         default_factory=torch.nn.Module
     )
     model_checkpoints: TrainingDynamics = field(default_factory=TrainingDynamics)
+
+    class_means: TrainingDynamics = field(default_factory=TrainingDynamics)
 
     datasets: Optional[DatasetContainer] = field(
         default_factory=lambda: DatasetContainer(train=None, valid=None, test=None)

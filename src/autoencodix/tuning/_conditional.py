@@ -31,6 +31,23 @@ _surrogate_cache: Dict[Hashable, Tuple[RandomForestRegressor, List[str]]] = {}
 def validate_fixed(
     architecture: str, fixed: Dict[str, Any], space: Dict[str, Dict[str, Any]]
 ) -> None:
+    """Check that fixed hyperparameters are tunable and inside the benchmark range.
+
+    Args:
+        architecture: Architecture name, used in messages.
+        fixed: Hyperparameters to fix, mapped to their values.
+        space: Search space of the architecture: per hyperparameter a dict with
+            "low"/"high" (and "scale" or "choices").
+
+    Raises:
+        ValueError: If a fixed name is not part of the benchmark search space.
+
+    Warns:
+        UserWarning: If a fixed value lies outside the benchmarked range (the
+            proposal is then extrapolated).
+
+    (LLM-generated docstring, pending human review.)
+    """
     unknown = sorted(set(fixed) - set(space))
     if unknown:
         raise ValueError(
@@ -70,6 +87,21 @@ def _fit_surrogate(
     target: str,
     maximize: bool,
 ) -> Tuple[RandomForestRegressor, List[str]]:
+    """Fit (or fetch from cache) a random-forest surrogate of per-task ranks.
+
+    Args:
+        cache_key: Key under which the fitted surrogate is cached.
+        table: Raw benchmark evaluations (one row per config, task and dataset).
+        hp_names: Hyperparameters used as model inputs.
+        target: Column with the score to model.
+        maximize: Whether higher scores are better.
+
+    Returns:
+        Tuple of the fitted multi-output regressor (one output per task) and
+        the task names in output order.
+
+    (LLM-generated docstring, pending human review.)
+    """
     if cache_key not in _surrogate_cache:
         ranks = _task_ranks(table, target, maximize)
         hps = table.drop_duplicates("config_id").set_index("config_id").sort_index()
@@ -87,7 +119,17 @@ def _candidates(
     fixed: Dict[str, Any],
 ) -> pd.DataFrame:
     """Random samples of the free hyperparameters plus every evaluated
-    combination of them, with the fixed hyperparameters held at their values."""
+    combination of them, with the fixed hyperparameters held at their values.
+
+    Args:
+        table: Raw benchmark evaluations.
+        space: Search space of the architecture.
+        fixed: Hyperparameters held at the caller's values.
+
+    Returns:
+        Candidate configurations, one per row, with columns in search-space
+        order.
+    """
     rng = np.random.default_rng(_SEED)
     free = [name for name in space if name not in fixed]
     sampled: Dict[str, Any] = {}
@@ -110,6 +152,20 @@ def _candidates(
 
 
 def _greedy_portfolio(scores: np.ndarray, top_k: int) -> List[int]:
+    """Greedily pick ``top_k`` complementary candidates.
+
+    Each pick maximizes the mean over tasks of the best rank achieved by any
+    picked candidate so far (as in Syne Tune's ``ZeroShotTransfer``).
+
+    Args:
+        scores: Predicted ranks, candidates x tasks (higher is better).
+        top_k: Number of candidates to pick.
+
+    Returns:
+        Row indices of the picked candidates, best first.
+
+    (LLM-generated docstring, pending human review.)
+    """
     picked: List[int] = []
     best: Optional[np.ndarray] = None
     # Ties in the coverage gain (common once a few configs are picked) are broken

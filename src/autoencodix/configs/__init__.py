@@ -6,6 +6,7 @@ from .vanillix_config import VanillixConfig
 from .varix_config import VarixConfig
 from .xmodalix_config import XModalixConfig
 from .maskix_config import MaskixConfig
+from .supervisix_config import SupervisixConfig
 from .imagix3d_config import Imagix3DConfig
 
 __all__ = [
@@ -20,5 +21,6 @@ __all__ = [
     "VarixConfig",
     "XModalixConfig",
     "MaskixConfig",
+    "SupervisixConfig",
     "Imagix3DConfig",
 ]

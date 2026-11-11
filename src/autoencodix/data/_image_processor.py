@@ -9,9 +9,11 @@ from autoencodix.configs.default_config import DefaultConfig
 
 
 class ImagePreprocessor(GeneralPreprocessor):
-    """
-    Preprocessor for cross-modal data, handling multiple data types and their transformations.
+    """Preprocessor for a single image modality (``Imagix``).
 
+    Splits and normalizes the images of a DataPackage and wraps each split in an
+    ``ImageDataset``. Only one image modality is supported; additional ones are
+    ignored with a warning.
 
     Attributes:
         data_config: Configuration specific to data handling and preprocessing.
@@ -60,6 +62,24 @@ class ImagePreprocessor(GeneralPreprocessor):
         )
 
     def _process_dp(self, dp: DataPackage, indices: Dict[str, Any]) -> ImageDataset:
+        """Wrap the images of one split into an ``ImageDataset``.
+
+        Uses the first image modality and its annotation (or the "paired"
+        annotation) as metadata.
+
+        Args:
+            dp: DataPackage of one split.
+            indices: Sample indices of this split.
+
+        Returns:
+            The image dataset of this split.
+
+        Raises:
+            ValueError: If the DataPackage has no images.
+            TypeError: If ``dp.img`` is not a dict.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if dp.img is None:
             raise ValueError("no img attribute found in datapackage")
         first_key = next(iter(list(dp.img.keys())))

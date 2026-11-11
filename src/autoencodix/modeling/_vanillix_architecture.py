@@ -33,8 +33,13 @@ class VanillixArchitecture(BaseAutoencoder):
         """Initialize the Vanilla Autoencoder with the given configuration.
 
         Args:
-            config: Configuration object containing model parameters.
+            config: Configuration object containing model parameters; defaults are
+                used if None.
             input_dim: Number of input features.
+            ontologies: Accepted for a uniform constructor interface across
+                architectures; not used.
+            feature_order: Accepted for a uniform constructor interface across
+                architectures; not used.
         """
 
         if config is None:

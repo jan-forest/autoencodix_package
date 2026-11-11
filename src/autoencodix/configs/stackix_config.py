@@ -23,6 +23,16 @@ class StackixConfig(DefaultConfig):
 
     @model_validator(mode="before")
     def _force_save_memory_false(cls, values):
+        """Disable ``save_memory`` (unsupported for Stackix) with a warning.
+
+        Args:
+            values (dict): Raw config values before validation.
+
+        Returns:
+            dict: The values with ``save_memory`` set to False.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if values.get("save_memory") is True:
             warnings.warn(
                 "`save_memory=True` is not supported for StackixConfig — forcing to False., Set the checkpoint_interval to number of epochs if you want to save memory",

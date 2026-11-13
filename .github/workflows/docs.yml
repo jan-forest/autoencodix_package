@@ -61,7 +61,7 @@ jobs:
 
     # Build the documentation
     - name: Build docs
-      run: uv run mkdocs build
+      run: mkdocs build
 
     # Deploy to GitHub Pages using peaceiris
     - name: Deploy to GitHub Pages

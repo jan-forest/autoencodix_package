@@ -73,7 +73,10 @@ class XModalTrainer(BaseTrainer):
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
-        model_map: Dict[DataSetTypes, Type[BaseAutoencoder]],
+        model_map: Dict[DataSetTypes, Type[BaseAutoencoder]] = {
+            DataSetTypes.NUM: VarixArchitecture,
+            DataSetTypes.IMG: ImageVAEArchitecture,
+        },
         sub_loss_type: Type[BaseLoss] = VarixLoss,
         ontologies: Optional[Union[Tuple, List]] = None,
         **kwargs,
@@ -108,6 +111,7 @@ class XModalTrainer(BaseTrainer):
         self.n_test: Optional[int] = None
         self.n_train = len(trainset.data) if trainset else 0
         self.n_valid = len(validset.data) if validset else 0
+        self.n_features = trainset.get_input_dim() if trainset else 0
         self._cur_epoch: int = 0
         self._is_checkpoint_epoch: Optional[bool] = None
         self._sub_loss_type = sub_loss_type
@@ -154,15 +158,26 @@ class XModalTrainer(BaseTrainer):
         """Initializes DataLoaders with smart sampler selection based on pairing."""
 
         def _build_loader(dataset: MultiModalDataset, is_train: bool):
-            batch_size = self._config.batch_size
+            if len(self._trainset) % self._config.batch_size == 1:
+                corrected_bs = self._config.batch_size + 1
+                while len(self._trainset) % corrected_bs == 1:
+                    corrected_bs = corrected_bs + 1
+                    if len(self._trainset) <= corrected_bs:
+                        break
+                warnings.warn(
+                    f"increased batch_size to {corrected_bs} for trainset, to avoid dropping samples (makes trainingdynamics messy with missing samples per epoch) and having batches of size one (fails for Models with BachNorm)"
+                )
+            else:
+                corrected_bs = self._config.batch_size
+
             collate_fn = create_multimodal_collate_fn(multimodal_dataset=dataset)
 
             if dataset.is_fully_paired:
                 return DataLoader(
                     dataset,
-                    batch_size=batch_size,
+                    batch_size=corrected_bs,
                     shuffle=is_train,
-                    drop_last=is_train,
+                    drop_last=False,
                     collate_fn=collate_fn,
                     pin_memory=self._config.pin_memory,
                 )
@@ -173,7 +188,7 @@ class XModalTrainer(BaseTrainer):
                 )
                 sampler = CoverageEnsuringSampler(
                     multimodal_dataset=dataset,
-                    batch_size=batch_size,
+                    batch_size=corrected_bs,
                 )
                 return DataLoader(
                     dataset,

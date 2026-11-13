@@ -1,0 +1,61 @@
+# Autoencodix
+
+AUTOENCODIX is a Python framework to train, evaluate, explain and share autoencoders for biological data and beyond (bulk and single-cell omics, images, any tabular data). All architectures share one pipeline API (preprocess, fit, predict, visualize, generate, evaluate, explain, save/load) and are configured with validated Pydantic configs; call `<Name>Config.print_schema()` to list all parameters. Pretrained models are on https://huggingface.co/autoencodix. Source: https://github.com/jan-forest/autoencodix_package
+
+
+## Getting started
+
+- [Home](https://jan-forest.github.io/autoencodix_package/index.md): Overview, installation, quick start, architectures with references, pretrained models
+
+## Pipeline tutorials (one per architecture, start with Vanillix)
+
+- [Disentanglix](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/Disentanglix/index.md)
+- [Imagix](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/Imagix/index.md)
+- [Imagix3D](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/Imagix3D/index.md)
+- [Maskix](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/Maskix/index.md)
+- [Ontix](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/Ontix/index.md)
+- [Stackix](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/Stackix/index.md)
+- [Supervisix](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/Supervisix/index.md)
+- [Vanillix (start here)](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/Vanillix/index.md)
+- [Varix](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/Varix/index.md)
+- [X-Modalix](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/XModalix/index.md)
+
+## Deep dives (data input, config, evaluation, visualization, explainability, tuning, pretrained models)
+
+- [Config](https://jan-forest.github.io/autoencodix_package/tutorials/DeepDives/ConfigTutorial/index.md)
+- [Evaluate](https://jan-forest.github.io/autoencodix_package/tutorials/DeepDives/EvaluateTutorial/index.md)
+- [Explain Step](https://jan-forest.github.io/autoencodix_package/tutorials/DeepDives/ExplainStep/index.md)
+- [Hyperparameter Optimization (Optuna)](https://jan-forest.github.io/autoencodix_package/tutorials/DeepDives/HyperparameterOptimizationOptunaTutorial/index.md)
+- [Hyperparameter Optimization](https://jan-forest.github.io/autoencodix_package/tutorials/DeepDives/HyperparameterOptimizationTutorial/index.md)
+- [Input Data](https://jan-forest.github.io/autoencodix_package/tutorials/DeepDives/InputDataTutorials/index.md)
+- [Memory-Efficient Saving](https://jan-forest.github.io/autoencodix_package/tutorials/DeepDives/MemoryEfficientSaving/index.md)
+- [Pipeline Output](https://jan-forest.github.io/autoencodix_package/tutorials/DeepDives/PipelineOutputTutorial/index.md)
+- [Propose Initial Config](https://jan-forest.github.io/autoencodix_package/tutorials/DeepDives/ProposeInitialConfigTutorial/index.md)
+- [Using Pre-Trained Models](https://jan-forest.github.io/autoencodix_package/tutorials/DeepDives/UsingPreTrainedModels/index.md)
+- [Visualize](https://jan-forest.github.io/autoencodix_package/tutorials/DeepDives/VisualizeTutorial/index.md)
+
+## Developer guide
+
+- [Developer Guide](https://jan-forest.github.io/autoencodix_package/tutorials/DevGuide/index.md): How to add a new architecture
+
+## API reference
+
+- [Base](https://jan-forest.github.io/autoencodix_package/api/base/index.md)
+- [Configs](https://jan-forest.github.io/autoencodix_package/api/configs/index.md)
+- [Data](https://jan-forest.github.io/autoencodix_package/api/data/index.md)
+- [Disentanglix](https://jan-forest.github.io/autoencodix_package/api/disentanglix/index.md)
+- [Evaluate](https://jan-forest.github.io/autoencodix_package/api/evaluate/index.md)
+- [Imagix](https://jan-forest.github.io/autoencodix_package/api/imagix/index.md)
+- [Imagix3D](https://jan-forest.github.io/autoencodix_package/api/imagix3d/index.md)
+- [Maskix](https://jan-forest.github.io/autoencodix_package/api/maskix/index.md)
+- [Modeling](https://jan-forest.github.io/autoencodix_package/api/modeling/index.md)
+- [Ontix](https://jan-forest.github.io/autoencodix_package/api/ontix/index.md)
+- [Stackix](https://jan-forest.github.io/autoencodix_package/api/stackix/index.md)
+- [Supervisix](https://jan-forest.github.io/autoencodix_package/api/supervisix/index.md)
+- [Trainers](https://jan-forest.github.io/autoencodix_package/api/trainers/index.md)
+- [Utils](https://jan-forest.github.io/autoencodix_package/api/utils/index.md)
+- [Vanillix](https://jan-forest.github.io/autoencodix_package/api/vanillix/index.md)
+- [Varix](https://jan-forest.github.io/autoencodix_package/api/varix/index.md)
+- [Visualize](https://jan-forest.github.io/autoencodix_package/api/visualize/index.md)
+- [XModalix](https://jan-forest.github.io/autoencodix_package/api/xmodalix/index.md)
+

@@ -574,13 +574,13 @@ Uses the trained model to make predictions on test data or new data provided by 
 
 Parameters:
 
-| Name       | Type                                                              | Description                                                                                  | Default |
-| ---------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------- |
-| `data`     | `Optional[Union[DataPackage, DatasetContainer, AnnData, MuData]]` | Optional new data for predictions. If None, the test split of the preprocessed data is used. | `None`  |
-| `config`   | `Optional[Union[None, DefaultConfig]]`                            | Optional custom configuration for prediction.                                                | `None`  |
-| `from_key` | `Optional[str]`                                                   | Source modality for cross-modal translation (XModalix only).                                 | `None`  |
-| `to_key`   | `Optional[str]`                                                   | Target modality for cross-modal translation (XModalix only).                                 | `None`  |
-| `**kwargs` |                                                                   | Additional configuration parameters as keyword arguments.                                    | `{}`    |
+| Name       | Type                                                              | Description                                                                                                                                                                                                                                                                                                                            | Default |
+| ---------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `data`     | `Optional[Union[DataPackage, DatasetContainer, AnnData, MuData]]` | Optional new data for predictions. If None, the test split of the preprocessed data is used. The passed data is copied before preprocessing and stays unchanged, unless save_memory=True is set in the config: then it is preprocessed (filtered and scaled) in place to avoid the extra copy and must not be passed to predict again. | `None`  |
+| `config`   | `Optional[Union[None, DefaultConfig]]`                            | Optional custom configuration for prediction.                                                                                                                                                                                                                                                                                          | `None`  |
+| `from_key` | `Optional[str]`                                                   | Source modality for cross-modal translation (XModalix only).                                                                                                                                                                                                                                                                           | `None`  |
+| `to_key`   | `Optional[str]`                                                   | Target modality for cross-modal translation (XModalix only).                                                                                                                                                                                                                                                                           | `None`  |
+| `**kwargs` |                                                                   | Additional configuration parameters as keyword arguments.                                                                                                                                                                                                                                                                              | `{}`    |
 
 Returns:
 
@@ -665,9 +665,9 @@ Saves the pipeline to a file.
 
 Writes three files next to each other: `<file_path>` (pickled pipeline), `<stem>_preprocessor.pkl` and `<stem>_model.pth` (model weights). Restore with `<PipelineClass>.load(file_path)`.
 
-Warning
+Note
 
-With `save_all=False` the pipeline object in memory is slimmed down as a side effect: datasets, raw data and most results are removed and the in-memory model is re-initialized (weights are only kept in the saved files). Reload the pipeline with `load` before continuing to work with it, or use `save_all=True`.
+Saving does not change the pipeline object in memory. With `save_all=False` only the saved files are slimmed down: a pipeline restored with `load` has no datasets, raw data or training dynamics (loss curves, latent spaces per epoch) anymore. Run `predict` on the loaded pipeline to obtain latent spaces again, or use `save_all=True`.
 
 Parameters:
 
@@ -941,7 +941,7 @@ Raises:
 
 ### `show_evaluation(param: str, metric: str, ml_alg: Optional[str] = None) -> None`
 
-Displays the evaluation plot for a specific clinical parameter, metric, and optionally ML algorithm. Args: param: clinical parameter to visualize. metric: metric to visualize. ml_alg: ML algorithm to visualize. If None, plots all available algorithms. Returns: None
+Displays the evaluation plot for a specific clinical parameter, metric, and optionally ML algorithm. Args: param: clinical parameter to visualize. metric: metric to visualize. ml_alg: ML algorithm to visualize, given as class name (e.g. "RandomForestClassifier") or as `str(model)`. If None, plots all available algorithms. Returns: None
 
 ### `show_latent_space(result: Result, plot_type: str = '2D-scatter', labels: Optional[Union[list, pd.Series, None]] = None, param: Optional[Union[list, str]] = None, epoch: Optional[Union[int, None]] = None, split: str = 'all') -> None`
 

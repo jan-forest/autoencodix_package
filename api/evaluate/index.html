@@ -6929,8 +6929,7 @@ translation quality against a single-modality VAE.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/autoencodix/evaluate/_xmodalix_evaluator.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 25</span>
-<span class="normal"> 26</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 26</span>
 <span class="normal"> 27</span>
 <span class="normal"> 28</span>
 <span class="normal"> 29</span>
@@ -7322,7 +7321,18 @@ translation quality against a single-modality VAE.</p>
 <span class="normal">415</span>
 <span class="normal">416</span>
 <span class="normal">417</span>
-<span class="normal">418</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">XModalixEvaluator</span><span class="p">(</span><span class="n">GeneralEvaluator</span><span class="p">):</span>
+<span class="normal">418</span>
+<span class="normal">419</span>
+<span class="normal">420</span>
+<span class="normal">421</span>
+<span class="normal">422</span>
+<span class="normal">423</span>
+<span class="normal">424</span>
+<span class="normal">425</span>
+<span class="normal">426</span>
+<span class="normal">427</span>
+<span class="normal">428</span>
+<span class="normal">429</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">XModalixEvaluator</span><span class="p">(</span><span class="n">GeneralEvaluator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Evaluator for cross-modal (``XModalix``) results.</span>
 
 <span class="sd">    Extends ``GeneralEvaluator`` so that each modality's latent space is</span>
@@ -7641,7 +7651,11 @@ translation quality against a single-modality VAE.</p>
     <span class="c1">## New for x-modalix</span>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_input_for_ml</span><span class="p">(</span>
-        <span class="n">task</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">DatasetContainer</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">Result</span>
+        <span class="n">task</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">dataset</span><span class="p">:</span> <span class="n">DatasetContainer</span><span class="p">,</span>
+        <span class="n">result</span><span class="p">:</span> <span class="n">Result</span><span class="p">,</span>
+        <span class="n">n_downsample</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">reference_reducer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Loads and processes input data for various machine learning tasks based on the specified task type.</span>
 
@@ -7657,11 +7671,17 @@ translation quality against a single-modality VAE.</p>
 <span class="sd">            task: The type of ML task. Supported values are "Latent", "UMAP", "PCA", "TSNE", and "RandomFeature".</span>
 <span class="sd">            dataset: The dataset container object holding train, validation, and test splits.</span>
 <span class="sd">            result: The result object containing model configuration and methods to retrieve latent representations.</span>
+<span class="sd">            n_downsample: Accepted for compatibility with ``GeneralEvaluator``; not yet supported for XModalix and ignored.</span>
+<span class="sd">            reference_reducer: Accepted for compatibility with ``GeneralEvaluator``; not yet supported for XModalix and ignored.</span>
 <span class="sd">        Returns:</span>
 <span class="sd">            A DataFrame containing the processed input data suitable for the specified ML task.</span>
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If the provided task is not supported.</span>
 <span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">reference_reducer</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">"reference_reducer is not supported for XModalix evaluation and is ignored."</span>
+            <span class="p">)</span>
 
         <span class="c1"># final_epoch = result.model.config.epochs - 1</span>
         <span class="n">modality</span> <span class="o">=</span> <span class="n">task</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_$_"</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
@@ -7883,8 +7903,7 @@ The results are merged with sample metadata and returned in a long-format DataFr
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/evaluate/_xmodalix_evaluator.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 39</span>
-<span class="normal"> 40</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 40</span>
 <span class="normal"> 41</span>
 <span class="normal"> 42</span>
 <span class="normal"> 43</span>
@@ -8067,7 +8086,8 @@ The results are merged with sample metadata and returned in a long-format DataFr
 <span class="normal">220</span>
 <span class="normal">221</span>
 <span class="normal">222</span>
-<span class="normal">223</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+<span class="normal">223</span>
+<span class="normal">224</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="nd">@no_type_check</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">pure_vae_comparison</span><span class="p">(</span>
     <span class="n">xmodalix_result</span><span class="p">:</span> <span class="n">Result</span><span class="p">,</span>

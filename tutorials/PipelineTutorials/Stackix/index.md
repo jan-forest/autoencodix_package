@@ -149,73 +149,156 @@ Starting Pipeline
 --------------------------------------------------
 in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
 anno key: paired
-Reproducibility settings for device auto are not implemented or necessary i.e. for cpu.
+```
+
+```
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+```
+
+```
 Training each modality model...
 Training modality: rna
 Training modality: rna
-Reproducibility settings for device auto are not implemented or necessary i.e. for cpu.
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 9.6730 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 11.0494 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 20 - Train Loss: 862.4087
-Sub-losses: recon_loss: 862.4078, var_loss: 0.0009, anneal_factor: 0.0020, effective_beta_factor: 0.0000
-Epoch 20 - Valid Loss: 802.0719
-Sub-losses: recon_loss: 802.0713, var_loss: 0.0006, anneal_factor: 0.0020, effective_beta_factor: 0.0000
-Epoch 40 - Train Loss: 806.1211
-Sub-losses: recon_loss: 806.0600, var_loss: 0.0611, anneal_factor: 0.0998, effective_beta_factor: 0.0010
-Epoch 40 - Valid Loss: 740.7936
-Sub-losses: recon_loss: 740.7423, var_loss: 0.0513, anneal_factor: 0.0998, effective_beta_factor: 0.0010
-Epoch 60 - Train Loss: 763.1939
-Sub-losses: recon_loss: 762.3805, var_loss: 0.8135, anneal_factor: 0.8581, effective_beta_factor: 0.0086
-Epoch 60 - Valid Loss: 727.0296
-Sub-losses: recon_loss: 726.3649, var_loss: 0.6646, anneal_factor: 0.8581, effecti
-... [output truncated]
+Epoch 20 - Train Loss: 861.5075
+Sub-losses: recon_loss: 861.5067, var_loss: 0.0008, anneal_factor: 0.0020, effective_beta_factor: 0.0000
+Epoch 20 - Valid Loss: 809.1370
+Sub-losses: recon_loss: 809.1366, var_loss: 0.0003, anneal_factor: 0.0020, effective_beta_factor: 0.0000
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 11.1517 exceeded max norm of 5.
+Epoch 40 - Train Loss: 798.5528
+Sub-losses: recon_loss: 798.4950, var_loss: 0.0578, anneal_factor: 0.0998, effective_beta_factor: 0.0010
+Epoch 40 - Valid Loss: 741.4023
+Sub-losses: recon_loss: 741.3617, var_loss: 0.0406, anneal_factor: 0.0998, effective_beta_factor: 0.0010
+```
+
+```
+Epoch 60 - Train Loss: 766.8894
+Sub-losses: recon_loss: 766.2031, var_loss: 0.6862, anneal_factor: 0.8581, effective_beta_factor: 0.0086
+Epoch 60 - Valid Loss: 719.2603
+Sub-losses: recon_loss: 718.7603, var_loss: 0.5000, anneal_factor: 0.8581, effective_beta_factor: 0.0086
+```
+
+```
+Epoch 80 - Train Loss: 744.9275
+Sub-losses: recon_loss: 743.8341, var_loss: 1.0934, anneal_factor: 0.9970, effective_beta_factor: 0.0100
+Epoch 80 - Valid Loss: 701.3495
+Sub-losses: recon_loss: 700.5113, var_loss: 0.8382, anneal_factor: 0.9970, effective_beta_factor: 0.0100
+```
+
+```
+Epoch 100 - Train Loss: 737.5424
+Sub-losses: recon_loss: 736.1616, var_loss: 1.3807, anneal_factor: 0.9999, effective_beta_factor: 0.0100
+Epoch 100 - Valid Loss: 701.1273
+Sub-losses: recon_loss: 700.1542, var_loss: 0.9730, anneal_factor: 0.9999, effective_beta_factor: 0.0100
+Training modality: meth
+Training modality: meth
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 9.7115 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 20 - Train Loss: 661.1864
-Sub-losses: recon_loss: 661.1857, var_loss: 0.0007, anneal_factor: 0.0020, effective_beta_factor: 0.0000
-Epoch 20 - Valid Loss: 655.0351
-Sub-losses: recon_loss: 655.0345, var_loss: 0.0007, anneal_factor: 0.0020, effective_beta_factor: 0.0000
-Epoch 40 - Train Loss: 612.0515
-Sub-losses: recon_loss: 611.9937, var_loss: 0.0579, anneal_factor: 0.0998, effective_beta_factor: 0.0010
-Epoch 40 - Valid Loss: 603.8224
-Sub-losses: recon_loss: 603.7703, var_loss: 0.0520, anneal_factor: 0.0998, effective_beta_factor: 0.0010
-Epoch 60 - Train Loss: 561.3298
-Sub-losses: recon_loss: 560.5643, var_loss: 0.7655, anneal_factor: 0.8581, effective_beta_factor: 0.0086
-Epoch 60 - Valid Loss: 562.8977
-Sub-losses: recon_loss: 562.1656, var_loss: 0.7321, anneal_factor: 0.8581, effecti
-... [output truncated]
+Epoch 20 - Train Loss: 708.7072
+Sub-losses: recon_loss: 708.7065, var_loss: 0.0008, anneal_factor: 0.0020, effective_beta_factor: 0.0000
+Epoch 20 - Valid Loss: 827.8635
+Sub-losses: recon_loss: 827.8621, var_loss: 0.0014, anneal_factor: 0.0020, effective_beta_factor: 0.0000
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 73.4787 exceeded max norm of 5.
+Epoch 40 - Train Loss: 615.2633
+Sub-losses: recon_loss: 615.2055, var_loss: 0.0578, anneal_factor: 0.0998, effective_beta_factor: 0.0010
+Epoch 40 - Valid Loss: 612.6787
+Sub-losses: recon_loss: 612.6109, var_loss: 0.0677, anneal_factor: 0.0998, effective_beta_factor: 0.0010
+```
+
+```
+Epoch 60 - Train Loss: 588.3950
+Sub-losses: recon_loss: 587.6555, var_loss: 0.7395, anneal_factor: 0.8581, effective_beta_factor: 0.0086
+Epoch 60 - Valid Loss: 587.5274
+Sub-losses: recon_loss: 586.7058, var_loss: 0.8216, anneal_factor: 0.8581, effective_beta_factor: 0.0086
+```
+
+```
+Epoch 80 - Train Loss: 577.5370
+Sub-losses: recon_loss: 576.3876, var_loss: 1.1494, anneal_factor: 0.9970, effective_beta_factor: 0.0100
+Epoch 80 - Valid Loss: 572.7204
+Sub-losses: recon_loss: 571.5363, var_loss: 1.1841, anneal_factor: 0.9970, effective_beta_factor: 0.0100
+```
+
+```
+Epoch 100 - Train Loss: 557.4491
+Sub-losses: recon_loss: 555.9831, var_loss: 1.4660, anneal_factor: 0.9999, effective_beta_factor: 0.0100
+Epoch 100 - Valid Loss: 543.0278
+Sub-losses: recon_loss: 541.2497, var_loss: 1.7781, anneal_factor: 0.9999, effective_beta_factor: 0.0100
+Found 420 common samples for the stacked autoencoder.
+Found 60 common samples for the stacked autoencoder.
+finished training each modality model
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 86.0775 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 20 - Train Loss: 363.1186
-Sub-losses: recon_loss: 363.1184, var_loss: 0.0002, anneal_factor: 0.0020, effective_beta_factor: 0.0000
-Epoch 20 - Valid Loss: 321.1639
-Sub-losses: recon_loss: 321.1637, var_loss: 0.0002, anneal_factor: 0.0020, effective_beta_factor: 0.0000
-Epoch 40 - Train Loss: 247.1598
-Sub-losses: recon_loss: 247.1190, var_loss: 0.0408, anneal_factor: 0.0998, effective_beta_factor: 0.0010
-Epoch 40 - Valid Loss: 209.5626
-Sub-losses: recon_loss: 209.5314, var_loss: 0.0312, anneal_factor: 0.0998, effective_beta_factor: 0.0010
-Epoch 60 - Train Loss: 214.3203
-Sub-losses: recon_loss: 213.7860, var_loss: 0.5344, anneal_factor: 0.8581, effective_beta_factor: 0.0086
-Epoch 60 - Valid Loss: 176.2616
-Sub-losses: recon_loss: 175.7611, var_loss: 0.5005, anneal_factor: 0.8581, effecti
+Epoch 20 - Train Loss: 366.4243
+Sub-losses: recon_loss: 366.4241, var_loss: 0.0002, anneal_factor: 0.0020, effective_beta_factor: 0.0000
+Epoch 20 - Valid Loss: 337.7049
+Sub-losses: recon_loss: 337.7048, var_loss: 0.0001, anneal_factor: 0.0020, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 40 - Train Loss: 251.6875
+Sub-losses: recon_loss: 251.6583, var_loss: 0.0292, anneal_factor: 0.0998, effective_beta_factor: 0.0010
+Epoch 40 - Valid Loss: 218.8828
+Sub-losses: recon_loss: 218.8616, var_loss: 0.0212, anneal_factor: 0.0998, effective_beta_factor: 0.0010
+```
+
+```
+Epoch 60 - Train Loss: 217.7289
+Sub-losses: recon_loss: 217.2342, var_loss: 0.4947, anneal_factor: 0.8581, effective_beta_factor: 0.0086
+Epoch 60 - Valid Loss: 182.7816
+Sub-losses: recon_loss: 182.4353, var_loss: 0.3463, anneal_factor: 0.8581, effective_beta_factor: 0.0086
+```
+
+```
+Epoch 80 - Train Loss: 192.9095
+Sub-losses: recon_loss: 192.0899, var_loss: 0.8196, anneal_factor: 0.9970, effective_beta_factor: 0.0100
+Epoch 80 - Valid Loss: 167.0142
+Sub-losses: recon_loss: 166.4467, var_loss: 0.5675, anneal_factor: 0.9970, effective_beta_factor: 0.0100
+```
+
+```
+Epoch 100 - Train Loss: 195.3627
+Sub-losses: recon_loss: 194.3243, var_loss: 1.0384, anneal_factor: 0.9999, effective_beta_factor: 0.0100
+Epoch 100 - Valid Loss: 152.8711
+Sub-losses: recon_loss: 152.0966, var_loss: 0.7745, anneal_factor: 0.9999, effective_beta_factor: 0.0100
+Processed 32 / 120 samples
+Processed 64 / 120 samples
+Processed 96 / 120 samples
+Processed 120 / 120 samples
+Processed 32 / 120 samples
+Processed 64 / 120 samples
+Processed 96 / 120 samples
+Processed 120 / 120 samples
+Found 120 common samples for the stacked autoencoder.
+<autoencodix.data._numeric_dataset.NumericDataset object at 0x73fd70183da0>
+Processed 32 / 120 samples
+Processed 64 / 120 samples
+Processed 96 / 120 samples
+Processed 120 / 120 samples
+Successfully created annotated latent space object (adata_latent).
 ... [output truncated]
 ```
 
@@ -262,53 +345,69 @@ import pandas as pd from autoencodix.data.datapackage import DataPackage from au
 in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
 anno key: rna
 anno key: meth
+```
+
+```
 Training each modality model...
 Training modality: rna
 Training modality: rna
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 10.8362 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 11.0010 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 3 - Train Loss: 53474.2982
-Sub-losses: recon_loss: 18050.3304, var_loss: 35423.9675, anneal_factor: 0.9656, effective_beta_factor: 0.0966
-Epoch 3 - Valid Loss: 2383693.7091
-Sub-losses: recon_loss: 2383298.5129, var_loss: 395.0898, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Epoch 3 - Train Loss: 43112.5306
+Sub-losses: recon_loss: 18463.2616, var_loss: 24649.2694, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Epoch 3 - Valid Loss: 156541.3513
+Sub-losses: recon_loss: 156189.7737, var_loss: 351.5800, anneal_factor: 0.9656, effective_beta_factor: 0.0966
 Training modality: meth
 Training modality: meth
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 11.6226 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 10.8091 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 3 - Train Loss: 7836.0943
-Sub-losses: recon_loss: 7752.6758, var_loss: 83.4184, anneal_factor: 0.9656, effective_beta_factor: 0.0966
-Epoch 3 - Valid Loss: 11965.9589
-Sub-losses: recon_loss: 10710.3828, var_loss: 1255.5765, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Epoch 3 - Train Loss: 7730.2220
+Sub-losses: recon_loss: 7599.5141, var_loss: 130.7078, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Epoch 3 - Valid Loss: 9269.0419
+Sub-losses: recon_loss: 9249.8117, var_loss: 19.2304, anneal_factor: 0.9656, effective_beta_factor: 0.0966
 Found 406 common samples for the stacked autoencoder.
 Found 58 common samples for the stacked autoencoder.
 finished training each modality model
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 3753.9534 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 264.4442 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 3 - Train Loss: 1097675.9266
-Sub-losses: recon_loss: 1097672.9758, var_loss: 2.9551, anneal_factor: 0.9656, effective_beta_factor: 0.0966
-Epoch 3 - Valid Loss: 14828.0579
-Sub-losses: recon_loss: 14827.8384, var_loss: 0.2195, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Epoch 3 - Train Loss: 382916.6880
+Sub-losses: recon_loss: 382916.2968, var_loss: 0.3747, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Epoch 3 - Valid Loss: 7758.7018
+Sub-losses: recon_loss: 7758.6870, var_loss: 0.0150, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Processed 32 / 116 samples
+Processed 64 / 116 samples
+Processed 96 / 116 samples
+Processed 116 / 116 samples
+Processed 32 / 120 samples
+Processed 64 / 120 samples
+Processed 96 / 120 samples
+Processed 120 / 120 samples
 Found 116 common samples for the stacked autoencoder.
-<autoencodix.data._numeric_dataset.NumericDataset object at 0x7891a6988ca0>
-Successfully created annotated latent space object (adata_latent).
+<autoencodix.data._numeric_dataset.NumericDataset object at 0x73fd70448380>
+Processed 32 / 116 samples
+Processed 64 / 116 samples
+Processed 96 / 116 samples
+Processed 116 / 116 samples
+Successfully created annotated latent space object (adata_late
+... [output truncated]
 ```
 
 ## 3) Access Stackix-Specific Outputs[¶](#3-access-stackix-specific-outputs)
@@ -369,31 +468,30 @@ sub_losses: LossRegistry(_losses={'recon_loss': TrainingDynamics(), 'var_loss': 
 preprocessed_data: Tensor of shape (0,)
 model: VarixArchitecture
 model_checkpoints: TrainingDynamics object
+class_means: TrainingDynamics object
 datasets: DatasetContainer(train=None, valid=None, test=None)
 new_datasets: DatasetContainer(train=None, valid=None, test=None)
 adata_latent: AnnData object with n_obs × n_vars = 0 × 0
-final_reconstruction: None
-sub_results: None
-sub_re
+final_reconstr
 ... [output truncated]
 ```
 
 Out\[5\]:
 
 ```
-array([[ 0.881716  ,  1.2293729 ,  0.72128266, ...,  2.4728608 ,
-         6.5299053 ,  1.1532463 ],
-       [ 1.9333293 ,  1.5813494 ,  1.2028021 , ...,  5.103081  ,
-         4.5182433 ,  0.36976436],
-       [ 2.459379  ,  5.0468388 ,  5.430481  , ..., -1.0237892 ,
-         7.628327  ,  2.1867306 ],
+array([[ 0.60902447,  1.8953304 ,  1.6210244 , ..., -0.77807117,
+         0.13796484,  0.55225635],
+       [ 0.7116955 ,  2.1084826 ,  4.525612  , ...,  0.42529175,
+         1.7997122 ,  2.3922684 ],
+       [-1.4662203 , -0.16053778,  1.4779546 , ...,  1.6357734 ,
+         0.8535643 , -0.2062298 ],
        ...,
-       [ 7.0717545 ,  6.199747  ,  1.9782643 , ...,  5.257984  ,
-        11.63677   ,  2.5935605 ],
-       [ 0.21196252,  0.7826589 ,  0.6282544 , ...,  3.063758  ,
-         0.6773172 ,  1.109165  ],
-       [ 1.9420035 ,  8.156875  , 11.350476  , ..., -0.08163258,
-        -0.7722243 ,  7.3420835 ]], shape=(120, 16), dtype=float32)
+       [13.1728945 ,  9.191634  ,  9.9418    , ..., -0.15876473,
+         5.6592045 ,  0.9905605 ],
+       [ 1.1091481 ,  2.0996447 , -0.5123983 , ...,  0.11502871,
+         5.8076015 , -0.87619036],
+       [ 4.4038086 ,  3.2189286 ,  8.247406  , ...,  0.96144074,
+         9.293939  ,  2.3476388 ]], shape=(120, 16), dtype=float32)
 ```
 
 In \[6\]:
@@ -438,77 +536,79 @@ LatDim_15
 
 
 
-TCGA-05-4250-01
--0.178447
-2.736038
--0.746352
--0.764565
--0.667412
-1.717845
--1.600573
--2.225891
--0.023309
--0.783873
-3.320147
-4.199130
-2.715884
--1.023837
-4.936493
-4.073131
+TCGA-09-1670-01
+1.678541
+-0.756772
+1.766413
+5.494479
+5.885232
+2.213073
+-0.659003
+4.496250
+-1.154735
+2.784639
+1.886887
+0.316816
+2.120650
+-1.987382
+0.855010
+2.937171
 
 
-TCGA-05-4410-01
-1.164364
-2.972247
-0.209474
-1.088743
--1.119766
-0.989842
--0.003885
-0.724461
--0.071547
-0.963581
-0.872269
-0.817888
-1.490780
-0.051327
-4.229981
-1.636360
+TCGA-09-1674-01
+1.173382
+0.408939
+1.389013
+4.767611
+5.374843
+2.044036
+0.479978
+2.096513
+0.776345
+3.812770
+-0.617784
+0.124010
+1.663672
+0.685736
+-0.884433
+2.594606
 
 
-TCGA-05-4420-01
-1.361521
-1.197402
--0.829542
-0.702733
--0.512372
-1.131414
--1.352620
--0.470067
--0.032610
-1.409997
-1.676570
-0.123716
-2.481240
--0.988570
-2.873714
-2.274129
+TCGA-24-0975-01
+-0.875569
+1.486634
+2.251036
+1.607407
+4.139259
+1.688630
+0.304271
+2.961607
+0.838249
+4.214644
+1.642579
+0.805008
+3.197985
+2.320084
+0.302546
+0.986147
 
 
-TCGA-09-1669-01
-2.612077
--1.159732
-7.229315
-3.524749
-6.000990
-1.690343
-4.885739
-3.818074
--0.478044
-3.715651
-0.476996
-0.767875
-1.055437
+TCGA-24-1417-01
+-0.575101
+1.011320
+1.628110
+3.975448
+5.451651
+3.162087
+1.878302
+3.828600
+1.160349
+4.455536
+0.647374
+-0.609331
+2.483908
+0.160349
+-2
 ... [output truncated]
 ```
 
@@ -576,111 +676,176 @@ import autoencodix as acx from autoencodix.configs.default_config import DataCas
 ```
 in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
 anno key: paired
+```
+
+```
 Training each modality model...
 Training modality: rna
 Training modality: rna
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 23.0555 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 19.9810 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 5 - Train Loss: 856.5413
-Sub-losses: recon_loss: 856.5413
-Epoch 5 - Valid Loss: 1227.5358
-Sub-losses: recon_loss: 1227.5358
-Epoch 10 - Train Loss: 796.2182
-Sub-losses: recon_loss: 796.2182
-Epoch 10 - Valid Loss: 1179.8255
-Sub-losses: recon_loss: 1179.8255
-Epoch 15 - Train Loss: 761.0203
-Sub-losses: recon_loss: 761.0203
-Epoch 15 - Valid Loss: 1156.3602
-Sub-losses: recon_loss: 1156.3602
-Epoch 20 - Train Loss: 740.2954
-Sub-losses: recon_loss: 740.2954
-Epoch 20 - Valid Loss: 1145.7398
-Sub-losses: recon_loss: 1145.7398
-Epoch 25 - Train Loss: 738.6436
-Sub-losses: recon_loss: 738.6436
-Epoch 25 - Valid Loss: 1138.0193
-Sub-losses: recon_loss: 1138.0193
-Epoch 27 - Train Loss: 722.9525
-Sub-losses: recon_loss: 722.9525
-Epoch 27 - Valid Loss: 1129.5311
-Sub-losses: recon_loss: 1129.5311
-Training
-... [output truncated]
+Epoch 5 - Train Loss: 849.0952
+Sub-losses: recon_loss: 849.0952
+Epoch 5 - Valid Loss: 805.0664
+Sub-losses: recon_loss: 805.0664
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 19.4628 exceeded max norm of 5.
+Epoch 10 - Train Loss: 796.1807
+Sub-losses: recon_loss: 796.1807
+Epoch 10 - Valid Loss: 770.1940
+Sub-losses: recon_loss: 770.1940
+```
+
+```
+Epoch 15 - Train Loss: 772.3496
+Sub-losses: recon_loss: 772.3496
+Epoch 15 - Valid Loss: 747.3774
+Sub-losses: recon_loss: 747.3774
+```
+
+```
+Epoch 20 - Train Loss: 750.7159
+Sub-losses: recon_loss: 750.7159
+Epoch 20 - Valid Loss: 744.3476
+Sub-losses: recon_loss: 744.3476
+```
+
+```
+Epoch 25 - Train Loss: 730.3083
+Sub-losses: recon_loss: 730.3083
+Epoch 25 - Valid Loss: 737.4077
+Sub-losses: recon_loss: 737.4077
+```
+
+```
+Epoch 27 - Train Loss: 733.9101
+Sub-losses: recon_loss: 733.9101
+Epoch 27 - Valid Loss: 735.1336
+Sub-losses: recon_loss: 735.1336
+Training modality: meth
+Training modality: meth
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 16.7733 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 5 - Train Loss: 659.6040
-Sub-losses: recon_loss: 659.6040
-Epoch 5 - Valid Loss: 531.5841
-Sub-losses: recon_loss: 531.5841
-Epoch 10 - Train Loss: 602.5172
-Sub-losses: recon_loss: 602.5172
-Epoch 10 - Valid Loss: 484.7523
-Sub-losses: recon_loss: 484.7523
-Epoch 15 - Train Loss: 577.7273
-Sub-losses: recon_loss: 577.7273
-Epoch 15 - Valid Loss: 466.4911
-Sub-losses: recon_loss: 466.4911
-Epoch 20 - Train Loss: 573.4865
-Sub-losses: recon_loss: 573.4865
-Epoch 20 - Valid Loss: 463.3812
-Sub-losses: recon_loss: 463.3812
-Epoch 25 - Train Loss: 558.4631
-Sub-losses: recon_loss: 558.4631
-Epoch 25 - Valid Loss: 447.9033
-Sub-losses: recon_loss: 447.9033
-Epoch 27 - Train Loss: 538.6525
-Sub-losses: recon_loss: 538.6525
-Epoch 27 - Valid Loss: 448.4826
-Sub-losses: recon_loss: 448.4826
-Found 420 common samp
-... [output truncated]
+Epoch 5 - Train Loss: 667.1786
+Sub-losses: recon_loss: 667.1786
+Epoch 5 - Valid Loss: 561.2035
+Sub-losses: recon_loss: 561.2035
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 35.7969 exceeded max norm of 5.
+Epoch 10 - Train Loss: 592.9923
+Sub-losses: recon_loss: 592.9923
+Epoch 10 - Valid Loss: 519.3777
+Sub-losses: recon_loss: 519.3777
+```
+
+```
+Epoch 15 - Train Loss: 581.2438
+Sub-losses: recon_loss: 581.2438
+Epoch 15 - Valid Loss: 504.0353
+Sub-losses: recon_loss: 504.0353
+```
+
+```
+Epoch 20 - Train Loss: 571.8997
+Sub-losses: recon_loss: 571.8997
+Epoch 20 - Valid Loss: 500.9520
+Sub-losses: recon_loss: 500.9520
+```
+
+```
+Epoch 25 - Train Loss: 543.3780
+Sub-losses: recon_loss: 543.3780
+Epoch 25 - Valid Loss: 493.9917
+Sub-losses: recon_loss: 493.9917
+```
+
+```
+Epoch 27 - Train Loss: 547.9194
+Sub-losses: recon_loss: 547.9194
+Epoch 27 - Valid Loss: 487.6528
+Sub-losses: recon_loss: 487.6528
+Found 420 common samples for the stacked autoencoder.
+Found 60 common samples for the stacked autoencoder.
+finished training each modality model
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 42.4750 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 5 - Train Loss: 25.4678
-Sub-losses: recon_loss: 25.4678
-Epoch 5 - Valid Loss: 20.9136
-Sub-losses: recon_loss: 20.9136
-Epoch 10 - Train Loss: 20.5687
-Sub-losses: recon_loss: 20.5687
-Epoch 10 - Valid Loss: 16.4208
-Sub-losses: recon_loss: 16.4208
-Epoch 15 - Train Loss: 17.1140
-Sub-losses: recon_loss: 17.1140
-Epoch 15 - Valid Loss: 12.7210
-Sub-losses: recon_loss: 12.7210
-Epoch 20 - Train Loss: 15.5596
-Sub-losses: recon_loss: 15.5596
-Epoch 20 - Valid Loss: 9.8392
-Sub-losses: recon_loss: 9.8392
-Epoch 25 - Train Loss: 14.3893
-Sub-losses: recon_loss: 14.3893
-Epoch 25 - Valid Loss: 8.7181
-Sub-losses: recon_loss: 8.7181
-Epoch 27 - Train Loss: 14.2813
-Sub-losses: recon_loss: 14.2813
-Epoch 27 - Valid Loss: 9.0706
-Sub-losses: recon_loss: 9.0706
-Found 120 common samples for the stacked autoencode
-... [output truncated]
+Epoch 5 - Train Loss: 28.9800
+Sub-losses: recon_loss: 28.9800
+Epoch 5 - Valid Loss: 26.2177
+Sub-losses: recon_loss: 26.2177
+```
+
+```
+Epoch 10 - Train Loss: 23.7372
+Sub-losses: recon_loss: 23.7372
+Epoch 10 - Valid Loss: 21.4609
+Sub-losses: recon_loss: 21.4609
+```
+
+```
+Epoch 15 - Train Loss: 20.6745
+Sub-losses: recon_loss: 20.6745
+Epoch 15 - Valid Loss: 18.5181
+Sub-losses: recon_loss: 18.5181
+```
+
+```
+Epoch 20 - Train Loss: 19.5151
+Sub-losses: recon_loss: 19.5151
+Epoch 20 - Valid Loss: 16.0991
+Sub-losses: recon_loss: 16.0991
+```
+
+```
+Epoch 25 - Train Loss: 17.8456
+Sub-losses: recon_loss: 17.8456
+Epoch 25 - Valid Loss: 13.6030
+Sub-losses: recon_loss: 13.6030
+```
+
+```
+Epoch 27 - Train Loss: 17.1849
+Sub-losses: recon_loss: 17.1849
+Epoch 27 - Valid Loss: 12.8338
+Sub-losses: recon_loss: 12.8338
+Processed 32 / 120 samples
+Processed 64 / 120 samples
+Processed 96 / 120 samples
+Processed 120 / 120 samples
+Processed 32 / 120 samples
+Processed 64 / 120 samples
+Processed 96 / 120 samples
+Processed 120 / 120 samples
+Found 120 common samples for the stacked autoencoder.
+<autoencodix.data._numeric_dataset.NumericDataset object at 0x73fad037f950>
+Processed 32 / 120 samples
+```
+
+```
+Processed 64 / 120 samples
+Processed 96 / 120 samples
+Processed 120 / 120 samples
+Successfully created annotated latent space object (adata_latent).
 ```
 
 ## 6) Saving, Loading and Reusing[¶](#6-saving-loading-and-reusing)
@@ -720,11 +885,20 @@ stackix_loaded = acx.Stackix.load(outpath)
 
 ```
 Preprocessor saved successfully.
+```
+
+```
 saving memory efficient
+```
+
+```
 Pipeline object saved successfully.
-PKL files: ['tutorial_res/van_preprocessor.pkl', 'tutorial_res/stackix_preprocessor.pkl']
-Model files: ['tutorial_res/stackix_model.pth', 'tutorial_res/van_model.pth']
+PKL files: ['tutorial_res/supervisix_preprocessor.pkl', 'tutorial_res/van_preprocessor.pkl', 'tutorial_res/stackix_preprocessor.pkl']
+Model files: ['tutorial_res/stackix_model.pth', 'tutorial_res/supervisix_model.pth', 'tutorial_res/van_model.pth']
 Attempting to load a pipeline from tutorial_res/stackix...
+```
+
+```
 Pipeline object loaded successfully. Actual type: Stackix
 Preprocessor loaded successfully.
 ```
@@ -740,10 +914,59 @@ stackix_loaded.predict(data=tcga_multi_bulk)
 stackix_loaded.predict(data=tcga_multi_bulk)
 
 ```
-Reproducibility settings for device auto are not implemented or necessary i.e. for cpu.
 in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
-Found 600 common samples for the stacked autoencoder.
-<autoencodix.data._numeric_dataset.NumericDataset object at 0x7890f077c040>
+```
+
+```
+Processed 32 / 600 samples
+Processed 64 / 600 samples
+Processed 96 / 600 samples
+Processed 128 / 600 samples
+Processed 160 / 600 samples
+Processed 192 / 600 samples
+Processed 224 / 600 samples
+Processed 256 / 600 samples
+Processed 288 / 600 samples
+Processed 320 / 600 samples
+Processed 352 / 600 samples
+Processed 384 / 600 samples
+Processed 416 / 600 samples
+Processed 448 / 600 samples
+Processed 480 / 600 samples
+Processed 512 / 600 samples
+Processed 544 / 600 samples
+Processed 576 / 600 samples
+Processed 600 / 600 samples
+Processed 32 / 600 samples
+Processed 64 / 600 samples
+Processed 96 / 600 samples
+Processed 128 / 600 samples
+Processed 160 / 600 samples
+Processed 192 / 600 samples
+Processed 224 / 600 samples
+Processed 256 / 600 samples
+Processed 288 / 600 samples
+Processed 320 / 600 s
+... [output truncated]
+```
+
+```
+Processed 128 / 600 samples
+Processed 160 / 600 samples
+Processed 192 / 600 samples
+Processed 224 / 600 samples
+Processed 256 / 600 samples
+Processed 288 / 600 samples
+Processed 320 / 600 samples
+Processed 352 / 600 samples
+Processed 384 / 600 samples
+Processed 416 / 600 samples
+Processed 448 / 600 samples
+Processed 480 / 600 samples
+Processed 512 / 600 samples
+Processed 544 / 600 samples
+Processed 576 / 600 samples
+Processed 600 / 600 samples
 Successfully created annotated latent space object (adata_latent).
 ```
 
@@ -762,8 +985,8 @@ sub_losses: LossRegistry(_losses={'recon_loss': TrainingDynamics(), 'var_loss': 
 preprocessed_data: Tensor of shape (0,)
 model: VarixArchitecture
 model_checkpoints: TrainingDynamics object
-datasets: DatasetContainer(train=None, valid=None, test=None)
-new_datasets: DatasetContainer(train=<autoencodix.data._multimodal_dataset.MultiModalDataset object at 0x7890f077c550>, valid=None, test=<autoencodix.data._multimodal_dataset
+class_means: TrainingDynamics object
+datasets: DatasetContainer(train=<autoencodix.data._multimodal_dataset.MultiModalDataset object at 0x73fab8636540>, valid=<autoencodix.data._multimodal_dataset.MultiModalDataset object at 0x73fab8b39
 ... [output truncated]
 ```
 
@@ -781,28 +1004,6 @@ stackix_loaded.show_result(params=["CANCER_TYPE"])
 Creating plots ...
 Absolute loss plot not found in the plots dictionary
 This happens, when you did not run visualize() or if you saved and loaded the model with `save_all=False`
-```
-
-```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 99 and split 'train'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
-
-
-  warnings.warn(
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 99 and split 'valid'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
-
-
-  warnings.warn(
-```
-
-```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 99 and split 'train'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
-
-
-  warnings.warn(
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 99 and split 'valid'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
-
-
-  warnings.warn(
 ```
 
 #### Generate New Data[¶](#generate-new-data)
@@ -827,16 +1028,16 @@ print(generated_reconstructions)
 generated_reconstructions = stackix_loaded.generate(n_samples=5) print(generated_reconstructions)
 
 ```
-Reproducibility settings for device auto are not implemented or necessary i.e. for cpu.
-tensor([[3.4581, 0.9484, 4.1967, 3.9275, 1.9968, 2.9378, 4.8404, 0.7652, 1.7989,
-         3.4892, 4.3203, 2.6945, 4.6708, 2.5322, 2.8759, 2.5423, 2.4730, 1.9494,
-         2.3085, 3.2754, 1.2611, 1.5800, 1.2624, 0.8034, 2.3158, 1.8371, 1.3834,
-         1.5676, 4.7108, 3.6217, 3.6610, 1.9044],
-        [2.1054, 0.3580, 2.1148, 2.7985, 2.3127, 3.2155, 4.1482, 0.2411, 1.6331,
-         3.5144, 2.3068, 1.7943, 4.4628, 2.9603, 1.4355, 3.1935, 4.0196, 0.9700,
-         1.3288, 4.3767, 1.0587, 2.1889, 1.4707, 1.4002, 2.4744, 1.8154, 0.7167,
-         1.8016, 6.1686, 3.6641, 4.3081, 1.0681],
-        [2.6230, 0.8783, 2.3425, 2.3219, 0.7897, 1.7055, 2.0328, 0.6214, 1.6282,
-         1.3181, 2.5319, 1.6533, 3.8746, 2.2
+tensor([[2.0793, 1.7237, 1.4916, 2.8190, 1.3942, 1.6960, 1.5467, 1.5444, 1.7116,
+         1.1534, 1.2416, 1.0904, 4.1049, 2.8662, 2.8259, 1.3614, 4.8762, 4.0383,
+         4.5663, 3.9517, 2.0408, 1.4265, 2.7195, 2.2117, 3.4810, 1.9435, 2.3055,
+         0.6842, 4.9059, 2.4917, 3.9826, 3.0114],
+        [2.7321, 2.1541, 1.9380, 3.8838, 1.9447, 1.6806, 2.1549, 2.1850, 0.8857,
+         1.6568, 1.8522, 1.6868, 3.6741, 3.3703, 1.8000, 1.4678, 6.1978, 4.8756,
+         4.6193, 5.1619, 1.7323, 1.9495, 2.5986, 2.9031, 2.1829, 1.3280, 1.4037,
+         0.1897, 6.4398, 3.2108, 5.1410, 2.8926],
+        [2.0714, 2.4733, 2.6246, 3.1415, 1.2934, 1.8166, 2.0684, 1.5501, 0.8833,
+         2.0830, 2.2447, 1.6188, 2.7827, 2.2695, 1.6414, 2.1501, 5.3980, 4.6438,
+         3.9895, 4.9139, 2.2990, 1.6801, 2.5718, 2.
 ... [output truncated]
 ```

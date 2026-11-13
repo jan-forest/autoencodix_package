@@ -1718,6 +1718,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#autoencodix.trainers.StackixTrainer.purge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        purge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#autoencodix.trainers.StackixTrainer.train" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2308,6 +2319,17 @@
     <span class="md-ellipsis">
       
         predict
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#autoencodix.trainers.StackixTrainer.purge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        purge
       
     </span>
   </a>
@@ -3408,7 +3430,17 @@
 <span class="normal">643</span>
 <span class="normal">644</span>
 <span class="normal">645</span>
-<span class="normal">646</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GeneralTrainer</span><span class="p">(</span><span class="n">BaseTrainer</span><span class="p">):</span>
+<span class="normal">646</span>
+<span class="normal">647</span>
+<span class="normal">648</span>
+<span class="normal">649</span>
+<span class="normal">650</span>
+<span class="normal">651</span>
+<span class="normal">652</span>
+<span class="normal">653</span>
+<span class="normal">654</span>
+<span class="normal">655</span>
+<span class="normal">656</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GeneralTrainer</span><span class="p">(</span><span class="n">BaseTrainer</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Handles general training logic for autoencoder models.</span>
 
 <span class="sd">    Attributes:</span>
@@ -3574,6 +3606,16 @@
                 <span class="n">epoch_loss</span><span class="p">,</span> <span class="n">epoch_sub_losses</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_epoch</span><span class="p">(</span>
                     <span class="n">should_checkpoint</span><span class="o">=</span><span class="n">should_checkpoint</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span>
                 <span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">epoch_loss</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">getattr</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="p">,</span> <span class="s2">"_nonfinite_loss_warning_sent"</span><span class="p">,</span> <span class="kc">False</span>
+                <span class="p">):</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"Training loss is not finite (NaN or Inf) in epoch </span><span class="si">{</span><span class="n">epoch</span><span class="si">}</span><span class="s2">. "</span>
+                        <span class="s2">"The model has diverged and its results are not usable. Try a "</span>
+                        <span class="s2">"lower learning_rate, a different scaling or, if the config "</span>
+                        <span class="s2">"offers it, clamp_logvar=True."</span>
+                    <span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_nonfinite_loss_warning_sent</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_log_losses</span><span class="p">(</span>
                     <span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">,</span>
                     <span class="n">split</span><span class="o">=</span><span class="s2">"train"</span><span class="p">,</span>
@@ -3686,7 +3728,7 @@
                     <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
                         <span class="sa">f</span><span class="s2">"Gradient clipping was first applied in epoch </span><span class="si">{</span><span class="n">epoch</span><span class="si">}</span><span class="s2">. Total norm of gradients (adjusted for number of features): </span><span class="si">{</span><span class="n">total_norm</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> exceeded max norm of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">grad_clip_max_norm</span><span class="si">}</span><span class="s2">."</span>
                     <span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="o">=</span> <span class="kc">True</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_ontix_hook</span><span class="p">()</span>
@@ -4360,21 +4402,21 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_general_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">593</span>
-<span class="normal">594</span>
-<span class="normal">595</span>
-<span class="normal">596</span>
-<span class="normal">597</span>
-<span class="normal">598</span>
-<span class="normal">599</span>
-<span class="normal">600</span>
-<span class="normal">601</span>
-<span class="normal">602</span>
-<span class="normal">603</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">603</span>
 <span class="normal">604</span>
 <span class="normal">605</span>
 <span class="normal">606</span>
-<span class="normal">607</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">decode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+<span class="normal">607</span>
+<span class="normal">608</span>
+<span class="normal">609</span>
+<span class="normal">610</span>
+<span class="normal">611</span>
+<span class="normal">612</span>
+<span class="normal">613</span>
+<span class="normal">614</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">decode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Decodes the input tensor x using the trained model.</span>
 
 <span class="sd">    Args:</span>
@@ -4414,14 +4456,14 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_general_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">609</span>
-<span class="normal">610</span>
-<span class="normal">611</span>
-<span class="normal">612</span>
-<span class="normal">613</span>
-<span class="normal">614</span>
-<span class="normal">615</span>
-<span class="normal">616</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_model</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">619</span>
+<span class="normal">620</span>
+<span class="normal">621</span>
+<span class="normal">622</span>
+<span class="normal">623</span>
+<span class="normal">624</span>
+<span class="normal">625</span>
+<span class="normal">626</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_model</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Getter method for the trained model.</span>
 
 <span class="sd">    Returns:</span>
@@ -4451,9 +4493,9 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_general_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">212</span>
-<span class="normal">213</span>
-<span class="normal">214</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">maskix_hook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">maskix_hook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Only active when override from MaskixTrainer is used"""</span>
     <span class="k">return</span> <span class="n">X</span>
 </code></pre></div></td></tr></table></div>
@@ -4570,17 +4612,7 @@ that are needed for prediction. So this way we don't need to write so much dupli
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_general_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">542</span>
-<span class="normal">543</span>
-<span class="normal">544</span>
-<span class="normal">545</span>
-<span class="normal">546</span>
-<span class="normal">547</span>
-<span class="normal">548</span>
-<span class="normal">549</span>
-<span class="normal">550</span>
-<span class="normal">551</span>
-<span class="normal">552</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">552</span>
 <span class="normal">553</span>
 <span class="normal">554</span>
 <span class="normal">555</span>
@@ -4619,7 +4651,17 @@ that are needed for prediction. So this way we don't need to write so much dupli
 <span class="normal">588</span>
 <span class="normal">589</span>
 <span class="normal">590</span>
-<span class="normal">591</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span>
+<span class="normal">591</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span>
+<span class="normal">600</span>
+<span class="normal">601</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Decided to add predict method to the trainer class.</span>
@@ -4691,17 +4733,7 @@ that are needed for prediction. So this way we don't need to write so much dupli
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_general_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">618</span>
-<span class="normal">619</span>
-<span class="normal">620</span>
-<span class="normal">621</span>
-<span class="normal">622</span>
-<span class="normal">623</span>
-<span class="normal">624</span>
-<span class="normal">625</span>
-<span class="normal">626</span>
-<span class="normal">627</span>
-<span class="normal">628</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">628</span>
 <span class="normal">629</span>
 <span class="normal">630</span>
 <span class="normal">631</span>
@@ -4719,7 +4751,17 @@ that are needed for prediction. So this way we don't need to write so much dupli
 <span class="normal">643</span>
 <span class="normal">644</span>
 <span class="normal">645</span>
-<span class="normal">646</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">purge</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">646</span>
+<span class="normal">647</span>
+<span class="normal">648</span>
+<span class="normal">649</span>
+<span class="normal">650</span>
+<span class="normal">651</span>
+<span class="normal">652</span>
+<span class="normal">653</span>
+<span class="normal">654</span>
+<span class="normal">655</span>
+<span class="normal">656</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">purge</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Cleans up any resources used during training, such as cached data or large attributes."""</span>
 
     <span class="n">attrs_to_delete</span> <span class="o">=</span> <span class="p">[</span>
@@ -4770,15 +4812,15 @@ that are needed for prediction. So this way we don't need to write so much dupli
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_general_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">216</span>
-<span class="normal">217</span>
-<span class="normal">218</span>
-<span class="normal">219</span>
-<span class="normal">220</span>
-<span class="normal">221</span>
-<span class="normal">222</span>
-<span class="normal">223</span>
-<span class="normal">224</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">supervisix_capture_hook</span><span class="p">(</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">supervisix_capture_hook</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">model_output</span><span class="p">:</span> <span class="n">ModelOutput</span><span class="p">,</span>
     <span class="n">sample_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
@@ -4809,9 +4851,9 @@ that are needed for prediction. So this way we don't need to write so much dupli
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_general_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">226</span>
-<span class="normal">227</span>
-<span class="normal">228</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">supervisix_get_hook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">supervisix_get_hook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Only active when override from SupervisixTrainer is used"""</span>
     <span class="k">pass</span>
 </code></pre></div></td></tr></table></div>
@@ -4836,11 +4878,11 @@ that are needed for prediction. So this way we don't need to write so much dupli
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_general_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">230</span>
-<span class="normal">231</span>
-<span class="normal">232</span>
-<span class="normal">233</span>
-<span class="normal">234</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">supervisix_update_hook</span><span class="p">(</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">supervisix_update_hook</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">batch_class_means</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">dataset_type</span><span class="p">:</span> <span class="nb">str</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Only active when override from SupervisixTrainer is used"""</span>
@@ -4948,7 +4990,17 @@ This is only there so we can use the train method for pretraining.Any</p>
 <span class="normal">207</span>
 <span class="normal">208</span>
 <span class="normal">209</span>
-<span class="normal">210</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epochs_overwrite</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epochs_overwrite</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Orchestrates training over multiple epochs, including training and validation phases.</span>
 
 <span class="sd">    Args:</span>
@@ -4972,6 +5024,16 @@ This is only there so we can use the train method for pretraining.Any</p>
             <span class="n">epoch_loss</span><span class="p">,</span> <span class="n">epoch_sub_losses</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_epoch</span><span class="p">(</span>
                 <span class="n">should_checkpoint</span><span class="o">=</span><span class="n">should_checkpoint</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span>
             <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">epoch_loss</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">getattr</span><span class="p">(</span>
+                <span class="bp">self</span><span class="p">,</span> <span class="s2">"_nonfinite_loss_warning_sent"</span><span class="p">,</span> <span class="kc">False</span>
+            <span class="p">):</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Training loss is not finite (NaN or Inf) in epoch </span><span class="si">{</span><span class="n">epoch</span><span class="si">}</span><span class="s2">. "</span>
+                    <span class="s2">"The model has diverged and its results are not usable. Try a "</span>
+                    <span class="s2">"lower learning_rate, a different scaling or, if the config "</span>
+                    <span class="s2">"offers it, clamp_logvar=True."</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_nonfinite_loss_warning_sent</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_log_losses</span><span class="p">(</span>
                 <span class="n">epoch</span><span class="o">=</span><span class="n">epoch</span><span class="p">,</span>
                 <span class="n">split</span><span class="o">=</span><span class="s2">"train"</span><span class="p">,</span>
@@ -7229,8 +7291,7 @@ _workdir: Directory for saving intermediate models and results</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/autoencodix/trainers/_stackix_trainer.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 17</span>
-<span class="normal"> 18</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 18</span>
 <span class="normal"> 19</span>
 <span class="normal"> 20</span>
 <span class="normal"> 21</span>
@@ -7422,7 +7483,41 @@ _workdir: Directory for saving intermediate models and results</p>
 <span class="normal">207</span>
 <span class="normal">208</span>
 <span class="normal">209</span>
-<span class="normal">210</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">StackixTrainer</span><span class="p">(</span><span class="n">GeneralTrainer</span><span class="p">):</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">StackixTrainer</span><span class="p">(</span><span class="n">GeneralTrainer</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""StackixTrainer is a wrapper for StackixOrchestrator that conforms to the BaseTrainer interface.</span>
 
 <span class="sd">    This trainer maintains compatibility with the BasePipeline interface while</span>
@@ -7550,6 +7645,39 @@ _workdir: Directory for saving intermediate models and results</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_result</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">purge</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Removes training-only objects before the pipeline is saved.</span>
+
+<span class="sd">        In addition to the cleanup of ``GeneralTrainer.purge``, the optimizers and</span>
+<span class="sd">        data loaders of the nested modality trainers and of the stacked trainer are</span>
+<span class="sd">        dropped. They are not needed for prediction and cannot be pickled with</span>
+<span class="sd">        recent PyTorch versions. The modality models are kept, because they are</span>
+<span class="sd">        required to encode new data. Nested trainers are copied before they are</span>
+<span class="sd">        slimmed down, so a pipeline that is still in use is not changed.</span>
+<span class="sd">        """</span>
+        <span class="n">training_only</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">"_trainloader"</span><span class="p">,</span>
+            <span class="s2">"_validloader"</span><span class="p">,</span>
+            <span class="s2">"_optimizer"</span><span class="p">,</span>
+            <span class="s2">"_trainset"</span><span class="p">,</span>
+            <span class="s2">"_validset"</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modality_trainers</span><span class="p">:</span>
+            <span class="n">slim_trainers</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">trainer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modality_trainers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">slim</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">trainer</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">training_only</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">slim</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
+                        <span class="nb">delattr</span><span class="p">(</span><span class="n">slim</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+                <span class="n">slim_trainers</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">slim</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_modality_trainers</span> <span class="o">=</span> <span class="n">slim_trainers</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_orchestrator</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_orchestrator</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_orchestrator</span><span class="o">.</span><span class="n">modality_trainers</span> <span class="o">=</span> <span class="n">slim_trainers</span>
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"_trainer"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span><span class="o">.</span><span class="n">purge</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">purge</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_train_modalities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Trains a Autoencoder for each modality in the dataset.</span>
@@ -7843,8 +7971,7 @@ _workdir: Directory for saving intermediate models and results</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_stackix_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 47</span>
-<span class="normal"> 48</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 48</span>
 <span class="normal"> 49</span>
 <span class="normal"> 50</span>
 <span class="normal"> 51</span>
@@ -7907,7 +8034,8 @@ _workdir: Directory for saving intermediate models and results</p>
 <span class="normal">108</span>
 <span class="normal">109</span>
 <span class="normal">110</span>
-<span class="normal">111</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">111</span>
+<span class="normal">112</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">trainset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StackixDataset</span><span class="p">],</span>
     <span class="n">validset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StackixDataset</span><span class="p">],</span>
@@ -8017,13 +8145,13 @@ _workdir: Directory for saving intermediate models and results</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_stackix_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">113</span>
-<span class="normal">114</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">114</span>
 <span class="normal">115</span>
 <span class="normal">116</span>
 <span class="normal">117</span>
 <span class="normal">118</span>
-<span class="normal">119</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_model</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
+<span class="normal">119</span>
+<span class="normal">120</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_model</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Getter for the the trained model.</span>
 
 <span class="sd">    Returns:</span>
@@ -8116,27 +8244,27 @@ _workdir: Directory for saving intermediate models and results</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_stackix_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">190</span>
-<span class="normal">191</span>
-<span class="normal">192</span>
-<span class="normal">193</span>
-<span class="normal">194</span>
-<span class="normal">195</span>
-<span class="normal">196</span>
-<span class="normal">197</span>
-<span class="normal">198</span>
-<span class="normal">199</span>
-<span class="normal">200</span>
-<span class="normal">201</span>
-<span class="normal">202</span>
-<span class="normal">203</span>
-<span class="normal">204</span>
-<span class="normal">205</span>
-<span class="normal">206</span>
-<span class="normal">207</span>
-<span class="normal">208</span>
-<span class="normal">209</span>
-<span class="normal">210</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">BaseDataset</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Make predictions on the given dataset.</span>
@@ -8157,6 +8285,97 @@ _workdir: Directory for saving intermediate models and results</p>
     <span class="bp">self</span><span class="o">.</span><span class="n">_result</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">other</span><span class="o">=</span><span class="n">pred_result</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_reconstruct</span><span class="p">(</span><span class="n">split</span><span class="o">=</span><span class="s2">"test"</span><span class="p">)</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_result</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="autoencodix.trainers.StackixTrainer.purge" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">purge</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Removes training-only objects before the pipeline is saved.</p>
+<p>In addition to the cleanup of <code>GeneralTrainer.purge</code>, the optimizers and
+data loaders of the nested modality trainers and of the stacked trainer are
+dropped. They are not needed for prediction and cannot be pickled with
+recent PyTorch versions. The modality models are kept, because they are
+required to encode new data. Nested trainers are copied before they are
+slimmed down, so a pipeline that is still in use is not changed.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/autoencodix/trainers/_stackix_trainer.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">purge</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Removes training-only objects before the pipeline is saved.</span>
+
+<span class="sd">    In addition to the cleanup of ``GeneralTrainer.purge``, the optimizers and</span>
+<span class="sd">    data loaders of the nested modality trainers and of the stacked trainer are</span>
+<span class="sd">    dropped. They are not needed for prediction and cannot be pickled with</span>
+<span class="sd">    recent PyTorch versions. The modality models are kept, because they are</span>
+<span class="sd">    required to encode new data. Nested trainers are copied before they are</span>
+<span class="sd">    slimmed down, so a pipeline that is still in use is not changed.</span>
+<span class="sd">    """</span>
+    <span class="n">training_only</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s2">"_trainloader"</span><span class="p">,</span>
+        <span class="s2">"_validloader"</span><span class="p">,</span>
+        <span class="s2">"_optimizer"</span><span class="p">,</span>
+        <span class="s2">"_trainset"</span><span class="p">,</span>
+        <span class="s2">"_validset"</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modality_trainers</span><span class="p">:</span>
+        <span class="n">slim_trainers</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">trainer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modality_trainers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">slim</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">trainer</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">training_only</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">slim</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
+                    <span class="nb">delattr</span><span class="p">(</span><span class="n">slim</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+            <span class="n">slim_trainers</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">slim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_modality_trainers</span> <span class="o">=</span> <span class="n">slim_trainers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_orchestrator</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_orchestrator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_orchestrator</span><span class="o">.</span><span class="n">modality_trainers</span> <span class="o">=</span> <span class="n">slim_trainers</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"_trainer"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trainer</span><span class="o">.</span><span class="n">purge</span><span class="p">()</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">purge</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -8208,8 +8427,7 @@ _workdir: Directory for saving intermediate models and results</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/trainers/_stackix_trainer.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">121</span>
-<span class="normal">122</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">122</span>
 <span class="normal">123</span>
 <span class="normal">124</span>
 <span class="normal">125</span>
@@ -8231,7 +8449,8 @@ _workdir: Directory for saving intermediate models and results</p>
 <span class="normal">141</span>
 <span class="normal">142</span>
 <span class="normal">143</span>
-<span class="normal">144</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
+<span class="normal">144</span>
+<span class="normal">145</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Train the stacked model on the concatenated latent space.</span>
 
 <span class="sd">    Uses the standard BaseTrainer training process but with the stacked model.</span>
@@ -11101,9 +11320,9 @@ is added via a hook. Inherits all attributes from GeneralTrainer.</p>
             <span class="mi">0</span>  <span class="c1"># because of unpaired training we need to sum the samples instead of using len(dataset)</span>
         <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="kc">False</span>  <span class="c1"># Reset the warning flag at the start of each epoch</span>
-        <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"_grad_clip_warning_sent"</span><span class="p">):</span>
+            <span class="c1"># Warn only once per trainer, not once per epoch</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trainloader</span><span class="p">:</span>
             <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fabric</span><span class="o">.</span><span class="n">autocast</span><span class="p">():</span>
@@ -11156,7 +11375,7 @@ is added via a hook. Inherits all attributes from GeneralTrainer.</p>
                         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
                             <span class="sa">f</span><span class="s2">"Gradient clipping was first applied in epoch </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_cur_epoch</span><span class="si">}</span><span class="s2">. Total norm of gradients (adjusted for number of features): </span><span class="si">{</span><span class="n">total_norm</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> exceeded max norm of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">grad_clip_max_norm</span><span class="si">}</span><span class="s2">."</span>
                         <span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="c1"># Perform optimizer step for each modality</span>
                 <span class="n">dynamics</span><span class="p">[</span><span class="s2">"optim"</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
 
@@ -11707,7 +11926,7 @@ is added via a hook. Inherits all attributes from GeneralTrainer.</p>
                                     <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
                                         <span class="sa">f</span><span class="s2">"Gradient clipping was first applied in epoch </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_cur_epoch</span><span class="si">}</span><span class="s2">. Total norm of gradients (adjusted for number of features): </span><span class="si">{</span><span class="n">total_norm</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> exceeded max norm of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="o">.</span><span class="n">grad_clip_max_norm</span><span class="si">}</span><span class="s2">."</span>
                                     <span class="p">)</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="o">=</span> <span class="kc">True</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_grad_clip_warning_sent</span> <span class="o">=</span> <span class="kc">True</span>
                             <span class="n">dynamics</span><span class="p">[</span><span class="s2">"optim"</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
 
                     <span class="c1"># --- Logging and Capturing ---</span>

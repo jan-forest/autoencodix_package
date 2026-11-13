@@ -1,6 +1,6 @@
 > **Note:** This environment variable is required for fully deterministic CuBLAS ops on CUDA >= 10.2 when `reproducible=True` is set below. Without it, PyTorch raises a `RuntimeError` instead of training deterministically. It must be set before `torch` is imported. See the [README FAQ](https://jan-forest.github.io/autoencodix_package/tutorials/README.md#reproducibility-and-cublas_workspace_config) for details.
 
-In \[ \]:
+In \[1\]:
 
 Copied!
 
@@ -91,7 +91,7 @@ import os p = os.getcwd() d = "autoencodix_package" if d not in p: raise FileNot
 import shutil from huggingface_hub import hf_hub_download HF_REPO_ID = "autoencodix/tcga" os.makedirs("data/raw", exist_ok=True) for hf_filename, local_name in \[ ("rna.parquet", "combined_rnaseq_formatted.parquet"), ("methylation.parquet", "combined_meth_formatted.parquet"), ("clinical.parquet", "combined_clin_formatted.parquet"), ("ontology/chromosome_ont_lvl1_ncbi.txt", "chromosome_ont_genelevel_ncbi.txt"), ("ontology/chromosome_ont_lvl2.txt", "chromosome_ont_hiddenlevel.txt") \]: downloaded_path = hf_hub_download( repo_id=HF_REPO_ID, repo_type="dataset", filename=hf_filename ) shutil.copyfile(downloaded_path, os.path.join("data/raw", local_name))
 
 ```
-Changed to: /home/kristina/Dokumente/autoencodix_package
+Changed to: /home/janew/ACX/autoencodix_package
 ```
 
 ### 2a) Creating a synthetic ground truth[¶](#2a-creating-a-synthetic-ground-truth)
@@ -268,8 +268,7 @@ ontix_config = OntixConfig(
     drop_p=0.3,
     k_filter=2000,
     latent_dim=6,
-    device="cpu",
-    #device="cuda",
+    # device="cpu",  # default is "auto", which uses a GPU when available; uncomment to force CPU
     reconstruction_loss="mse",
     default_vae_loss="kl",
     beta=0.001,
@@ -341,7 +340,11 @@ data_config = DataConfig( data_info={ "RNA": rna_info, "METH": meth_info, "ANNO"
 
 # ---------------------------------------------------------------------
 
-ontix_config = OntixConfig( data_config=data_config, reproducible=True, global_seed=42, epochs=100, learning_rate=0.0005, batch_size=128, drop_p=0.3, k_filter=2000, latent_dim=6, device="cpu", #device="cuda", reconstruction_loss="mse", default_vae_loss="kl", beta=0.001, save_memory=False, scaling="MINMAX", train_ratio=0.7, test_ratio=0.2, valid_ratio=0.1, annotation_columns=\[
+ontix_config = OntixConfig( data_config=data_config, reproducible=True, global_seed=42, epochs=100, learning_rate=0.0005, batch_size=128, drop_p=0.3, k_filter=2000, latent_dim=6,
+
+# device="cpu", # default is "auto", which uses a GPU when available; uncomment to force CPU
+
+reconstruction_loss="mse", default_vae_loss="kl", beta=0.001, save_memory=False, scaling="MINMAX", train_ratio=0.7, test_ratio=0.2, valid_ratio=0.1, annotation_columns=\[
 
 # "CANCER_TYPE",
 
@@ -377,11 +380,127 @@ result = ontix.run()
 
 ```
 reading parquet: data/raw/combined_rnaseq_formatted_synth.parquet
+```
+
+```
 reading parquet: data/raw/combined_meth_formatted_synth.parquet
+```
+
+```
 reading parquet: data/raw/combined_clin_formatted.parquet
+```
+
+```
 anno key: paired
-Features in feature_order not found in all_feature_names: ['100133144', '10357', '10431', '155060', '390284', '57714', '645851', '653553', '729884', '246182', '119385', '653268', '728404', '200810', '138649', '441425', '728747', '729171', '23520', '303', '304', '305', '244', '375719', '441432', '503640', '641522', '432369', '92270', '6791', '85319', '606', '23629', '286076', '414235', '170393', '255352', '283422', '283416', '374467', '84837', '400223', '650662', '280655', '283651', '80035', '283687', '196968', '284185', '147429', '147525', '494514', '574036', '284573', '149469', '84791',
-... [output truncated]
+```
+
+```
+Features in feature_order not found in all_feature_names, first 5: ['100133144', '10357', '10431', '155060', '390284']...
+```
+
+```
+Features in feature_order not found in all_feature_names, first 5: ['100033413', '100130426', '100133144', '1038', '10431']...
+```
+
+```
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+```
+
+```
+Ontix checks:
+All possible feature names length: 27248
+Feature order length: 2000
+```
+
+```
+Feature names without filtering: 2000
+Mask layer 0 with shape torch.Size([817, 25]) and 817.0 connections
+```
+
+```
+Mask layer 1 with shape torch.Size([2000, 817]) and 1950.0 connections
+Latent Dim: 25
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 3. Total norm of gradients (adjusted for number of features): 5.0206 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+Epoch 10 - Train Loss: 203.7841
+Sub-losses: recon_loss: 203.7841, var_loss: 0.0000, anneal_factor: 0.0003, effective_beta_factor: 0.0000
+Epoch 10 - Valid Loss: 193.2462
+Sub-losses: recon_loss: 193.2461, var_loss: 0.0000, anneal_factor: 0.0003, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 20 - Train Loss: 87.2142
+Sub-losses: recon_loss: 87.2133, var_loss: 0.0010, anneal_factor: 0.0020, effective_beta_factor: 0.0000
+Epoch 20 - Valid Loss: 81.9489
+Sub-losses: recon_loss: 81.9480, var_loss: 0.0009, anneal_factor: 0.0020, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 30 - Train Loss: 73.3652
+Sub-losses: recon_loss: 73.3569, var_loss: 0.0084, anneal_factor: 0.0148, effective_beta_factor: 0.0000
+Epoch 30 - Valid Loss: 69.4877
+Sub-losses: recon_loss: 69.4795, var_loss: 0.0082, anneal_factor: 0.0148, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 40 - Train Loss: 70.2031
+Sub-losses: recon_loss: 70.1403, var_loss: 0.0628, anneal_factor: 0.0998, effective_beta_factor: 0.0001
+Epoch 40 - Valid Loss: 67.1237
+Sub-losses: recon_loss: 67.0624, var_loss: 0.0613, anneal_factor: 0.0998, effective_beta_factor: 0.0001
+```
+
+```
+Epoch 50 - Train Loss: 68.3455
+Sub-losses: recon_loss: 68.0337, var_loss: 0.3118, anneal_factor: 0.4502, effective_beta_factor: 0.0005
+Epoch 50 - Valid Loss: 65.1846
+Sub-losses: recon_loss: 64.8820, var_loss: 0.3026, anneal_factor: 0.4502, effective_beta_factor: 0.0005
+```
+
+```
+Epoch 60 - Train Loss: 66.7748
+Sub-losses: recon_loss: 66.1393, var_loss: 0.6355, anneal_factor: 0.8581, effective_beta_factor: 0.0009
+Epoch 60 - Valid Loss: 63.7644
+Sub-losses: recon_loss: 63.1313, var_loss: 0.6331, anneal_factor: 0.8581, effective_beta_factor: 0.0009
+```
+
+```
+Epoch 70 - Train Loss: 65.1900
+Sub-losses: recon_loss: 64.4215, var_loss: 0.7685, anneal_factor: 0.9781, effective_beta_factor: 0.0010
+Epoch 70 - Valid Loss: 62.3462
+Sub-losses: recon_loss: 61.5980, var_loss: 0.7483, anneal_factor: 0.9781, effective_beta_factor: 0.0010
+```
+
+```
+Epoch 80 - Train Loss: 63.6874
+Sub-losses: recon_loss: 62.8687, var_loss: 0.8186, anneal_factor: 0.9970, effective_beta_factor: 0.0010
+Epoch 80 - Valid Loss: 61.1732
+Sub-losses: recon_loss: 60.3729, var_loss: 0.8004, anneal_factor: 0.9970, effective_beta_factor: 0.0010
+```
+
+```
+Epoch 90 - Train Loss: 62.6992
+Sub-losses: recon_loss: 61.8668, var_loss: 0.8324, anneal_factor: 0.9996, effective_beta_factor: 0.0010
+Epoch 90 - Valid Loss: 60.1497
+Sub-losses: recon_loss: 59.3039, var_loss: 0.8459, anneal_factor: 0.9996, effective_beta_factor: 0.0010
+```
+
+```
+Epoch 100 - Train Loss: 61.7623
+Sub-losses: recon_loss: 60.9365, var_loss: 0.8257, anneal_factor: 0.9999, effective_beta_factor: 0.0010
+Epoch 100 - Valid Loss: 59.2660
+Sub-losses: recon_loss: 58.4456, var_loss: 0.8204, anneal_factor: 0.9999, effective_beta_factor: 0.0010
+Processed 128 / 707 samples
+Processed 256 / 707 samples
+Processed 384 / 707 samples
+Processed 512 / 707 samples
+Processed 640 / 707 samples
+Processed 707 / 707 samples
 ```
 
 ### Check if we have a little signal on Chromosome 21 (male/femal seperation)[¶](#check-if-we-have-a-little-signal-on-chromosome-21-malefemal-seperation)
@@ -430,9 +549,9 @@ latent_contributions = ontix.explain( method="DeepLiftShap", # "DeepLiftShap" or
 sel_latent_dim='21', # Or specify a single latent dimension to explain input_type="grouped", # We will test group 'Male' (input) vs. 'Female' (baseline) input_group="Male", baseline_type="grouped", baseline_group="Female", anno_col="SEX", )
 
 ```
-/home/kristina/Dokumente/autoencodix_package/.venv/lib/python3.10/site-packages/anndata/_core/anndata.py:1820: UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
+.venv/lib/python3.12/site-packages/anndata/_core/anndata.py:1820: UserWarning: Variable names are not unique. To make them unique, call `.var_names_make_unique`.
   utils.warn_names_duplicates("var")
-/home/kristina/Dokumente/autoencodix_package/.venv/lib/python3.10/site-packages/captum/attr/_core/deep_lift.py:304: UserWarning: Setting forward, backward hooks and attributes on non-linear
+.venv/lib/python3.12/site-packages/captum/attr/_core/deep_lift.py:304: UserWarning: Setting forward, backward hooks and attributes on non-linear
                activations. The hooks and attributes will be removed
             after the attribution is finished
   warnings.warn(
@@ -454,18 +573,18 @@ print(latent_contributions)
 print(latent_contributions)
 
 ```
-             21
-8755   0.000527
-6439   0.000464
-1277   0.000879
-3481   0.000045
-2335   0.000217
-...         ...
-6335   0.007490
-1378   0.000839
-2070   0.001215
-4640   0.008509
-80231  0.008128
+              21
+8755    0.000238
+6439    0.000652
+1277    0.000301
+3481    0.000066
+2335    0.001526
+...          ...
+3224    0.000680
+4128    0.004705
+143379  0.001751
+2555    0.001041
+6700    0.009494
 
 [2000 rows x 1 columns]
 ```
@@ -482,19 +601,19 @@ latent_contributions.loc\[:, ["21"]\].sort_values(by="21", ascending=False)
 
 Out\[10\]:
 
-|       | 21           |
-| ----- | ------------ |
-| 58494 | 4.913954e-02 |
-| 9875  | 4.434006e-02 |
-| 1525  | 4.365378e-02 |
-| 2010  | 3.734745e-02 |
-| 3597  | 3.632422e-02 |
-| ...   | ...          |
-| 6750  | 1.255828e-06 |
-| 70    | 1.184365e-06 |
-| 3848  | 7.548605e-07 |
-| 335   | 5.473745e-07 |
-| 1548  | 1.348732e-07 |
+|        | 21       |
+| ------ | -------- |
+| 337880 | 0.022189 |
+| 83887  | 0.019646 |
+| 84648  | 0.019497 |
+| 254778 | 0.018882 |
+| 79368  | 0.018222 |
+| ...    | ...      |
+| 251    | 0.000002 |
+| 27121  | 0.000001 |
+| 118430 | 0.000001 |
+| 3848   | 0.000001 |
+| 4246   | 0.000001 |
 
 2000 rows × 1 columns
 

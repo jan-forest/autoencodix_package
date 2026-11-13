@@ -1906,7 +1906,9 @@ of attributes and methods.</p>
 <span class="normal">142</span>
 <span class="normal">143</span>
 <span class="normal">144</span>
-<span class="normal">145</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Ontix</span><span class="p">(</span><span class="n">BasePipeline</span><span class="p">):</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Ontix</span><span class="p">(</span><span class="n">BasePipeline</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Ontix specific version of the BasePipeline class.</span>
 
 <span class="sd">    Inherits preprocess, fit, predict, evaluate, and visualize methods from BasePipeline.</span>
@@ -1973,6 +1975,8 @@ of attributes and methods.</p>
                 <span class="sa">f</span><span class="s2">"Expected ontologies to be of type tuple or list, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">ontologies</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
 
+        <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_config</span>
         <span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="p">)</span>  <span class="c1"># Set latent dim to number of nodes in the ontology</span>
@@ -2154,7 +2158,9 @@ data that is only available after preprocessing.</p>
 <span class="normal">118</span>
 <span class="normal">119</span>
 <span class="normal">120</span>
-<span class="normal">121</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">ontologies</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">],</span>  <span class="c1"># Addition to Varix, mandotory for Ontix</span>
     <span class="n">sep</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span>  <span class="c1"># Addition to Varix, optional to read in ontologies</span>
@@ -2208,6 +2214,8 @@ data that is only available after preprocessing.</p>
             <span class="sa">f</span><span class="s2">"Expected ontologies to be of type tuple or list, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">ontologies</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
         <span class="p">)</span>
 
+    <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_config</span>
     <span class="n">config</span><span class="o">.</span><span class="n">latent_dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ontologies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="p">)</span>  <span class="c1"># Set latent dim to number of nodes in the ontology</span>

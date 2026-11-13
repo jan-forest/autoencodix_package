@@ -98,13 +98,13 @@ If you use `.txt` or `.csv` files, it is best practice to add the `sep` paramete
 **Now we can prepare the config:**
 
 > Besides the actual data files, we expect one `annotation` file with metadata. We add the parameter `data_type` and set it to `ANNOTATION`, as shown in the code below.\
-> If you have columns inside the `ANNOTATION` data that you want to use later in downstream visualization or evaluation tasks, please specify them with the `annotation_columns` parameter of the `DataConfig`. This will prevent errors later, as NaNs will be handled automatically during preprocessing for these columns.
+> If you have columns inside the `ANNOTATION` data that you want to use later in downstream visualization or evaluation tasks, please specify them with the `annotation_columns` parameter of the pipeline config (here `VarixConfig`). This will prevent errors later, as NaNs will be handled automatically during preprocessing for these columns.
 
 #### ❗❗ Requirements: Getting Tutorial Data ❗❗[¶](#requirements-getting-tutorial-data)
 
 The data for this example is hosted on Hugging Face Hub ([autoencodix/tcga](https://huggingface.co/datasets/autoencodix/tcga)) and is downloaded automatically in the cell below.
 
-In \[4\]:
+In \[2\]:
 
 Copied!
 
@@ -126,7 +126,6 @@ Here, we fill the `data_info` Dict, by defining names for our data modalities ("
 The value of this Dict is a instance of the `DataInfo` class. All we need to pass here is a `file_path` argument.
 """
 data_config = DataConfig(
-    annotation_columns=["CANCER_TYPE"],
     data_info={
         "RNA": DataInfo(file_path=mrna_file),
         "METHYLATION": DataInfo(file_path=meth_file),
@@ -139,7 +138,7 @@ data_config = DataConfig(
 """
 Lastly, we pass our data_config to the VarixConfig. Remember to pass the appropriate `DataCase`.
 """
-bulk_config = VarixConfig(data_config=data_config, data_case=DataCase.MULTI_BULK, epochs=30, checkpoint_interval=10, k_filter=100)
+bulk_config = VarixConfig(data_config=data_config, annotation_columns=["CANCER_TYPE"], data_case=DataCase.MULTI_BULK, epochs=30, checkpoint_interval=10, k_filter=100)
 varix = acx.Varix(config=bulk_config)
 
 result_varix = varix.run()
@@ -150,39 +149,76 @@ import autoencodix as acx from autoencodix.configs.default_config import DataCon
 
 # Data is hosted on Hugging Face Hub and downloaded (and locally cached) automatically
 
-HF_REPO_ID = "autoencodix/tcga" mrna_file = hf_hub_download(repo_id=HF_REPO_ID, repo_type="dataset", filename="rna.parquet") meth_file = hf_hub_download(repo_id=HF_REPO_ID, repo_type="dataset", filename="methylation.parquet") clin_file = hf_hub_download(repo_id=HF_REPO_ID, repo_type="dataset", filename="clinical.parquet") """ Our config class has the attribute `data_config`. Here, we fill the `data_info` Dict, by defining names for our data modalities ("RNA" for example). The value of this Dict is a instance of the `DataInfo` class. All we need to pass here is a `file_path` argument. """ data_config = DataConfig( annotation_columns=["CANCER_TYPE"], data_info={ "RNA": DataInfo(file_path=mrna_file), "METHYLATION": DataInfo(file_path=meth_file), "CLINICAL": DataInfo( file_path=clin_file, data_type="ANNOTATION" ), }, ) """ Lastly, we pass our data_config to the VarixConfig. Remember to pass the appropriate `DataCase`. """ bulk_config = VarixConfig(data_config=data_config, data_case=DataCase.MULTI_BULK, epochs=30, checkpoint_interval=10, k_filter=100) varix = acx.Varix(config=bulk_config) result_varix = varix.run() varix.show_result()
+HF_REPO_ID = "autoencodix/tcga" mrna_file = hf_hub_download(repo_id=HF_REPO_ID, repo_type="dataset", filename="rna.parquet") meth_file = hf_hub_download(repo_id=HF_REPO_ID, repo_type="dataset", filename="methylation.parquet") clin_file = hf_hub_download(repo_id=HF_REPO_ID, repo_type="dataset", filename="clinical.parquet") """ Our config class has the attribute `data_config`. Here, we fill the `data_info` Dict, by defining names for our data modalities ("RNA" for example). The value of this Dict is a instance of the `DataInfo` class. All we need to pass here is a `file_path` argument. """ data_config = DataConfig( data_info={ "RNA": DataInfo(file_path=mrna_file), "METHYLATION": DataInfo(file_path=meth_file), "CLINICAL": DataInfo( file_path=clin_file, data_type="ANNOTATION" ), }, ) """ Lastly, we pass our data_config to the VarixConfig. Remember to pass the appropriate `DataCase`. """ bulk_config = VarixConfig(data_config=data_config, annotation_columns=["CANCER_TYPE"], data_case=DataCase.MULTI_BULK, epochs=30, checkpoint_interval=10, k_filter=100) varix = acx.Varix(config=bulk_config) result_varix = varix.run() varix.show_result()
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/configs/default_config.py:439: UserWarning: annotation_columns in DataConfig is deprecated. Please set it directly in DefaultConfig instead.
-  warnings.warn(
+reading parquet: /home/janew/.cache/huggingface/hub/datasets--autoencodix--tcga/snapshots/c59ee679d11ea17c0fd615248a382ef1c38ef456/rna.parquet
 ```
 
 ```
-reading parquet: /home/ewald/.cache/huggingface/hub/datasets--autoencodix--tcga/snapshots/c59ee679d11ea17c0fd615248a382ef1c38ef456/rna.parquet
-reading parquet: /home/ewald/.cache/huggingface/hub/datasets--autoencodix--tcga/snapshots/c59ee679d11ea17c0fd615248a382ef1c38ef456/methylation.parquet
-reading parquet: /home/ewald/.cache/huggingface/hub/datasets--autoencodix--tcga/snapshots/c59ee679d11ea17c0fd615248a382ef1c38ef456/clinical.parquet
+reading parquet: /home/janew/.cache/huggingface/hub/datasets--autoencodix--tcga/snapshots/c59ee679d11ea17c0fd615248a382ef1c38ef456/methylation.parquet
+```
+
+```
+reading parquet: /home/janew/.cache/huggingface/hub/datasets--autoencodix--tcga/snapshots/c59ee679d11ea17c0fd615248a382ef1c38ef456/clinical.parquet
+```
+
+```
 anno key: paired
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:250: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 21.2159 exceeded max norm of 5.
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 15.0148 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 68.6068
-Sub-losses: recon_loss: 68.4236, var_loss: 0.1833, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 10 - Valid Loss: 60.8824
-Sub-losses: recon_loss: 60.7143, var_loss: 0.1681, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 20 - Train Loss: 68.2652
-Sub-losses: recon_loss: 65.2557, var_loss: 3.0095, anneal_factor: 0.9350, effective_beta_factor: 0.0935
-Epoch 20 - Valid Loss: 60.4574
-Sub-losses: recon_loss: 57.6298, var_loss: 2.8276, anneal_factor: 0.9350, effective_beta_factor: 0.0935
-Epoch 30 - Train Loss: 66.6436
-Sub-losses: recon_loss: 63.7218, var_loss: 2.9218, anneal_factor: 0.9999, effective_beta_factor: 0.1000
-Epoch 30 - Valid Loss: 59.4852
-Sub-losses: recon_loss: 57.0109, var_loss: 2.4743, anneal_factor: 0.9999, effective_beta_fact
+Epoch 10 - Train Loss: 82.0013
+Sub-losses: recon_loss: 81.9152, var_loss: 0.0861, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+Epoch 10 - Valid Loss: 77.8209
+Sub-losses: recon_loss: 77.7234, var_loss: 0.0975, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+```
+
+```
+Epoch 20 - Train Loss: 79.2955
+Sub-losses: recon_loss: 77.3822, var_loss: 1.9132, anneal_factor: 0.9350, effective_beta_factor: 0.0935
+Epoch 20 - Valid Loss: 74.8004
+Sub-losses: recon_loss: 73.0722, var_loss: 1.7283, anneal_factor: 0.9350, effective_beta_factor: 0.0935
+```
+
+```
+Epoch 30 - Train Loss: 76.5190
+Sub-losses: recon_loss: 74.7004, var_loss: 1.8187, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Epoch 30 - Valid Loss: 72.3115
+Sub-losses: recon_loss: 70.6669, var_loss: 1.6446, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Processed 32 / 707 samples
+Processed 64 / 707 samples
+Processed 96 / 707 samples
+Processed 128 / 707 samples
+Processed 160 / 707 samples
+Processed 192 / 707 samples
+Processed 224 / 707 samples
+Processed 256 / 707 samples
+Processed 288 / 707 samples
+Processed 320 / 707 samples
+Processed 352 / 707 samples
+Processed 384 / 707 samples
+Processed 416 / 707 samples
+Processed 448 / 707 samples
+Processed 480 / 707 samples
+Processed 512 / 707 samples
+Processed 544 / 707 samples
+Processed 576 / 707 samples
+Processed 608 / 707 samples
 ... [output truncated]
+```
+
+```
+Creating plots ...
 ```
 
 #### 1.1.1 All Options for Data Specifc Parameters[¶](#111-all-options-for-data-specifc-parameters)
@@ -246,7 +282,7 @@ The data for this example is hosted on Hugging Face Hub ([autoencodix/pancreas-f
 
 > It is best practice to add the `is_single_cell` parameter to the `DataInfo` of the modality.
 
-In \[1\]:
+In \[3\]:
 
 Copied!
 
@@ -258,30 +294,33 @@ from huggingface_hub import hf_hub_download
 
 filepath = hf_hub_download(repo_id="autoencodix/pancreas-fang", repo_type="dataset", filename="pancreas.h5ad")
 data_config = DataConfig(
-    annotation_columns=["assigned_cluster"],
     data_info={"SC": DataInfo(file_path=filepath, is_single_cell=True)},
 )
-sc_config = VarixConfig(data_config=data_config, data_case=DataCase.MULTI_SINGLE_CELL, k_filter=100, epochs=30, checkpoint_interval=10)
+sc_config = VarixConfig(data_config=data_config, annotation_columns=["assigned_cluster"], data_case=DataCase.MULTI_SINGLE_CELL, k_filter=100, epochs=30, checkpoint_interval=10)
 varix_sc = acx.Varix(config=sc_config)
 result_sc = varix_sc.run()
 ```
 
-import autoencodix as acx from autoencodix.configs.default_config import DataConfig, DataInfo, DataCase from autoencodix.configs import VarixConfig from huggingface_hub import hf_hub_download filepath = hf_hub_download(repo_id="autoencodix/pancreas-fang", repo_type="dataset", filename="pancreas.h5ad") data_config = DataConfig( annotation_columns=["assigned_cluster"], data_info={"SC": DataInfo(file_path=filepath, is_single_cell=True)}, ) sc_config = VarixConfig(data_config=data_config, data_case=DataCase.MULTI_SINGLE_CELL, k_filter=100, epochs=30, checkpoint_interval=10) varix_sc = acx.Varix(config=sc_config) result_sc = varix_sc.run()
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/configs/default_config.py:439: UserWarning: annotation_columns in DataConfig is deprecated. Please set it directly in DefaultConfig instead.
-  warnings.warn(
-```
+import autoencodix as acx from autoencodix.configs.default_config import DataConfig, DataInfo, DataCase from autoencodix.configs import VarixConfig from huggingface_hub import hf_hub_download filepath = hf_hub_download(repo_id="autoencodix/pancreas-fang", repo_type="dataset", filename="pancreas.h5ad") data_config = DataConfig( data_info={"SC": DataInfo(file_path=filepath, is_single_cell=True)}, ) sc_config = VarixConfig(data_config=data_config, annotation_columns=["assigned_cluster"], data_case=DataCase.MULTI_SINGLE_CELL, k_filter=100, epochs=30, checkpoint_interval=10) varix_sc = acx.Varix(config=sc_config) result_sc = varix_sc.run()
 
 ```
 Number of common cells: 8569
+```
+
+```
 mudata: View of MuData object with n_obs × n_vars = 8569 × 20125
   obs:	'barcode', 'assigned_cluster', 'sample_id'
   1 modality
     SC:	8569 x 20125
       obs:	'barcode', 'assigned_cluster', 'sample_id'
+```
+
+```
 Processing 1 MuData objects: ['multi_sc']
 Processing train modality: multi_sc
+```
+
+```
 Processing valid split
 Processing valid modality: multi_sc
 Processing test split
@@ -289,23 +328,79 @@ Processing test modality: multi_sc
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:250: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 17.0524 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 16.2997 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 60.9338
-Sub-losses: recon_loss: 60.4786, var_loss: 0.4553, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 10 - Valid Loss: 51.1281
-Sub-losses: recon_loss: 50.6877, var_loss: 0.4404, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 20 - Train Loss: 62.9274
-Sub-losses: recon_loss: 59.8972, var_loss: 3.0302, anneal_factor: 0.9350, effective_beta_factor: 0.0935
-Epoch 20 - Valid Loss: 52.7536
-Sub-losses: recon_loss: 49.8155, var_loss: 2.9380, anneal_factor: 0.9350, effective_beta_factor: 0.0935
-Epoch 30 - Train Loss: 61.4364
-Sub-losses: recon_loss: 58.4847, var_loss: 2.9518, anneal_factor: 0.9999, effective_beta_factor: 0.1000
-Epoch 30 - Valid Loss: 51.3027
-Sub-losses: recon_loss: 48.4929, var_loss: 2.8098, anneal_factor: 0.9999, effective_beta_fact
+Epoch 10 - Train Loss: 73.1627
+Sub-losses: recon_loss: 72.9744, var_loss: 0.1882, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+Epoch 10 - Valid Loss: 66.8011
+Sub-losses: recon_loss: 66.6294, var_loss: 0.1717, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+```
+
+```
+Epoch 20 - Train Loss: 73.1266
+Sub-losses: recon_loss: 71.2037, var_loss: 1.9228, anneal_factor: 0.9350, effective_beta_factor: 0.0935
+Epoch 20 - Valid Loss: 66.4729
+Sub-losses: recon_loss: 64.5531, var_loss: 1.9198, anneal_factor: 0.9350, effective_beta_factor: 0.0935
+```
+
+```
+Epoch 30 - Train Loss: 71.8575
+Sub-losses: recon_loss: 69.9701, var_loss: 1.8874, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Epoch 30 - Valid Loss: 65.0221
+Sub-losses: recon_loss: 63.2418, var_loss: 1.7803, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Processed 32 / 1715 samples
+Processed 64 / 1715 samples
+Processed 96 / 1715 samples
+Processed 128 / 1715 samples
+Processed 160 / 1715 samples
+Processed 192 / 1715 samples
+Processed 224 / 1715 samples
+Processed 256 / 1715 samples
+Processed 288 / 1715 samples
+Processed 320 / 1715 samples
+Processed 352 / 1715 samples
+Processed 384 / 1715 samples
+Processed 416 / 1715 samples
+Processed 448 / 1715 samples
+Processed 480 / 1715 samples
+Processed 512 / 1715 samples
+Processed 544 / 1715 samples
+Processed 576 / 1715 samples
+Processed
+... [output truncated]
+```
+
+```
+Processed 736 / 1715 samples
+Processed 768 / 1715 samples
+Processed 800 / 1715 samples
+Processed 832 / 1715 samples
+Processed 864 / 1715 samples
+Processed 896 / 1715 samples
+Processed 928 / 1715 samples
+Processed 960 / 1715 samples
+Processed 992 / 1715 samples
+Processed 1024 / 1715 samples
+Processed 1056 / 1715 samples
+Processed 1088 / 1715 samples
+Processed 1120 / 1715 samples
+Processed 1152 / 1715 samples
+Processed 1184 / 1715 samples
+Processed 1216 / 1715 samples
+Processed 1248 / 1715 samples
+Processed 1280 / 1715 samples
+Processed 1312 / 1715 samples
+Processed 1344 / 1715 samples
+Processed 1376 / 1715 samples
+Processed 1408 / 1715 samples
+Processed 1440 / 1715 samples
+Processed 1472 / 1715 samples
+Processed 1504 / 1715 samples
+Processed 1536 / 1715 samples
+Processed 1568 / 1715 sample
 ... [output truncated]
 ```
 
@@ -314,7 +409,7 @@ As explained before, we can define one or more columns to use for visualization.
 
 > This should be fixed now, allowing you to pass the column name without the prefix.
 
-In \[2\]:
+In \[4\]:
 
 Copied!
 
@@ -346,7 +441,7 @@ Optionally, you can specify an **image size** (only square dimensions are allowe
 
 The data for this example is hosted on Hugging Face Hub ([autoencodix/tcga](https://huggingface.co/datasets/autoencodix/tcga)) and is downloaded automatically in the cell below.
 
-In \[1\]:
+In \[5\]:
 
 Copied!
 
@@ -455,11 +550,26 @@ clin_df = pd.read_parquet(clin_path) mapping_df = pd.read_csv(mapping_path, sep=
 
 ```
 reading parquet: data/XModalix-Tut-data/combined_rnaseq_formatted.parquet
+```
+
+```
 reading parquet: data/XModalix-Tut-data/combined_clin_formatted.parquet
+```
+
+```
 Given image size is possible, rescaling images to: 32x32
+```
+
+```
 Successfully loaded 3230 images for img
+```
+
+```
 anno key: rna
 anno key: img
+```
+
+```
 Converting 2261 images to torch.float32 tensors...
 Converting 646 images to torch.float32 tensors...
 Converting 323 images to torch.float32 tensors...
@@ -470,491 +580,151 @@ Dataset has UNPAIRED samples → using CoverageEnsuringSampler (2261 paired + 22
 Dataset has UNPAIRED samples → using CoverageEnsuringSampler (323 paired + 32 unpaired)
 Check if we need to pretrain: multi_bulk.rna
 pretrain epochs : 10
-starting pretraining for: multi_bul
-... [output truncated]
+starting pretraining for: multi_bulk.rna with <class 'autoencodix.trainers._general_trainer.GeneralTrainer'>
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:250: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 12.5916 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 9.1323 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 5 - Train Loss: 0.5879
-Sub-losses: recon_loss: 0.5771, var_loss: 0.0108, anneal_factor: 0.0007, effective_beta_factor: 0.0001
-Epoch 5 - Valid Loss: 0.7038
-Sub-losses: recon_loss: 0.5518, var_loss: 0.1520, anneal_factor: 0.0007, effective_beta_factor: 0.0001
-Epoch 10 - Train Loss: 0.4741
-Sub-losses: recon_loss: 0.4458, var_loss: 0.0282, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 10 - Valid Loss: 0.4253
-Sub-losses: recon_loss: 0.3947, var_loss: 0.0306, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+Epoch 5 - Train Loss: 0.5863
+Sub-losses: recon_loss: 0.5856, var_loss: 0.0007, anneal_factor: 0.0007, effective_beta_factor: 0.0001
+Epoch 5 - Valid Loss: 0.4993
+Sub-losses: recon_loss: 0.4987, var_loss: 0.0006, anneal_factor: 0.0007, effective_beta_factor: 0.0001
+```
+
+```
+Epoch 10 - Train Loss: 0.4964
+Sub-losses: recon_loss: 0.4826, var_loss: 0.0138, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+Epoch 10 - Valid Loss: 0.4527
+Sub-losses: recon_loss: 0.4402, var_loss: 0.0126, anneal_factor: 0.0180, effective_beta_factor: 0.0018
 Check if we need to pretrain: img.img
 pretrain epochs : 10
 starting pretraining for: img.img with <class 'autoencodix.trainers._general_trainer.GeneralTrainer'>
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:250: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 82.4634 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 108.9137 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 5 - Train Loss: 27.1822
-Sub-losses: recon_loss: 27.1701, var_loss: 0.0121, anneal_factor: 0.0007, effective_beta_factor: 0.0001
-Epoch 5 - Valid Loss: 25.2441
-Sub-losses: recon_loss: 25.2298, var_loss: 0.0143, anneal_factor: 0.0007, effective_beta_factor: 0.0001
-Epoch 10 - Train Loss: 20.2610
-Sub-losses: recon_loss: 19.5585, var_loss: 0.7025, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 10 - Valid Loss: 19.1020
-Sub-losses: recon_loss: 18.3307, var_loss: 0.7713, anneal_factor: 0.0180, effective_beta_factor: 0.0018
---- Epoch 1/30 ---
-split: train, n_samples: 5765.0
-Epoch 1/30 - Train Loss: 160.6849
-Sub-losses - adver_loss: 55.9999, aggregated_sub_losses: 15.5742, paired_loss: 20.3146, class_loss: 68.7962, multi_bulk.rna.recon_loss: 0.5393, multi_bulk.rna.var_loss: 0.0001,
-... [output truncated]
+Epoch 5 - Train Loss: 33.6545
+Sub-losses: recon_loss: 33.6446, var_loss: 0.0098, anneal_factor: 0.0007, effective_beta_factor: 0.0001
+Epoch 5 - Valid Loss: 31.0203
+Sub-losses: recon_loss: 31.0097, var_loss: 0.0107, anneal_factor: 0.0007, effective_beta_factor: 0.0001
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 1. Total norm of gradients (adjusted for number of features): 8.3429 exceeded max norm of 5.
+Epoch 10 - Train Loss: 23.8403
+Sub-losses: recon_loss: 23.2998, var_loss: 0.5405, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+Epoch 10 - Valid Loss: 22.7215
+Sub-losses: recon_loss: 22.1636, var_loss: 0.5579, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:469: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 5.7760 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-split: train, n_samples: 5765.0
-Epoch 2/30 - Train Loss: 205.1911
-Sub-losses - adver_loss: 100.3661, aggregated_sub_losses: 15.5742, paired_loss: 20.3194, class_loss: 68.9313, multi_bulk.rna.recon_loss: 0.5341, multi_bulk.rna.var_loss: 0.0001, multi_bulk.rna.loss: 0.5343, img.img.recon_loss: 15.0372, img.img.var_loss: 0.0027, img.img.loss: 15.0400, clf_loss: 0.0513
-split: valid, n_samples: 323
-Epoch 2/30 - Valid Loss: 218.6657
-Sub-losses - adver_loss: 114.5413, aggregated_sub_losses: 14.7325, paired_loss: 20.4167, class_loss: 68.9751, multi_bulk.rna.recon_loss: 0.4792, multi_bulk.rna.var_loss: 0.0002, multi_bulk.rna.loss: 0.4794, img.img.recon_loss: 14.2504, img.img.var_loss: 0.0027, img.img.loss: 14.2532, clf_loss: 0.0183
---- Epoch 3/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 2. Total norm of gradients (adjusted for number of features): 6.1006 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 3/30 - Train Loss: 221.7280
-Sub-losses - adver_loss: 117.0082, aggregated_sub_losses: 15.6420, paired_loss: 20.3398, class_loss: 68.7379, multi_bulk.rna.recon_loss: 0.5383, multi_bulk.rna.var_loss: 0.0003, multi_bulk.rna.loss: 0.5386, img.img.recon_loss: 15.0981, img.img.var_loss: 0.0053, img.img.loss: 15.1034, clf_loss: 0.0291
-split: valid, n_samples: 323
-Epoch 3/30 - Valid Loss: 229.9468
-Sub-losses - adver_loss: 126.1234, aggregated_sub_losses: 14.7124, paired_loss: 20.4732, class_loss: 68.6377, multi_bulk.rna.recon_loss: 0.4801, multi_bulk.rna.var_loss: 0.0003, multi_bulk.rna.loss: 0.4804, img.img.recon_loss: 14.2266, img.img.var_loss: 0.0054, img.img.loss: 14.2320, clf_loss: 0.0209
---- Epoch 4/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 3. Total norm of gradients (adjusted for number of features): 7.5513 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 4/30 - Train Loss: 239.3957
-Sub-losses - adver_loss: 134.7512, aggregated_sub_losses: 15.6616, paired_loss: 20.2884, class_loss: 68.6946, multi_bulk.rna.recon_loss: 0.5415, multi_bulk.rna.var_loss: 0.0005, multi_bulk.rna.loss: 0.5420, img.img.recon_loss: 15.1092, img.img.var_loss: 0.0104, img.img.loss: 15.1196, clf_loss: 0.0141
-split: valid, n_samples: 323
-Epoch 4/30 - Valid Loss: 251.5439
-Sub-losses - adver_loss: 148.7990, aggregated_sub_losses: 14.8734, paired_loss: 20.0834, class_loss: 67.7882, multi_bulk.rna.recon_loss: 0.4893, multi_bulk.rna.var_loss: 0.0006, multi_bulk.rna.loss: 0.4899, img.img.recon_loss: 14.3733, img.img.var_loss: 0.0102, img.img.loss: 14.3835, clf_loss: 0.0107
 --- Epoch 5/30 ---
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 4. Total norm of gradients (adjusted for number of features): 7.7933 exceeded max norm of 5.
-  warnings.warn(
+Epoch 5/30 - Train Loss: 237.9127
+Sub-losses - adver_loss: 138.9067, aggregated_sub_losses: 19.5406, paired_loss: 17.4100, class_loss: 62.0554, multi_bulk.rna.recon_loss: 0.5762, multi_bulk.rna.var_loss: 0.0006, multi_bulk.rna.loss: 0.5768, img.img.recon_loss: 18.9482, img.img.var_loss: 0.0157, img.img.loss: 18.9638, clf_loss: 0.0162
 ```
 
 ```
-split: train, n_samples: 5765.0
-Epoch 5/30 - Train Loss: 248.5907
-Sub-losses - adver_loss: 143.6507, aggregated_sub_losses: 15.7524, paired_loss: 20.3334, class_loss: 68.8543, multi_bulk.rna.recon_loss: 0.5359, multi_bulk.rna.var_loss: 0.0010, multi_bulk.rna.loss: 0.5369, img.img.recon_loss: 15.1954, img.img.var_loss: 0.0201, img.img.loss: 15.2155, clf_loss: 0.0162
-split: valid, n_samples: 323
-Epoch 5/30 - Valid Loss: 255.8977
-Sub-losses - adver_loss: 153.1569, aggregated_sub_losses: 14.6911, paired_loss: 20.1511, class_loss: 67.8986, multi_bulk.rna.recon_loss: 0.4865, multi_bulk.rna.var_loss: 0.0011, multi_bulk.rna.loss: 0.4876, img.img.recon_loss: 14.1837, img.img.var_loss: 0.0198, img.img.loss: 14.2035, clf_loss: 0.0027
+Epoch 5/30 - Valid Loss: 229.4239
+Sub-losses - adver_loss: 133.4085, aggregated_sub_losses: 18.1579, paired_loss: 16.9626, class_loss: 60.8949, multi_bulk.rna.recon_loss: 0.5501, multi_bulk.rna.var_loss: 0.0005, multi_bulk.rna.loss: 0.5506, img.img.recon_loss: 17.5924, img.img.var_loss: 0.0148, img.img.loss: 17.6073, clf_loss: 0.0067
 Storing checkpoint for epoch 4...
---- Epoch 6/30 ---
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 5. Total norm of gradients (adjusted for number of features): 7.1650 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 6/30 - Train Loss: 252.4860
-Sub-losses - adver_loss: 147.6023, aggregated_sub_losses: 15.7572, paired_loss: 20.3229, class_loss: 68.8036, multi_bulk.rna.recon_loss: 0.5333, multi_bulk.rna.var_loss: 0.0020, multi_bulk.rna.loss: 0.5353, img.img.recon_loss: 15.1827, img.img.var_loss: 0.0392, img.img.loss: 15.2219, clf_loss: 0.0109
-split: valid, n_samples: 323
-Epoch 6/30 - Valid Loss: 255.7790
-Sub-losses - adver_loss: 151.7353, aggregated_sub_losses: 14.6970, paired_loss: 20.4212, class_loss: 68.9255, multi_bulk.rna.recon_loss: 0.4973, multi_bulk.rna.var_loss: 0.0020, multi_bulk.rna.loss: 0.4993, img.img.recon_loss: 14.1580, img.img.var_loss: 0.0397, img.img.loss: 14.1977, clf_loss: 0.0059
---- Epoch 7/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 6. Total norm of gradients (adjusted for number of features): 6.7283 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 7/30 - Train Loss: 259.3877
-Sub-losses - adver_loss: 154.5182, aggregated_sub_losses: 15.7702, paired_loss: 20.2834, class_loss: 68.8159, multi_bulk.rna.recon_loss: 0.5395, multi_bulk.rna.var_loss: 0.0039, multi_bulk.rna.loss: 0.5434, img.img.recon_loss: 15.1506, img.img.var_loss: 0.0763, img.img.loss: 15.2269, clf_loss: 0.0068
-split: valid, n_samples: 323
-Epoch 7/30 - Valid Loss: 258.6879
-Sub-losses - adver_loss: 155.0229, aggregated_sub_losses: 14.7683, paired_loss: 20.4279, class_loss: 68.4687, multi_bulk.rna.recon_loss: 0.4847, multi_bulk.rna.var_loss: 0.0037, multi_bulk.rna.loss: 0.4884, img.img.recon_loss: 14.2027, img.img.var_loss: 0.0772, img.img.loss: 14.2799, clf_loss: 0.0057
---- Epoch 8/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 7. Total norm of gradients (adjusted for number of features): 12.5114 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 8/30 - Train Loss: 267.3811
-Sub-losses - adver_loss: 162.5574, aggregated_sub_losses: 15.7098, paired_loss: 20.3145, class_loss: 68.7994, multi_bulk.rna.recon_loss: 0.5307, multi_bulk.rna.var_loss: 0.0074, multi_bulk.rna.loss: 0.5381, img.img.recon_loss: 15.0234, img.img.var_loss: 0.1483, img.img.loss: 15.1717, clf_loss: 0.0068
-split: valid, n_samples: 323
-Epoch 8/30 - Valid Loss: 259.0375
-Sub-losses - adver_loss: 155.9933, aggregated_sub_losses: 14.8562, paired_loss: 20.1929, class_loss: 67.9951, multi_bulk.rna.recon_loss: 0.4917, multi_bulk.rna.var_loss: 0.0074, multi_bulk.rna.loss: 0.4992, img.img.recon_loss: 14.2098, img.img.var_loss: 0.1473, img.img.loss: 14.3571, clf_loss: 0.0234
---- Epoch 9/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 8. Total norm of gradients (adjusted for number of features): 6.4650 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 9/30 - Train Loss: 268.4097
-Sub-losses - adver_loss: 163.4658, aggregated_sub_losses: 15.9236, paired_loss: 20.3031, class_loss: 68.7172, multi_bulk.rna.recon_loss: 0.5397, multi_bulk.rna.var_loss: 0.0144, multi_bulk.rna.loss: 0.5541, img.img.recon_loss: 15.0821, img.img.var_loss: 0.2874, img.img.loss: 15.3695, clf_loss: 0.0056
-split: valid, n_samples: 323
-Epoch 9/30 - Valid Loss: 269.9840
-Sub-losses - adver_loss: 167.7535, aggregated_sub_losses: 15.1728, paired_loss: 19.8707, class_loss: 67.1869, multi_bulk.rna.recon_loss: 0.4736, multi_bulk.rna.var_loss: 0.0156, multi_bulk.rna.loss: 0.4892, img.img.recon_loss: 14.4066, img.img.var_loss: 0.2771, img.img.loss: 14.6837, clf_loss: 0.0045
 --- Epoch 10/30 ---
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 9. Total norm of gradients (adjusted for number of features): 8.4092 exceeded max norm of 5.
-  warnings.warn(
+Epoch 10/30 - Train Loss: 254.1130
+Sub-losses - adver_loss: 154.8897, aggregated_sub_losses: 19.7585, paired_loss: 17.4046, class_loss: 62.0602, multi_bulk.rna.recon_loss: 0.5752, multi_bulk.rna.var_loss: 0.0161, multi_bulk.rna.loss: 0.5913, img.img.recon_loss: 18.7364, img.img.var_loss: 0.4309, img.img.loss: 19.1672, clf_loss: 0.0095
 ```
 
 ```
-split: train, n_samples: 5765.0
-Epoch 10/30 - Train Loss: 277.5313
-Sub-losses - adver_loss: 172.2902, aggregated_sub_losses: 16.2071, paired_loss: 20.3018, class_loss: 68.7323, multi_bulk.rna.recon_loss: 0.5460, multi_bulk.rna.var_loss: 0.0278, multi_bulk.rna.loss: 0.5739, img.img.recon_loss: 15.0779, img.img.var_loss: 0.5553, img.img.loss: 15.6332, clf_loss: 0.0055
-split: valid, n_samples: 323
-Epoch 10/30 - Valid Loss: 272.7187
-Sub-losses - adver_loss: 170.1818, aggregated_sub_losses: 15.4158, paired_loss: 19.8617, class_loss: 67.2593, multi_bulk.rna.recon_loss: 0.4918, multi_bulk.rna.var_loss: 0.0294, multi_bulk.rna.loss: 0.5212, img.img.recon_loss: 14.3704, img.img.var_loss: 0.5243, img.img.loss: 14.8946, clf_loss: 0.0109
+Epoch 10/30 - Valid Loss: 264.3958
+Sub-losses - adver_loss: 169.0099, aggregated_sub_losses: 18.5332, paired_loss: 16.6654, class_loss: 60.1873, multi_bulk.rna.recon_loss: 0.5403, multi_bulk.rna.var_loss: 0.0194, multi_bulk.rna.loss: 0.5597, img.img.recon_loss: 17.5754, img.img.var_loss: 0.3981, img.img.loss: 17.9735, clf_loss: 0.0016
 Storing checkpoint for epoch 9...
---- Epoch 11/30 ---
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 10. Total norm of gradients (adjusted for number of features): 10.8791 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 11/30 - Train Loss: 281.4610
-Sub-losses - adver_loss: 175.6005, aggregated_sub_losses: 16.8073, paired_loss: 20.3117, class_loss: 68.7415, multi_bulk.rna.recon_loss: 0.5372, multi_bulk.rna.var_loss: 0.0540, multi_bulk.rna.loss: 0.5913, img.img.recon_loss: 15.1534, img.img.var_loss: 1.0626, img.img.loss: 16.2160, clf_loss: 0.0050
-split: valid, n_samples: 323
-Epoch 11/30 - Valid Loss: 290.1814
-Sub-losses - adver_loss: 183.8156, aggregated_sub_losses: 15.7639, paired_loss: 20.7781, class_loss: 69.8239, multi_bulk.rna.recon_loss: 0.4792, multi_bulk.rna.var_loss: 0.0619, multi_bulk.rna.loss: 0.5411, img.img.recon_loss: 14.1082, img.img.var_loss: 1.1146, img.img.loss: 15.2228, clf_loss: 0.0039
---- Epoch 12/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 11. Total norm of gradients (adjusted for number of features): 7.7414 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 12/30 - Train Loss: 282.1764
-Sub-losses - adver_loss: 175.5065, aggregated_sub_losses: 17.6982, paired_loss: 20.3047, class_loss: 68.6670, multi_bulk.rna.recon_loss: 0.5381, multi_bulk.rna.var_loss: 0.1015, multi_bulk.rna.loss: 0.6396, img.img.recon_loss: 15.0541, img.img.var_loss: 2.0044, img.img.loss: 17.0585, clf_loss: 0.0058
-split: valid, n_samples: 323
-Epoch 12/30 - Valid Loss: 276.4003
-Sub-losses - adver_loss: 169.6548, aggregated_sub_losses: 16.8063, paired_loss: 20.6306, class_loss: 69.3087, multi_bulk.rna.recon_loss: 0.4876, multi_bulk.rna.var_loss: 0.1303, multi_bulk.rna.loss: 0.6178, img.img.recon_loss: 14.1056, img.img.var_loss: 2.0828, img.img.loss: 16.1884, clf_loss: 0.0060
---- Epoch 13/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 12. Total norm of gradients (adjusted for number of features): 9.0457 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 13/30 - Train Loss: 278.0572
-Sub-losses - adver_loss: 169.5071, aggregated_sub_losses: 19.4415, paired_loss: 20.3158, class_loss: 68.7928, multi_bulk.rna.recon_loss: 0.5327, multi_bulk.rna.var_loss: 0.1852, multi_bulk.rna.loss: 0.7179, img.img.recon_loss: 15.0470, img.img.var_loss: 3.6767, img.img.loss: 18.7237, clf_loss: 0.0037
-split: valid, n_samples: 323
-Epoch 13/30 - Valid Loss: 294.4367
-Sub-losses - adver_loss: 185.5339, aggregated_sub_losses: 18.6540, paired_loss: 20.8176, class_loss: 69.4312, multi_bulk.rna.recon_loss: 0.4858, multi_bulk.rna.var_loss: 0.1777, multi_bulk.rna.loss: 0.6635, img.img.recon_loss: 14.1413, img.img.var_loss: 3.8492, img.img.loss: 17.9906, clf_loss: 0.0005
---- Epoch 14/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 13. Total norm of gradients (adjusted for number of features): 8.7713 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 14/30 - Train Loss: 291.3857
-Sub-losses - adver_loss: 180.1248, aggregated_sub_losses: 22.4017, paired_loss: 20.2883, class_loss: 68.5709, multi_bulk.rna.recon_loss: 0.5451, multi_bulk.rna.var_loss: 0.3209, multi_bulk.rna.loss: 0.8660, img.img.recon_loss: 15.1003, img.img.var_loss: 6.4354, img.img.loss: 21.5357, clf_loss: 0.0041
-split: valid, n_samples: 323
-Epoch 14/30 - Valid Loss: 312.7153
-Sub-losses - adver_loss: 203.3838, aggregated_sub_losses: 21.4690, paired_loss: 20.0427, class_loss: 67.8198, multi_bulk.rna.recon_loss: 0.4933, multi_bulk.rna.var_loss: 0.3544, multi_bulk.rna.loss: 0.8477, img.img.recon_loss: 14.3602, img.img.var_loss: 6.2611, img.img.loss: 20.6213, clf_loss: 0.0014
 --- Epoch 15/30 ---
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 14. Total norm of gradients (adjusted for number of features): 9.5465 exceeded max norm of 5.
-  warnings.warn(
+Epoch 15/30 - Train Loss: 266.7817
+Sub-losses - adver_loss: 159.2618, aggregated_sub_losses: 27.8579, paired_loss: 17.4595, class_loss: 62.2024, multi_bulk.rna.recon_loss: 0.5761, multi_bulk.rna.var_loss: 0.3006, multi_bulk.rna.loss: 0.8767, img.img.recon_loss: 18.8535, img.img.var_loss: 8.1277, img.img.loss: 26.9813, clf_loss: 0.0084
 ```
 
 ```
-split: train, n_samples: 5765.0
-Epoch 15/30 - Train Loss: 297.3779
-Sub-losses - adver_loss: 181.5914, aggregated_sub_losses: 26.6587, paired_loss: 20.3193, class_loss: 68.8085, multi_bulk.rna.recon_loss: 0.5389, multi_bulk.rna.var_loss: 0.5261, multi_bulk.rna.loss: 1.0651, img.img.recon_loss: 15.1259, img.img.var_loss: 10.4677, img.img.loss: 25.5937, clf_loss: 0.0072
-split: valid, n_samples: 323
-Epoch 15/30 - Valid Loss: 293.8940
-Sub-losses - adver_loss: 179.0335, aggregated_sub_losses: 25.8470, paired_loss: 20.3407, class_loss: 68.6728, multi_bulk.rna.recon_loss: 0.5037, multi_bulk.rna.var_loss: 0.5958, multi_bulk.rna.loss: 1.0995, img.img.recon_loss: 14.1753, img.img.var_loss: 10.5722, img.img.loss: 24.7475, clf_loss: 0.0040
+Epoch 15/30 - Valid Loss: 256.3250
+Sub-losses - adver_loss: 152.2392, aggregated_sub_losses: 26.2685, paired_loss: 17.0486, class_loss: 60.7688, multi_bulk.rna.recon_loss: 0.5385, multi_bulk.rna.var_loss: 0.2765, multi_bulk.rna.loss: 0.8150, img.img.recon_loss: 17.6880, img.img.var_loss: 7.7654, img.img.loss: 25.4535, clf_loss: 0.0006
 Storing checkpoint for epoch 14...
---- Epoch 16/30 ---
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 15. Total norm of gradients (adjusted for number of features): 9.7712 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 16/30 - Train Loss: 295.5848
-Sub-losses - adver_loss: 174.6323, aggregated_sub_losses: 31.8286, paired_loss: 20.3017, class_loss: 68.8223, multi_bulk.rna.recon_loss: 0.5380, multi_bulk.rna.var_loss: 0.7839, multi_bulk.rna.loss: 1.3219, img.img.recon_loss: 15.0793, img.img.var_loss: 15.4274, img.img.loss: 30.5067, clf_loss: 0.0021
-split: valid, n_samples: 323
-Epoch 16/30 - Valid Loss: 302.2223
-Sub-losses - adver_loss: 183.1870, aggregated_sub_losses: 30.8501, paired_loss: 20.2629, class_loss: 67.9223, multi_bulk.rna.recon_loss: 0.4877, multi_bulk.rna.var_loss: 0.8153, multi_bulk.rna.loss: 1.3030, img.img.recon_loss: 14.2410, img.img.var_loss: 15.3061, img.img.loss: 29.5471, clf_loss: 0.0004
---- Epoch 17/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 16. Total norm of gradients (adjusted for number of features): 12.9886 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 17/30 - Train Loss: 311.8745
-Sub-losses - adver_loss: 185.4926, aggregated_sub_losses: 37.0322, paired_loss: 20.3320, class_loss: 69.0177, multi_bulk.rna.recon_loss: 0.5391, multi_bulk.rna.var_loss: 1.0282, multi_bulk.rna.loss: 1.5673, img.img.recon_loss: 15.0722, img.img.var_loss: 20.3927, img.img.loss: 35.4649, clf_loss: 0.0061
-split: valid, n_samples: 323
-Epoch 17/30 - Valid Loss: 306.6333
-Sub-losses - adver_loss: 181.2490, aggregated_sub_losses: 36.2831, paired_loss: 20.3458, class_loss: 68.7554, multi_bulk.rna.recon_loss: 0.4857, multi_bulk.rna.var_loss: 1.0644, multi_bulk.rna.loss: 1.5501, img.img.recon_loss: 14.2638, img.img.var_loss: 20.4692, img.img.loss: 34.7330, clf_loss: 0.0013
---- Epoch 18/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 17. Total norm of gradients (adjusted for number of features): 7.4515 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 18/30 - Train Loss: 316.9872
-Sub-losses - adver_loss: 186.5819, aggregated_sub_losses: 41.2990, paired_loss: 20.3344, class_loss: 68.7719, multi_bulk.rna.recon_loss: 0.5444, multi_bulk.rna.var_loss: 1.2332, multi_bulk.rna.loss: 1.7776, img.img.recon_loss: 15.1158, img.img.var_loss: 24.4055, img.img.loss: 39.5213, clf_loss: 0.0031
-split: valid, n_samples: 323
-Epoch 18/30 - Valid Loss: 318.1626
-Sub-losses - adver_loss: 188.0127, aggregated_sub_losses: 41.0329, paired_loss: 20.4496, class_loss: 68.6674, multi_bulk.rna.recon_loss: 0.4711, multi_bulk.rna.var_loss: 1.3841, multi_bulk.rna.loss: 1.8552, img.img.recon_loss: 14.2654, img.img.var_loss: 24.9123, img.img.loss: 39.1777, clf_loss: 0.0004
---- Epoch 19/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 18. Total norm of gradients (adjusted for number of features): 9.4652 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 19/30 - Train Loss: 324.3129
-Sub-losses - adver_loss: 190.9484, aggregated_sub_losses: 44.1295, paired_loss: 20.3398, class_loss: 68.8954, multi_bulk.rna.recon_loss: 0.5407, multi_bulk.rna.var_loss: 1.3561, multi_bulk.rna.loss: 1.8968, img.img.recon_loss: 15.0426, img.img.var_loss: 27.1900, img.img.loss: 42.2326, clf_loss: 0.0016
-split: valid, n_samples: 323
-Epoch 19/30 - Valid Loss: 322.3584
-Sub-losses - adver_loss: 190.8427, aggregated_sub_losses: 43.1444, paired_loss: 20.1505, class_loss: 68.2207, multi_bulk.rna.recon_loss: 0.4756, multi_bulk.rna.var_loss: 1.5958, multi_bulk.rna.loss: 2.0714, img.img.recon_loss: 14.2664, img.img.var_loss: 26.8066, img.img.loss: 41.0730, clf_loss: 0.0004
 --- Epoch 20/30 ---
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 19. Total norm of gradients (adjusted for number of features): 11.5217 exceeded max norm of 5.
-  warnings.warn(
+Epoch 20/30 - Train Loss: 272.3434
+Sub-losses - adver_loss: 149.9477, aggregated_sub_losses: 42.7666, paired_loss: 17.4099, class_loss: 62.2192, multi_bulk.rna.recon_loss: 0.5784, multi_bulk.rna.var_loss: 0.8358, multi_bulk.rna.loss: 1.4142, img.img.recon_loss: 18.9621, img.img.var_loss: 22.3903, img.img.loss: 41.3524, clf_loss: 0.0078
 ```
 
 ```
-split: train, n_samples: 5765.0
-Epoch 20/30 - Train Loss: 330.2791
-Sub-losses - adver_loss: 195.1311, aggregated_sub_losses: 45.9420, paired_loss: 20.3346, class_loss: 68.8714, multi_bulk.rna.recon_loss: 0.5358, multi_bulk.rna.var_loss: 1.4505, multi_bulk.rna.loss: 1.9862, img.img.recon_loss: 15.0967, img.img.var_loss: 28.8590, img.img.loss: 43.9558, clf_loss: 0.0029
-split: valid, n_samples: 323
-Epoch 20/30 - Valid Loss: 346.7808
-Sub-losses - adver_loss: 211.9340, aggregated_sub_losses: 45.3938, paired_loss: 20.4719, class_loss: 68.9812, multi_bulk.rna.recon_loss: 0.4850, multi_bulk.rna.var_loss: 1.4234, multi_bulk.rna.loss: 1.9084, img.img.recon_loss: 14.3378, img.img.var_loss: 29.1476, img.img.loss: 43.4854, clf_loss: 0.0003
+Epoch 20/30 - Valid Loss: 267.5110
+Sub-losses - adver_loss: 149.7178, aggregated_sub_losses: 40.2521, paired_loss: 16.9398, class_loss: 60.6013, multi_bulk.rna.recon_loss: 0.5440, multi_bulk.rna.var_loss: 0.8285, multi_bulk.rna.loss: 1.3725, img.img.recon_loss: 17.8791, img.img.var_loss: 21.0006, img.img.loss: 38.8796, clf_loss: 0.0005
 Storing checkpoint for epoch 19...
---- Epoch 21/30 ---
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 20. Total norm of gradients (adjusted for number of features): 13.3257 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 21/30 - Train Loss: 331.8548
-Sub-losses - adver_loss: 195.7193, aggregated_sub_losses: 46.9146, paired_loss: 20.3623, class_loss: 68.8586, multi_bulk.rna.recon_loss: 0.5425, multi_bulk.rna.var_loss: 1.5029, multi_bulk.rna.loss: 2.0454, img.img.recon_loss: 15.0658, img.img.var_loss: 29.8035, img.img.loss: 44.8693, clf_loss: 0.0034
-split: valid, n_samples: 323
-Epoch 21/30 - Valid Loss: 329.3173
-Sub-losses - adver_loss: 193.4308, aggregated_sub_losses: 46.5868, paired_loss: 20.3911, class_loss: 68.9086, multi_bulk.rna.recon_loss: 0.4823, multi_bulk.rna.var_loss: 1.6546, multi_bulk.rna.loss: 2.1369, img.img.recon_loss: 14.2981, img.img.var_loss: 30.1519, img.img.loss: 44.4499, clf_loss: 0.0139
---- Epoch 22/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 21. Total norm of gradients (adjusted for number of features): 9.4405 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 22/30 - Train Loss: 335.7301
-Sub-losses - adver_loss: 199.1504, aggregated_sub_losses: 47.4819, paired_loss: 20.2999, class_loss: 68.7979, multi_bulk.rna.recon_loss: 0.5423, multi_bulk.rna.var_loss: 1.5174, multi_bulk.rna.loss: 2.0596, img.img.recon_loss: 15.1296, img.img.var_loss: 30.2927, img.img.loss: 45.4223, clf_loss: 0.0018
-split: valid, n_samples: 323
-Epoch 22/30 - Valid Loss: 339.6571
-Sub-losses - adver_loss: 205.4392, aggregated_sub_losses: 46.0752, paired_loss: 20.2046, class_loss: 67.9380, multi_bulk.rna.recon_loss: 0.4950, multi_bulk.rna.var_loss: 1.7062, multi_bulk.rna.loss: 2.2012, img.img.recon_loss: 14.2401, img.img.var_loss: 29.6339, img.img.loss: 43.8740, clf_loss: 0.0054
---- Epoch 23/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 22. Total norm of gradients (adjusted for number of features): 8.9085 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 23/30 - Train Loss: 337.3739
-Sub-losses - adver_loss: 200.5690, aggregated_sub_losses: 47.6947, paired_loss: 20.3195, class_loss: 68.7907, multi_bulk.rna.recon_loss: 0.5308, multi_bulk.rna.var_loss: 1.5545, multi_bulk.rna.loss: 2.0853, img.img.recon_loss: 15.0332, img.img.var_loss: 30.5762, img.img.loss: 45.6093, clf_loss: 0.0041
-split: valid, n_samples: 323
-Epoch 23/30 - Valid Loss: 337.4436
-Sub-losses - adver_loss: 200.8550, aggregated_sub_losses: 47.2664, paired_loss: 20.4041, class_loss: 68.9182, multi_bulk.rna.recon_loss: 0.4802, multi_bulk.rna.var_loss: 1.8243, multi_bulk.rna.loss: 2.3045, img.img.recon_loss: 14.1708, img.img.var_loss: 30.7911, img.img.loss: 44.9619, clf_loss: 0.0024
---- Epoch 24/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 23. Total norm of gradients (adjusted for number of features): 10.1026 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 24/30 - Train Loss: 333.7203
-Sub-losses - adver_loss: 196.7116, aggregated_sub_losses: 47.9649, paired_loss: 20.2735, class_loss: 68.7703, multi_bulk.rna.recon_loss: 0.5406, multi_bulk.rna.var_loss: 1.5476, multi_bulk.rna.loss: 2.0882, img.img.recon_loss: 15.1677, img.img.var_loss: 30.7091, img.img.loss: 45.8768, clf_loss: 0.0030
-split: valid, n_samples: 323
-Epoch 24/30 - Valid Loss: 338.9710
-Sub-losses - adver_loss: 201.0202, aggregated_sub_losses: 47.7696, paired_loss: 20.5201, class_loss: 69.6610, multi_bulk.rna.recon_loss: 0.5233, multi_bulk.rna.var_loss: 1.7429, multi_bulk.rna.loss: 2.2662, img.img.recon_loss: 14.2982, img.img.var_loss: 31.2052, img.img.loss: 45.5034, clf_loss: 0.0003
 --- Epoch 25/30 ---
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 24. Total norm of gradients (adjusted for number of features): 6.4946 exceeded max norm of 5.
-  warnings.warn(
+Epoch 25/30 - Train Loss: 291.5098
+Sub-losses - adver_loss: 167.8221, aggregated_sub_losses: 44.1945, paired_loss: 17.3909, class_loss: 62.1022, multi_bulk.rna.recon_loss: 0.5667, multi_bulk.rna.var_loss: 0.8874, multi_bulk.rna.loss: 1.4542, img.img.recon_loss: 18.8370, img.img.var_loss: 23.9033, img.img.loss: 42.7404, clf_loss: 0.0059
 ```
 
 ```
-split: train, n_samples: 5765.0
-Epoch 25/30 - Train Loss: 340.9228
-Sub-losses - adver_loss: 203.8271, aggregated_sub_losses: 48.0034, paired_loss: 20.2916, class_loss: 68.8007, multi_bulk.rna.recon_loss: 0.5381, multi_bulk.rna.var_loss: 1.5710, multi_bulk.rna.loss: 2.1091, img.img.recon_loss: 15.1269, img.img.var_loss: 30.7675, img.img.loss: 45.8943, clf_loss: 0.0017
-split: valid, n_samples: 323
-Epoch 25/30 - Valid Loss: 347.9312
-Sub-losses - adver_loss: 206.9238, aggregated_sub_losses: 49.4616, paired_loss: 21.1116, class_loss: 70.4343, multi_bulk.rna.recon_loss: 0.4781, multi_bulk.rna.var_loss: 1.7041, multi_bulk.rna.loss: 2.1821, img.img.recon_loss: 14.1721, img.img.var_loss: 33.1074, img.img.loss: 47.2794, clf_loss: 0.0013
+Epoch 25/30 - Valid Loss: 287.5018
+Sub-losses - adver_loss: 167.3556, aggregated_sub_losses: 41.9905, paired_loss: 16.9858, class_loss: 61.1699, multi_bulk.rna.recon_loss: 0.5215, multi_bulk.rna.var_loss: 0.9818, multi_bulk.rna.loss: 1.5033, img.img.recon_loss: 17.5631, img.img.var_loss: 22.9241, img.img.loss: 40.4872, clf_loss: 0.0004
 Storing checkpoint for epoch 24...
---- Epoch 26/30 ---
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 25. Total norm of gradients (adjusted for number of features): 7.8311 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 26/30 - Train Loss: 351.5484
-Sub-losses - adver_loss: 214.3203, aggregated_sub_losses: 48.0713, paired_loss: 20.2825, class_loss: 68.8743, multi_bulk.rna.recon_loss: 0.5353, multi_bulk.rna.var_loss: 1.5664, multi_bulk.rna.loss: 2.1018, img.img.recon_loss: 15.1753, img.img.var_loss: 30.7942, img.img.loss: 45.9695, clf_loss: 0.0028
-split: valid, n_samples: 323
-Epoch 26/30 - Valid Loss: 346.0363
-Sub-losses - adver_loss: 212.2418, aggregated_sub_losses: 46.4096, paired_loss: 19.8235, class_loss: 67.5614, multi_bulk.rna.recon_loss: 0.4854, multi_bulk.rna.var_loss: 1.6902, multi_bulk.rna.loss: 2.1756, img.img.recon_loss: 14.3936, img.img.var_loss: 29.8404, img.img.loss: 44.2340, clf_loss: 0.0027
---- Epoch 27/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 26. Total norm of gradients (adjusted for number of features): 8.2142 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 27/30 - Train Loss: 348.0869
-Sub-losses - adver_loss: 210.9238, aggregated_sub_losses: 48.0197, paired_loss: 20.3308, class_loss: 68.8126, multi_bulk.rna.recon_loss: 0.5364, multi_bulk.rna.var_loss: 1.5506, multi_bulk.rna.loss: 2.0870, img.img.recon_loss: 15.0766, img.img.var_loss: 30.8562, img.img.loss: 45.9327, clf_loss: 0.0011
-split: valid, n_samples: 323
-Epoch 27/30 - Valid Loss: 360.2113
-Sub-losses - adver_loss: 221.8642, aggregated_sub_losses: 48.4344, paired_loss: 20.5780, class_loss: 69.3347, multi_bulk.rna.recon_loss: 0.5157, multi_bulk.rna.var_loss: 1.8154, multi_bulk.rna.loss: 2.3311, img.img.recon_loss: 14.1942, img.img.var_loss: 31.9091, img.img.loss: 46.1033, clf_loss: 0.0003
---- Epoch 28/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 27. Total norm of gradients (adjusted for number of features): 11.4655 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 28/30 - Train Loss: 349.0731
-Sub-losses - adver_loss: 211.9900, aggregated_sub_losses: 48.0576, paired_loss: 20.3356, class_loss: 68.6899, multi_bulk.rna.recon_loss: 0.5320, multi_bulk.rna.var_loss: 1.5673, multi_bulk.rna.loss: 2.0993, img.img.recon_loss: 15.1350, img.img.var_loss: 30.8233, img.img.loss: 45.9583, clf_loss: 0.0031
-split: valid, n_samples: 323
-Epoch 28/30 - Valid Loss: 352.1399
-Sub-losses - adver_loss: 215.2407, aggregated_sub_losses: 47.5142, paired_loss: 20.4821, class_loss: 68.9029, multi_bulk.rna.recon_loss: 0.4926, multi_bulk.rna.var_loss: 1.4499, multi_bulk.rna.loss: 1.9426, img.img.recon_loss: 14.3661, img.img.var_loss: 31.2055, img.img.loss: 45.5716, clf_loss: 0.0015
---- Epoch 29/30 ---
-```
-
-```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 28. Total norm of gradients (adjusted for number of features): 8.8409 exceeded max norm of 5.
-  warnings.warn(
-```
-
-```
-split: train, n_samples: 5765.0
-Epoch 29/30 - Train Loss: 338.3573
-Sub-losses - adver_loss: 201.2539, aggregated_sub_losses: 48.0384, paired_loss: 20.3193, class_loss: 68.7456, multi_bulk.rna.recon_loss: 0.5428, multi_bulk.rna.var_loss: 1.5603, multi_bulk.rna.loss: 2.1031, img.img.recon_loss: 15.0984, img.img.var_loss: 30.8369, img.img.loss: 45.9353, clf_loss: 0.0031
-split: valid, n_samples: 323
-Epoch 29/30 - Valid Loss: 340.7493
-Sub-losses - adver_loss: 203.9537, aggregated_sub_losses: 47.6893, paired_loss: 20.4101, class_loss: 68.6962, multi_bulk.rna.recon_loss: 0.4781, multi_bulk.rna.var_loss: 1.8940, multi_bulk.rna.loss: 2.3721, img.img.recon_loss: 14.0875, img.img.var_loss: 31.2298, img.img.loss: 45.3173, clf_loss: 0.0004
 --- Epoch 30/30 ---
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:446: UserWarning: Gradient clipping was first applied in epoch 29. Total norm of gradients (adjusted for number of features): 10.0081 exceeded max norm of 5.
-  warnings.warn(
+Epoch 30/30 - Train Loss: 295.1008
+Sub-losses - adver_loss: 171.4776, aggregated_sub_losses: 44.1573, paired_loss: 17.4004, class_loss: 62.0654, multi_bulk.rna.recon_loss: 0.5741, multi_bulk.rna.var_loss: 0.8797, multi_bulk.rna.loss: 1.4538, img.img.recon_loss: 18.7312, img.img.var_loss: 23.9723, img.img.loss: 42.7035, clf_loss: 0.0062
 ```
 
 ```
-split: train, n_samples: 5765.0
-Epoch 30/30 - Train Loss: 339.5961
-Sub-losses - adver_loss: 202.4635, aggregated_sub_losses: 48.0025, paired_loss: 20.2992, class_loss: 68.8309, multi_bulk.rna.recon_loss: 0.5385, multi_bulk.rna.var_loss: 1.5415, multi_bulk.rna.loss: 2.0800, img.img.recon_loss: 15.0539, img.img.var_loss: 30.8687, img.img.loss: 45.9225, clf_loss: 0.0023
-split: valid, n_samples: 323
-Epoch 30/30 - Valid Loss: 350.7390
-Sub-losses - adver_loss: 211.1494, aggregated_sub_losses: 48.8886, paired_loss: 20.8458, class_loss: 69.8552, multi_bulk.rna.recon_loss: 0.4871, multi_bulk.rna.var_loss: 1.8902, multi_bulk.rna.loss: 2.3772, img.img.recon_loss: 14.3014, img.img.var_loss: 32.2100, img.img.loss: 46.5114, clf_loss: 0.0014
+Epoch 30/30 - Valid Loss: 292.3552
+Sub-losses - adver_loss: 170.3753, aggregated_sub_losses: 42.9188, paired_loss: 17.3933, class_loss: 61.6679, multi_bulk.rna.recon_loss: 0.5400, multi_bulk.rna.var_loss: 0.9466, multi_bulk.rna.loss: 1.4866, img.img.recon_loss: 17.8537, img.img.var_loss: 23.5784, img.img.loss: 41.4321, clf_loss: 0.0012
 Storing checkpoint for epoch 29...
+```
+
+```
 Prediction complete.
-Proces
-... [output truncated]
+Processing latent space results into a single AnnData object...
+Identified source modality for latent space: 'multi_bulk.rna'
+  - Added 100 source feature IDs to .uns
+Finished processing latent results.
 ```
 
 ## 2) Passing Data Directly[¶](#2-passing-data-directly)
@@ -970,7 +740,7 @@ Let's see in code how this works to make things clearer:
 Let's assume we have two data modalities as `pd.DataFrame`s and one annotation file with metadata, also as a `pd.DataFrame`.\
 The only requirement for the data files is that they are numeric. For the annotation file, categorical variables are also allowed.
 
-In \[2\]:
+In \[6\]:
 
 Copied!
 
@@ -988,7 +758,7 @@ from autoencodix.utils.example_data import raw_protein, raw_rna, annotation from
 Type of rna: <class 'pandas.core.frame.DataFrame'>
 ```
 
-Out\[2\]:
+Out\[6\]:
 
 ```
 protein_0
@@ -1094,7 +864,7 @@ In our `DataPackage` class we have four attributes:
 
 Each attribute holds a `Dict`, where you can pass your `DataFrame`s (or AnnData/MuData) and assign a data modality key, like:
 
-In \[3\]:
+In \[7\]:
 
 Copied!
 
@@ -1108,7 +878,7 @@ my_dp = DataPackage( multi_bulk={"rna": raw_rna, "protein": raw_protein}, annota
 
 The instance of `DataPackage` can be directly passed to our pipeline object via the data keyword argument.
 
-In \[4\]:
+In \[8\]:
 
 Copied!
 
@@ -1130,29 +900,38 @@ anno key: anno
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:250: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 15.8682 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 15.3995 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 152.2939
-Sub-losses: recon_loss: 152.2562, var_loss: 0.0378, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 10 - Valid Loss: 152.1192
-Sub-losses: recon_loss: 152.0843, var_loss: 0.0349, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 20 - Train Loss: 114.6131
-Sub-losses: recon_loss: 109.9776, var_loss: 4.6355, anneal_factor: 0.9350, effective_beta_factor: 0.0935
-Epoch 20 - Valid Loss: 120.5976
-Sub-losses: recon_loss: 116.4424, var_loss: 4.1552, anneal_factor: 0.9350, effective_beta_factor: 0.0935
-Epoch 30 - Train Loss: 96.5454
-Sub-losses: recon_loss: 90.1262, var_loss: 6.4192, anneal_factor: 0.9999, effective_beta_factor: 0.1000
-Epoch 30 - Valid Loss: 103.8546
-Sub-losses: recon_loss: 97.8245, var_loss: 6.0301, anneal_factor: 0.9999, effective_
-... [output truncated]
+Epoch 10 - Train Loss: 183.8661
+Sub-losses: recon_loss: 183.8494, var_loss: 0.0167, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+Epoch 10 - Valid Loss: 153.6754
+Sub-losses: recon_loss: 153.6688, var_loss: 0.0066, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+```
+
+```
+Epoch 20 - Train Loss: 170.8820
+Sub-losses: recon_loss: 170.0307, var_loss: 0.8513, anneal_factor: 0.9350, effective_beta_factor: 0.0935
+Epoch 20 - Valid Loss: 147.6164
+Sub-losses: recon_loss: 147.2209, var_loss: 0.3955, anneal_factor: 0.9350, effective_beta_factor: 0.0935
+```
+
+```
+Epoch 30 - Train Loss: 162.9200
+Sub-losses: recon_loss: 161.7729, var_loss: 1.1471, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Epoch 30 - Valid Loss: 144.4241
+Sub-losses: recon_loss: 143.8149, var_loss: 0.6091, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Processed 32 / 100 samples
+Processed 64 / 100 samples
+Processed 96 / 100 samples
+Processed 100 / 100 samples
 ```
 
 You still can customize your config by providing a `DataConfig` with `DataInfo` as shown in [section 1](#11-combining-mulit-omics-data-from-bulk-sequencing).
 
-In \[5\]:
+In \[9\]:
 
 Copied!
 
@@ -1180,24 +959,33 @@ anno key: anno
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:250: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 15.7751 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 10.5066 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 12.6953
-Sub-losses: recon_loss: 12.6528, var_loss: 0.0425, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 10 - Valid Loss: 8.5690
-Sub-losses: recon_loss: 8.5338, var_loss: 0.0352, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 20 - Train Loss: 7.9003
-Sub-losses: recon_loss: 6.9505, var_loss: 0.9497, anneal_factor: 0.9350, effective_beta_factor: 0.0935
-Epoch 20 - Valid Loss: 6.7541
-Sub-losses: recon_loss: 5.9348, var_loss: 0.8193, anneal_factor: 0.9350, effective_beta_factor: 0.0935
-Epoch 30 - Train Loss: 6.1444
-Sub-losses: recon_loss: 5.5134, var_loss: 0.6310, anneal_factor: 0.9999, effective_beta_factor: 0.1000
-Epoch 30 - Valid Loss: 5.8938
-Sub-losses: recon_loss: 5.3956, var_loss: 0.4981, anneal_factor: 0.9999, effective_beta_factor: 0.1000
-... [output truncated]
+Epoch 10 - Train Loss: 11.1363
+Sub-losses: recon_loss: 11.1196, var_loss: 0.0167, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+Epoch 10 - Valid Loss: 8.2466
+Sub-losses: recon_loss: 8.2371, var_loss: 0.0095, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+```
+
+```
+Epoch 20 - Train Loss: 8.4417
+Sub-losses: recon_loss: 7.8645, var_loss: 0.5772, anneal_factor: 0.9350, effective_beta_factor: 0.0935
+Epoch 20 - Valid Loss: 5.9198
+Sub-losses: recon_loss: 5.6514, var_loss: 0.2684, anneal_factor: 0.9350, effective_beta_factor: 0.0935
+```
+
+```
+Epoch 30 - Train Loss: 6.7288
+Sub-losses: recon_loss: 6.4396, var_loss: 0.2892, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Epoch 30 - Valid Loss: 5.4979
+Sub-losses: recon_loss: 5.3585, var_loss: 0.1394, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Processed 32 / 100 samples
+Processed 64 / 100 samples
+Processed 96 / 100 samples
+Processed 100 / 100 samples
 ```
 
 #### 2.2) Passing Single Cell Data[¶](#22-passing-single-cell-data)
@@ -1208,7 +996,7 @@ It is also possible to pass `AnnData` or `MuData` directly to the pipeline.
 
 **Working with AnnData**
 
-In \[6\]:
+In \[10\]:
 
 Copied!
 
@@ -1220,7 +1008,7 @@ sample_adata
 
 from autoencodix.utils.example_data import sample_adata, sample_mudata sample_adata
 
-Out\[6\]:
+Out\[10\]:
 
 ```
 AnnData object with n_obs × n_vars = 1000 × 500
@@ -1233,7 +1021,7 @@ In this example, we did not pass a config, which means the pipeline will use def
 
 Of course, you can also define and pass a custom config if needed.
 
-In \[7\]:
+In \[11\]:
 
 Copied!
 
@@ -1252,6 +1040,9 @@ mudata: View of MuData object with n_obs × n_vars = 1000 × 500
       obs:	'cell_type', 'batch', 'donor', 'cell_cycle'
 Processing 1 MuData objects: ['multi_sc']
 Processing train modality: multi_sc
+```
+
+```
 Processing valid split
 Processing valid modality: multi_sc
 Processing test split
@@ -1259,22 +1050,28 @@ Processing test modality: multi_sc
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:250: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 16.4819 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 12.6049 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 3 - Train Loss: 400.7616
-Sub-losses: recon_loss: 396.2915, var_loss: 4.4701, anneal_factor: 0.9656, effective_beta_factor: 0.0966
-Epoch 3 - Valid Loss: 327.8859
-Sub-losses: recon_loss: 323.4257, var_loss: 4.4602, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Epoch 3 - Train Loss: 497.8862
+Sub-losses: recon_loss: 496.7424, var_loss: 1.1438, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Epoch 3 - Valid Loss: 575.4791
+Sub-losses: recon_loss: 574.0580, var_loss: 1.4211, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Processed 32 / 200 samples
+Processed 64 / 200 samples
+Processed 96 / 200 samples
+Processed 128 / 200 samples
+Processed 160 / 200 samples
+Processed 192 / 200 samples
 Processed 200 / 200 samples
 ```
 
 **Working with MuData**\
 In some cases, you may want to combine multiple single-cell modalities. Here, we expect a `MuData` object. This can be passed directly to the pipeline, as shown for `AnnData`, or via our `DataPackage`, as shown in the tabular numeric case.
 
-In \[8\]:
+In \[12\]:
 
 Copied!
 
@@ -1284,7 +1081,7 @@ sample_mudata
 
 sample_mudata
 
-Out\[8\]:
+Out\[12\]:
 
 ```
 MuData object with n_obs × n_vars = 1000 × 700
@@ -1295,7 +1092,7 @@ MuData object with n_obs × n_vars = 1000 × 700
       obs:	'cell_type', 'batch', 'donor', 'cell_cycle'
 ```
 
-In \[9\]:
+In \[13\]:
 
 Copied!
 
@@ -1316,6 +1113,9 @@ mudata: View of MuData object with n_obs × n_vars = 1000 × 700
       obs:	'cell_type', 'batch', 'donor', 'cell_cycle'
 Processing 1 MuData objects: ['multi_sc']
 Processing train modality: multi_sc
+```
+
+```
 Processing valid split
 Processing valid modality: multi_sc
 Processing test split
@@ -1323,15 +1123,21 @@ Processing test modality: multi_sc
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:250: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 14.9491 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 9.5354 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 3 - Train Loss: 464.2348
-Sub-losses: recon_loss: 457.3495, var_loss: 6.8853, anneal_factor: 0.9656, effective_beta_factor: 0.0966
-Epoch 3 - Valid Loss: 379.6347
-Sub-losses: recon_loss: 372.9406, var_loss: 6.6941, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Epoch 3 - Train Loss: 663.0028
+Sub-losses: recon_loss: 657.0651, var_loss: 5.9377, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Epoch 3 - Valid Loss: 709.9949
+Sub-losses: recon_loss: 708.8445, var_loss: 1.1504, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Processed 32 / 200 samples
+Processed 64 / 200 samples
+Processed 96 / 200 samples
+Processed 128 / 200 samples
+Processed 160 / 200 samples
+Processed 192 / 200 samples
 Processed 200 / 200 samples
 ```
 
@@ -1342,7 +1148,7 @@ For completeness, we show how one could pass images directly to the pipeline, bu
 
 We store image data as a list, where each item represents one image and is of our custom class `ImgData`.
 
-In \[10\]:
+In \[14\]:
 
 Copied!
 
@@ -1416,7 +1222,7 @@ Alternatively the `utils` function `custom_splits_from_anno()` can be used to re
 
 In the following is an example on the TCGA data where we exclude one cancer type from the training and validation set and define it as test set.
 
-In \[1\]:
+In \[15\]:
 
 Copied!
 
@@ -1451,7 +1257,6 @@ custom_splits = {
 clin_df.loc[custom_splits['train'],:]
 
 data_config = DataConfig(
-    annotation_columns=["CANCER_TYPE"],
     data_info={
         "RNA": DataInfo(file_path=mrna_file),
         "METHYLATION": DataInfo(file_path=meth_file),
@@ -1461,7 +1266,7 @@ data_config = DataConfig(
     },
 )
 
-bulk_config = VarixConfig(data_config=data_config, data_case=DataCase.MULTI_BULK, epochs=30, checkpoint_interval=10, k_filter=100)
+bulk_config = VarixConfig(data_config=data_config, annotation_columns=["CANCER_TYPE"], data_case=DataCase.MULTI_BULK, epochs=30, checkpoint_interval=10, k_filter=100)
 varix = acx.Varix(config=bulk_config, custom_splits=custom_splits)
 
 result_varix = varix.run()
@@ -1480,45 +1285,84 @@ clin_df = pd.read_parquet(clin_file) test_indices = list(clin_df\[clin_df['CANCE
 
 # Split remaining indices randomly into train and validation sets (80% train, 20% validation)
 
-train_indices = np.random.choice(remaining_indices, size=int(0.8 * len(remaining_indices)), replace=False) val_indices = [i for i in remaining_indices if i not in train_indices] custom_splits = { "train": train_indices, "valid": val_indices, "test": test_indices } clin_df.loc\[custom_splits['train'],:\] data_config = DataConfig( annotation_columns=["CANCER_TYPE"], data_info={ "RNA": DataInfo(file_path=mrna_file), "METHYLATION": DataInfo(file_path=meth_file), "CLINICAL": DataInfo( file_path=clin_file, data_type="ANNOTATION" ), }, ) bulk_config = VarixConfig(data_config=data_config, data_case=DataCase.MULTI_BULK, epochs=30, checkpoint_interval=10, k_filter=100) varix = acx.Varix(config=bulk_config, custom_splits=custom_splits) result_varix = varix.run() varix.show_result()
+train_indices = np.random.choice(remaining_indices, size=int(0.8 * len(remaining_indices)), replace=False) val_indices = [i for i in remaining_indices if i not in train_indices] custom_splits = { "train": train_indices, "valid": val_indices, "test": test_indices } clin_df.loc\[custom_splits['train'],:\] data_config = DataConfig( data_info={ "RNA": DataInfo(file_path=mrna_file), "METHYLATION": DataInfo(file_path=meth_file), "CLINICAL": DataInfo( file_path=clin_file, data_type="ANNOTATION" ), }, ) bulk_config = VarixConfig(data_config=data_config, annotation_columns=["CANCER_TYPE"], data_case=DataCase.MULTI_BULK, epochs=30, checkpoint_interval=10, k_filter=100) varix = acx.Varix(config=bulk_config, custom_splits=custom_splits) result_varix = varix.run() varix.show_result()
 
 ```
-/home/kristina/Dokumente/autoencodix_package_custom_split/src/autoencodix/configs/default_config.py:559: UserWarning: annotation_columns in DataConfig is deprecated. Please set it directly in DefaultConfig instead.
-  warnings.warn(
+reading parquet: /home/janew/.cache/huggingface/hub/datasets--autoencodix--tcga/snapshots/c59ee679d11ea17c0fd615248a382ef1c38ef456/rna.parquet
 ```
 
 ```
-reading parquet: /home/kristina/.cache/huggingface/hub/datasets--autoencodix--tcga/snapshots/c59ee679d11ea17c0fd615248a382ef1c38ef456/rna.parquet
-reading parquet: /home/kristina/.cache/huggingface/hub/datasets--autoencodix--tcga/snapshots/c59ee679d11ea17c0fd615248a382ef1c38ef456/methylation.parquet
-reading parquet: /home/kristina/.cache/huggingface/hub/datasets--autoencodix--tcga/snapshots/c59ee679d11ea17c0fd615248a382ef1c38ef456/clinical.parquet
+reading parquet: /home/janew/.cache/huggingface/hub/datasets--autoencodix--tcga/snapshots/c59ee679d11ea17c0fd615248a382ef1c38ef456/methylation.parquet
+```
+
+```
+reading parquet: /home/janew/.cache/huggingface/hub/datasets--autoencodix--tcga/snapshots/c59ee679d11ea17c0fd615248a382ef1c38ef456/clinical.parquet
+```
+
+```
 Using custom splits in PairedUnpairedSplitter.
 anno key: paired
 ```
 
 ```
-/home/kristina/Dokumente/autoencodix_package_custom_split/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 19.1786 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 13.9052 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 72.7226
-Sub-losses: recon_loss: 72.6276, var_loss: 0.0950, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 10 - Valid Loss: 62.9423
-Sub-losses: recon_loss: 62.8509, var_loss: 0.0914, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 20 - Train Loss: 73.4160
-Sub-losses: recon_loss: 71.1807, var_loss: 2.2353, anneal_factor: 0.9350, effective_beta_factor: 0.0935
-Epoch 20 - Valid Loss: 63.2366
-Sub-losses: recon_loss: 61.1673, var_loss: 2.0693, anneal_factor: 0.9350, effective_beta_factor: 0.0935
-Epoch 30 - Train Loss: 71.8787
-Sub-losses: recon_loss: 69.8613, var_loss: 2.0173, anneal_factor: 0.9999, effective_beta_factor: 0.1000
-Epoch 30 - Valid Loss: 62.3669
-Sub-losses: recon_loss: 60.3995, var_loss: 1.9674, anneal_factor: 0.9999, effective_beta_fact
+Epoch 10 - Train Loss: 79.4287
+Sub-losses: recon_loss: 79.3370, var_loss: 0.0917, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+Epoch 10 - Valid Loss: 70.3153
+Sub-losses: recon_loss: 70.2222, var_loss: 0.0931, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+```
+
+```
+Epoch 20 - Train Loss: 75.5938
+Sub-losses: recon_loss: 73.4769, var_loss: 2.1169, anneal_factor: 0.9350, effective_beta_factor: 0.0935
+Epoch 20 - Valid Loss: 65.9533
+Sub-losses: recon_loss: 64.0218, var_loss: 1.9315, anneal_factor: 0.9350, effective_beta_factor: 0.0935
+```
+
+```
+Epoch 30 - Train Loss: 71.9623
+Sub-losses: recon_loss: 69.8754, var_loss: 2.0870, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Epoch 30 - Valid Loss: 62.6252
+Sub-losses: recon_loss: 60.6122, var_loss: 2.0130, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Processed 32 / 1065 samples
+Processed 64 / 1065 samples
+Processed 96 / 1065 samples
+Processed 128 / 1065 samples
+Processed 160 / 1065 samples
+Processed 192 / 1065 samples
+Processed 224 / 1065 samples
+Processed 256 / 1065 samples
+Processed 288 / 1065 samples
+Processed 320 / 1065 samples
+Processed 352 / 1065 samples
+Processed 384 / 1065 samples
+Processed 416 / 1065 samples
+Processed 448 / 1065 samples
+Processed 480 / 1065 samples
+Processed 512 / 1065 samples
+Processed 544 / 1065 samples
+Processed 576 / 1065 samples
+Processed
 ... [output truncated]
+```
+
+```
+Processed 1024 / 1065 samples
+Processed 1056 / 1065 samples
+Processed 1065 / 1065 samples
+```
+
+```
+Creating plots ...
 ```
 
 When we look at the three sets separately we can see that train and validation set contain all cancer types except breast cancer and the test set contains only breast cancer. Our custom split worked.
 
-In \[8\]:
+In \[16\]:
 
 Copied!
 
@@ -1533,7 +1377,7 @@ varix.visualizer.show_latent_space(
 
 varix.visualizer.show_latent_space( result=varix.result, plot_type="2D-scatter", split="train", param=["CANCER_TYPE"], # optional: color points by this annotation )
 
-In \[9\]:
+In \[17\]:
 
 Copied!
 
@@ -1548,7 +1392,7 @@ varix.visualizer.show_latent_space(
 
 varix.visualizer.show_latent_space( result=varix.result, plot_type="2D-scatter", split="valid", param=["CANCER_TYPE"], # optional: color points by this annotation )
 
-In \[10\]:
+In \[18\]:
 
 Copied!
 

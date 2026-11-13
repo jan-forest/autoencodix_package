@@ -1,6 +1,6 @@
 > **Note:** This environment variable is required for fully deterministic CuBLAS ops on CUDA >= 10.2 when `reproducible=True` is set below. Without it, PyTorch raises a `RuntimeError` instead of training deterministically. It must be set before `torch` is imported. See the [README FAQ](https://jan-forest.github.io/autoencodix_package/tutorials/README.md#reproducibility-and-cublas_workspace_config) for details.
 
-In \[ \]:
+In \[1\]:
 
 Copied!
 
@@ -9,6 +9,10 @@ Copied!
 ```
 
 %env CUBLAS_WORKSPACE_CONFIG=:16:8
+
+```
+env: CUBLAS_WORKSPACE_CONFIG=:16:8
+```
 
 # How to Access Pipeline Results - Deep Dive[¶](#how-to-access-pipeline-results-deep-dive)
 
@@ -70,7 +74,7 @@ Before showing data preparation and `XModalix` training, here is some background
 
 The data for this tutorial is hosted on Hugging Face Hub ([autoencodix/tcga](https://huggingface.co/datasets/autoencodix/tcga)) and is downloaded automatically in the cell below on first run.
 
-In \[1\]:
+In \[2\]:
 
 Copied!
 
@@ -88,10 +92,10 @@ print(f"Changed to: {os.getcwd()}")
 import os p = os.getcwd() d = "autoencodix_package" if d not in p: raise FileNotFoundError(f"'{d}' not found in path: {p}") os.chdir(os.sep.join(p.split(os.sep)[: p.split(os.sep).index(d) + 1])) print(f"Changed to: {os.getcwd()}")
 
 ```
-Changed to: /Users/maximilianjoas/development/autoencodix_package
+Changed to: /home/janew/ACX/autoencodix_package
 ```
 
-In \[ \]:
+In \[3\]:
 
 Copied!
 
@@ -202,6 +206,353 @@ import shutil import zipfile import pandas as pd from huggingface_hub import hf_
 # per-architecture extension that we join in here (left join: not every sample has an image).
 
 clin_df = pd.read_parquet(clin_path) mapping_df = pd.read_csv(mapping_path, sep="\\t", index_col="sample_ids") clin_df["img_paths"] = mapping_df["img_paths"] clin_df.to_parquet(os.path.join(xmod_data_root, "combined_clin_formatted.parquet")) images_zip = hf_hub_download( repo_id=HF_REPO_ID, repo_type="dataset", filename="xmodalix/tcga_fake_images.zip" ) images_extract_dir = os.path.join(xmod_data_root, "images") if not os.path.isdir(os.path.join(images_extract_dir, "tcga_fake")): with zipfile.ZipFile(images_zip) as zf: zf.extractall(images_extract_dir) clin_file = os.path.join("data/XModalix-Tut-data/combined_clin_formatted.parquet") rna_file = os.path.join("data/XModalix-Tut-data/combined_rnaseq_formatted.parquet") img_root = os.path.join("data/XModalix-Tut-data/images/tcga_fake") xmodalix_config = XModalixConfig( checkpoint_interval=5, class_param="CANCER_TYPE_ACRONYM", epochs=10, data_case=DataCase.IMG_TO_BULK, data_config=DataConfig( data_info={ "img": DataInfo( file_path=img_root, data_type="IMG", scaling="MINMAX", translate_direction="to", ), "rna": DataInfo( file_path=rna_file, data_type="NUMERIC", scaling="MINMAX", translate_direction="from", ), "anno": DataInfo(file_path=clin_file, data_type="ANNOTATION", sep="\\t"), }, ), ) xmodalix = acx.XModalix(config=xmodalix_config) xmodalix_result = xmodalix.run()
+
+```
+in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
+mudata: View of MuData object with n_obs × n_vars = 1000 × 700
+  2 modalities
+    rna:	1000 x 500
+      obs:	'cell_type', 'batch', 'donor', 'cell_cycle'
+    protein:	1000 x 200
+      obs:	'cell_type', 'batch', 'donor', 'cell_cycle'
+Processing 1 MuData objects: ['multi_sc']
+Processing train modality: multi_sc
+```
+
+```
+Processing valid split
+Processing valid modality: multi_sc
+Processing test split
+Processing test modality: multi_sc
+```
+
+```
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 12.0150 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+Epoch 1 - Train Loss: 789.5454
+Sub-losses: recon_loss: 789.5454, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
+Epoch 1 - Valid Loss: 861.7886
+Sub-losses: recon_loss: 861.7884, var_loss: 0.0003, anneal_factor: 0.0000, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 2 - Train Loss: 714.1906
+Sub-losses: recon_loss: 714.1905, var_loss: 0.0001, anneal_factor: 0.0001, effective_beta_factor: 0.0000
+Epoch 2 - Valid Loss: 726.2190
+Sub-losses: recon_loss: 726.2188, var_loss: 0.0002, anneal_factor: 0.0001, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 3 - Train Loss: 654.3003
+Sub-losses: recon_loss: 654.3000, var_loss: 0.0003, anneal_factor: 0.0002, effective_beta_factor: 0.0000
+Epoch 3 - Valid Loss: 661.9915
+Sub-losses: recon_loss: 661.9913, var_loss: 0.0002, anneal_factor: 0.0002, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 4 - Train Loss: 603.1925
+Sub-losses: recon_loss: 603.1918, var_loss: 0.0007, anneal_factor: 0.0003, effective_beta_factor: 0.0000
+Epoch 4 - Valid Loss: 628.7880
+Sub-losses: recon_loss: 628.7874, var_loss: 0.0006, anneal_factor: 0.0003, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 5 - Train Loss: 565.8273
+Sub-losses: recon_loss: 565.8261, var_loss: 0.0013, anneal_factor: 0.0005, effective_beta_factor: 0.0001
+Epoch 5 - Valid Loss: 580.7370
+Sub-losses: recon_loss: 580.7361, var_loss: 0.0009, anneal_factor: 0.0005, effective_beta_factor: 0.0001
+```
+
+```
+Epoch 6 - Train Loss: 535.0951
+Sub-losses: recon_loss: 535.0925, var_loss: 0.0026, anneal_factor: 0.0009, effective_beta_factor: 0.0001
+Epoch 6 - Valid Loss: 580.8360
+Sub-losses: recon_loss: 580.8344, var_loss: 0.0016, anneal_factor: 0.0009, effective_beta_factor: 0.0001
+```
+
+```
+Epoch 7 - Train Loss: 515.1641
+Sub-losses: recon_loss: 515.1593, var_loss: 0.0047, anneal_factor: 0.0017, effective_beta_factor: 0.0002
+Epoch 7 - Valid Loss: 544.3053
+Sub-losses: recon_loss: 544.3018, var_loss: 0.0035, anneal_factor: 0.0017, effective_beta_factor: 0.0002
+```
+
+```
+Epoch 8 - Train Loss: 493.2187
+Sub-losses: recon_loss: 493.1982, var_loss: 0.0205, anneal_factor: 0.0031, effective_beta_factor: 0.0003
+Epoch 8 - Valid Loss: 555.5275
+Sub-losses: recon_loss: 555.5203, var_loss: 0.0072, anneal_factor: 0.0031, effective_beta_factor: 0.0003
+```
+
+```
+Epoch 9 - Train Loss: 487.6101
+Sub-losses: recon_loss: 487.5851, var_loss: 0.0251, anneal_factor: 0.0058, effective_beta_factor: 0.0006
+Epoch 9 - Valid Loss: 535.1194
+Sub-losses: recon_loss: 535.1047, var_loss: 0.0148, anneal_factor: 0.0058, effective_beta_factor: 0.0006
+```
+
+```
+Epoch 10 - Train Loss: 475.9777
+Sub-losses: recon_loss: 475.9373, var_loss: 0.0404, anneal_factor: 0.0105, effective_beta_factor: 0.0011
+Epoch 10 - Valid Loss: 540.3726
+Sub-losses: recon_loss: 540.3461, var_loss: 0.0264, anneal_factor: 0.0105, effective_beta_factor: 0.0011
+```
+
+```
+Epoch 11 - Train Loss: 465.1706
+Sub-losses: recon_loss: 465.0587, var_loss: 0.1119, anneal_factor: 0.0191, effective_beta_factor: 0.0019
+Epoch 11 - Valid Loss: 535.0998
+Sub-losses: recon_loss: 535.0498, var_loss: 0.0500, anneal_factor: 0.0191, effective_beta_factor: 0.0019
+```
+
+```
+Epoch 12 - Train Loss: 461.6776
+Sub-losses: recon_loss: 461.5501, var_loss: 0.1275, anneal_factor: 0.0344, effective_beta_factor: 0.0034
+Epoch 12 - Valid Loss: 527.3585
+Sub-losses: recon_loss: 527.2690, var_loss: 0.0895, anneal_factor: 0.0344, effective_beta_factor: 0.0034
+```
+
+```
+Epoch 13 - Train Loss: 462.7907
+Sub-losses: recon_loss: 462.5608, var_loss: 0.2298, anneal_factor: 0.0614, effective_beta_factor: 0.0061
+Epoch 13 - Valid Loss: 509.7819
+Sub-losses: recon_loss: 509.6216, var_loss: 0.1603, anneal_factor: 0.0614, effective_beta_factor: 0.0061
+```
+
+```
+Epoch 14 - Train Loss: 453.6761
+Sub-losses: recon_loss: 453.2983, var_loss: 0.3779, anneal_factor: 0.1071, effective_beta_factor: 0.0107
+Epoch 14 - Valid Loss: 514.1650
+Sub-losses: recon_loss: 513.8674, var_loss: 0.2976, anneal_factor: 0.1071, effective_beta_factor: 0.0107
+```
+
+```
+Epoch 15 - Train Loss: 448.2364
+Sub-losses: recon_loss: 447.5243, var_loss: 0.7121, anneal_factor: 0.1802, effective_beta_factor: 0.0180
+Epoch 15 - Valid Loss: 506.4760
+Sub-losses: recon_loss: 505.9687, var_loss: 0.5072, anneal_factor: 0.1802, effective_beta_factor: 0.0180
+```
+
+```
+Epoch 16 - Train Loss: 450.8643
+Sub-losses: recon_loss: 449.7722, var_loss: 1.0922, anneal_factor: 0.2872, effective_beta_factor: 0.0287
+Epoch 16 - Valid Loss: 507.3997
+Sub-losses: recon_loss: 506.4213, var_loss: 0.9784, anneal_factor: 0.2872, effective_beta_factor: 0.0287
+```
+
+```
+Epoch 17 - Train Loss: 446.2062
+Sub-losses: recon_loss: 444.6207, var_loss: 1.5854, anneal_factor: 0.4248, effective_beta_factor: 0.0425
+Epoch 17 - Valid Loss: 505.6747
+Sub-losses: recon_loss: 504.2951, var_loss: 1.3796, anneal_factor: 0.4248, effective_beta_factor: 0.0425
+```
+
+```
+Epoch 18 - Train Loss: 445.6188
+Sub-losses: recon_loss: 443.2989, var_loss: 2.3199, anneal_factor: 0.5752, effective_beta_factor: 0.0575
+Epoch 18 - Valid Loss: 509.4240
+Sub-losses: recon_loss: 507.6395, var_loss: 1.7845, anneal_factor: 0.5752, effective_beta_factor: 0.0575
+```
+
+```
+Epoch 19 - Train Loss: 440.7485
+Sub-losses: recon_loss: 438.1607, var_loss: 2.5878, anneal_factor: 0.7128, effective_beta_factor: 0.0713
+Epoch 19 - Valid Loss: 513.0084
+Sub-losses: recon_loss: 510.5956, var_loss: 2.4128, anneal_factor: 0.7128, effective_beta_factor: 0.0713
+```
+
+```
+Epoch 20 - Train Loss: 444.3923
+Sub-losses: recon_loss: 441.1604, var_loss: 3.2319, anneal_factor: 0.8198, effective_beta_factor: 0.0820
+Epoch 20 - Valid Loss: 505.8253
+Sub-losses: recon_loss: 503.4233, var_loss: 2.4019, anneal_factor: 0.8198, effective_beta_factor: 0.0820
+```
+
+```
+Epoch 21 - Train Loss: 438.8480
+Sub-losses: recon_loss: 435.6881, var_loss: 3.1599, anneal_factor: 0.8929, effective_beta_factor: 0.0893
+Epoch 21 - Valid Loss: 510.4828
+Sub-losses: recon_loss: 507.7820, var_loss: 2.7008, anneal_factor: 0.8929, effective_beta_factor: 0.0893
+```
+
+```
+Epoch 22 - Train Loss: 440.5572
+Sub-losses: recon_loss: 437.1135, var_loss: 3.4436, anneal_factor: 0.9386, effective_beta_factor: 0.0939
+Epoch 22 - Valid Loss: 512.5383
+Sub-losses: recon_loss: 509.4187, var_loss: 3.1197, anneal_factor: 0.9386, effective_beta_factor: 0.0939
+```
+
+```
+Epoch 23 - Train Loss: 436.6567
+Sub-losses: recon_loss: 433.0894, var_loss: 3.5673, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+Epoch 23 - Valid Loss: 507.8697
+Sub-losses: recon_loss: 505.1926, var_loss: 2.6771, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+```
+
+```
+Epoch 24 - Train Loss: 440.1171
+Sub-losses: recon_loss: 436.5504, var_loss: 3.5667, anneal_factor: 0.9809, effective_beta_factor: 0.0981
+Epoch 24 - Valid Loss: 507.4889
+Sub-losses: recon_loss: 504.7422, var_loss: 2.7468, anneal_factor: 0.9809, effective_beta_factor: 0.0981
+```
+
+```
+Epoch 25 - Train Loss: 429.4857
+Sub-losses: recon_loss: 425.7818, var_loss: 3.7039, anneal_factor: 0.9895, effective_beta_factor: 0.0989
+Epoch 25 - Valid Loss: 504.5467
+Sub-losses: recon_loss: 501.6651, var_loss: 2.8816, anneal_factor: 0.9895, effective_beta_factor: 0.0989
+```
+
+```
+Epoch 26 - Train Loss: 435.2628
+Sub-losses: recon_loss: 431.6024, var_loss: 3.6604, anneal_factor: 0.9942, effective_beta_factor: 0.0994
+Epoch 26 - Valid Loss: 505.1390
+Sub-losses: recon_loss: 502.1949, var_loss: 2.9441, anneal_factor: 0.9942, effective_beta_factor: 0.0994
+```
+
+```
+Epoch 27 - Train Loss: 435.7699
+Sub-losses: recon_loss: 432.1537, var_loss: 3.6161, anneal_factor: 0.9969, effective_beta_factor: 0.0997
+Epoch 27 - Valid Loss: 504.8547
+Sub-losses: recon_loss: 501.9875, var_loss: 2.8672, anneal_factor: 0.9969, effective_beta_factor: 0.0997
+```
+
+```
+Epoch 28 - Train Loss: 433.8389
+Sub-losses: recon_loss: 430.2849, var_loss: 3.5539, anneal_factor: 0.9983, effective_beta_factor: 0.0998
+Epoch 28 - Valid Loss: 505.3432
+Sub-losses: recon_loss: 502.3962, var_loss: 2.9471, anneal_factor: 0.9983, effective_beta_factor: 0.0998
+```
+
+```
+Epoch 29 - Train Loss: 433.8051
+Sub-losses: recon_loss: 430.1422, var_loss: 3.6630, anneal_factor: 0.9991, effective_beta_factor: 0.0999
+Epoch 29 - Valid Loss: 504.1737
+Sub-losses: recon_loss: 501.2206, var_loss: 2.9530, anneal_factor: 0.9991, effective_beta_factor: 0.0999
+```
+
+```
+Epoch 30 - Train Loss: 443.3228
+Sub-losses: recon_loss: 439.7624, var_loss: 3.5604, anneal_factor: 0.9995, effective_beta_factor: 0.0999
+Epoch 30 - Valid Loss: 503.1838
+Sub-losses: recon_loss: 500.1693, var_loss: 3.0145, anneal_factor: 0.9995, effective_beta_factor: 0.0999
+```
+
+```
+Epoch 31 - Train Loss: 431.9200
+Sub-losses: recon_loss: 428.1943, var_loss: 3.7258, anneal_factor: 0.9997, effective_beta_factor: 0.1000
+Epoch 31 - Valid Loss: 504.0523
+Sub-losses: recon_loss: 501.0170, var_loss: 3.0353, anneal_factor: 0.9997, effective_beta_factor: 0.1000
+```
+
+```
+Epoch 32 - Train Loss: 432.1389
+Sub-losses: recon_loss: 428.5857, var_loss: 3.5532, anneal_factor: 0.9998, effective_beta_factor: 0.1000
+Epoch 32 - Valid Loss: 503.3811
+Sub-losses: recon_loss: 500.4593, var_loss: 2.9218, anneal_factor: 0.9998, effective_beta_factor: 0.1000
+```
+
+```
+Epoch 33 - Train Loss: 435.9395
+Sub-losses: recon_loss: 432.3635, var_loss: 3.5760, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Epoch 33 - Valid Loss: 505.8085
+Sub-losses: recon_loss: 502.9571, var_loss: 2.8514, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Processed 32 / 200 samples
+Processed 64 / 200 samples
+Processed 96 / 200 samples
+Processed 128 / 200 samples
+Processed 160 / 200 samples
+Processed 192 / 200 samples
+Processed 200 / 200 samples
+```
+
+```
+reading parquet: data/XModalix-Tut-data/combined_rnaseq_formatted.parquet
+```
+
+```
+reading parquet: data/XModalix-Tut-data/combined_clin_formatted.parquet
+Given image size is possible, rescaling images to: 64x64
+```
+
+```
+Successfully loaded 3230 images for img
+```
+
+```
+anno key: rna
+anno key: img
+```
+
+```
+Converting 2261 images to torch.float32 tensors...
+Converting 646 images to torch.float32 tensors...
+Converting 323 images to torch.float32 tensors...
+key: train, type: <class 'dict'>
+key: valid, type: <class 'dict'>
+key: test, type: <class 'dict'>
+Dataset has UNPAIRED samples → using CoverageEnsuringSampler (2261 paired + 225 unpaired)
+Dataset has UNPAIRED samples → using CoverageEnsuringSampler (323 paired + 32 unpaired)
+```
+
+```
+Check if we need to pretrain: multi_bulk.rna
+pretrain epochs : None
+No pretraining for multi_bulk.rna
+Check if we need to pretrain: img.img
+pretrain epochs : None
+No pretraining for img.img
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:469: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 7.3381 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+--- Epoch 5/10 ---
+```
+
+```
+Epoch 5/10 - Train Loss: 253.0092
+Sub-losses - adver_loss: 17.9186, aggregated_sub_losses: 192.4159, paired_loss: 7.7542, class_loss: 34.9205, multi_bulk.rna.recon_loss: 115.5716, multi_bulk.rna.var_loss: 1.8430, multi_bulk.rna.loss: 117.4146, img.img.recon_loss: 73.5219, img.img.var_loss: 1.4794, img.img.loss: 75.0013, clf_loss: 1.0618
+```
+
+```
+Epoch 5/10 - Valid Loss: 227.1937
+Sub-losses - adver_loss: 17.8239, aggregated_sub_losses: 166.8495, paired_loss: 7.7761, class_loss: 34.7441, multi_bulk.rna.recon_loss: 90.2641, multi_bulk.rna.var_loss: 1.6118, multi_bulk.rna.loss: 91.8760, img.img.recon_loss: 73.6118, img.img.var_loss: 1.3618, img.img.loss: 74.9735, clf_loss: 0.9859
+Storing checkpoint for epoch 4...
+```
+
+```
+--- Epoch 10/10 ---
+```
+
+```
+Epoch 10/10 - Train Loss: 240.8600
+Sub-losses - adver_loss: 19.2354, aggregated_sub_losses: 182.4831, paired_loss: 7.0897, class_loss: 32.0518, multi_bulk.rna.recon_loss: 97.8461, multi_bulk.rna.var_loss: 6.0918, multi_bulk.rna.loss: 103.9379, img.img.recon_loss: 72.7175, img.img.var_loss: 5.8277, img.img.loss: 78.5452, clf_loss: 1.0012
+```
+
+```
+Epoch 10/10 - Valid Loss: 229.5862
+Sub-losses - adver_loss: 18.2204, aggregated_sub_losses: 172.5583, paired_loss: 7.1107, class_loss: 31.6967, multi_bulk.rna.recon_loss: 86.9691, multi_bulk.rna.var_loss: 5.6081, multi_bulk.rna.loss: 92.5772, img.img.recon_loss: 74.3049, img.img.var_loss: 5.6762, img.img.loss: 79.9811, clf_loss: 0.9996
+Storing checkpoint for epoch 9...
+```
+
+```
+Prediction complete.
+Processing latent space results into a single AnnData object...
+Identified source modality for latent space: 'multi_bulk.rna'
+  - Added 17448 source feature IDs to .uns
+Finished processing latent results.
+```
 
 ## 2) TrainingDynamics Interface Deep Dive[¶](#2-trainingdynamics-interface-deep-dive)
 
@@ -346,15 +697,15 @@ print("\\n") print("-"\*80) print(f"latentspace of one sample in train split at 
 ```
 Splits in 2. epoch: dict_keys(['train', 'valid'])
 Splits in epoch =-1: dict_keys(['train', 'valid'])
-[ 6.30214     0.7521438   1.7172257  -0.9989515   5.5416946   6.0979557
- -1.0258414   1.5317484  -0.04637699  4.334748    0.31163976  0.3512562
-  1.0720801  -0.54168016 -0.10310201  2.4067917 ]
+[ 3.6223373   0.09076981  0.9311101   0.4686319   0.5648282   4.362979
+  7.462656    4.2597566  -3.0950072   5.624643   -0.7086104  -1.9337438
+ -0.5916452  -0.30150637  6.15409     7.991743  ]
 
 
 --------------------------------------------------------------------------------
-latentspace of one sample in train split at epoch 4: [ 2.1796706   0.60611284  0.18117622 -0.74476635  0.8137296   2.5618582
-  2.2042491  -1.9576615  -1.4144119   0.5333763   0.9915411   0.44359267
- -0.09947515  0.13895065 -0.37461102  0.55542964]
+latentspace of one sample in train split at epoch 4: [-0.7468408   2.9747071   0.17302047  0.04815996 -2.0036192   0.17140199
+ -1.1278459   4.9971147   2.4795966  -0.19799425  2.1384008   2.5776906
+ -0.8080328  -0.23301628 -0.6225459   2.2121964 ]
 ```
 
 ### 3.2 XModalix[¶](#32-xmodalix)
@@ -419,19 +770,19 @@ xmodalix_result.latentspaces.get(epoch=-1, split="test").get("img.img")
 Out\[7\]:
 
 ```
-array([[-0.78152806, -0.7762103 ,  4.448717  , ...,  1.779333  ,
-        -1.209155  , -1.13602   ],
-       [ 0.78200436, -0.6337442 ,  1.1372604 , ..., -0.47643963,
-         1.0322978 , -0.09783195],
-       [-0.22461136,  1.6985878 ,  3.380916  , ...,  2.5895224 ,
-         1.4247885 ,  0.28271654],
+array([[ 0.8092547 ,  4.121351  ,  1.4299108 , ...,  5.3962545 ,
+         0.6538164 ,  0.9702057 ],
+       [ 2.1221623 ,  5.256636  ,  0.04541756, ...,  5.646598  ,
+         0.04192398,  1.9187347 ],
+       [ 5.382866  ,  6.639792  , -0.14126651, ...,  6.236802  ,
+        -1.1598693 ,  2.861813  ],
        ...,
-       [ 2.916834  , -0.281322  ,  1.6438428 , ..., -0.3873932 ,
-         6.9723663 ,  0.6587008 ],
-       [-0.80762166,  1.1656091 , -0.8296414 , ..., -1.0064985 ,
-         7.8977246 , -0.944083  ],
-       [ 6.3655725 ,  3.4816382 ,  3.0730734 , ...,  0.738921  ,
-         3.650429  , -0.5597477 ]], shape=(646, 16), dtype=float32)
+       [ 1.267178  , -2.6413867 ,  0.61661077, ..., -0.13882025,
+        -1.8977132 , 12.516397  ],
+       [ 7.283764  , -1.0312403 , -1.7102883 , ...,  3.6146328 ,
+        -0.6609394 ,  4.1691995 ],
+       [ 1.247888  ,  4.62085   ,  1.3288131 , ...,  4.4530516 ,
+        -0.98057437,  0.6013475 ]], shape=(646, 16), dtype=float32)
 ```
 
 #### 3.2.2 Access Translation[¶](#322-access-translation)
@@ -490,7 +841,7 @@ keys: dict_keys(['adver_loss', 'aggregated_sub_losses', 'paired_loss', 'class_lo
 
 
 Value of paired loss in epoch 4 for train split
-9.23
+7.75
 ```
 
 ## 4) Non-TrainingDynamics Result Attributes[¶](#4-non-trainingdynamics-result-attributes)
@@ -518,8 +869,8 @@ result.datasets.train.metadata.head()
 print(result.datasets) print(result.datasets.train) print(type(result.datasets.train.data)) result.datasets.train.metadata.head()
 
 ```
-DatasetContainer(train=<autoencodix.data._numeric_dataset.NumericDataset object at 0x140b89070>, valid=<autoencodix.data._numeric_dataset.NumericDataset object at 0x140c243e0>, test=<autoencodix.data._numeric_dataset.NumericDataset object at 0x140c24c20>)
-<autoencodix.data._numeric_dataset.NumericDataset object at 0x140b89070>
+DatasetContainer(train=<autoencodix.data._numeric_dataset.NumericDataset object at 0x7c930fb41b80>, valid=<autoencodix.data._numeric_dataset.NumericDataset object at 0x7c930fc8e0f0>, test=<autoencodix.data._numeric_dataset.NumericDataset object at 0x7c933c175cd0>)
+<autoencodix.data._numeric_dataset.NumericDataset object at 0x7c930fb41b80>
 <class 'torch.Tensor'>
 ```
 
@@ -529,9 +880,9 @@ Out\[10\]:
 | -------- | --------- | ------ | ------ | ---------- | ------- |
 | cell_0   | type_0    | batch2 | donor2 | S          | 346     |
 | cell_1   | type_0    | batch3 | donor4 | G1         | 357     |
-| cell_195 | type_4    | batch2 | donor2 | S          | 357     |
-| cell_269 | type_4    | batch1 | donor1 | G2M        | 339     |
-| cell_27  | type_4    | batch1 | donor4 | S          | 351     |
+| cell_19  | type_3    | batch1 | donor1 | G1         | 345     |
+| cell_190 | type_4    | batch1 | donor2 | S          | 338     |
+| cell_191 | type_0    | batch3 | donor2 | S          | 349     |
 
 #### 4.2 New Datasets[¶](#42-new-datasets)
 
@@ -568,23 +919,30 @@ new_data.multi_sc["multi_sc"].update()
 import copy from autoencodix.utils.example_data import EXAMPLE_MULTI_SC new_data = copy.copy(EXAMPLE_MULTI_SC) new_multi_sc = new_data.multi_sc["multi_sc"] for modname, mod in new_multi_sc.mod.items(): new_names = mod.obs_names.str.replace('cell', 'new_cell') mod.index = new_names mod.obs_names = new_names print(mod.index) new_multi_sc.mod[modname] = mod new_data.multi_sc["multi_sc"] = new_multi_sc new_data.multi_sc["multi_sc"].update()
 
 ```
-Index(['new_cell_0', 'new_cell_1', 'new_cell_107', 'new_cell_189',
-       'new_cell_19', 'new_cell_190', 'new_cell_191', 'new_cell_192',
-       'new_cell_193', 'new_cell_194',
+Index(['new_cell_0', 'new_cell_1', 'new_cell_10', 'new_cell_100',
+       'new_cell_101', 'new_cell_102', 'new_cell_103', 'new_cell_104',
+       'new_cell_105', 'new_cell_106',
        ...
        'new_cell_990', 'new_cell_991', 'new_cell_992', 'new_cell_993',
        'new_cell_994', 'new_cell_995', 'new_cell_996', 'new_cell_997',
        'new_cell_998', 'new_cell_999'],
       dtype='object', length=1000)
-Index(['new_cell_0', 'new_cell_1', 'new_cell_107', 'new_cell_189',
-       'new_cell_19', 'new_cell_190', 'new_cell_191', 'new_cell_192',
-       'new_cell_193', 'new_cell_194',
+Index(['new_cell_0', 'new_cell_1', 'new_cell_10', 'new_cell_100',
+       'new_cell_101', 'new_cell_102', 'new_cell_103', 'new_cell_104',
+       'new_cell_105', 'new_cell_106',
        ...
        'new_cell_990', 'new_cell_991', 'new_cell_992', 'new_cell_993',
        'new_cell_994', 'new_cell_995', 'new_cell_996', 'new_cell_997',
        'new_cell_998', 'new_cell_999'],
       dtype='object', leng
 ... [output truncated]
+```
+
+```
+.venv/lib/python3.12/site-packages/mudata/_core/mudata.py:758: ImplicitModificationWarning: Setting element `.varm['rna']` of view, initializing view as actual.
+  attrm[mod] = mapping > 0
+.venv/lib/python3.12/site-packages/mudata/_core/mudata.py:758: ImplicitModificationWarning: Setting element `.varm['protein']` of view, initializing view as actual.
+  attrm[mod] = mapping > 0
 ```
 
 Run the predict step:
@@ -740,14 +1098,14 @@ Out\[18\]:
 
 |     | score_split | CLINIC_PARAM | metric      | value    | ML_ALG               | ML_TYPE        | MODALITY       | ML_TASK | ML_SUBTASK                |
 | --- | ----------- | ------------ | ----------- | -------- | -------------------- | -------------- | -------------- | ------- | ------------------------- |
-| 0   | train       | CANCER_TYPE  | roc_auc_ovo | 0.930816 | LogisticRegression() | classification | multi_bulk.rna | Latent  | Latent\_$\_multi_bulk.rna |
-| 1   | valid       | CANCER_TYPE  | roc_auc_ovo | 0.926246 | LogisticRegression() | classification | multi_bulk.rna | Latent  | Latent\_$\_multi_bulk.rna |
-| 2   | test        | CANCER_TYPE  | roc_auc_ovo | 0.932935 | LogisticRegression() | classification | multi_bulk.rna | Latent  | Latent\_$\_multi_bulk.rna |
-| 0   | train       | CANCER_TYPE  | roc_auc_ovo | 0.986654 | LogisticRegression() | classification | img.img        | Latent  | Latent\_$\_img.img        |
-| 1   | valid       | CANCER_TYPE  | roc_auc_ovo | 0.976694 | LogisticRegression() | classification | img.img        | Latent  | Latent\_$\_img.img        |
-| 2   | test        | CANCER_TYPE  | roc_auc_ovo | 0.980744 | LogisticRegression() | classification | img.img        | Latent  | Latent\_$\_img.img        |
+| 0   | train       | CANCER_TYPE  | roc_auc_ovo | 0.995432 | LogisticRegression() | classification | multi_bulk.rna | Latent  | Latent\_$\_multi_bulk.rna |
+| 1   | valid       | CANCER_TYPE  | roc_auc_ovo | 0.998581 | LogisticRegression() | classification | multi_bulk.rna | Latent  | Latent\_$\_multi_bulk.rna |
+| 2   | test        | CANCER_TYPE  | roc_auc_ovo | 0.995974 | LogisticRegression() | classification | multi_bulk.rna | Latent  | Latent\_$\_multi_bulk.rna |
+| 0   | train       | CANCER_TYPE  | roc_auc_ovo | 0.993840 | LogisticRegression() | classification | img.img        | Latent  | Latent\_$\_img.img        |
+| 1   | valid       | CANCER_TYPE  | roc_auc_ovo | 0.986195 | LogisticRegression() | classification | img.img        | Latent  | Latent\_$\_img.img        |
+| 2   | test        | CANCER_TYPE  | roc_auc_ovo | 0.986864 | LogisticRegression() | classification | img.img        | Latent  | Latent\_$\_img.img        |
 
-In \[20\]:
+In \[19\]:
 
 Copied!
 
@@ -765,12 +1123,16 @@ Perform ML task for target parameter: batch
 Perform ML task with feature df: Latent
 Latent
 Perform ML task for target parameter: batch
-Perform ML task with feature df: Latent
-Latent
-Perform ML task for target parameter: batch
 ```
 
-Out\[20\]:
+```
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:451: OptimizeWarning: Unknown solver options: iprint
+  opt_res = optimize.minimize(
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:451: OptimizeWarning: Unknown solver options: iprint
+  opt_res = optimize.minimize(
+```
+
+Out\[19\]:
 
 ```
 Result Object Public Attributes:
@@ -785,7 +1147,8 @@ sub_losses: LossRegistry(_losses={'recon_loss': TrainingDynamics(), 'var_loss': 
 preprocessed_data: Tensor of shape (0,)
 model: VarixArchitecture
 model_checkpoints: TrainingDynamics object
-datasets: DatasetContainer(train=<autoencodix.data._numeric_dataset.NumericDataset object at 0x140b89070>, valid=<autoencodix.data._numeric_dataset.NumericDataset object at 0x140c243e0>, test=<autoencodix.data._numeric_dataset.NumericDa
+class_means: TrainingDynamics object
+datasets: DatasetContainer(train=<autoencodix.data._numeric_dataset.NumericDataset object at 0x7c933c70fbf0>, valid=<autoencodix.data._numeric_dataset.NumericDataset object at 0x7c930fc8e0f0>, test=<
 ... [output truncated]
 ```
 
@@ -793,7 +1156,7 @@ datasets: DatasetContainer(train=<autoencodix.data._numeric_dataset.NumericDatas
 
 As you've seen in the [Training Dynamics Section](#2-trainingdynamics-interface-deep-dive), we only get plain values of reconstructions and latetnspaces. Often it is more useful to have sample ids, too. We could obtain the sample ids in the same order via the `sample_ids` TrainingDynamic. To make this more accessible, we added the methods `get_latent_df` and `get_reconstructions_df`. Here you pass `epoch` and `split` as seen before and you get a pandas DataFrame for the specific split and epoch for the latent space or the reconstruction.
 
-In \[21\]:
+In \[20\]:
 
 Copied!
 
@@ -803,7 +1166,7 @@ result.get_latent_df(epoch=-1, split="test").head()
 
 result.get_latent_df(epoch=-1, split="test").head()
 
-Out\[21\]:
+Out\[20\]:
 
 ```
 LatDim_0
@@ -827,82 +1190,82 @@ LatDim_15
 
 
 new_cell_0
-7.326564
--1.073827
-0.268320
-2.035412
-5.388091
-4.979861
-1.124839
-0.911935
--0.284716
-5.384183
--1.287263
-0.413481
-2.850581
--0.280163
--1.262128
-2.862012
+1.169099
+6.428045
+-0.909395
+0.374270
+0.522860
+-0.824939
+1.320667
+0.916621
+3.864682
+0.547017
+8.015424
+4.431547
+-0.753605
+-1.017359
+0.735275
+4.925269
 
 
 new_cell_1
-8.377705
-0.078919
--0.083633
-0.767228
-5.919516
-5.684262
-0.185831
-3.151647
--0.802761
-6.607008
-0.175018
-1.661315
-1.336131
--1.485604
-0.535221
-1.720066
+3.025050
+6.690741
+0.612838
+-0.001472
+0.647654
+-1.513513
+1.393777
+-1.178969
+1.668167
+-1.575379
+9.334797
+3.258978
+1.502755
+0.931644
+-0.203693
+5.011363
 
 
 new_cell_10
-2.120787
-1.665626
-0.899663
--0.595117
-0.981167
-0.226507
-0.077835
--2.504569
-1.947884
--0.049883
--0.647825
-0.119985
--0.367380
-0.747782
-0.245587
--1.272236
+-0.952251
+0.109878
+0.152486
+0.666301
+-0.460282
+0.398765
+-0.068070
+1.201444
+-0.069014
+-1.078704
+1.034621
+1.796616
+0.391577
+0.868087
+-0.355039
+0.085928
 
 
 new_cell_100
-0.397119
--0.726314
--2.079093
-1.323053
-2.802404
-0.744250
--0.432267
--1.008114
--0.103993
--0.014099
--0.150142
--0.122557
-0.128536
--1.062114
-1.936
+-0.601422
+-2.526164
+-0.972690
+0.702619
+2.239834
+0.029732
+0.817120
+0.423556
+-0.162558
+0.135305
+0.155343
+0.305283
+-0.373023
+0.563850
+-0.91012
 ... [output truncated]
 ```
 
-In \[22\]:
+In \[21\]:
 
 Copied!
 
@@ -912,7 +1275,7 @@ result.get_reconstructions_df(epoch=-1, split="test").head()
 
 result.get_reconstructions_df(epoch=-1, split="test").head()
 
-Out\[22\]:
+Out\[21\]:
 
 ```
 gene_0
@@ -941,72 +1304,71 @@ protein_199
 
 
 new_cell_0
-1.320424
--0.772346
-0.014947
-1.532826
--0.318065
-0.183227
-0.027560
-0.064022
--0.722645
--0.768205
+1.182295
+-0.796981
+0.030274
+1.458777
+-0.325000
+0.197361
+-0.000707
+-0.019382
+-0.742352
+-0.733279
 ...
--1.022267
-1.740210
-0.153457
--0.471486
-0.059539
--1.215273
--0.381351
-0.148173
--1.211444
-1.394425
+-1.050608
+1.612186
+0.162170
+-0.430544
+-0.057345
+-1.153803
+-0.433501
+0.075737
+-1.191396
+1.251562
 
 
 new_cell_1
-1.285662
--0.763142
-0.011849
-1.498099
--0.305929
-0.185441
-0.015083
-0.056283
--0.709083
--0.758961
+1.172235
+-0.790350
+0.034178
+1.442763
+-0.313463
+0.197347
+-0.000446
+-0.024263
+-0.737805
+-0.726801
 ...
--1.003222
-1.696856
-0.168587
--0.460411
-0.066222
--1.185669
--0.360587
-0.144142
--1.197535
-1.368953
+-1.042170
+1.587032
+0.162941
+-0.421808
+-0.042026
+-1.147030
+-0.442250
+0.061307
+-1.191653
+1.268421
 
 
 new_cell_10
--0.512781
-0.637073
--0.010666
--0.435319
--0.297005
--0.545675
--0.012363
-0.021127
-0.567361
-0.633929
+-0.613804
+0.630371
+-0.016076
+-0.494771
+-0.308604
+-0.622271
+-0.010671
+-0.022798
+0.682072
+0.599002
 ...
-0.852979
--0.450144
--0.094879
--0.448923
--0.007796
-0.091232
--0.452214
--0.
+0.906552
+-0.558953
+-0.075986
+-0.452418
+-0.095015
+0.129426
+-0.444
 ... [output truncated]
 ```

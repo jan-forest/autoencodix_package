@@ -200,7 +200,7 @@ StackixConfig epochs: 3
 ```
 
 ```
-/var/folders/fz/3nckfp3n60s2f4p0_rb0vbph0000gn/T/ipykernel_20732/2371638015.py:6: UserWarning: No BBOmix-derived portfolio for architecture 'stackix'; falling back to StackixConfig schema defaults. Supported architectures with a portfolio: ['disentanglix', 'ontix', 'vanillix', 'varix'].
+/tmp/ipykernel_55774/2371638015.py:6: UserWarning: No BBOmix-derived portfolio for architecture 'stackix'; falling back to StackixConfig schema defaults. Supported architectures with a portfolio: ['disentanglix', 'ontix', 'vanillix', 'varix'].
   config = acx.propose_initial_config("stackix", allow_fallback_to_defaults=True)
 ```
 

@@ -1,6 +1,6 @@
 > **Note:** This environment variable is required for fully deterministic CuBLAS ops on CUDA >= 10.2 when `reproducible=True` is set below. Without it, PyTorch raises a `RuntimeError` instead of training deterministically. It must be set before `torch` is imported. See the [README FAQ](https://jan-forest.github.io/autoencodix_package/tutorials/README.md#reproducibility-and-cublas_workspace_config) for details.
 
-In \[ \]:
+In \[1\]:
 
 Copied!
 
@@ -9,6 +9,10 @@ Copied!
 ```
 
 %env CUBLAS_WORKSPACE_CONFIG=:16:8
+
+```
+env: CUBLAS_WORKSPACE_CONFIG=:16:8
+```
 
 ### Disclaimer[¶](#disclaimer)
 
@@ -86,7 +90,7 @@ The full list of configurable parameters can be found in DefaultConfig.py
 
 ______________________________________________________________________
 
-In \[1\]:
+In \[2\]:
 
 Copied!
 
@@ -144,7 +148,7 @@ To properly work, we need to provide the optimizer with several parameters:
 - The performance metric to optimize.
 - The optimization direction, so whether we want to minimize or maximize our metric value.
 
-In \[2\]:
+In \[3\]:
 
 Copied!
 
@@ -188,7 +192,7 @@ Syne Tune treats this function as a black box: it only cares about the input hyp
 
 ______________________________________________________________________
 
-In \[3\]:
+In \[4\]:
 
 Copied!
 
@@ -233,7 +237,7 @@ def objective_function(
 			epochs=epochs,
 			checkpoint_interval= checkpoint_interval,
 			loss_reduction= loss_reduction,
-        	device="cpu",
+        	# device="cpu",  # default is "auto", which uses a GPU when available; uncomment to force CPU
 			## Tunable params
 			batch_size= batch_size,
 			drop_p= drop_p,
@@ -321,7 +325,9 @@ myconfig = VanillixConfig(
 
 ## Fixed params
 
-data_case=DataCase.MULTI_BULK, epochs=epochs, checkpoint_interval= checkpoint_interval, loss_reduction= loss_reduction, device="cpu",
+data_case=DataCase.MULTI_BULK, epochs=epochs, checkpoint_interval= checkpoint_interval, loss_reduction= loss_reduction,
+
+# device="cpu", # default is "auto", which uses a GPU when available; uncomment to force CPU
 
 ## Tunable params
 
@@ -377,7 +383,7 @@ The optimizer runs until a stopping criterion is met, such as a maximum number o
 
 ______________________________________________________________________
 
-In \[4\]:
+In \[5\]:
 
 Copied!
 
@@ -420,148 +426,212 @@ tuner.run()
 tuning_experiment = load_experiment(tuner.name)
 
 ```
-WARNING:syne_tune.backend.local_backend:num_gpus_per_trial = 1 is too large, reducing to 0
-```
-
-```
 🚀 Syne Tune - Hyperparameter Optimization
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📋 Experiment Configuration
-├─ Name: python-entrypoint-2026-01-06-11-38-15-455
+├─ Name: python-entrypoint-2026-11-13-14-05-18-725
 ├─ Backend: PythonBackend
 ├─ Workers: 1
 ├─ Scheduler: CQR
-├─ Results Path: /Users/lucathale-bombien/syne-tune/python-entrypoint-2026-01-06-11-38-15-455
-└─ Log Path: /Users/lucathale-bombien/syne-tune/python-entrypoint-2026-01-06-11-38-15-455
+├─ Results Path: /home/janew/syne-tune/python-entrypoint-2026-11-13-14-05-18-725
+└─ Log Path: /home/janew/syne-tune/python-entrypoint-2026-11-13-14-05-18-725
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🏁 Starting hyperparameter optimization...
-[12:38:15] 🚀 Trial 0 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=2551, drop_p=0.8636488958909204, enc_factor=5, weight_decay=0.07776356337560063, beta=4.082749409092568, learning_rate=0.00
+[15:05:18] 🚀 Trial 0 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=1240, drop_p=0.5747568679582536, enc_factor=4, weight_decay=0.005350551637553704, beta=0.011103838225001075, learning_rate=2.196641844192667e-05, n_l
 ... [output truncated]
 ```
 
 ```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package_dev/.venv/lib/python3.12/site-packages/sklearn/pipeline.py:62: FutureWarning: This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using other methods such as transform, predict, etc. This will raise an error in 1.8 instead of the current warning.
-  warnings.warn(
+[15:05:39] ✅ Trial 0 completed!
+[15:05:39] 🚀 Trial 1 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=3786, drop_p=0.3247605317064866, enc_factor=2, weight_decay=0.00024235043429375263, beta=0.01681450209847977, learning_rate=0.029046772340186336, n_layers=2, tasks=condition
 ```
 
 ```
-[12:39:10] 🚀 Trial 5 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=2666, drop_p=0.0030178922018332943, enc_factor=3, weight_decay=0.014299759280339304, beta=0.005047156237200351, learning_rate=2.7284801034072225e-05, n_layers=2, tasks=condition
-[12:39:20] ✅ Trial 5 completed!
-```
-
-```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package_dev/.venv/lib/python3.12/site-packages/sklearn/pipeline.py:62: FutureWarning: This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using other methods such as transform, predict, etc. This will raise an error in 1.8 instead of the current warning.
-  warnings.warn(
-```
-
-```
-[12:39:21] 🚀 Trial 6 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=3982, drop_p=0.7685645669297791, enc_factor=1, weight_decay=0.00010986162093961166, beta=0.00010858740155490102, learning_rate=0.04926421972212471, n_layers=5, tasks=condition
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📊 Tuning Status (last metric is reported)
  trial_id     status  iter  epochs  checkpoint_interval loss_reduction  batch_size   drop_p  enc_factor  weight_decay     beta  learning_rate  n_layers     tasks  downstream_performance  reconstruction_loss  worker-time
-        0  Completed     1     100                   25            sum        2551 0.863649           5      0.077764 4.082749       0.009378         2 condition
+        0  Completed     1     100                   25            sum        1240 0.574757           4      0.005351 0.011104       0.000022         5 condition                0.526772           155.967031     0.000008
+        1 InProgress     0     100                   25            sum        3786 0.324761           2      0.000242 0.016815       0.029047         2 condition                       -                    -            -
+1 trials runnin
 ... [output truncated]
 ```
 
 ```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package_dev/.venv/lib/python3.12/site-packages/sklearn/pipeline.py:62: FutureWarning: This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using other methods such as transform, predict, etc. This will raise an error in 1.8 instead of the current warning.
-  warnings.warn(
+[15:06:19] ✅ Trial 2 completed!
+[15:06:19] 🚀 Trial 3 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=3246, drop_p=0.004179913989218709, enc_factor=5, weight_decay=0.0006284349564596045, beta=0.052941758544331016, learning_rate=1.1022866113739377e-05, n_layers=5, tasks=condition
 ```
 
 ```
-[12:39:36] 🚀 Trial 7 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=1265, drop_p=0.05675606491416636, enc_factor=2, weight_decay=0.0005910163277284513, beta=0.0013638533803526827, learning_rate=0.0546578436296968, n_layers=2, tasks=condition
-[12:39:46] ✅ Trial 7 completed!
-```
-
-```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package_dev/.venv/lib/python3.12/site-packages/sklearn/pipeline.py:62: FutureWarning: This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using other methods such as transform, predict, etc. This will raise an error in 1.8 instead of the current warning.
-  warnings.warn(
-```
-
-```
-[12:39:46] 🚀 Trial 8 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=1854, drop_p=0.03778487067064231, enc_factor=2, weight_decay=3.306827959300699e-05, beta=9.852171449132589e-05, learning_rate=0.003517630948788302, n_layers=4, tasks=condition
-[12:39:56] ✅ Trial 8 completed!
-```
-
-```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package_dev/.venv/lib/python3.12/site-packages/sklearn/pipeline.py:62: FutureWarning: This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using other methods such as transform, predict, etc. This will raise an error in 1.8 instead of the current warning.
-  warnings.warn(
-```
-
-```
-[12:39:57] 🚀 Trial 9 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=1193, drop_p=0.06294672914204115, enc_factor=4, weight_decay=0.0029756648352616427, beta=0.00010687122041560436, learning_rate=0.046449197541839016, n_layers=2, tasks=condition
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📊 Tuning Status (last metric is reported)
  trial_id     status  iter  epochs  checkpoint_interval loss_reduction  batch_size   drop_p  enc_factor  weight_decay     beta  learning_rate  n_layers     tasks  downstream_performance  reconstruction_loss  worker-time
-        0  Completed     1     100                   25            sum        2551 0.863649           5      0.077764 4.082749       0.009378         2 condition
+        0  Completed     1     100                   25            sum        1240 0.574757           4      0.005351 0.011104       0.000022         5 condition                0.526772           155.967031     0.000008
+        1  Completed     1     100                   25            sum        3786 0.324761           2      0.000242 0.016815       0.029047         2 condition                0.889065            63.816455     0.000008
+        2  Comp
 ... [output truncated]
 ```
 
 ```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package_dev/.venv/lib/python3.12/site-packages/sklearn/pipeline.py:62: FutureWarning: This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using other methods such as transform, predict, etc. This will raise an error in 1.8 instead of the current warning.
-  warnings.warn(
+[15:06:40] ✅ Trial 3 completed!
+[15:06:40] 🚀 Trial 4 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=3518, drop_p=0.1269391288856593, enc_factor=2, weight_decay=0.001414133015620124, beta=0.12267351975687857, learning_rate=0.000487182457793855, n_layers=5, tasks=condition
 ```
 
 ```
-[12:40:07] 🚀 Trial 10 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=1716, drop_p=0.005019216719299513, enc_factor=4, weight_decay=0.0004156830637845455, beta=0.0001542502785451385, learning_rate=0.07259431960210584, n_layers=5, tasks=condition
-[12:40:17] ✅ Trial 10 completed!
-[12:40:17] 🚀 Trial 11 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=1503, drop_p=0.04688061635604327, enc_factor=1, weight_decay=0.00025460102008993484, beta=3.081079568314798e-05, learning_rate=0.015219860755495283, n_layers=2, tasks=condition
+[15:07:00] ✅ Trial 4 completed!
+```
+
+```
+[15:07:00] 🚀 Trial 5 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=2711, drop_p=0.5656734364212888, enc_factor=1, weight_decay=1.0510498995736113e-05, beta=8.386935396298032, learning_rate=0.00048700893048800466, n_layers=2, tasks=condition
+```
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Tuning Status (last metric is reported)
+ trial_id     status  iter  epochs  checkpoint_interval loss_reduction  batch_size   drop_p  enc_factor  weight_decay     beta  learning_rate  n_layers     tasks  downstream_performance  reconstruction_loss  worker-time
+        0  Completed     1     100                   25            sum        1240 0.574757           4      0.005351 0.011104       0.000022         5 condition                0.526772           155.967031     0.000008
+        1  Completed     1     100                   25            sum        3786 0.324761           2      0.000242 0.016815       0.029047         2 condition                0.889065            63.816455     0.000008
+        2  Comp
+... [output truncated]
+```
+
+```
+[15:07:21] ✅ Trial 5 completed!
+```
+
+```
+[15:07:21] 🚀 Trial 6 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=3706, drop_p=0.49371205736798757, enc_factor=1, weight_decay=0.018035789439704544, beta=5.6702969205585275e-05, learning_rate=0.024104395594215886, n_layers=3, tasks=condition
+```
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Tuning Status (last metric is reported)
+ trial_id     status  iter  epochs  checkpoint_interval loss_reduction  batch_size   drop_p  enc_factor  weight_decay     beta  learning_rate  n_layers     tasks  downstream_performance  reconstruction_loss  worker-time
+        0  Completed     1     100                   25            sum        1240 0.574757           4      0.005351 0.011104       0.000022         5 condition                0.526772           155.967031     0.000008
+        1  Completed     1     100                   25            sum        3786 0.324761           2      0.000242 0.016815       0.029047         2 condition                0.889065            63.816455     0.000008
+        2  Comp
+... [output truncated]
+```
+
+```
+[15:07:42] ✅ Trial 6 completed!
+```
+
+```
+[15:07:42] 🚀 Trial 7 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=3911, drop_p=0.40399205840381613, enc_factor=1, weight_decay=0.0028441291840514567, beta=0.0064200768285000214, learning_rate=0.06646590699020742, n_layers=2, tasks=condition
+```
+
+```
+[15:07:57] ✅ Trial 7 completed!
+```
+
+```
+[15:07:58] 🚀 Trial 8 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=3794, drop_p=0.13160172244036167, enc_factor=5, weight_decay=0.01851016049118515, beta=0.0014701692625455611, learning_rate=0.03887832772615192, n_layers=5, tasks=condition
+```
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Tuning Status (last metric is reported)
+ trial_id     status  iter  epochs  checkpoint_interval loss_reduction  batch_size   drop_p  enc_factor  weight_decay     beta  learning_rate  n_layers     tasks  downstream_performance  reconstruction_loss  worker-time
+        0  Completed     1     100                   25            sum        1240 0.574757           4      0.005351 0.011104       0.000022         5 condition                0.526772           155.967031     0.000008
+        1  Completed     1     100                   25            sum        3786 0.324761           2      0.000242 0.016815       0.029047         2 condition                0.889065            63.816455     0.000008
+        2  Comp
+... [output truncated]
+```
+
+```
+[15:08:24] ✅ Trial 8 completed!
+```
+
+```
+[15:08:24] 🚀 Trial 9 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=3865, drop_p=0.48512150451951247, enc_factor=1, weight_decay=0.007080645705697765, beta=0.0006179422392261735, learning_rate=0.07806784205123984, n_layers=2, tasks=condition
+```
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Tuning Status (last metric is reported)
+ trial_id     status  iter  epochs  checkpoint_interval loss_reduction  batch_size   drop_p  enc_factor  weight_decay     beta  learning_rate  n_layers     tasks  downstream_performance  reconstruction_loss  worker-time
+        0  Completed     1     100                   25            sum        1240 0.574757           4      0.005351 0.011104       0.000022         5 condition                0.526772           155.967031     0.000008
+        1  Completed     1     100                   25            sum        3786 0.324761           2      0.000242 0.016815       0.029047         2 condition                0.889065            63.816455     0.000008
+        2  Comp
+... [output truncated]
+```
+
+```
+[15:08:45] ✅ Trial 9 completed!
+```
+
+```
+[15:08:46] 🚀 Trial 10 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=3810, drop_p=0.33888069983035984, enc_factor=4, weight_decay=6.198384625530537e-05, beta=0.010645874058964128, learning_rate=0.03816015621637652, n_layers=2, tasks=condition
+```
+
+```
+[15:09:06] ✅ Trial 10 completed!
+```
+
+```
+[15:09:06] 🚀 Trial 11 started - config: epochs=100, checkpoint_interval=25, loss_reduction=sum, batch_size=4009, drop_p=0.05708373102710941, enc_factor=2, weight_decay=0.00100654704069504, beta=3.087305254755213, learning_rate=0.02913068140562028, n_layers=4, tasks=condition
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎉🎉🎉 HYPERPARAMETER OPTIMIZATION COMPLETE!
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+--------------------
+Resource summary (last result is reported):
+ trial_id     status  iter  epochs  checkpoint_interval loss_reduction  batch_size   drop_p  enc_factor  weight_decay     beta  learning_rate  n_layers     tasks  downstream_performance  reconstruction_loss  worker-time
+        0  Completed     1     1
 ... [output truncated]
 ```
 
 ```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package_dev/.venv/lib/python3.12/site-packages/sklearn/pipeline.py:62: FutureWarning: This Pipeline instance is not fitted yet. Call 'fit' with appropriate arguments before using other methods such as transform, predict, etc. This will raise an error in 1.8 instead of the current warning.
-  warnings.warn(
+🛑 Stopping trials that may still be running.
+✅ Tuning finished, results of trials can be found at /home/janew/syne-tune/python-entrypoint-2026-11-13-14-05-18-725
+
+💾 Results saved to: /home/janew/syne-tune/python-entrypoint-2026-11-13-14-05-18-725
+✨ Happy training with your optimized hyperparameters!
 ```
 
 ## Visualizing the Optimization process[¶](#visualizing-the-optimization-process)
 
 ### Best Performance over Time[¶](#best-performance-over-time)
 
-In \[5\]:
-
-Copied!
-
-```
-tuning_experiment.plot()
-```
-
-tuning_experiment.plot()
-
-```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package_dev/.venv/lib/python3.12/site-packages/syne_tune/experiments/experiment_result.py:139: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
-  fig.show()
-```
-
-### Scatterplot of all trials[¶](#scatterplot-of-all-trials)
-
 In \[6\]:
 
 Copied!
 
 ```
+tuning_experiment.plot()
+```
+
+tuning_experiment.plot()
+
+```
+.venv/lib/python3.12/site-packages/syne_tune/experiments/experiment_result.py:139: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  fig.show()
+```
+
+### Scatterplot of all trials[¶](#scatterplot-of-all-trials)
+
+In \[7\]:
+
+Copied!
+
+```
 tuning_experiment.plot_trials_over_time()
 ```
 
 tuning_experiment.plot_trials_over_time()
 
 ```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package_dev/.venv/lib/python3.12/site-packages/syne_tune/experiments/experiment_result.py:178: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+.venv/lib/python3.12/site-packages/syne_tune/experiments/experiment_result.py:178: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
   fig.show()
 ```
 
 ### Comparing tuning on Reconstruction Loss vs. Downstream Performance[¶](#comparing-tuning-on-reconstruction-loss-vs-downstream-performance)
 
-In \[7\]:
+In \[8\]:
 
 Copied!
 
@@ -611,7 +681,7 @@ This configuration can then be reused for final training or further experiments.
 
 ______________________________________________________________________
 
-In \[11\]:
+In \[9\]:
 
 Copied!
 
@@ -638,7 +708,7 @@ print(f"best result found: {tuning_experiment.best_config()}") import pickle wit
 tuning_experiment = pickle.load(f) print("loaded tuning_experiment.pkl")
 
 ```
-best result found: {'downstream_performance': 0.9756944444444444, 'reconstruction_loss': 25.77974853515625, 'trial_id': 3, 'config_epochs': 100, 'config_checkpoint_interval': 25, 'config_loss_reduction': 'sum', 'config_batch_size': 1581, 'config_drop_p': 0.0223448386659114, 'config_enc_factor': 1, 'config_weight_decay': 0.0001133359274981, 'config_beta': 0.0008579860880328, 'config_learning_rate': 0.0451006955485194, 'config_n_layers': 2, 'config_tasks': 'condition'}
+best result found: {'downstream_performance': np.float64(0.8890648567119156), 'reconstruction_loss': np.float64(63.816455078125), 'trial_id': np.int64(1), 'config_epochs': np.int64(100), 'config_checkpoint_interval': np.int64(25), 'config_loss_reduction': 'sum', 'config_batch_size': np.int64(3786), 'config_drop_p': np.float64(0.3247605317064866), 'config_enc_factor': np.int64(2), 'config_weight_decay': np.float64(0.0002423504342937), 'config_beta': np.float64(0.0168145020984797), 'config_learning_rate': np.float64(0.0290467723401863), 'config_n_layers': np.int64(2), 'config_tasks': 'condition'}
 Saved tuning_experiment.pkl
 loaded tuning_experiment.pkl
 ```

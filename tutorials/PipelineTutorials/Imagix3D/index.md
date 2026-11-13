@@ -56,7 +56,7 @@ print(f"Changed to: {os.getcwd()}")
 import os p = os.getcwd() d = "autoencodix_package" if d not in p: raise FileNotFoundError(f"'{d}' not found in path: {p}") os.chdir(os.sep.join(p.split(os.sep)[: p.split(os.sep).index(d) + 1])) print(f"Changed to: {os.getcwd()}")
 
 ```
-Changed to: /home/ewald/Github/autoencodix_package
+Changed to: /home/janew/ACX/autoencodix_package
 ```
 
 ## 1) Initialize the Imagix3D Pipeline[¶](#1-initialize-the-imagix3d-pipeline)
@@ -185,6 +185,9 @@ volconfig = Imagix3DConfig( data_case=DataCase.IMG_TO_IMG, img_path_col="filepat
 
 ```
 Successfully loaded 345 images for IMG
+```
+
+```
 anno key: IMG
 Converting 241 images to torch.float32 tensors...
 Converting 70 images to torch.float32 tensors...
@@ -192,24 +195,88 @@ Converting 34 images to torch.float32 tensors...
 ```
 
 ```
-/home/ewald/Github/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:250: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 52.4849 exceeded max norm of 5.
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 58.4806 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 8310.2237
-Sub-losses: recon_loss: 8310.2237, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
-Epoch 10 - Valid Loss: 8580.0268
-Sub-losses: recon_loss: 8580.0268, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
-Epoch 20 - Train Loss: 6737.2059
-Sub-losses: recon_loss: 6737.2059, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
-Epoch 20 - Valid Loss: 7556.0366
-Sub-losses: recon_loss: 7556.0366, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
-Epoch 30 - Train Loss: 6339.6828
-Sub-losses: recon_loss: 6339.6828, var_loss: 0.0000, anneal_factor: 0.0001, effective_beta_factor: 0.0000
-Epoch 30 - Valid Loss: 7303.8807
-Sub-losses: recon_loss: 7303.8807, var_loss: 0.0000, anneal_factor: 0.0
-... [output truncated]
+Epoch 10 - Train Loss: 9982.3075
+Sub-losses: recon_loss: 9982.3075, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
+Epoch 10 - Valid Loss: 30180.1625
+Sub-losses: recon_loss: 30180.1625, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 20 - Train Loss: 8472.0694
+Sub-losses: recon_loss: 8472.0694, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
+Epoch 20 - Valid Loss: 38888.0949
+Sub-losses: recon_loss: 38888.0949, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 30 - Train Loss: 7252.6510
+Sub-losses: recon_loss: 7252.6510, var_loss: 0.0000, anneal_factor: 0.0001, effective_beta_factor: 0.0000
+Epoch 30 - Valid Loss: 39523.6252
+Sub-losses: recon_loss: 39523.6252, var_loss: 0.0000, anneal_factor: 0.0001, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 40 - Train Loss: 6660.7500
+Sub-losses: recon_loss: 6660.7500, var_loss: 0.0001, anneal_factor: 0.0007, effective_beta_factor: 0.0000
+Epoch 40 - Valid Loss: 7731.5018
+Sub-losses: recon_loss: 7731.5018, var_loss: 0.0001, anneal_factor: 0.0007, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 50 - Train Loss: 6461.2901
+Sub-losses: recon_loss: 6461.2891, var_loss: 0.0009, anneal_factor: 0.0055, effective_beta_factor: 0.0000
+Epoch 50 - Valid Loss: 9580.4022
+Sub-losses: recon_loss: 9580.4013, var_loss: 0.0011, anneal_factor: 0.0055, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 60 - Train Loss: 5498.8996
+Sub-losses: recon_loss: 5498.8932, var_loss: 0.0064, anneal_factor: 0.0392, effective_beta_factor: 0.0000
+Epoch 60 - Valid Loss: 7152.8297
+Sub-losses: recon_loss: 7152.8251, var_loss: 0.0048, anneal_factor: 0.0392, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 70 - Train Loss: 5054.5640
+Sub-losses: recon_loss: 5054.5257, var_loss: 0.0383, anneal_factor: 0.2315, effective_beta_factor: 0.0002
+Epoch 70 - Valid Loss: 6764.1904
+Sub-losses: recon_loss: 6764.1597, var_loss: 0.0306, anneal_factor: 0.2315, effective_beta_factor: 0.0002
+```
+
+```
+Epoch 80 - Train Loss: 4994.2163
+Sub-losses: recon_loss: 4994.1010, var_loss: 0.1153, anneal_factor: 0.6900, effective_beta_factor: 0.0007
+Epoch 80 - Valid Loss: 6220.2981
+Sub-losses: recon_loss: 6220.2015, var_loss: 0.0967, anneal_factor: 0.6900, effective_beta_factor: 0.0007
+```
+
+```
+Epoch 90 - Train Loss: 4327.6055
+Sub-losses: recon_loss: 4327.4495, var_loss: 0.1560, anneal_factor: 0.9427, effective_beta_factor: 0.0009
+Epoch 90 - Valid Loss: 6064.2495
+Sub-losses: recon_loss: 6064.1176, var_loss: 0.1318, anneal_factor: 0.9427, effective_beta_factor: 0.0009
+```
+
+```
+Epoch 100 - Train Loss: 4357.9028
+Sub-losses: recon_loss: 4357.7365, var_loss: 0.1664, anneal_factor: 0.9918, effective_beta_factor: 0.0010
+Epoch 100 - Valid Loss: 6509.8689
+Sub-losses: recon_loss: 6509.7150, var_loss: 0.1537, anneal_factor: 0.9918, effective_beta_factor: 0.0010
+```
+
+```
+Processed 32 / 70 samples
+Processed 64 / 70 samples
+Processed 70 / 70 samples
 ```
 
 ## 2) Understand Imagix3D Specific Steps[¶](#2-understand-imagix3d-specific-steps)
@@ -393,7 +460,7 @@ We can simply pass the architecture as type to the `model_type` parameter of the
 
 [2] Tutorials/DeepDives/ConfigTutorial.ipynb.
 
-In \[14\]:
+In \[13\]:
 
 Copied!
 
@@ -408,7 +475,8 @@ custom_volconfig = Imagix3DConfig(
     target_shape_3d=(64,64,64),
     checkpoint_interval=10,
     epochs=100,
-    learning_rate=0.001,
+    learning_rate=0.0005,
+    clamp_logvar=True,  # keeps training of this architecture (no normalization layers) numerically stable
     reconstruction_loss="mse",
     beta=0.005,
     scaling="MINMAX",
@@ -436,24 +504,98 @@ result = imagix3d.run()
 backup_dataset = result.datasets
 ```
 
-from autoencodix.modeling.\_volfast_architecture import VolumeVAEFastArchitecture from autoencodix.modeling.\_volumevae_architecture import VolumeVAEArchitecture custom_volconfig = Imagix3DConfig( data_case=DataCase.IMG_TO_IMG, img_path_col="filepath", spatial_shape_policy="crop_or_pad_to_shape", target_shape_3d=(64,64,64), checkpoint_interval=10, epochs=100, learning_rate=0.001, reconstruction_loss="mse", beta=0.005, scaling="MINMAX", anneal_function="logistic-late", data_config=DataConfig( data_info={ "IMG": DataInfo( file_path=os.path.join(VOLIMAGES, "organmnist3d_subsample"), scaling="MINMAX", data_type="IMG", ), "ANNO": DataInfo( file_path=IMGMAPPING, data_type="ANNOTATION", ), }, ), ) imagix3d = acx.Imagix3D( config=custom_volconfig, model_type=VolumeVAEFastArchitecture ) result = imagix3d.run() backup_dataset = result.datasets
+from autoencodix.modeling.\_volfast_architecture import VolumeVAEFastArchitecture from autoencodix.modeling.\_volumevae_architecture import VolumeVAEArchitecture custom_volconfig = Imagix3DConfig( data_case=DataCase.IMG_TO_IMG, img_path_col="filepath", spatial_shape_policy="crop_or_pad_to_shape", target_shape_3d=(64,64,64), checkpoint_interval=10, epochs=100, learning_rate=0.0005, clamp_logvar=True, # keeps training of this architecture (no normalization layers) numerically stable reconstruction_loss="mse", beta=0.005, scaling="MINMAX", anneal_function="logistic-late", data_config=DataConfig( data_info={ "IMG": DataInfo( file_path=os.path.join(VOLIMAGES, "organmnist3d_subsample"), scaling="MINMAX", data_type="IMG", ), "ANNO": DataInfo( file_path=IMGMAPPING, data_type="ANNOTATION", ), }, ), ) imagix3d = acx.Imagix3D( config=custom_volconfig, model_type=VolumeVAEFastArchitecture ) result = imagix3d.run() backup_dataset = result.datasets
 
 ```
 Successfully loaded 345 images for IMG
+```
+
+```
 anno key: IMG
 Converting 241 images to torch.float32 tensors...
 Converting 70 images to torch.float32 tensors...
 Converting 34 images to torch.float32 tensors...
-Epoch 10 - Train Loss: 18228.9796
-Sub-losses: recon_loss: 18228.9796, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
-Epoch 10 - Valid Loss: 16439.0481
-Sub-losses: recon_loss: 16439.0481, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
-Epoch 20 - Train Loss: 12809.1013
-Sub-losses: recon_loss: 12809.1013, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
-Epoch 20 - Valid Loss: 11979.7325
-Sub-losses: recon_loss: 11979.7325, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
-Epoch 30 - Train Loss: 11307.0336
-... [output truncated]
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 47.2779 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+Epoch 10 - Train Loss: 38528.7674
+Sub-losses: recon_loss: 38528.7674, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
+Epoch 10 - Valid Loss: 15233.4901
+Sub-losses: recon_loss: 15233.4901, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 20 - Train Loss: 14083.7698
+Sub-losses: recon_loss: 14083.7698, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
+Epoch 20 - Valid Loss: 14171.7888
+Sub-losses: recon_loss: 14171.7888, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 30 - Train Loss: 9553.6612
+Sub-losses: recon_loss: 9553.6612, var_loss: 0.0002, anneal_factor: 0.0001, effective_beta_factor: 0.0000
+Epoch 30 - Valid Loss: 9232.0330
+Sub-losses: recon_loss: 9232.0330, var_loss: 0.0002, anneal_factor: 0.0001, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 40 - Train Loss: 9032.9927
+Sub-losses: recon_loss: 9032.9906, var_loss: 0.0021, anneal_factor: 0.0007, effective_beta_factor: 0.0000
+Epoch 40 - Valid Loss: 10874.2792
+Sub-losses: recon_loss: 10874.2773, var_loss: 0.0019, anneal_factor: 0.0007, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 50 - Train Loss: 9232.4082
+Sub-losses: recon_loss: 9232.3914, var_loss: 0.0169, anneal_factor: 0.0055, effective_beta_factor: 0.0000
+Epoch 50 - Valid Loss: 8556.6671
+Sub-losses: recon_loss: 8556.6558, var_loss: 0.0114, anneal_factor: 0.0055, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 60 - Train Loss: 8634.0777
+Sub-losses: recon_loss: 8633.9619, var_loss: 0.1158, anneal_factor: 0.0392, effective_beta_factor: 0.0002
+Epoch 60 - Valid Loss: 8001.0617
+Sub-losses: recon_loss: 8000.9770, var_loss: 0.0844, anneal_factor: 0.0392, effective_beta_factor: 0.0002
+```
+
+```
+Epoch 70 - Train Loss: 8287.8768
+Sub-losses: recon_loss: 8287.1909, var_loss: 0.6857, anneal_factor: 0.2315, effective_beta_factor: 0.0012
+Epoch 70 - Valid Loss: 9869.3101
+Sub-losses: recon_loss: 9868.7023, var_loss: 0.6078, anneal_factor: 0.2315, effective_beta_factor: 0.0012
+```
+
+```
+Epoch 80 - Train Loss: 8321.5917
+Sub-losses: recon_loss: 8319.4370, var_loss: 2.1547, anneal_factor: 0.6900, effective_beta_factor: 0.0034
+Epoch 80 - Valid Loss: 7682.8633
+Sub-losses: recon_loss: 7681.3820, var_loss: 1.4813, anneal_factor: 0.6900, effective_beta_factor: 0.0034
+```
+
+```
+Epoch 90 - Train Loss: 7710.8215
+Sub-losses: recon_loss: 7708.0401, var_loss: 2.7815, anneal_factor: 0.9427, effective_beta_factor: 0.0047
+Epoch 90 - Valid Loss: 7282.5947
+Sub-losses: recon_loss: 7280.5214, var_loss: 2.0734, anneal_factor: 0.9427, effective_beta_factor: 0.0047
+```
+
+```
+Epoch 100 - Train Loss: 7514.6393
+Sub-losses: recon_loss: 7511.5497, var_loss: 3.0897, anneal_factor: 0.9918, effective_beta_factor: 0.0050
+Epoch 100 - Valid Loss: 9048.5601
+Sub-losses: recon_loss: 9045.8693, var_loss: 2.6908, anneal_factor: 0.9918, effective_beta_factor: 0.0050
+```
+
+```
+Processed 32 / 70 samples
+Processed 64 / 70 samples
+Processed 70 / 70 samples
 ```
 
 ## 6) Load Save and Reuse Imagix3D[¶](#6-load-save-and-reuse-imagix3d)
@@ -471,7 +613,7 @@ You can do the following:
 
 Best practice is to provide a file path without extension, we set the extensions internally and handle all saving and loading.
 
-In \[15\]:
+In \[14\]:
 
 Copied!
 
@@ -486,7 +628,7 @@ imagix3d.save(file_path=outpath,
 
 folder = os.path.dirname(outpath)
 pkl_files = glob.glob(os.path.join(folder, "*imagix3d.pkl"))
-model_files = glob.glob(os.path.join(folder, "*imagix3d.pth"))
+model_files = glob.glob(os.path.join(folder, "*imagix3d*.pth"))
 
 print("PKL files:", pkl_files)
 print("Model files:", model_files)
@@ -495,7 +637,7 @@ print("Model files:", model_files)
 imagix3d_loaded = acx.Imagix3D.load(outpath)
 ```
 
-import os import glob outpath = os.path.join("tutorial_res", "imagix3d.pkl") imagix3d.save(file_path=outpath, save_all=True) folder = os.path.dirname(outpath) pkl_files = glob.glob(os.path.join(folder, "\*imagix3d.pkl")) model_files = glob.glob(os.path.join(folder, "\*imagix3d.pth")) print("PKL files:", pkl_files) print("Model files:", model_files)
+import os import glob outpath = os.path.join("tutorial_res", "imagix3d.pkl") imagix3d.save(file_path=outpath, save_all=True) folder = os.path.dirname(outpath) pkl_files = glob.glob(os.path.join(folder, "\*imagix3d.pkl")) model_files = glob.glob(os.path.join(folder, "\*imagix3d\*.pth")) print("PKL files:", pkl_files) print("Model files:", model_files)
 
 # the load functionality automatically will build the pipeline object out of the three saved files
 
@@ -503,17 +645,26 @@ imagix3d_loaded = acx.Imagix3D.load(outpath)
 
 ```
 Preprocessor saved successfully.
+```
+
+```
 Pipeline object saved successfully.
 PKL files: ['tutorial_res/imagix3d.pkl']
-Model files: []
+Model files: ['tutorial_res/imagix3d_model.pth']
 Attempting to load a pipeline from tutorial_res/imagix3d.pkl...
+```
+
+```
 Pipeline object loaded successfully. Actual type: Imagix3D
+```
+
+```
 Preprocessor loaded successfully.
 ```
 
 **Visualize on new predictions**
 
-In \[16\]:
+In \[15\]:
 
 Copied!
 
@@ -529,7 +680,7 @@ imagix3d_loaded.show_result( split="test", params=["group"])
 Creating plots ...
 ```
 
-In \[17\]:
+In \[16\]:
 
 Copied!
 

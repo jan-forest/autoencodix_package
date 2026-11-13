@@ -1,6 +1,6 @@
 > **Note:** This environment variable is required for fully deterministic CuBLAS ops on CUDA >= 10.2 when `reproducible=True` is set below. Without it, PyTorch raises a `RuntimeError` instead of training deterministically. It must be set before `torch` is imported. See the [README FAQ](https://jan-forest.github.io/autoencodix_package/tutorials/README.md#reproducibility-and-cublas_workspace_config) for details.
 
-In \[ \]:
+In \[1\]:
 
 Copied!
 
@@ -9,6 +9,10 @@ Copied!
 ```
 
 %env CUBLAS_WORKSPACE_CONFIG=:16:8
+
+```
+env: CUBLAS_WORKSPACE_CONFIG=:16:8
+```
 
 # Config Deep Dive[¶](#config-deep-dive)
 
@@ -39,7 +43,7 @@ The main way is to pass an instance of our `DefaultConfig` class to the pipeline
 
 #### 1.1 Provide Config as a Class Instance[¶](#11-provide-config-as-a-class-instance)
 
-In \[1\]:
+In \[2\]:
 
 Copied!
 
@@ -76,7 +80,7 @@ The data for this tutorial is hosted on Hugging Face Hub ([autoencodix/tcga](htt
 
 We assume you are in the root of the package. The following code ensures that the correct paths are used. [1] [Tutorials/DeepDives/ConfigTutorial.ipynb](https://jan-forest.github.io/autoencodix_package/tutorials/DeepDives/ConfigTutorial/ConfigTutorial.ipynb)
 
-In \[ \]:
+In \[3\]:
 
 Copied!
 
@@ -144,16 +148,93 @@ custom_config = VarixConfig.model_validate( { \*\*yaml.safe_load(Path("configs/m
 
 varix = acx.Varix(config=custom_config) r = varix.run()
 
+```
+Changed to: /home/janew/ACX/autoencodix_package
+```
+
+```
+reading parquet: data/raw/combined_rnaseq_formatted.parquet
+```
+
+```
+reading parquet: data/raw/combined_meth_formatted.parquet
+```
+
+```
+reading parquet: data/raw/combined_clin_formatted.parquet
+```
+
+```
+anno key: paired
+```
+
+```
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 11.6709 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+Epoch 3 - Train Loss: 244294676.3142
+Sub-losses: recon_loss: 632267.9116, var_loss: 243662407.5660, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+```
+
+```
+Epoch 3 - Valid Loss: 330077893.8182
+Sub-losses: recon_loss: 95851125.8182, var_loss: 234226768.0000, anneal_factor: 0.9656, effective_beta_factor: 0.0966
+```
+
+```
+Processed 32 / 707 samples
+Processed 64 / 707 samples
+Processed 96 / 707 samples
+Processed 128 / 707 samples
+Processed 160 / 707 samples
+Processed 192 / 707 samples
+Processed 224 / 707 samples
+Processed 256 / 707 samples
+```
+
+```
+Processed 288 / 707 samples
+Processed 320 / 707 samples
+Processed 352 / 707 samples
+Processed 384 / 707 samples
+Processed 416 / 707 samples
+Processed 448 / 707 samples
+Processed 480 / 707 samples
+Processed 512 / 707 samples
+Processed 544 / 707 samples
+```
+
+```
+Processed 576 / 707 samples
+Processed 608 / 707 samples
+Processed 640 / 707 samples
+Processed 672 / 707 samples
+Processed 704 / 707 samples
+Processed 707 / 707 samples
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/visualize/_general_visualizer.py:64: UserWarning: Model weights plot is skipped since input dimension 27277 is larger than 3000 and heatmap would be too large.
+  warnings.warn(
+```
+
 **Note**
 
 > We can also go the reverse way and save our config object to a YAML file, as shown below:
 
-In \[ \]:
+In \[4\]:
 
 Copied!
 
 ```
-output_path = Path("default_config.yaml")
+output_path = Path("tutorial_res") / "default_config.yaml"
+output_path.parent.mkdir(exist_ok=True)
 
 # Convert to plain Python dict first
 config_dict = config.model_dump()
@@ -164,7 +245,7 @@ with output_path.open("w") as f:
 print(f"✅ Saved config to {output_path.resolve()}")
 ```
 
-output_path = Path("default_config.yaml")
+output_path = Path("tutorial_res") / "default_config.yaml" output_path.parent.mkdir(exist_ok=True)
 
 # Convert to plain Python dict first
 
@@ -175,7 +256,7 @@ config_dict = config.model_dump()
 with output_path.open("w") as f: yaml.dump(config_dict, f, sort_keys=False, default_flow_style=False) print(f"✅ Saved config to {output_path.resolve()}")
 
 ```
-✅ Saved config to /Users/maximilianjoas/development/autoencodix_package/default_config.yaml
+✅ Saved config to /home/janew/ACX/autoencodix_package/tutorial_res/default_config.yaml
 ```
 
 ## 2) Which Config Parameter to Set[¶](#2-which-config-parameter-to-set)
@@ -210,7 +291,7 @@ Our config class consists of two parts: (a) a general part where we set global p
 Inside the `DataConfig` we have a `DataInfo` object where we can set the parameters; see a minimal code example below.\
 You can find a full list of parameters in [section 5.1](#51-dataconfig--configuration-parameters).
 
-In \[ \]:
+In \[5\]:
 
 Copied!
 
@@ -383,7 +464,7 @@ ______________________________________________________________________
 
 If you want to see all available parameters directly via Python, you can call `<config-instance>.print_schema()` as shown below.
 
-In \[ \]:
+In \[6\]:
 
 Copied!
 
@@ -401,12 +482,12 @@ DefaultConfig Configuration Parameters:
 data_config:
   Type: <class 'autoencodix.configs.default_config.DataConfig'>
   Default: data_info={} require_common_cells=False annotation_columns=None
-  Description: No description available
+  Description: Per-modality data settings; filled automatically from the DataPackage if not set
 
 annotation_columns:
   Type: typing.Optional[typing.List[str]]
   Default: None
-  Description: No description available
+  Description: Metadata columns used to color plots and as default targets in evaluate()
 
 img_path_col:
   Type: <class 'str'>
@@ -414,8 +495,6 @@ img_path_col:
   Description: When working with images, we except a column in your annotation file that specifies the path of the image for a particular sample. Here you can define the name of this column
 
 requires_paired:
-  Type: typing.Optional[bool]
-  Default: PydanticUndefined
-  Description: Indicator if the samples for the xmodalix are paired, b
+  Type: typing.Optional[
 ... [output truncated]
 ```

@@ -1,6 +1,6 @@
 > **Note:** This environment variable is required for fully deterministic CuBLAS ops on CUDA >= 10.2 when `reproducible=True` is set below. Without it, PyTorch raises a `RuntimeError` instead of training deterministically. It must be set before `torch` is imported. See the [README FAQ](https://jan-forest.github.io/autoencodix_package/tutorials/README.md#reproducibility-and-cublas_workspace_config) for details.
 
-In \[2\]:
+In \[1\]:
 
 Copied!
 
@@ -82,7 +82,7 @@ In order to calculate the class-based losses, Supervisix needs access to class l
 
 ## Requirements 1: Be in the correct directory (execute below)[¶](#requirements-1-be-in-the-correct-directory-execute-below)
 
-In \[1\]:
+In \[2\]:
 
 Copied!
 
@@ -90,17 +90,17 @@ Copied!
 import os
 
 p = os.getcwd()
-d = "autoencodix_package_custom_vae_dev"
+d = "autoencodix_package"
 if d not in p:
     raise FileNotFoundError(f"'{d}' not found in path: {p}")
 os.chdir(os.sep.join(p.split(os.sep)[: p.split(os.sep).index(d) + 1]))
 print(f"Changed to: {os.getcwd()}")
 ```
 
-import os p = os.getcwd() d = "autoencodix_package_custom_vae_dev" if d not in p: raise FileNotFoundError(f"'{d}' not found in path: {p}") os.chdir(os.sep.join(p.split(os.sep)[: p.split(os.sep).index(d) + 1])) print(f"Changed to: {os.getcwd()}")
+import os p = os.getcwd() d = "autoencodix_package" if d not in p: raise FileNotFoundError(f"'{d}' not found in path: {p}") os.chdir(os.sep.join(p.split(os.sep)[: p.split(os.sep).index(d) + 1])) print(f"Changed to: {os.getcwd()}")
 
 ```
-Changed to: /net/ifs1/san_projekte/projekte/genstat/09_nutzer/kmueller/ScaDS/NK_Alliance/autoencodix_package_custom_vae_dev
+Changed to: /home/janew/ACX/autoencodix_package
 ```
 
 ## Requirements 2: Obtain tutorial data or use own data[¶](#requirements-2-obtain-tutorial-data-or-use-own-data)
@@ -111,7 +111,7 @@ We use real human lung single-cell RNA-seq data assembled from the [CZ CELLxGENE
 
 This works like `Varix`, except we don't have only the `beta` parameter to weigh the distribution loss, we have one additional weight for each of the class-based loss terms, `delta_class_cohesion` and `gamma_class_separation`, that we can set in the config. We also have to make sure to set the `class_param` parameter in the config or an Error will be raised.
 
-In \[ \]:
+In \[3\]:
 
 Copied!
 
@@ -185,7 +185,7 @@ N_PER_TYPE = 2000 rng = np.random.RandomState(43) subsample_idx = [] for \_, gro
 in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
 ```
 
-In \[25\]:
+In \[4\]:
 
 Copied!
 
@@ -206,20 +206,75 @@ mudata: View of MuData object with n_obs × n_vars = 8000 × 8189
 ```
 
 ```
-/net/ifs1/san_projekte/projekte/genstat/09_nutzer/kmueller/ScaDS/NK_Alliance/autoencodix_package_custom_vae_dev/src/autoencodix/trainers/_general_trainer.py:282: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 40.4601 exceeded max norm of 5.
+Processing 1 MuData objects: ['multi_sc']
+Processing train modality: multi_sc
+```
+
+```
+Processing valid split
+Processing valid modality: multi_sc
+Processing test split
+Processing test modality: multi_sc
+```
+
+```
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 31.1268 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 1688.9269
-Sub-losses: recon_loss: 1796.1545, var_loss: 0.3819, class_separation_loss: -190.3712, class_cohesion_loss: 82.7617, anneal_factor: 0.0017, effective_beta_factor: 0.0002
-Epoch 10 - Valid Loss: 1714.3378
-Sub-losses: recon_loss: 1804.5236, var_loss: 0.4290, class_separation_loss: -192.5129, class_cohesion_loss: 101.8981, anneal_factor: 0.0017, effective_beta_factor: 0.0002
-Epoch 20 - Train Loss: 1682.7728
-Sub-losses: recon_loss: 1797.0962, var_loss: 24.7418, class_separation_loss: -226.3665, class_cohesion_loss: 87.3013, anneal_factor: 0.0832, effective_beta_factor: 0.0083
-Epoch 20 - Valid Loss: 1700.6685
-Sub-losses: recon_loss: 1800.4940, var_loss: 27.5201, class_separation_loss: -230.4452, class_cohesion_loss: 103.0995, anneal_factor: 0.0832, effective_bet
-... [output truncated]
+Epoch 10 - Train Loss: 1852.7631
+Sub-losses: recon_loss: 1815.3291, var_loss: 0.0494, class_separation_loss: -15.3328, class_cohesion_loss: 52.7174, anneal_factor: 0.0017, effective_beta_factor: 0.0002
+Epoch 10 - Valid Loss: 2110.0043
+Sub-losses: recon_loss: 2071.3368, var_loss: 0.0511, class_separation_loss: -15.9767, class_cohesion_loss: 54.5931, anneal_factor: 0.0017, effective_beta_factor: 0.0002
+```
+
+```
+Epoch 20 - Train Loss: 1854.3458
+Sub-losses: recon_loss: 1812.9887, var_loss: 4.1599, class_separation_loss: -15.4794, class_cohesion_loss: 52.6766, anneal_factor: 0.0832, effective_beta_factor: 0.0083
+Epoch 20 - Valid Loss: 2115.5669
+Sub-losses: recon_loss: 2068.0816, var_loss: 4.3873, class_separation_loss: -17.4118, class_cohesion_loss: 60.5099, anneal_factor: 0.0832, effective_beta_factor: 0.0083
+```
+
+```
+Epoch 30 - Train Loss: 1865.3655
+Sub-losses: recon_loss: 1804.5089, var_loss: 22.7064, class_separation_loss: -16.1989, class_cohesion_loss: 54.3492, anneal_factor: 0.8320, effective_beta_factor: 0.0832
+Epoch 30 - Valid Loss: 2118.5156
+Sub-losses: recon_loss: 2054.1389, var_loss: 23.1051, class_separation_loss: -17.2160, class_cohesion_loss: 58.4875, anneal_factor: 0.8320, effective_beta_factor: 0.0832
+```
+
+```
+Epoch 40 - Train Loss: 1847.0812
+Sub-losses: recon_loss: 1802.9000, var_loss: 9.1868, class_separation_loss: -14.9180, class_cohesion_loss: 49.9124, anneal_factor: 0.9963, effective_beta_factor: 0.0996
+Epoch 40 - Valid Loss: 2100.8650
+Sub-losses: recon_loss: 2055.3828, var_loss: 9.3858, class_separation_loss: -15.6300, class_cohesion_loss: 51.7265, anneal_factor: 0.9963, effective_beta_factor: 0.0996
+```
+
+```
+Epoch 50 - Train Loss: 1845.0989
+Sub-losses: recon_loss: 1804.4329, var_loss: 7.3433, class_separation_loss: -14.1877, class_cohesion_loss: 47.5104, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Epoch 50 - Valid Loss: 2099.0162
+Sub-losses: recon_loss: 2055.9918, var_loss: 7.6010, class_separation_loss: -15.1744, class_cohesion_loss: 50.5976, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Processed 128 / 1600 samples
+Processed 256 / 1600 samples
+Processed 384 / 1600 samples
+Processed 512 / 1600 samples
+Processed 640 / 1600 samples
+```
+
+```
+Processed 768 / 1600 samples
+Processed 896 / 1600 samples
+Processed 1024 / 1600 samples
+Processed 1152 / 1600 samples
+Processed 1280 / 1600 samples
+Processed 1408 / 1600 samples
+Processed 1536 / 1600 samples
+Processed 1600 / 1600 samples
 ```
 
 #### 3.1) Obtain Results[¶](#31-obtain-results)
@@ -246,7 +301,7 @@ dict_keys(['recon_loss', 'var_loss', 'class_separation_loss', 'class_cohesion_lo
 
 In principle this also works the same as for `Varix`. However, we might be interested in a relative loss plot since we have more different loss types.
 
-In \[26\]:
+In \[6\]:
 
 Copied!
 
@@ -258,7 +313,7 @@ supervis.visualizer.show_loss(plot_type="relative")
 
 We can visualize our standard plots with `show_result`:
 
-In \[ \]:
+In \[7\]:
 
 Copied!
 
@@ -276,7 +331,7 @@ Creating plots ...
 
 To better showcase the effect of the class-based losses, we run the plain Varix on the same data with the same set of general parameters and compare the separation classes to the Supervisix results.
 
-In \[29\]:
+In \[8\]:
 
 Copied!
 
@@ -314,7 +369,7 @@ from autoencodix.configs.varix_config import VarixConfig my_cfg2 = VarixConfig( 
 in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
 ```
 
-In \[30\]:
+In \[9\]:
 
 Copied!
 
@@ -335,27 +390,71 @@ mudata: View of MuData object with n_obs × n_vars = 8000 × 8189
 ```
 
 ```
-/net/ifs1/san_projekte/projekte/genstat/09_nutzer/kmueller/ScaDS/NK_Alliance/autoencodix_package_custom_vae_dev/src/autoencodix/trainers/_general_trainer.py:282: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 35.2830 exceeded max norm of 5.
+Processing 1 MuData objects: ['multi_sc']
+Processing train modality: multi_sc
+```
+
+```
+Processing valid split
+Processing valid modality: multi_sc
+Processing test split
+Processing test modality: multi_sc
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 35.1597 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 1786.1190
-Sub-losses: recon_loss: 1777.8603, var_loss: 8.2587, anneal_factor: 0.0017, effective_beta_factor: 0.0002
-Epoch 10 - Valid Loss: 2060.4436
-Sub-losses: recon_loss: 2059.3068, var_loss: 1.1368, anneal_factor: 0.0017, effective_beta_factor: 0.0002
-Epoch 20 - Train Loss: 1743.4423
-Sub-losses: recon_loss: 1737.9589, var_loss: 5.4834, anneal_factor: 0.0832, effective_beta_factor: 0.0083
-Epoch 20 - Valid Loss: 1812.6911
-Sub-losses: recon_loss: 1807.1014, var_loss: 5.5897, anneal_factor: 0.0832, effective_beta_factor: 0.0083
-Epoch 30 - Train Loss: 1752.7409
-Sub-losses: recon_loss: 1739.8599, var_loss: 12.8810, anneal_factor: 0.8320, effective_beta_factor: 0.0832
-Epoch 30 - Valid Loss: 1818.8963
-Sub-losses: recon_loss: 1806.1059, var_loss: 12.7904, anneal_factor: 0
-... [output truncated]
+Epoch 10 - Train Loss: 1731.6490
+Sub-losses: recon_loss: 1730.3192, var_loss: 1.3298, anneal_factor: 0.0017, effective_beta_factor: 0.0002
+Epoch 10 - Valid Loss: 1699.4385
+Sub-losses: recon_loss: 1698.2469, var_loss: 1.1916, anneal_factor: 0.0017, effective_beta_factor: 0.0002
 ```
 
-In \[33\]:
+```
+Epoch 20 - Train Loss: 1730.3793
+Sub-losses: recon_loss: 1723.9799, var_loss: 6.3995, anneal_factor: 0.0832, effective_beta_factor: 0.0083
+Epoch 20 - Valid Loss: 1699.3371
+Sub-losses: recon_loss: 1693.8070, var_loss: 5.5301, anneal_factor: 0.0832, effective_beta_factor: 0.0083
+```
+
+```
+Epoch 30 - Train Loss: 1743.2866
+Sub-losses: recon_loss: 1729.7835, var_loss: 13.5031, anneal_factor: 0.8320, effective_beta_factor: 0.0832
+Epoch 30 - Valid Loss: 1714.3307
+Sub-losses: recon_loss: 1700.9803, var_loss: 13.3504, anneal_factor: 0.8320, effective_beta_factor: 0.0832
+```
+
+```
+Epoch 40 - Train Loss: 1745.2877
+Sub-losses: recon_loss: 1731.1592, var_loss: 14.1285, anneal_factor: 0.9963, effective_beta_factor: 0.0996
+Epoch 40 - Valid Loss: 1713.1936
+Sub-losses: recon_loss: 1700.3286, var_loss: 12.8650, anneal_factor: 0.9963, effective_beta_factor: 0.0996
+```
+
+```
+Epoch 50 - Train Loss: 1745.6215
+Sub-losses: recon_loss: 1731.5583, var_loss: 14.0632, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Epoch 50 - Valid Loss: 1717.2863
+Sub-losses: recon_loss: 1703.7823, var_loss: 13.5039, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Processed 128 / 1600 samples
+Processed 256 / 1600 samples
+Processed 384 / 1600 samples
+Processed 512 / 1600 samples
+Processed 640 / 1600 samples
+Processed 768 / 1600 samples
+Processed 896 / 1600 samples
+Processed 1024 / 1600 samples
+Processed 1152 / 1600 samples
+Processed 1280 / 1600 samples
+Processed 1408 / 1600 samples
+Processed 1536 / 1600 samples
+Processed 1600 / 1600 samples
+```
+
+In \[10\]:
 
 Copied!
 
@@ -375,7 +474,7 @@ Compare these plots to the first run's plots above: without the class-based loss
 
 There are no `Supervisix` specific steps here. See the `Getting Started - Vanillix` for details. Below is a basic save/load usecase:
 
-In \[34\]:
+In \[11\]:
 
 Copied!
 
@@ -404,15 +503,24 @@ supervis_loaded = acx.Supervisix.load(outpath)
 
 ```
 Preprocessor saved successfully.
+```
+
+```
 Pipeline object saved successfully.
-PKL files: ['tutorial_res/supervisix_preprocessor.pkl']
-Model files: ['tutorial_res/supervisix_model.pth']
-Attempting to load a pipeline from tutorial_res/supervisix...
+PKL files: ['tutorial_res/ontix_reactome_preprocessor.pkl', 'tutorial_res/ontix.pkl', 'tutorial_res/imagix_preprocessor.pkl', 'tutorial_res/varix_preprocessor.pkl', 'tutorial_res/imagix.pkl', 'tutorial_res/ontix_reactome.pkl', 'tutorial_res/supervisix_preprocessor.pkl', 'tutorial_res/maskix_preprocessor.pkl', 'tutorial_res/imagix3d_preprocessor.pkl', 'tutorial_res/xmodalix_preprocessor.pkl', 'tutorial_res/xmodalix.pkl', 'tutorial_res/imagix3d.pkl', 'tutorial_res/disent.pkl', 'tutorial_res/disent_preprocessor.pkl', 'tutorial_res/ontix_preprocessor.pkl']
+Model files: ['tutorial_res/imagix3d_model.pth', 'tutorial_res/imagix_model.pth', 'tutorial_res/disent_model.pth', 'tutorial_res/supervisix_model.pth', 'tutorial_res/img.img_xmodalix_model.pth', 'tutorial
+... [output truncated]
+```
+
+```
 Pipeline object loaded successfully. Actual type: Supervisix
+```
+
+```
 Preprocessor loaded successfully.
 ```
 
-In \[35\]:
+In \[12\]:
 
 Copied!
 
@@ -423,11 +531,22 @@ supervis_loaded.predict(data=supervis.result.datasets)
 supervis_loaded.predict(data=supervis.result.datasets)
 
 ```
-Reproducibility settings for device auto are not implemented or necessary i.e. for cpu.
+Processed 128 / 1600 samples
+Processed 256 / 1600 samples
+Processed 384 / 1600 samples
+Processed 512 / 1600 samples
+Processed 640 / 1600 samples
+Processed 768 / 1600 samples
+Processed 896 / 1600 samples
+Processed 1024 / 1600 samples
+Processed 1152 / 1600 samples
+Processed 1280 / 1600 samples
+Processed 1408 / 1600 samples
+Processed 1536 / 1600 samples
 Processed 1600 / 1600 samples
 ```
 
-Out\[35\]:
+Out\[12\]:
 
 ```
 Result Object Public Attributes:
@@ -443,11 +562,11 @@ preprocessed_data: Tensor of shape (0,)
 model: VarixArchitecture
 model_checkpoints: TrainingDynamics object
 class_means: TrainingDynamics object
-datasets: DatasetContainer(train=<autoencodix.data._numeric_dataset.NumericDataset object at 0x7f6ebebf44c0>, v
+datasets: DatasetContainer(train=<autoencodix.data._numeric_dataset.NumericDataset object at 0x74cb889e4da0>, v
 ... [output truncated]
 ```
 
-In \[37\]:
+In \[13\]:
 
 Copied!
 
@@ -471,7 +590,7 @@ For a variational autoencoder, the generate or sample_latent_space step draws ne
 
 **Custom Latent Prior:** Optionally, a custom latent_prior can be provided (a tensor or NumPy array with shape (n_samples, latent_dim)), which will be used directly instead of the aggregated posterior. This is basically the `decode` step.
 
-In \[38\]:
+In \[14\]:
 
 Copied!
 
@@ -483,6 +602,5 @@ print(reconstructions_generated.shape)
 reconstructions_generated = supervis_loaded.generate(n_samples=5) print(reconstructions_generated.shape)
 
 ```
-Reproducibility settings for device auto are not implemented or necessary i.e. for cpu.
 torch.Size([5, 2000])
 ```

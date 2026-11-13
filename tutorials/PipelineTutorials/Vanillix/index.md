@@ -386,7 +386,8 @@ my_datapackage: DataPackage = DataPackage(
 )
 
 myconfig: VanillixConfig = VanillixConfig(
-    data_case=DataCase.MULTI_BULK, epochs=30, device="cpu", k_filter=2000,
+    data_case=DataCase.MULTI_BULK, epochs=30, k_filter=2000,
+    # device="cpu",  # default is "auto", which uses a GPU when available; uncomment to force CPU
     reproducible=True, global_seed=1,
 )
 vanillix = acx.Vanillix(data=my_datapackage, config=myconfig)
@@ -404,7 +405,11 @@ import autoencodix as acx from autoencodix.data.datapackage import DataPackage f
 
 # annotation = {"rna": rna_annotation, "meth": meth_annotation}
 
-my_datapackage: DataPackage = DataPackage( multi_bulk={"rna": raw_rna, "meth": raw_meth}, annotation={"paired": annotation}, ) myconfig: VanillixConfig = VanillixConfig( data_case=DataCase.MULTI_BULK, epochs=30, device="cpu", k_filter=2000, reproducible=True, global_seed=1, ) vanillix = acx.Vanillix(data=my_datapackage, config=myconfig)
+my_datapackage: DataPackage = DataPackage( multi_bulk={"rna": raw_rna, "meth": raw_meth}, annotation={"paired": annotation}, ) myconfig: VanillixConfig = VanillixConfig( data_case=DataCase.MULTI_BULK, epochs=30, k_filter=2000,
+
+# device="cpu", # default is "auto", which uses a GPU when available; uncomment to force CPU
+
+reproducible=True, global_seed=1, ) vanillix = acx.Vanillix(data=my_datapackage, config=myconfig)
 
 ```
 in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
@@ -545,27 +550,33 @@ vanillix.fit()
 vanillix.fit()
 
 ```
-Reproducibility settings for device cpu are not implemented or necessary i.e. for cpu.
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 21.2020 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 19.5369 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 1343.8532
-Sub-losses: recon_loss: 1343.8532
-Epoch 10 - Valid Loss: 1444.9164
-Sub-losses: recon_loss: 1444.9164
-Epoch 20 - Train Loss: 1259.6486
-Sub-losses: recon_loss: 1259.6486
-Epoch 20 - Valid Loss: 1419.2240
-Sub-losses: recon_loss: 1419.2240
-Epoch 30 - Train Loss: 1219.7124
-Sub-losses: recon_loss: 1219.7124
-Epoch 30 - Valid Loss: 1403.2820
-Sub-losses: recon_loss: 1403.2820
+Epoch 10 - Train Loss: 1353.5464
+Sub-losses: recon_loss: 1353.5464
+Epoch 10 - Valid Loss: 1283.9677
+Sub-losses: recon_loss: 1283.9677
+```
+
+```
+Epoch 20 - Train Loss: 1239.2039
+Sub-losses: recon_loss: 1239.2039
+Epoch 20 - Valid Loss: 1257.0218
+Sub-losses: recon_loss: 1257.0218
+```
+
+```
+Epoch 30 - Train Loss: 1215.2880
+Sub-losses: recon_loss: 1215.2880
+Epoch 30 - Valid Loss: 1238.9283
+Sub-losses: recon_loss: 1238.9283
 ```
 
 ### 2.3) The Predict Step[¶](#23-the-predict-step)
@@ -602,7 +613,9 @@ result = vanillix.predict()
 result = vanillix.predict()
 
 ```
-Reproducibility settings for device cpu are not implemented or necessary i.e. for cpu.
+Processed 32 / 120 samples
+Processed 64 / 120 samples
+Processed 96 / 120 samples
 Processed 120 / 120 samples
 ```
 
@@ -663,28 +676,35 @@ vanillix = acx.Vanillix(config=myconfig, data=my_datapackage) result = vanillix.
 ```
 in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
 anno key: paired
-Reproducibility settings for device cpu are not implemented or necessary i.e. for cpu.
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 21.2020 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 19.5369 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 1343.8532
-Sub-losses: recon_loss: 1343.8532
-Epoch 10 - Valid Loss: 1444.9164
-Sub-losses: recon_loss: 1444.9164
-Epoch 20 - Train Loss: 1259.6486
-Sub-losses: recon_loss: 1259.6486
-Epoch 20 - Valid Loss: 1419.2240
-Sub-losses: recon_loss: 1419.2240
-Epoch 30 - Train Loss: 1219.7124
-Sub-losses: recon_loss: 1219.7124
-Epoch 30 - Valid Loss: 1403.2820
-Sub-losses: recon_loss: 1403.2820
-Reproducibility settings for device cpu are not implemented or necessary i.e. for cpu.
+Epoch 10 - Train Loss: 1353.5464
+Sub-losses: recon_loss: 1353.5464
+Epoch 10 - Valid Loss: 1283.9677
+Sub-losses: recon_loss: 1283.9677
+```
+
+```
+Epoch 20 - Train Loss: 1239.2039
+Sub-losses: recon_loss: 1239.2039
+Epoch 20 - Valid Loss: 1257.0218
+Sub-losses: recon_loss: 1257.0218
+```
+
+```
+Epoch 30 - Train Loss: 1215.2880
+Sub-losses: recon_loss: 1215.2880
+Epoch 30 - Valid Loss: 1238.9283
+Sub-losses: recon_loss: 1238.9283
+Processed 32 / 120 samples
+Processed 64 / 120 samples
+Processed 96 / 120 samples
 Processed 120 / 120 samples
 ```
 
@@ -730,6 +750,11 @@ Perform ML task with feature df: Latent
 Latent
 Perform ML task for target parameter: CANCER_TYPE
 Showing plot for ML algorithm: LogisticRegression
+```
+
+```
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:451: OptimizeWarning: Unknown solver options: iprint
+  opt_res = optimize.minimize(
 ```
 
 ## 3) Inspect Results[¶](#3-inspect-results)
@@ -810,76 +835,77 @@ LatDim_15
 
 
 
-TCGA-13-1481-01
-1.209185
-0.531535
--0.527219
--0.491622
--0.290974
--0.311621
-1.481660
--0.618345
--0.170473
--0.300490
-0.870092
-1.605035
-1.067834
-0.259719
--0.148721
--1.013062
+TCGA-05-4250-01
+-0.134333
+0.184705
+1.034357
+-0.527694
+-0.426813
+-0.686381
+0.381567
+-0.146911
+0.603377
+0.501211
+-0.312171
+0.344305
+0.707117
+0.210237
+0.325070
+-0.878611
 
 
-TCGA-13-1505-01
-0.944583
-2.431056
-1.349156
--1.322856
--0.449180
--0.266392
-3.401706
-0.173875
--0.479915
--0.800582
-0.729345
-3.361618
-2.464790
--0.704554
--0.512607
--1.826883
+TCGA-05-4410-01
+-0.134236
+0.038179
+1.281394
+-0.148018
+-0.232666
+-0.445765
+0.691919
+0.193910
+0.189729
+0.292228
+0.431180
+1.013778
+0.714651
+0.196329
+0.451410
+-0.783152
 
 
-TCGA-22-5491-01
--0.696727
-1.686747
-0.588093
--0.676969
-1.154979
--2.120204
-1.613690
--1.886487
--0.083105
-1.387410
--2.589422
-0.285199
-1.382209
--1.589720
-2.569001
--0.350600
+TCGA-09-1669-01
+0.951247
+1.873539
+-3.091675
+0.533695
+0.180924
+-1.088112
+0.731765
+-2.119608
+-0.275493
+0.847156
+-1.168360
+0.576426
+1.393342
+0.050539
+0.788266
+-1.037192
 
 
-TCGA-24-1103-01
-1.857729
-1.498289
--0.605264
--1.107758
--0.121941
--0.795754
-2.683646
--1.515085
--1.146217
--0.780832
-1.645314
-2.2982
+TCGA-22-4593-01
+-1.563626
+1.085134
+0.757656
+-1.897495
+-0.121314
+0.013462
+1.274499
+0.307714
+0.847838
+-0.007632
+-1.454257
+0.106440
+0.6214
 ... [output truncated]
 ```
 
@@ -961,12 +987,12 @@ VanillixConfig Configuration Parameters:
 data_config:
   Type: <class 'autoencodix.configs.default_config.DataConfig'>
   Default: data_info={} require_common_cells=False annotation_columns=None
-  Description: No description available
+  Description: Per-modality data settings; filled automatically from the DataPackage if not set
 
 annotation_columns:
   Type: typing.Optional[typing.List[str]]
   Default: None
-  Description: No description available
+  Description: Metadata columns used to color plots and as default targets in evaluate()
 
 img_path_col:
   Type: <class 'str'>
@@ -974,9 +1000,7 @@ img_path_col:
   Description: When working with images, we except a column in your annotation file that specifies the path of the image for a particular sample. Here you can define the name of this column
 
 requires_paired:
-  Type: typing.Optional[bool]
-  Default: PydanticUndefined
-  Description: Indicator if the samples for the xmodalix are paired,
+  Type: typing.Optional
 ... [output truncated]
 ```
 
@@ -1027,8 +1051,29 @@ result_new_data = vanillix.predict(data=my_datapackage)
 result_new_data = vanillix.predict(data=my_datapackage)
 
 ```
-Reproducibility settings for device cpu are not implemented or necessary i.e. for cpu.
 in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
+```
+
+```
+Processed 32 / 600 samples
+Processed 64 / 600 samples
+Processed 96 / 600 samples
+Processed 128 / 600 samples
+Processed 160 / 600 samples
+Processed 192 / 600 samples
+Processed 224 / 600 samples
+Processed 256 / 600 samples
+Processed 288 / 600 samples
+Processed 320 / 600 samples
+Processed 352 / 600 samples
+Processed 384 / 600 samples
+Processed 416 / 600 samples
+Processed 448 / 600 samples
+Processed 480 / 600 samples
+Processed 512 / 600 samples
+Processed 544 / 600 samples
+Processed 576 / 600 samples
+Processed 600 / 600 samples
 n_samples in format recon: 600
 train
 n_samples from datatpackge: {'paired_count': 600}
@@ -1054,19 +1099,14 @@ import numpy as np import torch latent = result.latentspaces.get(split="test", e
 Out\[17\]:
 
 ```
-tensor([[ 1.5274e-01, -3.6452e-01, -5.3712e-01,  ...,  2.6847e-01,
-         -5.4154e-01, -6.7944e-01],
-        [ 2.1247e-02, -2.8497e-01, -7.1899e-01,  ...,  3.8997e-01,
-         -6.6211e-01, -5.5211e-01],
-        [ 2.4753e-01,  6.3635e-01,  6.0138e-01,  ...,  5.4399e-01,
-          6.5083e-01, -3.9466e-01],
+tensor([[-0.4304, -0.2681, -0.2412,  ..., -1.3200,  0.8084, -0.8658],
+        [-0.3750, -0.1470, -0.2641,  ..., -1.0700,  1.0863, -0.9298],
+        [ 0.9424,  0.0343,  0.6352,  ...,  0.2740, -0.2897,  0.5896],
         ...,
-        [ 2.3143e+00, -3.6618e-02,  6.0653e-01,  ...,  2.0298e-01,
-          5.3058e-01,  1.1579e-03],
-        [-3.6200e-01,  2.3870e-01, -1.9901e-01,  ...,  6.1861e-01,
-         -4.2072e-02,  6.5539e-01],
-        [-2.3190e-01, -9.3487e-02, -1.8447e-01,  ...,  4.6633e-01,
-         -4.2388e-01,  4.2086e-01]])
+        [ 0.6976,  2.1484, -0.1087,  ..., -0.1757,  0.3993,  0.4391],
+        [ 0.6244,  0.2073,  0.3800,  ...,  0.6812,  0.0954,  0.4772],
+        [-0.1691, -0.0496, -0.2324,  ...,  0.5676, -0.4408, -0.1914]],
+       device='cuda:0')
 ```
 
 #### Generate New Data[¶](#generate-new-data)
@@ -1094,7 +1134,6 @@ import torch
 if torch.backends.mps.is_available(): torch.mps.empty_cache() generated_reconstructions = vanillix.generate(n_samples=300) print(f"Generated reconstructions shape: {generated_reconstructions.shape}")
 
 ```
-Reproducibility settings for device cpu are not implemented or necessary i.e. for cpu.
 Generated reconstructions shape: torch.Size([300, 2000])
 ```
 
@@ -1110,7 +1149,6 @@ print(f"Generated from prior shape: {generated_from_prior.shape}")
 generated_from_prior = vanillix.generate(latent_prior=new_latent) print(f"Generated from prior shape: {generated_from_prior.shape}")
 
 ```
-Reproducibility settings for device cpu are not implemented or necessary i.e. for cpu.
 Generated from prior shape: torch.Size([600, 2000])
 ```
 
@@ -1188,10 +1226,16 @@ vanillix_loaded = acx.Vanillix.load(outpath)
 
 ```
 Preprocessor saved successfully.
+```
+
+```
 Pipeline object saved successfully.
-PKL files: ['tutorial_res/van_preprocessor.pkl', 'tutorial_res/stackix_preprocessor.pkl']
-Model files: ['tutorial_res/stackix_model.pth', 'tutorial_res/van_model.pth']
+PKL files: ['tutorial_res/supervisix_preprocessor.pkl', 'tutorial_res/van_preprocessor.pkl', 'tutorial_res/stackix_preprocessor.pkl']
+Model files: ['tutorial_res/stackix_model.pth', 'tutorial_res/supervisix_model.pth', 'tutorial_res/van_model.pth']
 Attempting to load a pipeline from tutorial_res/van...
+```
+
+```
 Pipeline object loaded successfully. Actual type: Vanillix
 Preprocessor loaded successfully.
 ```
@@ -1208,8 +1252,29 @@ vanillix_loaded.visualize()
 vanillix_loaded.predict(data=my_datapackage) vanillix_loaded.visualize()
 
 ```
-Reproducibility settings for device cpu are not implemented or necessary i.e. for cpu.
 in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
+```
+
+```
+Processed 32 / 600 samples
+Processed 64 / 600 samples
+Processed 96 / 600 samples
+Processed 128 / 600 samples
+Processed 160 / 600 samples
+Processed 192 / 600 samples
+Processed 224 / 600 samples
+Processed 256 / 600 samples
+Processed 288 / 600 samples
+Processed 320 / 600 samples
+Processed 352 / 600 samples
+Processed 384 / 600 samples
+Processed 416 / 600 samples
+Processed 448 / 600 samples
+Processed 480 / 600 samples
+Processed 512 / 600 samples
+Processed 544 / 600 samples
+Processed 576 / 600 samples
+Processed 600 / 600 samples
 n_samples in format recon: 600
 train
 n_samples from datatpackge: {'paired_count': 600}
@@ -1251,8 +1316,29 @@ vanillix_loaded.show_result(params=["CANCER_TYPE"])
 vanillix_loaded.predict(data=my_datapackage) vanillix_loaded.show_result(params=["CANCER_TYPE"])
 
 ```
-Reproducibility settings for device cpu are not implemented or necessary i.e. for cpu.
 in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
+```
+
+```
+Processed 32 / 600 samples
+Processed 64 / 600 samples
+Processed 96 / 600 samples
+Processed 128 / 600 samples
+Processed 160 / 600 samples
+Processed 192 / 600 samples
+Processed 224 / 600 samples
+Processed 256 / 600 samples
+Processed 288 / 600 samples
+Processed 320 / 600 samples
+Processed 352 / 600 samples
+Processed 384 / 600 samples
+Processed 416 / 600 samples
+Processed 448 / 600 samples
+Processed 480 / 600 samples
+Processed 512 / 600 samples
+Processed 544 / 600 samples
+Processed 576 / 600 samples
+Processed 600 / 600 samples
 n_samples in format recon: 600
 train
 n_samples from datatpackge: {'paired_count': 600}

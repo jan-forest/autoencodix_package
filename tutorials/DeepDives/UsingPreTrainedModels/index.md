@@ -42,21 +42,27 @@ model_file = model_file + "/large_ontix_final_model_Dim16_GPT5.6_TerraPro.pkl"
 
 print("Loading trained model ...")
 loaded_ontix = acx.Ontix.load(file_path=model_file)
-loaded_ontix._trainer._config.device = "cpu"  # Switch device if you want to run on CPU or GPU
+loaded_ontix._trainer._config.device = "auto"  # "auto" uses a GPU when available
+# loaded_ontix._trainer._config.device = "cpu"  # uncomment to force CPU
 # loaded_ontix._trainer._config.save_vram = True  # Enable memory saving for prediction
 ```
 
-from huggingface_hub import snapshot_download import autoencodix as acx model_name = "Ontix-Dim16-GPT5-6" repo_id = f"autoencodix/{model_name}" model_file = snapshot_download( repo_id=repo_id, ) model_file = model_file + "/large_ontix_final_model_Dim16_GPT5.6_TerraPro.pkl" print("Loading trained model ...") loaded_ontix = acx.Ontix.load(file_path=model_file) loaded_ontix.\_trainer.\_config.device = "cpu" # Switch device if you want to run on CPU or GPU
+from huggingface_hub import snapshot_download import autoencodix as acx model_name = "Ontix-Dim16-GPT5-6" repo_id = f"autoencodix/{model_name}" model_file = snapshot_download( repo_id=repo_id, ) model_file = model_file + "/large_ontix_final_model_Dim16_GPT5.6_TerraPro.pkl" print("Loading trained model ...") loaded_ontix = acx.Ontix.load(file_path=model_file) loaded_ontix.\_trainer.\_config.device = "auto" # "auto" uses a GPU when available
+
+# loaded_ontix.\_trainer.\_config.device = "cpu" # uncomment to force CPU
 
 # loaded_ontix.\_trainer.\_config.save_vram = True # Enable memory saving for prediction
 
 ```
-Fetching 6 files:   0%|          | 0/6 [00:00<?, ?it/s]
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]
 ```
 
 ```
 Loading trained model ...
-Attempting to load a pipeline from /home/ewald/.cache/huggingface/hub/models--autoencodix--Ontix-Dim16-GPT5-6/snapshots/192a8b01b94afc684c8fa25e6f1a226e6111cc14/large_ontix_final_model_Dim16_GPT5.6_TerraPro.pkl...
+Attempting to load a pipeline from /home/janew/.cache/huggingface/hub/models--autoencodix--Ontix-Dim16-GPT5-6/snapshots/16cf346242cb095e3e627253c4aee8c5ea560646/large_ontix_final_model_Dim16_GPT5.6_TerraPro.pkl...
+```
+
+```
 Pipeline object loaded successfully. Actual type: Ontix
 Preprocessor loaded successfully.
 ```
@@ -211,6 +217,25 @@ print("Calculate embeddings ...") result = loaded_ontix.predict(data=acx_contain
 
 ```
 Calculate embeddings ...
+```
+
+```
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+```
+
+```
+Processed 3097 / 10000 samples
+```
+
+```
+Processed 6194 / 10000 samples
+```
+
+```
+Processed 9291 / 10000 samples
+```
+
+```
 Processed 10000 / 10000 samples
 ```
 
@@ -317,66 +342,66 @@ train_score_std
 
 0
 dim01_energy_production_and_central_catabolism
-0.770242
-0.010872
-0.770508
-0.002735
+0.768002
+0.008308
+0.768143
+0.002088
 
 
 15
 dim16_redox_detoxification_and_xenobiotic_meta...
-0.755611
-0.007882
-0.755301
-0.001928
+0.752680
+0.010673
+0.752647
+0.002711
 
 
 8
 dim09_cytoskeleton_motility_and_cell_adhesion
-0.721482
-0.006976
-0.721591
-0.001704
+0.722490
+0.007916
+0.722647
+0.001881
 
 
 11
 dim12_immune_surveillance_inflammation_and_hos...
-0.718404
-0.019341
-0.718893
-0.004999
+0.718464
+0.020330
+0.718967
+0.005208
 
 
 1
 dim02_anabolic_biosynthesis_and_biomass_genera...
-0.712508
-0.012168
-0.712717
-0.003078
+0.714642
+0.011844
+0.714871
+0.002977
 
 
 3
 dim04_cell_cycle_proliferation_and_division
-0.702064
-0.009938
-0.702320
-0.002425
+0.703670
+0.010490
+0.703994
+0.002534
 
 
 2
 dim03_protein_synthesis_folding_and_turnover
-0.684031
-0.013247
-0.684122
-0.003327
+0.683686
+0.013893
+0.683780
+0.003480
 
 
 4
 dim05_genome_integrity_and_dna_repair
-0.667779
-0.014805
-0.667835
-0.003734
+0.665830
+0.017209
+0.666094
+0.004335
 
 
 14

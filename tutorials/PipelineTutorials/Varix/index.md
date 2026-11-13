@@ -60,7 +60,7 @@ print(f"Changed to: {os.getcwd()}")
 import os p = os.getcwd() d = "autoencodix_package" if d not in p: raise FileNotFoundError(f"'{d}' not found in path: {p}") os.chdir(os.sep.join(p.split(os.sep)[: p.split(os.sep).index(d) + 1])) print(f"Changed to: {os.getcwd()}")
 
 ```
-Changed to: /home/alicia/dev/biomarker_autoencoder/autoencodix_package
+Changed to: /home/janew/ACX/autoencodix_package
 ```
 
 ## Requirements 2: Obtain tutorial data or use own data[¶](#requirements-2-obtain-tutorial-data-or-use-own-data)
@@ -187,24 +187,123 @@ mudata: View of MuData object with n_obs × n_vars = 8000 × 8189
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 13.2772 exceeded max norm of 5.
+Processing 1 MuData objects: ['multi_sc']
+Processing train modality: multi_sc
+```
+
+```
+Processing valid split
+Processing valid modality: multi_sc
+Processing test split
+Processing test modality: multi_sc
+```
+
+```
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 13.9460 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 5 - Train Loss: 1772.1442
-Sub-losses: recon_loss: 1772.1319, var_loss: 0.0123, anneal_factor: 0.0007, effective_beta_factor: 0.0001
-Epoch 5 - Valid Loss: 1632.8667
-Sub-losses: recon_loss: 1632.8576, var_loss: 0.0092, anneal_factor: 0.0007, effective_beta_factor: 0.0001
-Epoch 10 - Train Loss: 1720.7331
-Sub-losses: recon_loss: 1720.1487, var_loss: 0.5844, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 10 - Valid Loss: 1593.5738
-Sub-losses: recon_loss: 1593.0346, var_loss: 0.5393, anneal_factor: 0.0180, effective_beta_factor: 0.0018
-Epoch 15 - Train Loss: 1710.1009
-Sub-losses: recon_loss: 1701.1942, var_loss: 8.9067, anneal_factor: 0.3392, effective_beta_factor: 0.0339
-Epoch 15 - Valid Loss: 1585.0462
-Sub-losses: recon_loss: 1577.8735, var_loss: 7.1727, anneal_factor: 0.339
+Epoch 5 - Train Loss: 1774.9840
+Sub-losses: recon_loss: 1774.9734, var_loss: 0.0106, anneal_factor: 0.0007, effective_beta_factor: 0.0001
+Epoch 5 - Valid Loss: 1586.1633
+Sub-losses: recon_loss: 1586.1513, var_loss: 0.0120, anneal_factor: 0.0007, effective_beta_factor: 0.0001
+```
+
+```
+Epoch 10 - Train Loss: 1731.5486
+Sub-losses: recon_loss: 1730.9184, var_loss: 0.6302, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+Epoch 10 - Valid Loss: 1550.8277
+Sub-losses: recon_loss: 1550.1988, var_loss: 0.6289, anneal_factor: 0.0180, effective_beta_factor: 0.0018
+```
+
+```
+Epoch 15 - Train Loss: 1721.2885
+Sub-losses: recon_loss: 1711.8086, var_loss: 9.4799, anneal_factor: 0.3392, effective_beta_factor: 0.0339
+Epoch 15 - Valid Loss: 1546.6144
+Sub-losses: recon_loss: 1538.1241, var_loss: 8.4904, anneal_factor: 0.3392, effective_beta_factor: 0.0339
+```
+
+```
+Epoch 20 - Train Loss: 1713.1763
+Sub-losses: recon_loss: 1702.2103, var_loss: 10.9660, anneal_factor: 0.9350, effective_beta_factor: 0.0935
+Epoch 20 - Valid Loss: 1542.9735
+Sub-losses: recon_loss: 1533.1573, var_loss: 9.8161, anneal_factor: 0.9350, effective_beta_factor: 0.0935
+```
+
+```
+Epoch 25 - Train Loss: 1703.6316
+Sub-losses: recon_loss: 1693.3572, var_loss: 10.2744, anneal_factor: 0.9975, effective_beta_factor: 0.0998
+```
+
+```
+Epoch 25 - Valid Loss: 1534.5916
+Sub-losses: recon_loss: 1526.1381, var_loss: 8.4535, anneal_factor: 0.9975, effective_beta_factor: 0.0998
+```
+
+```
+Epoch 30 - Train Loss: 1691.5348
+Sub-losses: recon_loss: 1681.4464, var_loss: 10.0884, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+```
+
+```
+Epoch 30 - Valid Loss: 1526.7488
+Sub-losses: recon_loss: 1518.0554, var_loss: 8.6934, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Processed 32 / 1600 samples
+Processed 64 / 1600 samples
+Processed 96 / 1600 samples
+Processed 128 / 1600 samples
+Processed 160 / 1600 samples
+Processed 192 / 1600 samples
+Processed 224 / 1600 samples
+Processed 256 / 1600 samples
+Processed 288 / 1600 samples
+Processed 320 / 1600 samples
+Processed 352 / 1600 samples
+Processed 384 / 1600 samples
+Processed 416 / 1600 samples
+Processed 448 / 1600 samples
+Processed 480 / 1600 samples
+Processed 512 / 1600 samples
+Processed 544 / 1600 samples
+Processed 576 / 1600 samples
+Processed 608 / 1600 samples
+Processed 640 / 1600 samples
+Processed 672 / 1600 samples
+Processed 704 / 1600 samples
+Processed 736 / 1600 samp
 ... [output truncated]
+```
+
+```
+Processed 864 / 1600 samples
+Processed 896 / 1600 samples
+Processed 928 / 1600 samples
+Processed 960 / 1600 samples
+Processed 992 / 1600 samples
+Processed 1024 / 1600 samples
+Processed 1056 / 1600 samples
+Processed 1088 / 1600 samples
+Processed 1120 / 1600 samples
+Processed 1152 / 1600 samples
+Processed 1184 / 1600 samples
+Processed 1216 / 1600 samples
+Processed 1248 / 1600 samples
+Processed 1280 / 1600 samples
+Processed 1312 / 1600 samples
+Processed 1344 / 1600 samples
+Processed 1376 / 1600 samples
+Processed 1408 / 1600 samples
+Processed 1440 / 1600 samples
+Processed 1472 / 1600 samples
+Processed 1504 / 1600 samples
+Processed 1536 / 1600 samples
+Processed 1568 / 1600 samples
+Processed 1600 / 1600 samples
 ```
 
 ## 2) Specific Varix Steps (with Beta Annealing Explanation)[¶](#2-specific-varix-steps-with-beta-annealing-explanation)
@@ -271,16 +370,19 @@ sampled latent space shape: torch.Size([100, 16])
 Out\[5\]:
 
 ```
-tensor([[ 3.9897,  4.1779,  1.8247,  2.3360,  1.1621,  6.5704,  4.2918,  0.8106,
-          1.2946, -1.0189,  3.0731,  3.7557,  1.0169,  5.1850,  3.3394,  2.4349],
-        [ 5.4976,  3.6496,  2.7947,  1.3314,  2.6984,  5.9357,  3.2230, -1.7498,
-          0.4365,  0.9875, -0.4079,  5.1207,  3.0713,  3.0493,  3.3609,  2.9824],
-        [ 4.2046,  2.2885,  4.5450,  0.0513,  1.7615,  7.2449,  4.5604,  0.9969,
-          2.8329,  3.4808,  2.3766,  3.0640,  1.7307,  6.3812,  3.9349,  1.3993],
-        [ 4.6709,  3.0498,  1.0624,  1.7734,  0.0657,  5.5635,  3.4210, -2.4210,
-         -0.4838,  1.5256, -0.5709,  5.5177,  3.0401,  4.6961,  2.1426,  2.6823],
-        [ 4.4480,  2.9986,  3.1832,  1.2259,  3.6005,  5.0852,  3.9627, -0.7497,
-          1.2437,  2.3503,  0.5664,  6.6973,  3.5103,  4.7849,  2.
+tensor([[-9.0151e-01,  4.1121e+00,  2.0569e+00,  4.6674e+00, -3.5426e-01,
+          4.4271e+00,  2.9221e+00,  3.7027e+00,  5.5142e+00,  2.4096e+00,
+          3.4524e+00,  3.3114e+00,  1.6839e+00,  3.1980e+00,  5.6445e+00,
+          7.5028e-01],
+        [-6.2570e-01,  4.3095e+00,  2.0333e+00,  5.1628e+00,  1.2702e+00,
+          5.7894e+00,  2.5599e+00,  1.0660e+00,  5.2623e+00,  2.0217e+00,
+          5.3762e+00,  1.7210e+00,  2.3712e+00,  2.3283e+00,  1.2552e+00,
+          1.7572e+00],
+        [ 1.9471e-01,  4.2462e+00, -1.8693e+00,  4.1160e+00,  9.0699e-01,
+          4.0397e+00,  2.3787e+00,  3.0838e+00,  3.5594e+00,  4.9432e+00,
+          4.8438e+00,  2.5668e+00,  2.2467e+00,  2.7558e+00,  2.5294e+00,
+          7.5489e-01],
+        [ 2.4275e-01,  2.5891e+00,  1.5906e+00,  5.0505e+00,  3.
 ... [output truncated]
 ```
 
@@ -321,7 +423,7 @@ keys: dict_keys(['recon_loss', 'var_loss', 'anneal_factor', 'effective_beta_fact
 
 
 Value of reconstruction loss in epoch 4 for train split
-1772.131879185268
+1774.9734127371653
 ```
 
 ## 4) Show Visualizations[¶](#4-show-visualizations)
@@ -440,24 +542,114 @@ mudata: View of MuData object with n_obs × n_vars = 8000 × 8189
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 11.8769 exceeded max norm of 5.
+Processing 1 MuData objects: ['multi_sc']
+Processing train modality: multi_sc
+```
+
+```
+Processing valid split
+Processing valid modality: multi_sc
+Processing test split
+Processing test modality: multi_sc
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 11.8250 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 1716.3193
-Sub-losses: recon_loss: 1716.3193, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
-Epoch 10 - Valid Loss: 1702.9074
-Sub-losses: recon_loss: 1702.9074, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
-Epoch 20 - Train Loss: 1682.3635
-Sub-losses: recon_loss: 1677.4623, var_loss: 4.9012, anneal_factor: 0.1400, effective_beta_factor: 0.2100
-Epoch 20 - Valid Loss: 1681.6059
-Sub-losses: recon_loss: 1676.8131, var_loss: 4.7928, anneal_factor: 0.1400, effective_beta_factor: 0.2100
-Epoch 30 - Train Loss: 1678.1424
-Sub-losses: recon_loss: 1661.8913, var_loss: 16.2512, anneal_factor: 0.7400, effective_beta_factor: 1.1100
-Epoch 30 - Valid Loss: 1680.7923
-Sub-losses: recon_loss: 1666.1517, var_loss: 14.6406, anneal_factor: 0
-... [output truncated]
+Epoch 10 - Train Loss: 1722.1053
+Sub-losses: recon_loss: 1722.1053, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
+Epoch 10 - Valid Loss: 1911.5156
+Sub-losses: recon_loss: 1911.5156, var_loss: 0.0000, anneal_factor: 0.0000, effective_beta_factor: 0.0000
+```
+
+```
+Epoch 20 - Train Loss: 1693.3474
+Sub-losses: recon_loss: 1688.5897, var_loss: 4.7578, anneal_factor: 0.1400, effective_beta_factor: 0.2100
+Epoch 20 - Valid Loss: 1890.6848
+Sub-losses: recon_loss: 1885.8566, var_loss: 4.8282, anneal_factor: 0.1400, effective_beta_factor: 0.2100
+```
+
+```
+Epoch 30 - Train Loss: 1686.8980
+Sub-losses: recon_loss: 1670.2706, var_loss: 16.6274, anneal_factor: 0.7400, effective_beta_factor: 1.1100
+Epoch 30 - Valid Loss: 1886.2877
+Sub-losses: recon_loss: 1870.9648, var_loss: 15.3229, anneal_factor: 0.7400, effective_beta_factor: 1.1100
+```
+
+```
+Epoch 40 - Train Loss: 1673.4968
+Sub-losses: recon_loss: 1656.1596, var_loss: 17.3372, anneal_factor: 1.0000, effective_beta_factor: 1.5000
+Epoch 40 - Valid Loss: 1875.6428
+Sub-losses: recon_loss: 1858.4759, var_loss: 17.1669, anneal_factor: 1.0000, effective_beta_factor: 1.5000
+```
+
+```
+Epoch 50 - Train Loss: 1661.7413
+Sub-losses: recon_loss: 1644.8980, var_loss: 16.8434, anneal_factor: 1.0000, effective_beta_factor: 1.5000
+```
+
+```
+Epoch 50 - Valid Loss: 1870.6242
+Sub-losses: recon_loss: 1855.3265, var_loss: 15.2977, anneal_factor: 1.0000, effective_beta_factor: 1.5000
+Processed 32 / 1600 samples
+Processed 64 / 1600 samples
+Processed 96 / 1600 samples
+Processed 128 / 1600 samples
+Processed 160 / 1600 samples
+Processed 192 / 1600 samples
+Processed 224 / 1600 samples
+Processed 256 / 1600 samples
+Processed 288 / 1600 samples
+Processed 320 / 1600 samples
+Processed 352 / 1600 samples
+```
+
+```
+Processed 384 / 1600 samples
+Processed 416 / 1600 samples
+Processed 448 / 1600 samples
+Processed 480 / 1600 samples
+Processed 512 / 1600 samples
+Processed 544 / 1600 samples
+Processed 576 / 1600 samples
+Processed 608 / 1600 samples
+Processed 640 / 1600 samples
+Processed 672 / 1600 samples
+Processed 704 / 1600 samples
+Processed 736 / 1600 samples
+Processed 768 / 1600 samples
+Processed 800 / 1600 samples
+Processed 832 / 1600 samples
+Processed 864 / 1600 samples
+Processed 896 / 1600 samples
+Processed 928 / 1600 samples
+Processed 960 / 1600 samples
+Processed 992 / 1600 samples
+Processed 1024 / 1600 samples
+Processed 1056 / 1600 samples
+Processed 1088 / 1600 samples
+Processed 1120 / 1600 samples
+```
+
+```
+Processed 1152 / 1600 samples
+Processed 1184 / 1600 samples
+Processed 1216 / 1600 samples
+Processed 1248 / 1600 samples
+Processed 1280 / 1600 samples
+Processed 1312 / 1600 samples
+Processed 1344 / 1600 samples
+Processed 1376 / 1600 samples
+Processed 1408 / 1600 samples
+Processed 1440 / 1600 samples
+Processed 1472 / 1600 samples
+Processed 1504 / 1600 samples
+Processed 1536 / 1600 samples
+Processed 1568 / 1600 samples
+Processed 1600 / 1600 samples
 ```
 
 In \[11\]:
@@ -521,36 +713,299 @@ varix_loaded = acx.Varix.load(outpath) varix_loaded.predict(data=sc_data) varix_
 
 ```
 Preprocessor saved successfully.
+```
+
+```
 saving memory efficient
+```
+
+```
 Pipeline object saved successfully.
-PKL files: ['tutorial_res/varix_preprocessor.pkl', 'tutorial_res/ontix_reactome_preprocessor.pkl', 'tutorial_res/ontix.pkl', 'tutorial_res/maskix_preprocessor.pkl', 'tutorial_res/imagix.pkl', 'tutorial_res/ontix_preprocessor.pkl', 'tutorial_res/disent.pkl', 'tutorial_res/imagix_preprocessor.pkl', 'tutorial_res/ontix_reactome.pkl', 'tutorial_res/disent_preprocessor.pkl']
-Model files: ['tutorial_res/varix_model.pth', 'tutorial_res/ontix_reactome_model.pth', 'tutorial_res/disent_model.pth', 'tutorial_res/imagix_model.pth', 'tutorial_res/ontix_model.pth', 'tutorial_res/maskix_model.pth']
-Attempting to load a pipeline from tutorial_res/varix...
-Pipeline object loaded successfully. Actual type: Varix
-Pr
+PKL files: ['tutorial_res/ontix_reactome_preprocessor.pkl', 'tutorial_res/ontix.pkl', 'tutorial_res/imagix_preprocessor.pkl', 'tutorial_res/varix_preprocessor.pkl', 'tutorial_res/imagix.pkl', 'tutorial_res/ontix_reactome.pkl', 'tutorial_res/supervisix_preprocessor.pkl', 'tutorial_res/maskix_preprocessor.pkl', 'tutorial_res/imagix3d_preprocessor.pkl', 'tutorial_res/xmodalix_preprocessor.pkl', 'tutorial_res/xmodalix.pkl', 'tutorial_res/imagix3d.pkl', 'tutorial_res/disent.pkl', 'tutorial_res/disent_preprocessor.pkl', 'tutorial_res/ontix_preprocessor.pkl']
+Model files: ['tutorial_res/imagix3d_model.pth', 'tutorial_res/imagix_model.pth', 'tutorial_res/disent_model.pth', 'tutorial_res/supervisix_model.pth', 'tutorial_res/img.img_xmodalix_model.pth', 'tutorial
 ... [output truncated]
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 29 and split 'train'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
-
-
-  warnings.warn(
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 29 and split 'valid'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
-
-
-  warnings.warn(
+Pipeline object loaded successfully. Actual type: Varix
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 29 and split 'train'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
+Preprocessor loaded successfully.
+in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
+```
 
+```
+mudata: View of MuData object with n_obs × n_vars = 8000 × 8189
+  var:	'soma_joinid', 'feature_id', 'feature_name', 'feature_type', 'feature_length', 'nnz', 'n_measured_obs'
+  1 modality
+    rna:	8000 x 8189
+      obs:	'soma_joinid', 'dataset_id', 'assay', 'assay_ontology_term_id', 'cell_type', 'cell_type_ontology_term_id', 'development_stage', 'development_stage_ontology_term_id', 'disease', 'disease_ontology_term_id', 'donor_id', 'is_primary_data', 'observation_joinid', 'self_reported_ethnicity', 'self_reported_ethnicity_ontology_term_id', 'sex', 'sex_ontology_term_id', 'suspension_type', 'tissue', 'tissue_ontology_term_id', 'tissue_type', 'tissue_general', 'tissue_general_ontology_term_id', 'raw_sum', 'nnz', 'raw_mean_nnz', 'raw_variance_nnz', 'n_measured_vars', 'n_genes'
+      var:	's
+... [output truncated]
+```
 
-  warnings.warn(
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 29 and split 'valid'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
+```
+Processed 32 / 8000 samples
+Processed 64 / 8000 samples
+Processed 96 / 8000 samples
+Processed 128 / 8000 samples
+Processed 160 / 8000 samples
+Processed 192 / 8000 samples
+Processed 224 / 8000 samples
+Processed 256 / 8000 samples
+Processed 288 / 8000 samples
+Processed 320 / 8000 samples
+Processed 352 / 8000 samples
+Processed 384 / 8000 samples
+Processed 416 / 8000 samples
+Processed 448 / 8000 samples
+Processed 480 / 8000 samples
+Processed 512 / 8000 samples
+Processed 544 / 8000 samples
+Processed 576 / 8000 samples
+Processed 608 / 8000 samples
+Processed 640 / 8000 samples
+Processed 672 / 8000 samples
+Processed 704 / 8000 samples
+```
 
+```
+Processed 736 / 8000 samples
+Processed 768 / 8000 samples
+Processed 800 / 8000 samples
+Processed 832 / 8000 samples
+Processed 864 / 8000 samples
+Processed 896 / 8000 samples
+Processed 928 / 8000 samples
+Processed 960 / 8000 samples
+Processed 992 / 8000 samples
+Processed 1024 / 8000 samples
+Processed 1056 / 8000 samples
+Processed 1088 / 8000 samples
+Processed 1120 / 8000 samples
+Processed 1152 / 8000 samples
+Processed 1184 / 8000 samples
+Processed 1216 / 8000 samples
+Processed 1248 / 8000 samples
+Processed 1280 / 8000 samples
+Processed 1312 / 8000 samples
+Processed 1344 / 8000 samples
+Processed 1376 / 8000 samples
+Processed 1408 / 8000 samples
+Processed 1440 / 8000 samples
+```
 
-  warnings.warn(
+```
+Processed 1472 / 8000 samples
+Processed 1504 / 8000 samples
+Processed 1536 / 8000 samples
+Processed 1568 / 8000 samples
+Processed 1600 / 8000 samples
+Processed 1632 / 8000 samples
+Processed 1664 / 8000 samples
+Processed 1696 / 8000 samples
+Processed 1728 / 8000 samples
+Processed 1760 / 8000 samples
+Processed 1792 / 8000 samples
+Processed 1824 / 8000 samples
+Processed 1856 / 8000 samples
+Processed 1888 / 8000 samples
+Processed 1920 / 8000 samples
+Processed 1952 / 8000 samples
+Processed 1984 / 8000 samples
+Processed 2016 / 8000 samples
+Processed 2048 / 8000 samples
+Processed 2080 / 8000 samples
+Processed 2112 / 8000 samples
+Processed 2144 / 8000 samples
+Processed 2176 / 8000 samples
+Processed 2208 / 8000 samples
+Processed 2240 / 8000 samples
+Processed 2272 / 8000 samples
+```
+
+```
+Processed 2304 / 8000 samples
+Processed 2336 / 8000 samples
+Processed 2368 / 8000 samples
+Processed 2400 / 8000 samples
+Processed 2432 / 8000 samples
+Processed 2464 / 8000 samples
+Processed 2496 / 8000 samples
+Processed 2528 / 8000 samples
+Processed 2560 / 8000 samples
+Processed 2592 / 8000 samples
+Processed 2624 / 8000 samples
+Processed 2656 / 8000 samples
+Processed 2688 / 8000 samples
+Processed 2720 / 8000 samples
+Processed 2752 / 8000 samples
+Processed 2784 / 8000 samples
+Processed 2816 / 8000 samples
+Processed 2848 / 8000 samples
+Processed 2880 / 8000 samples
+Processed 2912 / 8000 samples
+Processed 2944 / 8000 samples
+Processed 2976 / 8000 samples
+Processed 3008 / 8000 samples
+Processed 3040 / 8000 samples
+Processed 3072 / 8000 samples
+Processed 3104 / 8000 samples
+Processed 3136 / 80
+... [output truncated]
+```
+
+```
+Processed 3296 / 8000 samples
+Processed 3328 / 8000 samples
+Processed 3360 / 8000 samples
+Processed 3392 / 8000 samples
+Processed 3424 / 8000 samples
+Processed 3456 / 8000 samples
+Processed 3488 / 8000 samples
+Processed 3520 / 8000 samples
+Processed 3552 / 8000 samples
+Processed 3584 / 8000 samples
+Processed 3616 / 8000 samples
+Processed 3648 / 8000 samples
+Processed 3680 / 8000 samples
+Processed 3712 / 8000 samples
+Processed 3744 / 8000 samples
+Processed 3776 / 8000 samples
+Processed 3808 / 8000 samples
+Processed 3840 / 8000 samples
+Processed 3872 / 8000 samples
+Processed 3904 / 8000 samples
+Processed 3936 / 8000 samples
+Processed 3968 / 8000 samples
+Processed 4000 / 8000 samples
+```
+
+```
+Processed 4032 / 8000 samples
+Processed 4064 / 8000 samples
+Processed 4096 / 8000 samples
+Processed 4128 / 8000 samples
+Processed 4160 / 8000 samples
+Processed 4192 / 8000 samples
+Processed 4224 / 8000 samples
+Processed 4256 / 8000 samples
+Processed 4288 / 8000 samples
+Processed 4320 / 8000 samples
+Processed 4352 / 8000 samples
+Processed 4384 / 8000 samples
+Processed 4416 / 8000 samples
+Processed 4448 / 8000 samples
+Processed 4480 / 8000 samples
+Processed 4512 / 8000 samples
+Processed 4544 / 8000 samples
+Processed 4576 / 8000 samples
+Processed 4608 / 8000 samples
+Processed 4640 / 8000 samples
+Processed 4672 / 8000 samples
+Processed 4704 / 8000 samples
+Processed 4736 / 8000 samples
+```
+
+```
+Processed 4768 / 8000 samples
+Processed 4800 / 8000 samples
+Processed 4832 / 8000 samples
+Processed 4864 / 8000 samples
+Processed 4896 / 8000 samples
+Processed 4928 / 8000 samples
+Processed 4960 / 8000 samples
+Processed 4992 / 8000 samples
+Processed 5024 / 8000 samples
+Processed 5056 / 8000 samples
+Processed 5088 / 8000 samples
+Processed 5120 / 8000 samples
+Processed 5152 / 8000 samples
+Processed 5184 / 8000 samples
+Processed 5216 / 8000 samples
+Processed 5248 / 8000 samples
+Processed 5280 / 8000 samples
+Processed 5312 / 8000 samples
+Processed 5344 / 8000 samples
+Processed 5376 / 8000 samples
+Processed 5408 / 8000 samples
+Processed 5440 / 8000 samples
+Processed 5472 / 8000 samples
+```
+
+```
+Processed 5504 / 8000 samples
+Processed 5536 / 8000 samples
+Processed 5568 / 8000 samples
+Processed 5600 / 8000 samples
+Processed 5632 / 8000 samples
+Processed 5664 / 8000 samples
+Processed 5696 / 8000 samples
+Processed 5728 / 8000 samples
+Processed 5760 / 8000 samples
+Processed 5792 / 8000 samples
+Processed 5824 / 8000 samples
+Processed 5856 / 8000 samples
+Processed 5888 / 8000 samples
+Processed 5920 / 8000 samples
+Processed 5952 / 8000 samples
+Processed 5984 / 8000 samples
+Processed 6016 / 8000 samples
+Processed 6048 / 8000 samples
+Processed 6080 / 8000 samples
+Processed 6112 / 8000 samples
+Processed 6144 / 8000 samples
+Processed 6176 / 8000 samples
+Processed 6208 / 8000 samples
+Processed 6240 / 8000 samples
+Processed 6272 / 8000 samples
+Processed 6304 / 8000 samples
+Processed 6336 / 80
+... [output truncated]
+```
+
+```
+Processed 7072 / 8000 samples
+Processed 7104 / 8000 samples
+Processed 7136 / 8000 samples
+Processed 7168 / 8000 samples
+Processed 7200 / 8000 samples
+Processed 7232 / 8000 samples
+Processed 7264 / 8000 samples
+Processed 7296 / 8000 samples
+Processed 7328 / 8000 samples
+Processed 7360 / 8000 samples
+Processed 7392 / 8000 samples
+Processed 7424 / 8000 samples
+Processed 7456 / 8000 samples
+Processed 7488 / 8000 samples
+Processed 7520 / 8000 samples
+Processed 7552 / 8000 samples
+Processed 7584 / 8000 samples
+Processed 7616 / 8000 samples
+Processed 7648 / 8000 samples
+Processed 7680 / 8000 samples
+Processed 7712 / 8000 samples
+Processed 7744 / 8000 samples
+Processed 7776 / 8000 samples
+```
+
+```
+Processed 7808 / 8000 samples
+Processed 7840 / 8000 samples
+Processed 7872 / 8000 samples
+Processed 7904 / 8000 samples
+Processed 7936 / 8000 samples
+Processed 7968 / 8000 samples
+Processed 8000 / 8000 samples
+n_samples in format recon: 8000
+train
+n_samples from datatpackge: {'paired_count': 8000}
+```
+
+```
+Creating plots ...
 ```
 
 In \[14\]:
@@ -573,16 +1028,17 @@ Perform ML task for target parameter: cell_type
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 29 and split 'train'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
-
-
-  warnings.warn(
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 29 and split 'valid'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
-
-
-  warnings.warn(
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/.venv/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:465: ConvergenceWarning: lbfgs failed to converge (status=1):
-STOP:
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:451: OptimizeWarning: Unknown solver options: iprint
+  opt_res = optimize.minimize(
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:451: OptimizeWarning: Unknown solver options: iprint
+  opt_res = optimize.minimize(
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:451: OptimizeWarning: Unknown solver options: iprint
+  opt_res = optimize.minimize(
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:451: OptimizeWarning: Unknown solver options: iprint
+  opt_res = optimize.minimize(
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:451: OptimizeWarning: Unknown solver options: iprint
+  opt_res = optimize.minimize(
+.venv/lib/python3.12/site-packages
 ... [output truncated]
 ```
 
@@ -601,8 +1057,8 @@ sub_losses: LossRegistry(_losses={'recon_loss': TrainingDynamics(), 'var_loss': 
 preprocessed_data: Tensor of shape (0,)
 model: VarixArchitecture
 model_checkpoints: TrainingDynamics object
-datasets: DatasetContainer(train=None, valid=None, test=None)
-new_datasets: DatasetContainer(train=<autoencodix.data._numeric_dataset.NumericDataset object at 0x725f6510a5c0>, valid=None, test=<autoencodix.data._numeric_dataset.NumericD
+class_means: TrainingDynamics object
+datasets: DatasetContainer(train=<autoencodix.data._numeric_dataset.NumericDataset object at 0x77bd64494fb0>, valid=<autoencodix.data._numeric_dataset.NumericDataset object at 0x77bd653b03b0>, test=<
 ... [output truncated]
 ```
 

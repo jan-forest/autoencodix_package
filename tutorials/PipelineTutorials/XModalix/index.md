@@ -1,6 +1,6 @@
 > **Note:** This environment variable is required for fully deterministic CuBLAS ops on CUDA >= 10.2 when `reproducible=True` is set below. Without it, PyTorch raises a `RuntimeError` instead of training deterministically. It must be set before `torch` is imported. See the [README FAQ](https://jan-forest.github.io/autoencodix_package/tutorials/README.md#reproducibility-and-cublas_workspace_config) for details.
 
-In \[ \]:
+In \[1\]:
 
 Copied!
 
@@ -9,6 +9,10 @@ Copied!
 ```
 
 %env CUBLAS_WORKSPACE_CONFIG=:16:8
+
+```
+env: CUBLAS_WORKSPACE_CONFIG=:16:8
+```
 
 # How To Use XModalix[¶](#how-to-use-xmodalix)
 
@@ -73,7 +77,7 @@ The data for this tutorial is hosted on Hugging Face Hub ([autoencodix/tcga](htt
 
 We assume you are in the root of the package. The following code ensures that the correct paths are used. [1] [Tutorials/DeepDives/ConfigTutorial.ipynb](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/DeepDives/ConfigTutorial.ipynb)
 
-In \[ \]:
+In \[2\]:
 
 Copied!
 
@@ -89,6 +93,10 @@ print(f"Changed to: {os.getcwd()}")
 ```
 
 import os p = os.getcwd() d = "autoencodix_package" if d not in p: raise FileNotFoundError(f"'{d}' not found in path: {p}") os.chdir(os.sep.join(p.split(os.sep)[: p.split(os.sep).index(d) + 1])) print(f"Changed to: {os.getcwd()}")
+
+```
+Changed to: /home/janew/ACX/autoencodix_package
+```
 
 ### Extra 3: Data Assumptions[¶](#extra-3-data-assumptions)
 
@@ -146,7 +154,7 @@ To provide this mapping, you must supply a **global annotation file** that conta
 - To keep results consistent, users should define a `translate_direction` in the config.
 - If you want to change the direction or translate a different pair, you can specify this in the `predict` step (see [Section 3](#3-access-xmodalix-results)).
 
-In \[ \]:
+In \[3\]:
 
 Copied!
 
@@ -190,11 +198,110 @@ import os import pandas as pd import autoencodix as acx from autoencodix.configs
 
 clin_df = pd.read_parquet(clin_path) mapping_df = pd.read_csv(mapping_path, sep="\\t", index_col="sample_ids") clin_df["img_paths"] = mapping_df["img_paths"] os.makedirs("data/raw", exist_ok=True) clin_file = os.path.join("data/raw", "xmodalix_clinical.parquet") clin_df.to_parquet(clin_file) print("First five image paths:") print(clin_df["img_paths"].to_list()[0:5]) print("\\n") clin_df.head()
 
+```
+Current directory: /home/janew/ACX/autoencodix_package
+```
+
+```
+First five image paths:
+['2331_label_0.png', '2332_label_0.png', '2333_label_0.png', '2334_label_0.png', '2335_label_0.png']
+```
+
+Out\[3\]:
+
+```
+PATIENT_ID
+ONCOTREE_CODE
+CANCER_TYPE
+CANCER_TYPE_DETAILED
+TUMOR_TYPE
+GRADE
+TISSUE_PROSPECTIVE_COLLECTION_INDICATOR
+TISSUE_RETROSPECTIVE_COLLECTION_INDICATOR
+TISSUE_SOURCE_SITE_CODE
+TUMOR_TISSUE_SITE
+...
+OS_MONTHS
+DSS_STATUS
+DSS_MONTHS
+DFS_STATUS
+DFS_MONTHS
+PFS_STATUS
+PFS_MONTHS
+GENETIC_ANCESTRY_LABEL
+AJCC_PATHOLOGIC_TUMOR_STAGE_SHORT
+img_paths
+
+
+SAMPLE_ID
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+TCGA-3C-AAAU-01
+TCGA-3C-AAAU
+ILC
+Breast Cancer
+Breast Invasive Lobular Carcinoma
+Infiltrating Lobular Carcinoma
+unknown
+No
+Yes
+3C
+Breast
+...
+133.050597
+0:ALIVE OR DEAD TUMOR FREE
+133.050597
+1:Recurred/Progressed
+59.440444
+1:PROGRESSION
+59.440444
+EUR
+unknown
+2331_label_0.png
+
+
+TCGA-3C-AALI-01
+TCGA-3C-AALI
+IDC
+Breast Cancer
+Breast Invasive Ductal Carcinoma
+Infiltrating Ductal Carcinoma
+unknown
+No
+Yes
+3C
+Breas
+... [output truncated]
+```
+
 Another way is to provide a image-specific annotation file in with the `extra_anno_file` parameter of the DataInfo object in the DataConfig. Here you need to map the sample_id (index) to the image path and can add addtional metadata columns like we did in our `imganno_file`.
 
 > We recommend the first option of a global annotation file.
 
-In \[ \]:
+In \[4\]:
 
 Copied!
 
@@ -208,6 +315,17 @@ img_anno_df.head()
 
 imganno_file = hf_hub_download( repo_id="autoencodix/tcga", repo_type="dataset", filename="xmodalix/tcga_image_mappings.txt" ) img_anno_df = pd.read_csv(imganno_file, sep="\\t", index_col=0) img_anno_df.head()
 
+Out\[4\]:
+
+|                 | img_paths     | extra_class_labels         | CANCER_TYPE_ACRONYM |
+| --------------- | ------------- | -------------------------- | ------------------- |
+| sample_ids      |               |                            |                     |
+| TCGA-05-4244-01 | 0_label_1.png | Non-Small Cell Lung Cancer | LUAD                |
+| TCGA-05-4249-01 | 1_label_1.png | Non-Small Cell Lung Cancer | LUAD                |
+| TCGA-05-4250-01 | 2_label_1.png | Non-Small Cell Lung Cancer | LUAD                |
+| TCGA-05-4382-01 | 3_label_1.png | Non-Small Cell Lung Cancer | LUAD                |
+| TCGA-05-4384-01 | 4_label_1.png | Non-Small Cell Lung Cancer | LUAD                |
+
 ## 1) Initialize and Run XModalix[¶](#1-initialize-and-run-xmodalix)
 
 In this section, we demonstrate how to set up the configuration to account for the data requirements and highlight the custom XModalix parameters.
@@ -217,7 +335,7 @@ For a more in-depth guide on the configuration parameters and input data, see:
 [1] [`Tutorials/DeepDives/ConfigTutorial.ipynb`](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/DeepDives/ConfigTutorial.ipynb)\
 [2] [`Tutorials/DeepDives/InputDataTutorials.ipynb`](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/DeepDives/InputDataTutorials.ipynb)
 
-In \[ \]:
+In \[5\]:
 
 Copied!
 
@@ -251,6 +369,7 @@ xmodalix_config = XModalixConfig(
     loss_reduction="sum",
     pin_memory=False,
     data_case=DataCase.IMG_TO_BULK,
+    annotation_columns=["CANCER_TYPE_ACRONYM"],
     data_config=DataConfig(
         data_info={
             "img": DataInfo(
@@ -273,7 +392,6 @@ xmodalix_config = XModalixConfig(
 
             "anno": DataInfo(file_path=clin_file, data_type="ANNOTATION", sep="\t"),
         },
-        annotation_columns=["CANCER_TYPE_ACRONYM"],
     ),
 )
 
@@ -281,9 +399,81 @@ xmodalix = acx.XModalix(config=xmodalix_config)
 result = xmodalix.run()
 ```
 
-import zipfile rna_file = hf_hub_download(repo_id="autoencodix/tcga", repo_type="dataset", filename="rna.parquet") images_zip = hf_hub_download( repo_id="autoencodix/tcga", repo_type="dataset", filename="xmodalix/tcga_fake_images.zip" ) images_extract_dir = os.path.join("data/raw", "xmodalix_images") if not os.path.isdir(os.path.join(images_extract_dir, "tcga_fake")): with zipfile.ZipFile(images_zip) as zf: zf.extractall(images_extract_dir) img_root = os.path.join(images_extract_dir, "tcga_fake") xmodalix_config = XModalixConfig( checkpoint_interval=100, class_param="CANCER_TYPE", epochs=100, beta=0.1, gamma=10, delta_class=100, delta_pair=300, latent_dim=6, k_filter=1000, batch_size=1014, learning_rate=0.0005, requires_paired=False, loss_reduction="sum", pin_memory=False, data_case=DataCase.IMG_TO_BULK, data_config=DataConfig( data_info={ "img": DataInfo( file_path=img_root, img_height_resize=32, img_width_resize=32, data_type="IMG", scaling="STANDARD", translate_direction="to", pretrain_epochs=50, ), "rna": DataInfo( file_path=rna_file, data_type="NUMERIC", scaling="STANDARD", pretrain_epochs=0, translate_direction="from", ), "anno": DataInfo(file_path=clin_file, data_type="ANNOTATION", sep="\\t"), }, annotation_columns=["CANCER_TYPE_ACRONYM"], ), ) xmodalix = acx.XModalix(config=xmodalix_config) result = xmodalix.run()
+import zipfile rna_file = hf_hub_download(repo_id="autoencodix/tcga", repo_type="dataset", filename="rna.parquet") images_zip = hf_hub_download( repo_id="autoencodix/tcga", repo_type="dataset", filename="xmodalix/tcga_fake_images.zip" ) images_extract_dir = os.path.join("data/raw", "xmodalix_images") if not os.path.isdir(os.path.join(images_extract_dir, "tcga_fake")): with zipfile.ZipFile(images_zip) as zf: zf.extractall(images_extract_dir) img_root = os.path.join(images_extract_dir, "tcga_fake") xmodalix_config = XModalixConfig( checkpoint_interval=100, class_param="CANCER_TYPE", epochs=100, beta=0.1, gamma=10, delta_class=100, delta_pair=300, latent_dim=6, k_filter=1000, batch_size=1014, learning_rate=0.0005, requires_paired=False, loss_reduction="sum", pin_memory=False, data_case=DataCase.IMG_TO_BULK, annotation_columns=["CANCER_TYPE_ACRONYM"], data_config=DataConfig( data_info={ "img": DataInfo( file_path=img_root, img_height_resize=32, img_width_resize=32, data_type="IMG", scaling="STANDARD", translate_direction="to", pretrain_epochs=50, ), "rna": DataInfo( file_path=rna_file, data_type="NUMERIC", scaling="STANDARD", pretrain_epochs=0, translate_direction="from", ), "anno": DataInfo(file_path=clin_file, data_type="ANNOTATION", sep="\\t"), }, ), ) xmodalix = acx.XModalix(config=xmodalix_config) result = xmodalix.run()
 
-In \[ \]:
+```
+reading parquet: /home/janew/.cache/huggingface/hub/datasets--autoencodix--tcga/snapshots/c59ee679d11ea17c0fd615248a382ef1c38ef456/rna.parquet
+```
+
+```
+reading parquet: data/raw/xmodalix_clinical.parquet
+Given image size is possible, rescaling images to: 32x32
+```
+
+```
+Successfully loaded 3230 images for img
+```
+
+```
+anno key: rna
+anno key: img
+```
+
+```
+Converting 2261 images to torch.float32 tensors...
+Converting 646 images to torch.float32 tensors...
+Converting 323 images to torch.float32 tensors...
+key: train, type: <class 'dict'>
+key: valid, type: <class 'dict'>
+key: test, type: <class 'dict'>
+Dataset has UNPAIRED samples → using CoverageEnsuringSampler (2261 paired + 225 unpaired)
+Dataset has UNPAIRED samples → using CoverageEnsuringSampler (323 paired + 32 unpaired)
+```
+
+```
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+```
+
+```
+Check if we need to pretrain: multi_bulk.rna
+pretrain epochs : 0
+No pretraining for multi_bulk.rna
+Check if we need to pretrain: img.img
+pretrain epochs : 50
+starting pretraining for: img.img with <class 'autoencodix.trainers._general_trainer.GeneralTrainer'>
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 2851.1582 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_xmodal_trainer.py:469: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 291.7543 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+--- Epoch 100/100 ---
+```
+
+```
+Epoch 100/100 - Train Loss: 2298.9891
+Sub-losses - adver_loss: 29.9501, aggregated_sub_losses: 1212.4973, paired_loss: 569.9133, class_loss: 486.6284, multi_bulk.rna.recon_loss: 987.3050, multi_bulk.rna.var_loss: 4.5028, multi_bulk.rna.loss: 991.8078, img.img.recon_loss: 214.1520, img.img.var_loss: 6.5375, img.img.loss: 220.6895, clf_loss: 0.6159
+Epoch 100/100 - Valid Loss: 2199.5100
+Sub-losses - adver_loss: 29.8653, aggregated_sub_losses: 1402.2343, paired_loss: 334.4704, class_loss: 432.9402, multi_bulk.rna.recon_loss: 1205.0708, multi_bulk.rna.var_loss: 4.5753, multi_bulk.rna.loss: 1209.6461, img.img.recon_loss: 187.1042, img.img.var_loss: 5.4839, img.img.loss: 192.5881, clf_loss: 0.4551
+Storing checkpoint for epoch 99...
+```
+
+```
+Prediction complete.
+Processing latent space results into a single AnnData object...
+Identified source modality for latent space: 'multi_bulk.rna'
+  - Added 1000 source feature IDs to .uns
+Finished processing latent results.
+```
+
+In \[6\]:
 
 Copied!
 
@@ -293,6 +483,29 @@ xmodalix.predict()
 
 xmodalix.predict()
 
+```
+Prediction complete.
+Processing latent space results into a single AnnData object...
+Identified source modality for latent space: 'multi_bulk.rna'
+  - Added 1000 source feature IDs to .uns
+Finished processing latent results.
+```
+
+Out\[6\]:
+
+```
+Result Object Public Attributes:
+------------------------------
+latentspaces: TrainingDynamics object
+sample_ids: TrainingDynamics object
+reconstructions: TrainingDynamics object
+mus: TrainingDynamics object
+sigmas: TrainingDynamics object
+losses: TrainingDynamics object
+sub_losses: LossRegistry(_losses={'adver_loss': TrainingDynamics(), 'aggregated_sub_losses': TrainingDynamics(), 'paired_loss': TrainingDynamics(), 'class_loss': TrainingDynamics(), 'multi_bulk.rna.recon_loss': TrainingDynamics(), 'multi_bulk.rna.var_loss': TrainingDynamics(), 'multi_bulk.rna.anneal_factor': TrainingDynamics(), 'multi_bulk.rna.effective_beta_factor': TrainingDynamics(), 'multi_bulk.rna.loss': TrainingDynamics(), 'img.img.recon_loss': TrainingDynamics(), 'img.img.var_loss': TrainingDynamics(), 'img.img.ann
+... [output truncated]
+```
+
 ## 2) XModalix Specific Steps[¶](#2-xmodalix-specific-steps)
 
 XModalix does not introduce additional pipeline steps. However, its preprocessing and training differ slightly from Varix and Vanillix. XModalix processes each data modality individually and therefore supports unpaired data input.
@@ -301,7 +514,7 @@ It is also possible to re-run the `predict` step and change the translation pair
 
 Furthermore, the visualization and evaluation steps produce outputs that differ somewhat from the other pipelines, which we will focus on in [Section 4](#4-visualize-and-evaluate-xmodalix).
 
-In \[ \]:
+In \[7\]:
 
 Copied!
 
@@ -323,6 +536,14 @@ result_flipped = xmodalix.predict(from_key="img", to_key="rna")
 
 from copy import deepcopy backup_result = deepcopy(result) result_flipped = xmodalix.predict(from_key="img", to_key="rna")
 
+```
+Prediction complete.
+Processing latent space results into a single AnnData object...
+Identified source modality for latent space: 'multi_bulk.rna'
+  - Added 1000 source feature IDs to .uns
+Finished processing latent results.
+```
+
 ## 3) Access XModalix Results[¶](#3-access-xmodalix-results)
 
 Accessing the results works slightly differently for `XModalix` because we have:
@@ -341,7 +562,7 @@ See the code below for examples and [3] for more details:
 
 [3] [`Tutorials/DeepDives/PipelineOutputTutorial.ipynb`](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/DeepDives/PipelineOutputTutorial.ipynb)
 
-In \[ \]:
+In \[8\]:
 
 Copied!
 
@@ -354,7 +575,30 @@ backup_result.sub_losses.get("adver_loss").get(split="train")
 
 print("Find available loss types") print(backup_result.sub_losses.keys()) print("Get adver_loss for training") backup_result.sub_losses.get("adver_loss").get(split="train")
 
-In \[ \]:
+```
+Find available loss types
+dict_keys(['adver_loss', 'aggregated_sub_losses', 'paired_loss', 'class_loss', 'multi_bulk.rna.recon_loss', 'multi_bulk.rna.var_loss', 'multi_bulk.rna.anneal_factor', 'multi_bulk.rna.effective_beta_factor', 'multi_bulk.rna.loss', 'img.img.recon_loss', 'img.img.var_loss', 'img.img.anneal_factor', 'img.img.effective_beta_factor', 'img.img.loss', 'clf_loss'])
+Get adver_loss for training
+```
+
+Out\[8\]:
+
+```
+array([15.58498262, 15.93608477, 17.33203594, 17.85076588, 18.23565074,
+       18.22981648, 18.44941284, 18.70878978, 18.90765485, 19.03753875,
+       19.36349158, 19.52887487, 19.61803185, 19.81121422, 20.88082153,
+       20.77492759, 21.23305639, 21.40806396, 21.80953824, 21.76776518,
+       22.37744145, 21.86776006, 23.08126628, 23.1442834 , 23.15323465,
+       23.39618311, 23.9293998 , 24.34623181, 24.77278875, 25.20252113,
+       25.07029575, 25.87366297, 25.92241859, 26.84657276, 25.97191439,
+       27.25640949, 27.46409217, 28.01709834, 28.3806961 , 28.61011921,
+       29.3463219 , 29.682456  , 30.16281992, 30.62947964, 31.56639989,
+       30.08361847, 31.21143654, 31.82208996, 32.51644825, 32.47372567,
+       33.65122643, 32.79016307, 33.94093166, 34.22749259, 34.19313816,
+... [output truncated]
+```
+
+In \[9\]:
 
 Copied!
 
@@ -377,9 +621,16 @@ print("Get reconstruction keys")
 
 recons = backup_result.reconstructions.get(split="test", epoch=-1) print(recons.keys()) print("Getting Translation") trans = recons.get("translation") print(f"shape of translation: {trans.shape}")
 
+```
+Get reconstruction keys
+dict_keys(['multi_bulk.rna', 'img.img', 'translation', 'reference_img.img_to_img.img'])
+Getting Translation
+shape of translation: (711, 1, 32, 32)
+```
+
 **We can acutally plot a sample image here**
 
-In \[ \]:
+In \[10\]:
 
 Copied!
 
@@ -406,7 +657,7 @@ XModalix results can be inspected by similar plots as other architectures:
 
 Loss curves can be plotted like for all autoencoders:
 
-In \[ \]:
+In \[11\]:
 
 Copied!
 
@@ -420,7 +671,7 @@ In `aggregated_sub_losses` all sub-VAE's are aggregated collecting their reconst
 
 All sub-losses are stored in sub_loss attribute of the result where you can access individual VAE's like this:
 
-In \[ \]:
+In \[12\]:
 
 Copied!
 
@@ -430,9 +681,16 @@ backup_result.sub_losses.get("multi_bulk.rna.recon_loss").get(split="train")[0:5
 
 backup_result.sub_losses.get("multi_bulk.rna.recon_loss").get(split="train")[0:5] ## First five epochs of training reconstruction loss for RNA modality
 
+Out\[12\]:
+
+```
+array([1433.87771157, 1346.17343308, 1312.00032153, 1280.19841593,
+       1262.06039398])
+```
+
 Due to the complexity of loss terms in XModalix, a relative contribution of loss terms to overall is useful to find best loss term weight combination:
 
-In \[ \]:
+In \[13\]:
 
 Copied!
 
@@ -446,7 +704,7 @@ xmodalix.visualizer.show_loss(plot_type="relative")
 
 Latent space can be visualized as 2D representation or Ridgeline representation as before. But now for each modality. A good alignment will be visible if they match and show similarity:
 
-In \[ \]:
+In \[14\]:
 
 Copied!
 
@@ -468,7 +726,7 @@ To inspect translation quality of XModalix reconstructions we provide two plots:
 
 #### 2D translation[¶](#2d-translation)
 
-In \[ \]:
+In \[15\]:
 
 Copied!
 
@@ -483,9 +741,14 @@ fig = xmodalix.visualizer.show_2D_translation(
 
 fig = xmodalix.visualizer.show_2D_translation( result=backup_result, translated_modality="img.img", param="CANCER_TYPE_ACRONYM", reducer="PCA", )
 
+```
+len of tensor-list: 711
+len of tensor_ids: 711
+```
+
 #### Image translation[¶](#image-translation)
 
-In \[ \]:
+In \[16\]:
 
 Copied!
 
@@ -501,6 +764,10 @@ fig = xmodalix.visualizer.show_image_translation(  # ty: ignore
 
 fig = xmodalix.visualizer.show_image_translation( # ty: ignore result=backup_result, from_key ="mult_bulk.rna", to_key = "img.img", n_sample_per_class = 3, param = "CANCER_TYPE", )
 
+```
+Sample per class: {'Breast Cancer': ['TCGA-UU-A93S-01', 'TCGA-AR-A24T-01', 'TCGA-AC-A2FG-01'], 'Non-Small Cell Lung Cancer': ['TCGA-86-7954-01', 'TCGA-75-7030-01', 'TCGA-49-6742-01'], 'Ovarian Epithelial Tumor': ['TCGA-25-2392-01', 'TCGA-61-1738-01', 'TCGA-25-2391-01'], 'Colorectal Cancer': ['TCGA-DM-A28E-01', 'TCGA-D5-6534-01', 'TCGA-CA-6716-01'], 'Endometrial Cancer': ['TCGA-D1-A0ZQ-01', 'TCGA-AX-A3G6-01', 'TCGA-AJ-A3EL-01']}
+```
+
 ## 5) Evaluate[¶](#5-evaluate)
 
 ### 5.1 Embedding evaluation[¶](#51-embedding-evaluation)
@@ -511,7 +778,7 @@ This will perform embedding evaluatation for downstream tasks similarly as for a
 
 Since XModalix is composed of as many VAE's as modalities, each embedding will be evaluated independently.
 
-In \[ \]:
+In \[17\]:
 
 Copied!
 
@@ -532,9 +799,36 @@ result = xmodalix.evaluate(
 
 from sklearn.svm import SVC my_classifier = SVC(kernel="rbf", probability=True) # You can provide any sklearn classifier here my_metric = "roc_auc_ovo" # You can provide any sklearn metric here params = ["CANCER_TYPE_ACRONYM"] result = xmodalix.evaluate( ml_model_class = my_classifier, params=params, metric_class = my_metric, reference_methods= ["PCA"] # We compare XModalix embeddings to PCA embeddings )
 
+```
+Perform ML task with feature df: PCA_$_multi_bulk.rna
+PCA_$_multi_bulk.rna
+Perform ML task for target parameter: CANCER_TYPE_ACRONYM
+```
+
+```
+Perform ML task with feature df: PCA_$_img.img
+PCA_$_img.img
+```
+
+```
+Perform ML task for target parameter: CANCER_TYPE_ACRONYM
+```
+
+```
+Perform ML task with feature df: Latent_$_multi_bulk.rna
+Latent_$_multi_bulk.rna
+Perform ML task for target parameter: CANCER_TYPE_ACRONYM
+```
+
+```
+Perform ML task with feature df: Latent_$_img.img
+Latent_$_img.img
+Perform ML task for target parameter: CANCER_TYPE_ACRONYM
+```
+
 Then we can visualize the evaluation results as bar plots
 
-In \[ \]:
+In \[18\]:
 
 Copied!
 
@@ -556,7 +850,7 @@ Since XModalix VAE's for each modalities are coupled by a joint loss, we offer a
 
 Prior comparison this pure Imagix needs to be trained on the same data and ideally with a similar config as the XModalix:
 
-In \[ \]:
+In \[19\]:
 
 Copied!
 
@@ -571,6 +865,7 @@ imagix_config = 	DefaultConfig(
     batch_size=512,
     learning_rate=0.0005,
     loss_reduction="sum",
+    annotation_columns=["CANCER_TYPE_ACRONYM"],
     data_config=DataConfig(
         data_info={
             "img": DataInfo(
@@ -582,14 +877,13 @@ imagix_config = 	DefaultConfig(
             ),
             "anno": DataInfo(file_path=clin_file, data_type="ANNOTATION", sep="\t"),
         },
-        annotation_columns=["CANCER_TYPE_ACRONYM"],
     ),
 )
 ```
 
-from autoencodix.configs.default_config import DefaultConfig imagix_config = DefaultConfig( checkpoint_interval=100, epochs=100, beta=0.1, latent_dim=6, batch_size=512, learning_rate=0.0005, loss_reduction="sum", data_config=DataConfig( data_info={ "img": DataInfo( file_path=img_root, img_height_resize=32, img_width_resize=32, data_type="IMG", scaling="STANDARD", ), "anno": DataInfo(file_path=clin_file, data_type="ANNOTATION", sep="\\t"), }, annotation_columns=["CANCER_TYPE_ACRONYM"], ), )
+from autoencodix.configs.default_config import DefaultConfig imagix_config = DefaultConfig( checkpoint_interval=100, epochs=100, beta=0.1, latent_dim=6, batch_size=512, learning_rate=0.0005, loss_reduction="sum", annotation_columns=["CANCER_TYPE_ACRONYM"], data_config=DataConfig( data_info={ "img": DataInfo( file_path=img_root, img_height_resize=32, img_width_resize=32, data_type="IMG", scaling="STANDARD", ), "anno": DataInfo(file_path=clin_file, data_type="ANNOTATION", sep="\\t"), }, ), )
 
-In \[ \]:
+In \[20\]:
 
 Copied!
 
@@ -600,9 +894,36 @@ imagix_result = imagix.run()
 
 imagix = acx.Imagix(config=imagix_config) imagix_result = imagix.run()
 
+```
+Given image size is possible, rescaling images to: 32x32
+```
+
+```
+Successfully loaded 3230 images for img
+calling normalize image in _process_ing_to_img_case
+anno key: img
+Converting 2261 images to torch.float32 tensors...
+Converting 646 images to torch.float32 tensors...
+Converting 323 images to torch.float32 tensors...
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 1498.8319 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+Epoch 100 - Train Loss: 220.5545
+Sub-losses: recon_loss: 203.5455, var_loss: 17.0090, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Epoch 100 - Valid Loss: 252.4281
+Sub-losses: recon_loss: 235.9628, var_loss: 16.4653, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Processed 512 / 646 samples
+Processed 646 / 646 samples
+```
+
 Before we make the comparison, we can quickly check the imagix reconstruction capability with `imagix.visualizer.show_image_recon_grid()` showing original and reconstructed images from the test-split.
 
-In \[ \]:
+In \[21\]:
 
 Copied!
 
@@ -617,7 +938,7 @@ fig_imagix = imagix.visualizer.show_image_recon_grid( result=imagix_result, n_sa
 
 Looks good with small deviations. Let's compare with the XModalix:
 
-In \[ \]:
+In \[22\]:
 
 Copied!
 
@@ -635,7 +956,7 @@ param = "CANCER_TYPE" # Aggregate over a metadata parameter fig_pure_comparison,
 
 A visualization is created:
 
-In \[ \]:
+In \[23\]:
 
 Copied!
 
@@ -644,6 +965,8 @@ fig_pure_comparison.get_figure()
 ```
 
 fig_pure_comparison.get_figure()
+
+Out\[23\]:
 
 ## 6) Apply Custom Parameters[¶](#6-apply-custom-parameters)
 
@@ -675,7 +998,7 @@ In Addition, there is a way to use another architecture for the image autoencode
 
 Since we need different architecture for different data type i.e. Numeric, Image, we need to pass a model_map to the `XModalix` Pipeline as shown below.
 
-In \[ \]:
+In \[24\]:
 
 Copied!
 
@@ -689,7 +1012,7 @@ from autoencodix.modeling._imgfast_architecture import ImageVAEFastArchitecture
 from autoencodix.modeling._imagevae_architecture import ImageVAEArchitecture
 from autoencodix.modeling._varix_architecture import VarixArchitecture
 
-xmodalix_config = XModalixConfig(
+custom_xmodalix_config = XModalixConfig(
     class_param="CANCER_TYPE_ACRONYM",
     gamma=2,
     delta_class=10.0,  # increase this if you care about class info in embedding
@@ -715,16 +1038,21 @@ xmodalix_config = XModalixConfig(
     ),
 )
 model_map = {DataSetTypes.NUM: VarixArchitecture, DataSetTypes.IMG: ImageVAEFastArchitecture}
-xmodalix = acx.XModalix(config=xmodalix_config, model_map=model_map)
+# We use a new variable name, so the trained `xmodalix` from above stays available for the next section.
+custom_xmodalix = acx.XModalix(config=custom_xmodalix_config, model_map=model_map)
 ```
 
-import autoencodix as acx from autoencodix.configs.xmodalix_config import XModalixConfig from autoencodix.configs.default_config import DataConfig, DataInfo, DataCase from autoencodix.base.\_base_dataset import DataSetTypes from autoencodix.modeling.\_imgfast_architecture import ImageVAEFastArchitecture from autoencodix.modeling.\_imagevae_architecture import ImageVAEArchitecture from autoencodix.modeling.\_varix_architecture import VarixArchitecture xmodalix_config = XModalixConfig( class_param="CANCER_TYPE_ACRONYM", gamma=2, delta_class=10.0, # increase this if you care about class info in embedding delta_pair=3.0, requires_paired=False, pretrain_epochs=2, # can be overridden on data level, see below data_case=DataCase.IMG_TO_BULK, data_config=DataConfig( data_info={ "img": DataInfo( file_path="YOUR_PATH", data_type="IMG", translate_direction="to", pretrain_epochs=2, # this overrides global pretraining_epochs ), "rna": DataInfo( file_path="YOUR_PATH", data_type="NUMERIC", translate_direction="from", ), "anno": DataInfo(file_path="YOUR_PATH", data_type="ANNOTATION", sep="\\t"), }, ), ) model_map = {DataSetTypes.NUM: VarixArchitecture, DataSetTypes.IMG: ImageVAEFastArchitecture} xmodalix = acx.XModalix(config=xmodalix_config, model_map=model_map)
+import autoencodix as acx from autoencodix.configs.xmodalix_config import XModalixConfig from autoencodix.configs.default_config import DataConfig, DataInfo, DataCase from autoencodix.base.\_base_dataset import DataSetTypes from autoencodix.modeling.\_imgfast_architecture import ImageVAEFastArchitecture from autoencodix.modeling.\_imagevae_architecture import ImageVAEArchitecture from autoencodix.modeling.\_varix_architecture import VarixArchitecture custom_xmodalix_config = XModalixConfig( class_param="CANCER_TYPE_ACRONYM", gamma=2, delta_class=10.0, # increase this if you care about class info in embedding delta_pair=3.0, requires_paired=False, pretrain_epochs=2, # can be overridden on data level, see below data_case=DataCase.IMG_TO_BULK, data_config=DataConfig( data_info={ "img": DataInfo( file_path="YOUR_PATH", data_type="IMG", translate_direction="to", pretrain_epochs=2, # this overrides global pretraining_epochs ), "rna": DataInfo( file_path="YOUR_PATH", data_type="NUMERIC", translate_direction="from", ), "anno": DataInfo(file_path="YOUR_PATH", data_type="ANNOTATION", sep="\\t"), }, ), ) model_map = {DataSetTypes.NUM: VarixArchitecture, DataSetTypes.IMG: ImageVAEFastArchitecture}
+
+# We use a new variable name, so the trained `xmodalix` from above stays available for the next section.
+
+custom_xmodalix = acx.XModalix(config=custom_xmodalix_config, model_map=model_map)
 
 ## 7) Save, Load and Re-use XModalix[¶](#7-save-load-and-re-use-xmodalix)
 
 This works for `XModalix` as for any other models, by using the `save` and `load` methods.
 
-In \[ \]:
+In \[25\]:
 
 Copied!
 
@@ -732,7 +1060,7 @@ Copied!
 import os
 import glob
 
-outpath = os.path.join("xmodalix")
+outpath = os.path.join("tutorial_res", "xmodalix")
 xmodalix.save(file_path=outpath, save_all=False)
 
 folder = os.path.dirname(outpath)
@@ -749,7 +1077,7 @@ testdata = backup_result.datasets
 r = xmodalix_loaded.predict(data=testdata)
 ```
 
-import os import glob outpath = os.path.join("xmodalix") xmodalix.save(file_path=outpath, save_all=False) folder = os.path.dirname(outpath) pkl_files = glob.glob(os.path.join(folder, "\*.pkl")) model_files = glob.glob(os.path.join(folder, "\*.pth")) print("PKL files:", pkl_files) print("Model files:", model_files)
+import os import glob outpath = os.path.join("tutorial_res", "xmodalix") xmodalix.save(file_path=outpath, save_all=False) folder = os.path.dirname(outpath) pkl_files = glob.glob(os.path.join(folder, "\*.pkl")) model_files = glob.glob(os.path.join(folder, "\*.pth")) print("PKL files:", pkl_files) print("Model files:", model_files)
 
 # the load functionality automatically will build the pipeline object out of the three saved files
 
@@ -758,3 +1086,34 @@ xmodalix_loaded = acx.XModalix.load(outpath)
 # now you can use the model to predict with a different pair again:
 
 testdata = backup_result.datasets r = xmodalix_loaded.predict(data=testdata)
+
+```
+Preprocessor saved successfully.
+```
+
+```
+saving memory efficient
+```
+
+```
+Pipeline object saved successfully.
+PKL files: ['tutorial_res/ontix_reactome_preprocessor.pkl', 'tutorial_res/ontix.pkl', 'tutorial_res/imagix_preprocessor.pkl', 'tutorial_res/varix_preprocessor.pkl', 'tutorial_res/imagix.pkl', 'tutorial_res/ontix_reactome.pkl', 'tutorial_res/supervisix_preprocessor.pkl', 'tutorial_res/maskix_preprocessor.pkl', 'tutorial_res/imagix3d_preprocessor.pkl', 'tutorial_res/xmodalix_preprocessor.pkl', 'tutorial_res/xmodalix.pkl', 'tutorial_res/imagix3d.pkl', 'tutorial_res/disent.pkl', 'tutorial_res/disent_preprocessor.pkl', 'tutorial_res/ontix_preprocessor.pkl']
+Model files: ['tutorial_res/imagix3d_model.pth', 'tutorial_res/imagix_model.pth', 'tutorial_res/disent_model.pth', 'tutorial_res/supervisix_model.pth', 'tutorial_res/img.img_xmodalix_model.pth', 'tutorial
+... [output truncated]
+```
+
+```
+Pipeline object loaded successfully. Actual type: XModalix
+```
+
+```
+Preprocessor loaded successfully.
+```
+
+```
+Prediction complete.
+Processing latent space results into a single AnnData object...
+Identified source modality for latent space: 'multi_bulk.rna'
+  - Added 1000 source feature IDs to .uns
+Finished processing latent results.
+```

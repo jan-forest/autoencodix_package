@@ -3844,7 +3844,8 @@ in cross-modal translation; None otherwise.</p>
 <span class="normal">818</span>
 <span class="normal">819</span>
 <span class="normal">820</span>
-<span class="normal">821</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">DefaultConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">,</span> <span class="n">SchemaPrinterMixin</span><span class="p">):</span>
+<span class="normal">821</span>
+<span class="normal">822</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">DefaultConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">,</span> <span class="n">SchemaPrinterMixin</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Complete configuration for model, training, hardware, and data handling."""</span>
 
     <span class="c1"># Input validation</span>
@@ -3921,7 +3922,8 @@ in cross-modal translation; None otherwise.</p>
 
     <span class="c1"># Training configuration --------------------------------------------------</span>
     <span class="n">save_memory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"If set to True we don't store TrainingDynamics"</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"If set to True we don't store TrainingDynamics. In addition, data passed to predict() is not copied but preprocessed in place, so the same data object must not be passed to predict() again."</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">save_vram</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
@@ -4041,7 +4043,7 @@ in cross-modal translation; None otherwise.</p>
     <span class="p">)</span>
 
     <span class="n">grad_clip_max_norm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">default</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
         <span class="n">ge</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Maximum norm for gradient clipping (see torch.nn.utils.clip_grad_norm_). Set None, to disable gradient clipping."</span><span class="p">,</span>
     <span class="p">)</span>
@@ -4414,8 +4416,7 @@ in cross-modal translation; None otherwise.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/configs/default_config.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">638</span>
-<span class="normal">639</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">639</span>
 <span class="normal">640</span>
 <span class="normal">641</span>
 <span class="normal">642</span>
@@ -4483,7 +4484,8 @@ in cross-modal translation; None otherwise.</p>
 <span class="normal">704</span>
 <span class="normal">705</span>
 <span class="normal">706</span>
-<span class="normal">707</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
+<span class="normal">707</span>
+<span class="normal">708</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">determine_case</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"DefaultConfig"</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Assign the correct DataCase after model validation."""</span>
     <span class="n">data_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_config</span><span class="o">.</span><span class="n">data_info</span>
@@ -4602,8 +4604,7 @@ in cross-modal translation; None otherwise.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/configs/default_config.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">785</span>
-<span class="normal">786</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">786</span>
 <span class="normal">787</span>
 <span class="normal">788</span>
 <span class="normal">789</span>
@@ -4617,7 +4618,8 @@ in cross-modal translation; None otherwise.</p>
 <span class="normal">797</span>
 <span class="normal">798</span>
 <span class="normal">799</span>
-<span class="normal">800</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">800</span>
+<span class="normal">801</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_params</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Get detailed information about all config fields including types and default values.</span>
@@ -4655,8 +4657,7 @@ in cross-modal translation; None otherwise.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/configs/default_config.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">548</span>
-<span class="normal">549</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">549</span>
 <span class="normal">550</span>
 <span class="normal">551</span>
 <span class="normal">552</span>
@@ -4673,7 +4674,8 @@ in cross-modal translation; None otherwise.</p>
 <span class="normal">563</span>
 <span class="normal">564</span>
 <span class="normal">565</span>
-<span class="normal">566</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
+<span class="normal">566</span>
+<span class="normal">567</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">handle_backward_compatibility</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"DefaultConfig"</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Handle migration of annotation_columns from DataConfig to DefaultConfig."""</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_config</span><span class="o">.</span><span class="n">annotation_columns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -4718,8 +4720,7 @@ in cross-modal translation; None otherwise.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/configs/default_config.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">802</span>
-<span class="normal">803</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">803</span>
 <span class="normal">804</span>
 <span class="normal">805</span>
 <span class="normal">806</span>
@@ -4737,7 +4738,8 @@ in cross-modal translation; None otherwise.</p>
 <span class="normal">818</span>
 <span class="normal">819</span>
 <span class="normal">820</span>
-<span class="normal">821</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">821</span>
+<span class="normal">822</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">print_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filter_params</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># type: ignore</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Print a human-readable schema of all config parameters.</span>
@@ -4862,8 +4864,7 @@ directions ("from"/"to") are set consistently.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/configs/default_config.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">568</span>
-<span class="normal">569</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">569</span>
 <span class="normal">570</span>
 <span class="normal">571</span>
 <span class="normal">572</span>
@@ -4930,7 +4931,8 @@ directions ("from"/"to") are set consistently.</p>
 <span class="normal">633</span>
 <span class="normal">634</span>
 <span class="normal">635</span>
-<span class="normal">636</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"data_config"</span><span class="p">)</span>
+<span class="normal">636</span>
+<span class="normal">637</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"data_config"</span><span class="p">)</span>
 <span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">validate_data_config</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data_config</span><span class="p">:</span> <span class="n">DataConfig</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Main validation logic for dataset consistency and translation.</span>
@@ -5044,8 +5046,7 @@ directions ("from"/"to") are set consistently.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/configs/default_config.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">730</span>
-<span class="normal">731</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">731</span>
 <span class="normal">732</span>
 <span class="normal">733</span>
 <span class="normal">734</span>
@@ -5054,7 +5055,8 @@ directions ("from"/"to") are set consistently.</p>
 <span class="normal">737</span>
 <span class="normal">738</span>
 <span class="normal">739</span>
-<span class="normal">740</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"float_precision"</span><span class="p">)</span>
+<span class="normal">740</span>
+<span class="normal">741</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"float_precision"</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">validate_float_precision</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Validate float precision based on device type.</span>
 
@@ -5111,8 +5113,7 @@ directions ("from"/"to") are set consistently.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/configs/default_config.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">743</span>
-<span class="normal">744</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">744</span>
 <span class="normal">745</span>
 <span class="normal">746</span>
 <span class="normal">747</span>
@@ -5123,7 +5124,8 @@ directions ("from"/"to") are set consistently.</p>
 <span class="normal">752</span>
 <span class="normal">753</span>
 <span class="normal">754</span>
-<span class="normal">755</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"gpu_strategy"</span><span class="p">)</span>
+<span class="normal">755</span>
+<span class="normal">756</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"gpu_strategy"</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">validate_gpu_strategy</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Ensure that the MPS backend is only used with the "auto" GPU strategy.</span>
 
@@ -5204,8 +5206,7 @@ directions ("from"/"to") are set consistently.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/configs/default_config.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">757</span>
-<span class="normal">758</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">758</span>
 <span class="normal">759</span>
 <span class="normal">760</span>
 <span class="normal">761</span>
@@ -5226,7 +5227,8 @@ directions ("from"/"to") are set consistently.</p>
 <span class="normal">776</span>
 <span class="normal">777</span>
 <span class="normal">778</span>
-<span class="normal">779</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
+<span class="normal">779</span>
+<span class="normal">780</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@model_validator</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"after"</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">validate_k_filter_with_nonzero_var</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Forbid combining a global ``k_filter`` with "NONZEROVAR" filtering.</span>
 
@@ -5295,8 +5297,7 @@ directions ("from"/"to") are set consistently.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/autoencodix/configs/default_config.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">709</span>
-<span class="normal">710</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">710</span>
 <span class="normal">711</span>
 <span class="normal">712</span>
 <span class="normal">713</span>
@@ -5313,7 +5314,8 @@ directions ("from"/"to") are set consistently.</p>
 <span class="normal">724</span>
 <span class="normal">725</span>
 <span class="normal">726</span>
-<span class="normal">727</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"test_ratio"</span><span class="p">,</span> <span class="s2">"valid_ratio"</span><span class="p">)</span>
+<span class="normal">727</span>
+<span class="normal">728</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@field_validator</span><span class="p">(</span><span class="s2">"test_ratio"</span><span class="p">,</span> <span class="s2">"valid_ratio"</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">validate_ratios</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Ensure that train, valid and test ratios sum to at most 1.</span>
 

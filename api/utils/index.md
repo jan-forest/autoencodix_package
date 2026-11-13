@@ -254,6 +254,18 @@ Parameters:
 
 Raises: KeyError: If the key is not a valid attribute of the Results class.
 
+### `__setstate__(state: Dict[str, Any]) -> None`
+
+Restore a pickled Result and add fields it does not have yet.
+
+Pipelines saved with an earlier version of the package (e.g. the pretrained models on the Hugging Face Hub) lack fields that were added later. They are filled with their defaults, so such pipelines can still be used.
+
+Parameters:
+
+| Name    | Type             | Description                                 | Default    |
+| ------- | ---------------- | ------------------------------------------- | ---------- |
+| `state` | `Dict[str, Any]` | Attribute dictionary of the pickled object. | *required* |
+
 ### `__str__() -> str`
 
 Provide a readable string representation of the Result object's public attributes.

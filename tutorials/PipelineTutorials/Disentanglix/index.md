@@ -85,7 +85,7 @@ print(f"Changed to: {os.getcwd()}")
 import os p = os.getcwd() d = "autoencodix_package" if d not in p: raise FileNotFoundError(f"'{d}' not found in path: {p}") os.chdir(os.sep.join(p.split(os.sep)[: p.split(os.sep).index(d) + 1])) print(f"Changed to: {os.getcwd()}")
 
 ```
-Changed to: /home/alicia/dev/biomarker_autoencoder/autoencodix_package
+Changed to: /home/janew/ACX/autoencodix_package
 ```
 
 ## Requirements 2: Obtain tutorial data or use own data[¶](#requirements-2-obtain-tutorial-data-or-use-own-data)
@@ -190,18 +190,69 @@ mudata: View of MuData object with n_obs × n_vars = 8000 × 8189
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 33.1010 exceeded max norm of 5.
+Processing 1 MuData objects: ['multi_sc']
+Processing train modality: multi_sc
+```
+
+```
+Processing valid split
+Processing valid modality: multi_sc
+Processing test split
+Processing test modality: multi_sc
+```
+
+```
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 50.3036 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 1732.7759
-Sub-losses: recon_loss: 1731.7585, mut_info_loss: 0.0007, tot_corr_loss: 0.0003, dimwise_kl_loss: 1.0164, anneal_factor: 0.0017, effective_beta_mi_factor: 0.0002, effective_beta_tc_factor: 0.0002, effective_beta_dimKL_factor: 0.0002
-Epoch 10 - Valid Loss: 1582.8092
-Sub-losses: recon_loss: 1581.7168, mut_info_loss: 0.0007, tot_corr_loss: 0.0003, dimwise_kl_loss: 1.0914, anneal_factor: 0.0017, effective_beta_mi_factor: 0.0002, effective_beta_tc_factor: 0.0002, effective_beta_dimKL_factor: 0.0002
-Epoch 20 - Train Loss: 1735.1607
-Sub-losses: recon_loss: 1728.3082, mut_info_loss: 0.0317, tot_corr_loss: 0.0082, dimwise_kl_loss: 6.8126, anneal_factor: 0.0832, effective_beta_mi_factor: 0.0083, effective_beta_tc_factor: 0.0083, effective_beta_dimKL_factor: 0.0083
-E
+Epoch 10 - Train Loss: 1733.1841
+Sub-losses: recon_loss: 1732.1143, mut_info_loss: 0.0008, tot_corr_loss: 0.0003, dimwise_kl_loss: 1.0688, anneal_factor: 0.0017, effective_beta_mi_factor: 0.0002, effective_beta_tc_factor: 0.0002, effective_beta_dimKL_factor: 0.0002
+Epoch 10 - Valid Loss: 1978.9073
+Sub-losses: recon_loss: 1977.7334, mut_info_loss: 0.0007, tot_corr_loss: 0.0003, dimwise_kl_loss: 1.1729, anneal_factor: 0.0017, effective_beta_mi_factor: 0.0002, effective_beta_tc_factor: 0.0002, effective_beta_dimKL_factor: 0.0002
+```
+
+```
+Epoch 20 - Train Loss: 1731.1827
+Sub-losses: recon_loss: 1724.9158, mut_info_loss: 0.0321, tot_corr_loss: 0.0082, dimwise_kl_loss: 6.2267, anneal_factor: 0.0832, effective_beta_mi_factor: 0.0083, effective_beta_tc_factor: 0.0083, effective_beta_dimKL_factor: 0.0083
+Epoch 20 - Valid Loss: 1979.4648
+Sub-losses: recon_loss: 1973.1344, mut_info_loss: 0.0319, tot_corr_loss: 0.0081, dimwise_kl_loss: 6.2905, anneal_factor: 0.0832, effective_beta_mi_factor: 0.0083, effective_beta_tc_factor: 0.0083, effective_beta_dimKL_factor: 0.0083
+```
+
+```
+Epoch 30 - Train Loss: 1742.1375
+Sub-losses: recon_loss: 1729.7685, mut_info_loss: 0.2609, tot_corr_loss: 0.0384, dimwise_kl_loss: 12.0697, anneal_factor: 0.8320, effective_beta_mi_factor: 0.0832, effective_beta_tc_factor: 0.0832, effective_beta_dimKL_factor: 0.0832
+Epoch 30 - Valid Loss: 1988.7086
+Sub-losses: recon_loss: 1975.8932, mut_info_loss: 0.2590, tot_corr_loss: 0.0409, dimwise_kl_loss: 12.5155, anneal_factor: 0.8320, effective_beta_mi_factor: 0.0832, effective_beta_tc_factor: 0.0832, effective_beta_dimKL_factor: 0.0832
+```
+
+```
+Epoch 40 - Train Loss: 1739.4153
+Sub-losses: recon_loss: 1726.6906, mut_info_loss: 0.3056, tot_corr_loss: 0.0413, dimwise_kl_loss: 12.3778, anneal_factor: 0.9963, effective_beta_mi_factor: 0.0996, effective_beta_tc_factor: 0.0996, effective_beta_dimKL_factor: 0.0996
+Epoch 40 - Valid Loss: 1986.8330
+Sub-losses: recon_loss: 1973.7732, mut_info_loss: 0.3032, tot_corr_loss: 0.0379, dimwise_kl_loss: 12.7188, anneal_factor: 0.9963, effective_beta_mi_factor: 0.0996, effective_beta_tc_factor: 0.0996, effective_beta_dimKL_factor: 0.0996
+```
+
+```
+Epoch 50 - Train Loss: 1739.3977
+Sub-losses: recon_loss: 1726.5200, mut_info_loss: 0.3076, tot_corr_loss: 0.0401, dimwise_kl_loss: 12.5301, anneal_factor: 0.9999, effective_beta_mi_factor: 0.1000, effective_beta_tc_factor: 0.1000, effective_beta_dimKL_factor: 0.1000
+Epoch 50 - Valid Loss: 1987.1413
+Sub-losses: recon_loss: 1973.8067, mut_info_loss: 0.3062, tot_corr_loss: 0.0376, dimwise_kl_loss: 12.9907, anneal_factor: 0.9999, effective_beta_mi_factor: 0.1000, effective_beta_tc_factor: 0.1000, effective_beta_dimKL_factor: 0.1000
+Processed 128 / 1600 samples
+Processed 256 / 1600 samples
+Processed 384 / 1600 samples
+Processed 512 / 1600 samples
+Processed 640 / 1600 samples
+Processed 768 / 1600 samples
+Processed 896 / 1600 samples
+Processed 1024 / 1600 samples
+Processed 1152 / 1600 samples
+Pr
 ... [output truncated]
 ```
 
@@ -318,18 +369,65 @@ mudata: View of MuData object with n_obs × n_vars = 8000 × 8189
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 35.7598 exceeded max norm of 5.
+Processing 1 MuData objects: ['multi_sc']
+Processing train modality: multi_sc
+```
+
+```
+Processing valid split
+Processing valid modality: multi_sc
+Processing test split
+Processing test modality: multi_sc
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 55.7621 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 1810.9751
-Sub-losses: recon_loss: 1810.8527, mut_info_loss: 0.0005, tot_corr_loss: 0.0000, dimwise_kl_loss: 0.1218, anneal_factor: 0.0017, effective_beta_mi_factor: 0.0002, effective_beta_tc_factor: 0.1659, effective_beta_dimKL_factor: 0.0000
-Epoch 10 - Valid Loss: 1853.0909
-Sub-losses: recon_loss: 1852.9464, mut_info_loss: 0.0005, tot_corr_loss: 0.0000, dimwise_kl_loss: 0.1440, anneal_factor: 0.0017, effective_beta_mi_factor: 0.0002, effective_beta_tc_factor: 0.1659, effective_beta_dimKL_factor: 0.0000
-Epoch 20 - Train Loss: 1810.4937
-Sub-losses: recon_loss: 1808.0938, mut_info_loss: 0.0241, tot_corr_loss: 0.0000, dimwise_kl_loss: 2.3758, anneal_factor: 0.0832, effective_beta_mi_factor: 0.0083, effective_beta_tc_factor: 8.3173, effective_beta_dimKL_factor: 0.0008
-E
+Epoch 10 - Train Loss: 1822.2642
+Sub-losses: recon_loss: 1822.1652, mut_info_loss: 0.0006, tot_corr_loss: 0.0000, dimwise_kl_loss: 0.0984, anneal_factor: 0.0017, effective_beta_mi_factor: 0.0002, effective_beta_tc_factor: 0.1659, effective_beta_dimKL_factor: 0.0000
+Epoch 10 - Valid Loss: 1772.0760
+Sub-losses: recon_loss: 1771.9657, mut_info_loss: 0.0006, tot_corr_loss: 0.0000, dimwise_kl_loss: 0.1097, anneal_factor: 0.0017, effective_beta_mi_factor: 0.0002, effective_beta_tc_factor: 0.1659, effective_beta_dimKL_factor: 0.0000
+```
+
+```
+Epoch 20 - Train Loss: 1812.0741
+Sub-losses: recon_loss: 1809.0657, mut_info_loss: 0.0266, tot_corr_loss: 0.0000, dimwise_kl_loss: 2.9819, anneal_factor: 0.0832, effective_beta_mi_factor: 0.0083, effective_beta_tc_factor: 8.3173, effective_beta_dimKL_factor: 0.0008
+Epoch 20 - Valid Loss: 1773.9799
+Sub-losses: recon_loss: 1771.1935, mut_info_loss: 0.0265, tot_corr_loss: 0.0000, dimwise_kl_loss: 2.7598, anneal_factor: 0.0832, effective_beta_mi_factor: 0.0083, effective_beta_tc_factor: 8.3173, effective_beta_dimKL_factor: 0.0008
+```
+
+```
+Epoch 30 - Train Loss: 1813.0499
+Sub-losses: recon_loss: 1807.7945, mut_info_loss: 0.2067, tot_corr_loss: 0.0000, dimwise_kl_loss: 5.0487, anneal_factor: 0.8320, effective_beta_mi_factor: 0.0832, effective_beta_tc_factor: 83.2018, effective_beta_dimKL_factor: 0.0083
+Epoch 30 - Valid Loss: 1783.4342
+Sub-losses: recon_loss: 1778.6270, mut_info_loss: 0.2004, tot_corr_loss: 0.0000, dimwise_kl_loss: 4.6069, anneal_factor: 0.8320, effective_beta_mi_factor: 0.0832, effective_beta_tc_factor: 83.2018, effective_beta_dimKL_factor: 0.0083
+```
+
+```
+Epoch 40 - Train Loss: 1810.8446
+Sub-losses: recon_loss: 1805.6993, mut_info_loss: 0.2365, tot_corr_loss: 0.0000, dimwise_kl_loss: 4.9089, anneal_factor: 0.9963, effective_beta_mi_factor: 0.0996, effective_beta_tc_factor: 99.6316, effective_beta_dimKL_factor: 0.0100
+Epoch 40 - Valid Loss: 1777.4261
+Sub-losses: recon_loss: 1772.2850, mut_info_loss: 0.2393, tot_corr_loss: 0.0000, dimwise_kl_loss: 4.9018, anneal_factor: 0.9963, effective_beta_mi_factor: 0.0996, effective_beta_tc_factor: 99.6316, effective_beta_dimKL_factor: 0.0100
+```
+
+```
+Epoch 50 - Train Loss: 1805.4972
+Sub-losses: recon_loss: 1800.3266, mut_info_loss: 0.2389, tot_corr_loss: 0.0000, dimwise_kl_loss: 4.9317, anneal_factor: 0.9999, effective_beta_mi_factor: 0.1000, effective_beta_tc_factor: 99.9932, effective_beta_dimKL_factor: 0.0100
+Epoch 50 - Valid Loss: 1778.3342
+Sub-losses: recon_loss: 1772.8539, mut_info_loss: 0.2432, tot_corr_loss: 0.0000, dimwise_kl_loss: 5.2372, anneal_factor: 0.9999, effective_beta_mi_factor: 0.1000, effective_beta_tc_factor: 99.9932, effective_beta_dimKL_factor: 0.0100
+Processed 128 / 1600 samples
+Processed 256 / 1600 samples
+Processed 384 / 1600 samples
+Processed 512 / 1600 samples
+Processed 640 / 1600 samples
+Processed 768 / 1600 samples
+Processed 896 / 1600 samples
+Processed 1024 / 1600 samples
+Processed 1152 / 1600 samples
+Pr
 ... [output truncated]
 ```
 
@@ -388,11 +486,20 @@ disent_loaded = acx.Disentanglix.load(outpath)
 
 ```
 Preprocessor saved successfully.
+```
+
+```
 Pipeline object saved successfully.
-PKL files: ['tutorial_res/varix_preprocessor.pkl', 'tutorial_res/ontix.pkl', 'tutorial_res/maskix_preprocessor.pkl', 'tutorial_res/imagix.pkl', 'tutorial_res/ontix_preprocessor.pkl', 'tutorial_res/disent.pkl', 'tutorial_res/imagix_preprocessor.pkl', 'tutorial_res/disent_preprocessor.pkl']
-Model files: ['tutorial_res/varix_model.pth', 'tutorial_res/disent_model.pth', 'tutorial_res/imagix_model.pth', 'tutorial_res/ontix_model.pth', 'tutorial_res/maskix_model.pth']
-Attempting to load a pipeline from tutorial_res/disent.pkl...
+PKL files: ['tutorial_res/ontix_reactome_preprocessor.pkl', 'tutorial_res/ontix.pkl', 'tutorial_res/imagix_preprocessor.pkl', 'tutorial_res/varix_preprocessor.pkl', 'tutorial_res/imagix.pkl', 'tutorial_res/ontix_reactome.pkl', 'tutorial_res/supervisix_preprocessor.pkl', 'tutorial_res/maskix_preprocessor.pkl', 'tutorial_res/imagix3d_preprocessor.pkl', 'tutorial_res/xmodalix_preprocessor.pkl', 'tutorial_res/xmodalix.pkl', 'tutorial_res/imagix3d.pkl', 'tutorial_res/disent.pkl', 'tutorial_res/disent_preprocessor.pkl', 'tutorial_res/ontix_preprocessor.pkl']
+Model files: ['tutorial_res/imagix3d_model.pth', 'tutorial_res/imagix_model.pth', 'tutorial_res/disent_model.pth', 'tutorial_res/supervisix_model.pth', 'tutorial_res/img.img_xmodalix_model.pth', 'tutorial
+... [output truncated]
+```
+
+```
 Pipeline object loaded successfully. Actual type: Disentanglix
+```
+
+```
 Preprocessor loaded successfully.
 ```
 
@@ -407,7 +514,18 @@ disent_loaded.predict(data=disent.result.datasets)
 disent_loaded.predict(data=disent.result.datasets)
 
 ```
-Reproducibility settings for device auto are not implemented or necessary i.e. for cpu.
+Processed 128 / 1600 samples
+Processed 256 / 1600 samples
+Processed 384 / 1600 samples
+Processed 512 / 1600 samples
+Processed 640 / 1600 samples
+Processed 768 / 1600 samples
+Processed 896 / 1600 samples
+Processed 1024 / 1600 samples
+Processed 1152 / 1600 samples
+Processed 1280 / 1600 samples
+Processed 1408 / 1600 samples
+Processed 1536 / 1600 samples
 Processed 1600 / 1600 samples
 ```
 
@@ -426,7 +544,8 @@ sub_losses: LossRegistry(_losses={'recon_loss': TrainingDynamics(), 'mut_info_lo
 preprocessed_data: Tensor of shape (0,)
 model: VarixArchitecture
 model_checkpoints: TrainingDynamics object
-datasets: DatasetContainer(train=<autoencodix.data._n
+class_means: TrainingDynamics object
+datasets: Datase
 ... [output truncated]
 ```
 
@@ -466,6 +585,5 @@ print(reconstructions_generated.shape)
 reconstructions_generated = disent_loaded.generate(n_samples=5) print(reconstructions_generated.shape)
 
 ```
-Reproducibility settings for device auto are not implemented or necessary i.e. for cpu.
 torch.Size([5, 2000])
 ```

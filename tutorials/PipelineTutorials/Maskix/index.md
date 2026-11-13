@@ -73,7 +73,7 @@ print(f"Changed to: {os.getcwd()}")
 import os p = os.getcwd() d = "autoencodix_package" if d not in p: raise FileNotFoundError(f"'{d}' not found in path: {p}") os.chdir(os.sep.join(p.split(os.sep)[: p.split(os.sep).index(d) + 1])) print(f"Changed to: {os.getcwd()}")
 
 ```
-Changed to: /home/alicia/dev/biomarker_autoencoder/autoencodix_package
+Changed to: /home/janew/ACX/autoencodix_package
 ```
 
 ## Requirements 2: Obtain tutorial data or use own data[¶](#requirements-2-obtain-tutorial-data-or-use-own-data)
@@ -135,13 +135,22 @@ maskix_result = maskix.run()
 
 ```
 Number of common cells: 8569
+```
+
+```
 mudata: View of MuData object with n_obs × n_vars = 8569 × 20125
   obs:	'barcode', 'assigned_cluster', 'sample_id'
   1 modality
     multi_sc:	8569 x 20125
       obs:	'barcode', 'assigned_cluster', 'sample_id'
+```
+
+```
 Processing 1 MuData objects: ['multi_sc']
 Processing train modality: multi_sc
+```
+
+```
 Processing valid split
 Processing valid modality: multi_sc
 Processing test split
@@ -149,28 +158,56 @@ Processing test modality: multi_sc
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/losses/maskix_loss.py:38: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
+/home/janew/ACX/autoencodix_package/src/autoencodix/losses/maskix_loss.py:69: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 351.5225
-Sub-losses: recon_loss: 867.5084, recon_loss_weighted: 87.4652, mask_loss: 264.0573
-Epoch 10 - Valid Loss: 351.4917
-Sub-losses: recon_loss: 853.3143, recon_loss_weighted: 87.3680, mask_loss: 264.1237
-Epoch 20 - Train Loss: 349.6205
-Sub-losses: recon_loss: 846.8369, recon_loss_weighted: 86.0222, mask_loss: 263.5983
-Epoch 20 - Valid Loss: 347.1490
-Sub-losses: recon_loss: 830.9007, recon_loss_weighted: 83.8384, mask_loss: 263.3106
-Epoch 30 - Train Loss: 348.0189
-Sub-losses: recon_loss: 833.5078, recon_loss_weighted: 84.7925, mask_loss: 263.2265
-Epoch 30 - Valid Loss: 347.1538
-Sub-losses: recon_loss: 823.3418, recon_loss_weighted: 84.1736, mask_loss: 262.9802
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 5.0248 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+Epoch 10 - Train Loss: 352.9617
+Sub-losses: recon_loss: 860.2470, recon_loss_weighted: 87.7325, mask_loss: 265.2291
+Epoch 10 - Valid Loss: 355.6964
+Sub-losses: recon_loss: 891.2107, recon_loss_weighted: 90.9711, mask_loss: 264.7253
+```
+
+```
+Epoch 20 - Train Loss: 349.9198
+Sub-losses: recon_loss: 840.8167, recon_loss_weighted: 85.3964, mask_loss: 264.5235
+Epoch 20 - Valid Loss: 349.8507
+Sub-losses: recon_loss: 867.1857, recon_loss_weighted: 87.3966, mask_loss: 262.4541
+```
+
+```
+Epoch 30 - Train Loss: 348.4712
+Sub-losses: recon_loss: 830.7790, recon_loss_weighted: 84.4336, mask_loss: 264.0376
+Epoch 30 - Valid Loss: 349.5528
+Sub-losses: recon_loss: 853.7962, recon_loss_weighted: 86.4689, mask_loss: 263.0839
+Processed 128 / 1715 samples
+Processed 256 / 1715 samples
+Processed 384 / 1715 samples
+Processed 512 / 1715 samples
+Processed 640 / 1715 samples
+Processed 768 / 1715 samples
+Processed 896 / 1715 samples
+Processed 1024 / 1715 samples
+Processed 1152 / 1715 samples
+Processed 1280 / 1715 samples
+Processed 1408 / 1715 samples
+Processed 1536 / 1715 samples
+Processed 1664 / 1715 samples
 Processed 1715 / 1715 samples
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/losses/maskix_loss.py:38: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
+/home/janew/ACX/autoencodix_package/src/autoencodix/losses/maskix_loss.py:69: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
   warnings.warn(
 ```
 
@@ -262,7 +299,7 @@ keys: dict_keys(['recon_loss', 'recon_loss_weighted', 'mask_loss'])
 
 
 Value of reconstruction loss in epoch 4 for train split
-886.0941694106368
+882.451446054935
 ```
 
 As for our other pipelines we can visualize the loss with `.show_result()` For more infos on visualization, see: [`Tutorials/DeepDives/VisualizeTutorial.ipynb`](https://jan-forest.github.io/autoencodix_package/tutorials/PipelineTutorials/DeepDives/VisualizeTutorial.ipynb)
@@ -377,8 +414,8 @@ config = MaskixConfig(
     checkpoint_interval=10,
     k_filter=1000,
     batch_size=128,
+    annotation_columns=["assigned_cluster"],
     data_config=DataConfig(
-        annotation_columns=["assigned_cluster"],
         data_info={
             "multi_sc": DataInfo(
                 file_path=sc_path, is_single_cell=True, data_type="NUMERIC"
@@ -398,12 +435,7 @@ import torch import autoencodix as acx from autoencodix.configs import MaskixCon
 
 # device and dtype casting.
 
-noise = torch.randn_like(x) * strength return x + noise kwargs = {"strength": 0.5} from huggingface_hub import hf_hub_download sc_path = hf_hub_download( repo_id="autoencodix/pancreas-fang", repo_type="dataset", filename="pancreas.h5ad" ) config = MaskixConfig( epochs=30, checkpoint_interval=10, k_filter=1000, batch_size=128, data_config=DataConfig( annotation_columns=["assigned_cluster"], data_info={ "multi_sc": DataInfo( file_path=sc_path, is_single_cell=True, data_type="NUMERIC" ) }, ), data_case=DataCase.MULTI_SINGLE_CELL, ) maskix = acx.Maskix(config=config, masking_fn=my_masking_fn, masking_fn_kwargs=kwargs)
-
-```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/configs/default_config.py:439: UserWarning: annotation_columns in DataConfig is deprecated. Please set it directly in DefaultConfig instead.
-  warnings.warn(
-```
+noise = torch.randn_like(x) * strength return x + noise kwargs = {"strength": 0.5} from huggingface_hub import hf_hub_download sc_path = hf_hub_download( repo_id="autoencodix/pancreas-fang", repo_type="dataset", filename="pancreas.h5ad" ) config = MaskixConfig( epochs=30, checkpoint_interval=10, k_filter=1000, batch_size=128, annotation_columns=["assigned_cluster"], data_config=DataConfig( data_info={ "multi_sc": DataInfo( file_path=sc_path, is_single_cell=True, data_type="NUMERIC" ) }, ), data_case=DataCase.MULTI_SINGLE_CELL, ) maskix = acx.Maskix(config=config, masking_fn=my_masking_fn, masking_fn_kwargs=kwargs)
 
 In \[9\]:
 
@@ -417,13 +449,22 @@ result = maskix.run()
 
 ```
 Number of common cells: 8569
+```
+
+```
 mudata: View of MuData object with n_obs × n_vars = 8569 × 20125
   obs:	'barcode', 'assigned_cluster', 'sample_id'
   1 modality
     multi_sc:	8569 x 20125
       obs:	'barcode', 'assigned_cluster', 'sample_id'
+```
+
+```
 Processing 1 MuData objects: ['multi_sc']
 Processing train modality: multi_sc
+```
+
+```
 Processing valid split
 Processing valid modality: multi_sc
 Processing test split
@@ -431,28 +472,49 @@ Processing test modality: multi_sc
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/losses/maskix_loss.py:38: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
+/home/janew/ACX/autoencodix_package/src/autoencodix/losses/maskix_loss.py:69: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
+  warnings.warn(
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 5.6352 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 214.1537
-Sub-losses: recon_loss: 897.8995, recon_loss_weighted: 202.0274, mask_loss: 12.1264
-Epoch 10 - Valid Loss: 210.4761
-Sub-losses: recon_loss: 883.7049, recon_loss_weighted: 198.8336, mask_loss: 11.6424
-Epoch 20 - Train Loss: 207.9269
-Sub-losses: recon_loss: 882.6679, recon_loss_weighted: 198.6003, mask_loss: 9.3267
-Epoch 20 - Valid Loss: 204.4001
-Sub-losses: recon_loss: 866.8165, recon_loss_weighted: 195.0337, mask_loss: 9.3664
-Epoch 30 - Train Loss: 203.9368
-Sub-losses: recon_loss: 867.9988, recon_loss_weighted: 195.2997, mask_loss: 8.6370
-Epoch 30 - Valid Loss: 201.3682
-Sub-losses: recon_loss: 856.2013, recon_loss_weighted: 192.6453, mask_loss: 8.7229
+Epoch 10 - Train Loss: 214.7022
+Sub-losses: recon_loss: 896.2700, recon_loss_weighted: 201.6607, mask_loss: 13.0414
+Epoch 10 - Valid Loss: 220.6329
+Sub-losses: recon_loss: 925.3210, recon_loss_weighted: 208.1972, mask_loss: 12.4357
+```
+
+```
+Epoch 20 - Train Loss: 208.1193
+Sub-losses: recon_loss: 883.3334, recon_loss_weighted: 198.7498, mask_loss: 9.3694
+Epoch 20 - Valid Loss: 212.1653
+Sub-losses: recon_loss: 901.6835, recon_loss_weighted: 202.8788, mask_loss: 9.2865
+```
+
+```
+Epoch 30 - Train Loss: 205.5747
+Sub-losses: recon_loss: 874.3116, recon_loss_weighted: 196.7127, mask_loss: 8.8620
+Epoch 30 - Valid Loss: 210.7367
+Sub-losses: recon_loss: 897.5415, recon_loss_weighted: 201.9469, mask_loss: 8.7899
+Processed 128 / 1715 samples
+Processed 256 / 1715 samples
+Processed 384 / 1715 samples
+Processed 512 / 1715 samples
+Processed 640 / 1715 samples
+Processed 768 / 1715 samples
+Processed 896 / 1715 samples
+Processed 1024 / 1715 samples
+Processed 1152 / 1715 samples
+Processed 1280 / 1715 samples
+Processed 1408 / 1715 samples
+Processed 1536 / 1715 samples
+Processed 1664 / 1715 samples
 Processed 1715 / 1715 samples
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/losses/maskix_loss.py:38: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
+/home/janew/ACX/autoencodix_package/src/autoencodix/losses/maskix_loss.py:69: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
   warnings.warn(
 ```
 
@@ -498,8 +560,8 @@ config = MaskixConfig(
     checkpoint_interval=10,
     k_filter=1000,
     batch_size=128,
+    annotation_columns=["assigned_cluster"],
     data_config=DataConfig(
-        annotation_columns=["assigned_cluster"],
         data_info={
             "multi_sc": DataInfo(
                 file_path=sc_path, is_single_cell=True, data_type="NUMERIC"
@@ -513,22 +575,26 @@ maskix_orig.preprocess()
 data = maskix_orig.result.datasets
 ```
 
-import torch import autoencodix as acx from autoencodix.configs import MaskixConfig from autoencodix.configs.default_config import DataInfo, DataConfig, DataCase from huggingface_hub import hf_hub_download sc_path = hf_hub_download( repo_id="autoencodix/pancreas-fang", repo_type="dataset", filename="pancreas.h5ad" ) config = MaskixConfig( epochs=30, checkpoint_interval=10, k_filter=1000, batch_size=128, data_config=DataConfig( annotation_columns=["assigned_cluster"], data_info={ "multi_sc": DataInfo( file_path=sc_path, is_single_cell=True, data_type="NUMERIC" ) }, ), data_case=DataCase.MULTI_SINGLE_CELL, ) maskix_orig = acx.Maskix(config=config) maskix_orig.preprocess() data = maskix_orig.result.datasets
-
-```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/configs/default_config.py:439: UserWarning: annotation_columns in DataConfig is deprecated. Please set it directly in DefaultConfig instead.
-  warnings.warn(
-```
+import torch import autoencodix as acx from autoencodix.configs import MaskixConfig from autoencodix.configs.default_config import DataInfo, DataConfig, DataCase from huggingface_hub import hf_hub_download sc_path = hf_hub_download( repo_id="autoencodix/pancreas-fang", repo_type="dataset", filename="pancreas.h5ad" ) config = MaskixConfig( epochs=30, checkpoint_interval=10, k_filter=1000, batch_size=128, annotation_columns=["assigned_cluster"], data_config=DataConfig( data_info={ "multi_sc": DataInfo( file_path=sc_path, is_single_cell=True, data_type="NUMERIC" ) }, ), data_case=DataCase.MULTI_SINGLE_CELL, ) maskix_orig = acx.Maskix(config=config) maskix_orig.preprocess() data = maskix_orig.result.datasets
 
 ```
 Number of common cells: 8569
+```
+
+```
 mudata: View of MuData object with n_obs × n_vars = 8569 × 20125
   obs:	'barcode', 'assigned_cluster', 'sample_id'
   1 modality
     multi_sc:	8569 x 20125
       obs:	'barcode', 'assigned_cluster', 'sample_id'
+```
+
+```
 Processing 1 MuData objects: ['multi_sc']
 Processing train modality: multi_sc
+```
+
+```
 Processing valid split
 Processing valid modality: multi_sc
 Processing test split
@@ -599,9 +665,9 @@ imputed_data = data.clone() imputed_data[~keep_mask] = 0 missing_data = data[kee
 # clean corruped samples by removing zero values from dataset (drop samples) and also
 
 ```
-Original train data shape: torch.Size([5998, 1000]), shape after corruption: torch.Size([4251, 1000])
-Original test data shape: torch.Size([1715, 1000]), shape after corruption: torch.Size([1189, 1000])
-Original valid data shape: torch.Size([856, 1000]), shape after corruption: torch.Size([616, 1000])
+Original train data shape: torch.Size([5998, 1000]), shape after corruption: torch.Size([4177, 1000])
+Original test data shape: torch.Size([1715, 1000]), shape after corruption: torch.Size([1217, 1000])
+Original valid data shape: torch.Size([856, 1000]), shape after corruption: torch.Size([593, 1000])
 ```
 
 Now we train our Maskix with this clean data, but we will pass a custom imputer that will simulate missing values
@@ -636,8 +702,8 @@ config = MaskixConfig(
     k_filter=3000,
     skip_preprocessing=True,
     batch_size=64,
+    annotation_columns=["assigned_cluster"],
     data_config=DataConfig(
-        annotation_columns=["assigned_cluster"],
         data_info={
             "multi_sc": DataInfo(
                  is_single_cell=True, data_type="NUMERIC"
@@ -650,34 +716,60 @@ maskix = acx.Maskix(config=config, masking_fn=my_imputer, data=ds_with_missing)
 result = maskix.run()
 ```
 
-import torch import autoencodix as acx from autoencodix.configs import MaskixConfig from autoencodix.configs.default_config import DataInfo, DataConfig, DataCase def my_imputer(x: torch.Tensor) -> torch.Tensor: "randomly replaces value with zero" rand_mask = torch.bernoulli(0.3 * torch.ones(x.shape, device=x.device)).bool() rand_mask.to(x.device) imputed_x = torch.where(rand_mask, torch.zeros_like(x, device=x.device), x) return imputed_x from huggingface_hub import hf_hub_download sc_path = hf_hub_download( repo_id="autoencodix/pancreas-fang", repo_type="dataset", filename="pancreas.h5ad" ) config = MaskixConfig( epochs=30, checkpoint_interval=10, k_filter=3000, skip_preprocessing=True, batch_size=64, data_config=DataConfig( annotation_columns=["assigned_cluster"], data_info={ "multi_sc": DataInfo( is_single_cell=True, data_type="NUMERIC" ) }, ), data_case=DataCase.MULTI_SINGLE_CELL, ) maskix = acx.Maskix(config=config, masking_fn=my_imputer, data=ds_with_missing) result = maskix.run()
+import torch import autoencodix as acx from autoencodix.configs import MaskixConfig from autoencodix.configs.default_config import DataInfo, DataConfig, DataCase def my_imputer(x: torch.Tensor) -> torch.Tensor: "randomly replaces value with zero" rand_mask = torch.bernoulli(0.3 * torch.ones(x.shape, device=x.device)).bool() rand_mask.to(x.device) imputed_x = torch.where(rand_mask, torch.zeros_like(x, device=x.device), x) return imputed_x from huggingface_hub import hf_hub_download sc_path = hf_hub_download( repo_id="autoencodix/pancreas-fang", repo_type="dataset", filename="pancreas.h5ad" ) config = MaskixConfig( epochs=30, checkpoint_interval=10, k_filter=3000, skip_preprocessing=True, batch_size=64, annotation_columns=["assigned_cluster"], data_config=DataConfig( data_info={ "multi_sc": DataInfo( is_single_cell=True, data_type="NUMERIC" ) }, ), data_case=DataCase.MULTI_SINGLE_CELL, ) maskix = acx.Maskix(config=config, masking_fn=my_imputer, data=ds_with_missing) result = maskix.run()
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/configs/default_config.py:439: UserWarning: annotation_columns in DataConfig is deprecated. Please set it directly in DefaultConfig instead.
-  warnings.warn(
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/losses/maskix_loss.py:38: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
+/home/janew/ACX/autoencodix_package/src/autoencodix/losses/maskix_loss.py:69: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 525.6589
-Sub-losses: recon_loss: 810.2212, recon_loss_weighted: 97.0191, mask_loss: 428.6398
-Epoch 10 - Valid Loss: 523.1195
-Sub-losses: recon_loss: 785.5748, recon_loss_weighted: 94.5569, mask_loss: 428.5626
-Epoch 20 - Train Loss: 524.8635
-Sub-losses: recon_loss: 799.0144, recon_loss_weighted: 96.2755, mask_loss: 428.5880
-Epoch 20 - Valid Loss: 519.9710
-Sub-losses: recon_loss: 771.4230, recon_loss_weighted: 91.7578, mask_loss: 428.2132
-Epoch 30 - Train Loss: 523.7000
-Sub-losses: recon_loss: 790.4772, recon_loss_weighted: 95.1403, mask_loss: 428.5597
-Epoch 30 - Valid Loss: 519.5838
-Sub-losses: recon_loss: 770.1543, recon_loss_weighted: 91.3486, mask_loss: 428.2352
-Processed 1189 / 1189 samples
+Epoch 10 - Train Loss: 525.6738
+Sub-losses: recon_loss: 809.2231, recon_loss_weighted: 96.9992, mask_loss: 428.6746
+Epoch 10 - Valid Loss: 526.7359
+Sub-losses: recon_loss: 827.4320, recon_loss_weighted: 98.0240, mask_loss: 428.7119
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/losses/maskix_loss.py:38: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
+Epoch 20 - Train Loss: 524.6074
+Sub-losses: recon_loss: 792.3470, recon_loss_weighted: 95.5991, mask_loss: 429.0083
+Epoch 20 - Valid Loss: 526.5251
+Sub-losses: recon_loss: 816.4405, recon_loss_weighted: 98.2141, mask_loss: 428.3111
+```
+
+```
+Epoch 30 - Train Loss: 522.4807
+Sub-losses: recon_loss: 781.6490, recon_loss_weighted: 93.9856, mask_loss: 428.4951
+Epoch 30 - Valid Loss: 527.5178
+Sub-losses: recon_loss: 801.4171, recon_loss_weighted: 98.4102, mask_loss: 429.1076
+Processed 64 / 1217 samples
+Processed 128 / 1217 samples
+Processed 192 / 1217 samples
+Processed 256 / 1217 samples
+Processed 320 / 1217 samples
+Processed 384 / 1217 samples
+Processed 448 / 1217 samples
+Processed 512 / 1217 samples
+Processed 576 / 1217 samples
+Processed 640 / 1217 samples
+Processed 704 / 1217 samples
+Processed 768 / 1217 samples
+Processed 832 / 1217 samples
+Processed 896 / 1217 samples
+Processed 960 / 1217 samples
+Processed 1024 / 1217 samples
+Processed 1088 / 1217 samples
+Processed 1152 / 1217 samples
+Processed 1216 / 1217 samples
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/losses/maskix_loss.py:69: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
   warnings.warn(
+```
+
+```
+Processed 1217 / 1217 samples
 ```
 
 No we use the trained maskix to impute our missing data
@@ -743,8 +835,8 @@ print(f"MSE Loss imputed reconstruction: {loss_imputed}")
 from torch.nn.functional import mse_loss original_train = result_orig.datasets.train.data original_recon = result_orig.reconstructions.get(split="train", epoch=-1) original_recon_tensor = torch.from_numpy(original_recon) loss = mse_loss(original_recon_tensor, original_train) print(f"MSE Loss original reconstruction: {loss}") loss_imputed = mse_loss(recons_train.to("cpu"), original_train) print(f"MSE Loss imputed reconstruction: {loss_imputed}")
 
 ```
-MSE Loss original reconstruction: 0.8379753232002258
-MSE Loss imputed reconstruction: 0.8577121496200562
+MSE Loss original reconstruction: 0.8217788338661194
+MSE Loss imputed reconstruction: 0.853430986404419
 ```
 
 Finally, you can use this data as input for other autoencoders like `varix` or `vanillix`, but also use it for maskix. We will train two Varix models, one with the missing data and one with the imputed data and compare the results
@@ -797,8 +889,8 @@ config = VarixConfig(
     checkpoint_interval=10,
     batch_size=64,
     skip_preprocessing=True,
+    annotation_columns=["assigned_cluster"],
     data_config=DataConfig(
-        annotation_columns=["assigned_cluster"],
         data_info={"multi_sc": DataInfo(is_single_cell=True, data_type="NUMERIC")},
     ),
     data_case=DataCase.MULTI_SINGLE_CELL,
@@ -808,12 +900,7 @@ varix_imputed = acx.Varix(config=config, data=ds_imputed)
 varix_missing = acx.Varix(config=config, data=ds_with_zero)
 ```
 
-import autoencodix as acx from autoencodix.configs import VarixConfig from autoencodix.configs.default_config import DataInfo, DataConfig, DataCase from autoencodix.data.\_datasetcontainer import DatasetContainer import copy config = VarixConfig( epochs=50, checkpoint_interval=10, batch_size=64, skip_preprocessing=True, data_config=DataConfig( annotation_columns=["assigned_cluster"], data_info={"multi_sc": DataInfo(is_single_cell=True, data_type="NUMERIC")}, ), data_case=DataCase.MULTI_SINGLE_CELL, ) varix_imputed = acx.Varix(config=config, data=ds_imputed) varix_missing = acx.Varix(config=config, data=ds_with_zero)
-
-```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/configs/default_config.py:439: UserWarning: annotation_columns in DataConfig is deprecated. Please set it directly in DefaultConfig instead.
-  warnings.warn(
-```
+import autoencodix as acx from autoencodix.configs import VarixConfig from autoencodix.configs.default_config import DataInfo, DataConfig, DataCase from autoencodix.data.\_datasetcontainer import DatasetContainer import copy config = VarixConfig( epochs=50, checkpoint_interval=10, batch_size=64, skip_preprocessing=True, annotation_columns=["assigned_cluster"], data_config=DataConfig( data_info={"multi_sc": DataInfo(is_single_cell=True, data_type="NUMERIC")}, ), data_case=DataCase.MULTI_SINGLE_CELL, ) varix_imputed = acx.Varix(config=config, data=ds_imputed) varix_missing = acx.Varix(config=config, data=ds_with_zero)
 
 In \[19\]:
 
@@ -827,44 +914,132 @@ result_missing = varix_missing.run()
 result_imputed = varix_imputed.run() result_missing = varix_missing.run()
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 22.9550 exceeded max norm of 5.
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 17.8693 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 58.5504
-Sub-losses: recon_loss: 58.5361, var_loss: 0.0143, anneal_factor: 0.0017, effective_beta_factor: 0.0002
-Epoch 10 - Valid Loss: 33.6344
-Sub-losses: recon_loss: 33.6179, var_loss: 0.0165, anneal_factor: 0.0017, effective_beta_factor: 0.0002
-Epoch 20 - Train Loss: 45.7293
-Sub-losses: recon_loss: 44.2866, var_loss: 1.4427, anneal_factor: 0.0832, effective_beta_factor: 0.0083
-Epoch 20 - Valid Loss: 24.5973
-Sub-losses: recon_loss: 23.1475, var_loss: 1.4498, anneal_factor: 0.0832, effective_beta_factor: 0.0083
-Epoch 30 - Train Loss: 47.4960
-Sub-losses: recon_loss: 41.4196, var_loss: 6.0765, anneal_factor: 0.8320, effective_beta_factor: 0.0832
-Epoch 30 - Valid Loss: 28.1740
-Sub-losses: recon_loss: 21.9422, var_loss: 6.2318, anneal_factor: 0.8320, effective_beta_fact
-... [output truncated]
+Epoch 10 - Train Loss: 64.6057
+Sub-losses: recon_loss: 64.5902, var_loss: 0.0155, anneal_factor: 0.0017, effective_beta_factor: 0.0002
+Epoch 10 - Valid Loss: 35.7079
+Sub-losses: recon_loss: 35.6911, var_loss: 0.0169, anneal_factor: 0.0017, effective_beta_factor: 0.0002
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:233: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 16.4512 exceeded max norm of 5.
+Epoch 20 - Train Loss: 49.7563
+Sub-losses: recon_loss: 48.3171, var_loss: 1.4392, anneal_factor: 0.0832, effective_beta_factor: 0.0083
+Epoch 20 - Valid Loss: 26.4443
+Sub-losses: recon_loss: 25.0706, var_loss: 1.3737, anneal_factor: 0.0832, effective_beta_factor: 0.0083
+```
+
+```
+Epoch 30 - Train Loss: 50.9857
+Sub-losses: recon_loss: 44.8977, var_loss: 6.0880, anneal_factor: 0.8320, effective_beta_factor: 0.0832
+Epoch 30 - Valid Loss: 30.2246
+Sub-losses: recon_loss: 25.1086, var_loss: 5.1161, anneal_factor: 0.8320, effective_beta_factor: 0.0832
+```
+
+```
+Epoch 40 - Train Loss: 48.5249
+Sub-losses: recon_loss: 43.1473, var_loss: 5.3776, anneal_factor: 0.9963, effective_beta_factor: 0.0996
+Epoch 40 - Valid Loss: 30.3962
+Sub-losses: recon_loss: 25.5719, var_loss: 4.8243, anneal_factor: 0.9963, effective_beta_factor: 0.0996
+```
+
+```
+Epoch 50 - Train Loss: 47.0611
+Sub-losses: recon_loss: 41.9472, var_loss: 5.1139, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Epoch 50 - Valid Loss: 28.5695
+Sub-losses: recon_loss: 23.5106, var_loss: 5.0590, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+```
+
+```
+Processed 64 / 1715 samples
+Processed 128 / 1715 samples
+Processed 192 / 1715 samples
+Processed 256 / 1715 samples
+Processed 320 / 1715 samples
+Processed 384 / 1715 samples
+Processed 448 / 1715 samples
+Processed 512 / 1715 samples
+Processed 576 / 1715 samples
+Processed 640 / 1715 samples
+Processed 704 / 1715 samples
+Processed 768 / 1715 samples
+Processed 832 / 1715 samples
+Processed 896 / 1715 samples
+Processed 960 / 1715 samples
+Processed 1024 / 1715 samples
+Processed 1088 / 1715 samples
+Processed 1152 / 1715 samples
+Processed 1216 / 1715 samples
+Processed 1280 / 1715 samples
+Processed 1344 / 1715 samples
+Processed 1408 / 1715 samples
+Processed 1472 / 1715 samples
+Processed 1536 / 1715 samples
+Processed 1600 / 1715 samples
+Processed 1664 / 1715 samples
+Processed 1715 / 1715 samples
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:295: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 14.4497 exceeded max norm of 5.
   warnings.warn(
 ```
 
 ```
-Epoch 10 - Train Loss: 598.3720
-Sub-losses: recon_loss: 598.3560, var_loss: 0.0160, anneal_factor: 0.0017, effective_beta_factor: 0.0002
-Epoch 10 - Valid Loss: 561.6330
-Sub-losses: recon_loss: 561.6178, var_loss: 0.0152, anneal_factor: 0.0017, effective_beta_factor: 0.0002
-Epoch 20 - Train Loss: 579.7749
-Sub-losses: recon_loss: 578.2827, var_loss: 1.4922, anneal_factor: 0.0832, effective_beta_factor: 0.0083
-Epoch 20 - Valid Loss: 545.6434
-Sub-losses: recon_loss: 544.2280, var_loss: 1.4154, anneal_factor: 0.0832, effective_beta_factor: 0.0083
-Epoch 30 - Train Loss: 581.2735
-Sub-losses: recon_loss: 574.4224, var_loss: 6.8511, anneal_factor: 0.8320, effective_beta_factor: 0.0832
-Epoch 30 - Valid Loss: 546.9111
-Sub-losses: recon_loss: 540.5161, var_loss: 6.3950, anneal_factor: 0.8320, effecti
+Epoch 10 - Train Loss: 584.6642
+Sub-losses: recon_loss: 584.6421, var_loss: 0.0221, anneal_factor: 0.0017, effective_beta_factor: 0.0002
+Epoch 10 - Valid Loss: 569.9953
+Sub-losses: recon_loss: 569.9718, var_loss: 0.0235, anneal_factor: 0.0017, effective_beta_factor: 0.0002
+```
+
+```
+Epoch 20 - Train Loss: 572.8624
+Sub-losses: recon_loss: 570.8847, var_loss: 1.9777, anneal_factor: 0.0832, effective_beta_factor: 0.0083
+Epoch 20 - Valid Loss: 555.0081
+Sub-losses: recon_loss: 553.2080, var_loss: 1.8001, anneal_factor: 0.0832, effective_beta_factor: 0.0083
+```
+
+```
+Epoch 30 - Train Loss: 571.5883
+Sub-losses: recon_loss: 564.3123, var_loss: 7.2760, anneal_factor: 0.8320, effective_beta_factor: 0.0832
+Epoch 30 - Valid Loss: 552.6426
+Sub-losses: recon_loss: 546.2930, var_loss: 6.3496, anneal_factor: 0.8320, effective_beta_factor: 0.0832
+```
+
+```
+Epoch 40 - Train Loss: 565.3089
+Sub-losses: recon_loss: 558.5029, var_loss: 6.8060, anneal_factor: 0.9963, effective_beta_factor: 0.0996
+Epoch 40 - Valid Loss: 552.5511
+Sub-losses: recon_loss: 545.6898, var_loss: 6.8612, anneal_factor: 0.9963, effective_beta_factor: 0.0996
+```
+
+```
+Epoch 50 - Train Loss: 561.5511
+Sub-losses: recon_loss: 555.0318, var_loss: 6.5194, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Epoch 50 - Valid Loss: 545.5082
+Sub-losses: recon_loss: 539.2839, var_loss: 6.2243, anneal_factor: 0.9999, effective_beta_factor: 0.1000
+Processed 64 / 1715 samples
+Processed 128 / 1715 samples
+Processed 192 / 1715 samples
+Processed 256 / 1715 samples
+Processed 320 / 1715 samples
+Processed 384 / 1715 samples
+Processed 448 / 1715 samples
+Processed 512 / 1715 samples
+Processed 576 / 1715 samples
+Processed 640 / 1715 samples
+Processed 704 / 1715 samples
+Processed 768 / 1715 samples
+Processed 832 / 1715 samples
+Processed 896 / 1715 samples
+Processed 960 / 1715 samples
+Processed 1024 / 1715 samples
+Processed 1088 / 1715 samples
+Processed 1152 / 1715 samples
+P
 ... [output truncated]
 ```
 
@@ -880,21 +1055,96 @@ varix_imputed.\_datasets.train.metadata
 
 Out\[20\]:
 
-|                               | barcode             | assigned_cluster | sample_id | n_genes |
-| ----------------------------- | ------------------- | ---------------- | --------- | ------- |
-| human1_lib1.final_cell_0002_0 | GAGCGTTGCT-ACCTTCTT | acinar           | human1    | 4201    |
-| human1_lib1.final_cell_0003_0 | CTTACGGG-CCATTACT   | acinar           | human1    | 2119    |
-| human1_lib1.final_cell_0006_0 | AATCCCACG-ATTCGACG  | acinar           | human1    | 2477    |
-| human1_lib1.final_cell_0009_0 | GAGAATTCGT-GTTTGTTT | acinar           | human1    | 3272    |
-| human1_lib1.final_cell_0013_0 | AAAATCGTT-GGAAACAG  | delta            | human1    | 2357    |
-| ...                           | ...                 | ...              | ...       | ...     |
-| human4_lib3.final_cell_0693_3 | AGTTACCGC-CTACCGTT  | beta             | human4    | 1156    |
-| human4_lib3.final_cell_0694_3 | GACTTACTCC-TAGAAATG | alpha            | human4    | 1285    |
-| human4_lib3.final_cell_0695_3 | TAGCCTCG-GGCTACTA   | beta             | human4    | 983     |
-| human4_lib3.final_cell_0696_3 | GACGGGCTTT-TATTGCCT | beta             | human4    | 1226    |
-| human4_lib3.final_cell_0698_3 | GCTTACCT-ATGTTGGC   | alpha            | human4    | 1007    |
+```
+barcode
+assigned_cluster
+sample_id
+n_genes
 
-5998 rows × 4 columns
+
+
+
+human1_lib1.final_cell_0002_0
+GAGCGTTGCT-ACCTTCTT
+acinar
+human1
+4201
+
+
+human1_lib1.final_cell_0003_0
+CTTACGGG-CCATTACT
+acinar
+human1
+2119
+
+
+human1_lib1.final_cell_0004_0
+GATGTACACG-TTAAACTG
+acinar
+human1
+2956
+
+
+human1_lib1.final_cell_0005_0
+GAGATTGCGA-GTCGTCGT
+acinar
+human1
+2715
+
+
+human1_lib1.final_cell_0006_0
+AATCCCACG-ATTCGACG
+acinar
+human1
+2477
+
+
+...
+...
+...
+...
+...
+
+
+human4_lib3.final_cell_0695_3
+TAGCCTCG-GGCTACTA
+beta
+human4
+983
+
+
+human4_lib3.final_cell_0696_3
+GACGGGCTTT-TATTGCCT
+beta
+human4
+1226
+
+
+human4_lib3.final_cell_0697_3
+GAGATCTCGG-GTCTCTCT
+activated_stellate
+human4
+1055
+
+
+human4_lib3.final_cell_0698_3
+GCTTACCT-ATGTTGGC
+alpha
+human4
+1007
+
+
+human4_lib3.final_cell_0701_3
+TGATGCCC-TTGCACGC
+ductal
+human4
+985
+
+
+
+5998 rows × 4 col
+... [output truncated]
+```
 
 In \[21\]:
 
@@ -941,7 +1191,12 @@ Perform ML task for target parameter: assigned_cluster
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/.venv/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:465: ConvergenceWarning: lbfgs failed to converge (status=1):
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:451: OptimizeWarning: Unknown solver options: iprint
+  opt_res = optimize.minimize(
+```
+
+```
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:465: ConvergenceWarning: lbfgs failed to converge (status=1):
 STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT.
 
 Increase the number of iterations (max_iter) or scale the data as shown in:
@@ -966,7 +1221,8 @@ sub_losses: LossRegistry(_losses={'recon_loss': TrainingDynamics(), 'var_loss': 
 preprocessed_data: Tensor of shape (0,)
 model: VarixArchitecture
 model_checkpoints: TrainingDynamics object
-datasets: DatasetContainer(train=<autoencodix.data._numeric_dataset.NumericDataset object at 0x721689746560>, valid=<autoencodix.data._numeric_dataset.NumericDataset object at 0x721689747280>, test=<autoencodix.data._numeric_dataset.Num
+class_means: TrainingDynamics object
+datasets: DatasetContainer(train=<autoencodix.data._numeric_dataset.NumericDataset object at 0x7791a5d9d4f0>, valid=<autoencodix.data._numeric_dataset.NumericDataset object at 0x7791a4ec22a0>, test=<
 ... [output truncated]
 ```
 
@@ -987,7 +1243,12 @@ Perform ML task for target parameter: assigned_cluster
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/.venv/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:465: ConvergenceWarning: lbfgs failed to converge (status=1):
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:451: OptimizeWarning: Unknown solver options: iprint
+  opt_res = optimize.minimize(
+```
+
+```
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:465: ConvergenceWarning: lbfgs failed to converge (status=1):
 STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT.
 
 Increase the number of iterations (max_iter) or scale the data as shown in:
@@ -1004,7 +1265,12 @@ Perform ML task for target parameter: assigned_cluster
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/.venv/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:465: ConvergenceWarning: lbfgs failed to converge (status=1):
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:451: OptimizeWarning: Unknown solver options: iprint
+  opt_res = optimize.minimize(
+```
+
+```
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:465: ConvergenceWarning: lbfgs failed to converge (status=1):
 STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT.
 
 Increase the number of iterations (max_iter) or scale the data as shown in:
@@ -1029,7 +1295,8 @@ sub_losses: LossRegistry(_losses={'recon_loss': TrainingDynamics(), 'var_loss': 
 preprocessed_data: Tensor of shape (0,)
 model: VarixArchitecture
 model_checkpoints: TrainingDynamics object
-datasets: DatasetContainer(train=<autoencodix.data._numeric_dataset.NumericDataset object at 0x7216898a0700>, valid=<autoencodix.data._numeric_dataset.NumericDataset object at 0x7216898a0ca0>, test=<autoencodix.data._numeric_dataset.Num
+class_means: TrainingDynamics object
+datasets: DatasetContainer(train=<autoencodix.data._numeric_dataset.NumericDataset object at 0x7791a5bd1a90>, valid=<autoencodix.data._numeric_dataset.NumericDataset object at 0x7791a5c10d70>, test=<
 ... [output truncated]
 ```
 
@@ -1074,43 +1341,54 @@ varix_loaded = acx.Maskix.load(outpath) varix_loaded.predict(data=maskix_result.
 
 ```
 Preprocessor saved successfully.
+```
+
+```
 saving memory efficient
+```
+
+```
 Pipeline object saved successfully.
-PKL files: ['tutorial_res/varix_preprocessor.pkl', 'tutorial_res/ontix.pkl', 'tutorial_res/maskix_preprocessor.pkl', 'tutorial_res/imagix.pkl', 'tutorial_res/ontix_preprocessor.pkl', 'tutorial_res/disent.pkl', 'tutorial_res/imagix_preprocessor.pkl', 'tutorial_res/disent_preprocessor.pkl']
-Model files: ['tutorial_res/varix_model.pth', 'tutorial_res/disent_model.pth', 'tutorial_res/imagix_model.pth', 'tutorial_res/ontix_model.pth', 'tutorial_res/maskix_model.pth']
-Attempting to load a pipeline from tutorial_res/maskix...
-Pipeline object loaded successfully. Actual type: Maskix
-Preprocessor loaded successfully.
+PKL files: ['tutorial_res/ontix_reactome_preprocessor.pkl', 'tutorial_res/ontix.pkl', 'tutorial_res/imagix_preprocessor.pkl', 'tutorial_res/varix_preprocessor.pkl', 'tutorial_res/imagix.pkl', 'tutorial_res/ontix_reactome.pkl', 'tutorial_res/supervisix_preprocessor.pkl', 'tutorial_res/maskix_preprocessor.pkl', 'tutorial_res/imagix3d_preprocessor.pkl', 'tutorial_res/xmodalix_preprocessor.pkl', 'tutorial_res/xmodalix.pkl', 'tutorial_res/imagix3d.pkl', 'tutorial_res/disent.pkl', 'tutorial_res/disent_preprocessor.pkl', 'tutorial_res/ontix_preprocessor.pkl']
+Model files: ['tutorial_res/imagix3d_model.pth', 'tutorial_res/imagix_model.pth', 'tutorial_res/disent_model.pth', 'tutorial_res/supervisix_model.pth', 'tutorial_res/img.img_xmodalix_model.pth', 'tutorial
+... [output truncated]
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/losses/maskix_loss.py:69: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
+  warnings.warn(
+```
+
+```
+Processed 64 / 1715 samples
+Processed 128 / 1715 samples
+Processed 192 / 1715 samples
+Processed 256 / 1715 samples
+Processed 320 / 1715 samples
+Processed 384 / 1715 samples
+Processed 448 / 1715 samples
+Processed 512 / 1715 samples
+Processed 576 / 1715 samples
+Processed 640 / 1715 samples
+Processed 704 / 1715 samples
+Processed 768 / 1715 samples
+Processed 832 / 1715 samples
+Processed 896 / 1715 samples
+Processed 960 / 1715 samples
+Processed 1024 / 1715 samples
+Processed 1088 / 1715 samples
+Processed 1152 / 1715 samples
+Processed 1216 / 1715 samples
+Processed 1280 / 1715 samples
+Processed 1344 / 1715 samples
+Processed 1408 / 1715 samples
+Processed 1472 / 1715 samples
+Processed 1536 / 1715 samples
+Processed 1600 / 1715 samples
+Processed 1664 / 1715 samples
 Processed 1715 / 1715 samples
 ```
 
 ```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/losses/maskix_loss.py:38: UserWarning: You chose loss reduction: sum, this deviates from the implementation in the literature for this architecture, the authors used 'mean'
-  warnings.warn(
-```
-
-```
 Creating plots ...
-```
-
-```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 29 and split 'train'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
-
-
-  warnings.warn(
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 29 and split 'valid'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
-
-
-  warnings.warn(
-```
-
-```
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 29 and split 'train'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
-
-
-  warnings.warn(
-/home/alicia/dev/biomarker_autoencoder/autoencodix_package/src/autoencodix/utils/_result.py:348: UserWarning: Could not retrieve latent representations for epoch 29 and split 'valid'. Returning empty DataFrame. This may be due to missing data in the Result object or incorrect keys.
-
-
-  warnings.warn(
 ```

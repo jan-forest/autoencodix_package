@@ -1,6 +1,6 @@
 > **Note:** This environment variable is required for fully deterministic CuBLAS ops on CUDA >= 10.2 when `reproducible=True` is set below. Without it, PyTorch raises a `RuntimeError` instead of training deterministically. It must be set before `torch` is imported. See the [README FAQ](https://jan-forest.github.io/autoencodix_package/tutorials/README.md#reproducibility-and-cublas_workspace_config) for details.
 
-In \[ \]:
+In \[1\]:
 
 Copied!
 
@@ -9,6 +9,10 @@ Copied!
 ```
 
 %env CUBLAS_WORKSPACE_CONFIG=:16:8
+
+```
+env: CUBLAS_WORKSPACE_CONFIG=:16:8
+```
 
 ### Disclaimer[¶](#disclaimer)
 
@@ -76,7 +80,7 @@ We can also store additional metrics that we don't optimize for directly (e.g., 
 
 ______________________________________________________________________
 
-In \[11\]:
+In \[2\]:
 
 Copied!
 
@@ -124,7 +128,7 @@ def objective(trial):
 			epochs=epochs,
 			checkpoint_interval= checkpoint_interval,
 			loss_reduction= loss_reduction,
-        	device="cpu",
+        	# device="cpu",  # default is "auto", which uses a GPU when available; uncomment to force CPU
 			## Tunable params
 			batch_size= batch_size,
 			drop_p= drop_p,
@@ -222,7 +226,9 @@ myconfig = VanillixConfig(
 
 ## Fixed params
 
-data_case=DataCase.MULTI_BULK, epochs=epochs, checkpoint_interval= checkpoint_interval, loss_reduction= loss_reduction, device="cpu",
+data_case=DataCase.MULTI_BULK, epochs=epochs, checkpoint_interval= checkpoint_interval, loss_reduction= loss_reduction,
+
+# device="cpu", # default is "auto", which uses a GPU when available; uncomment to force CPU
 
 ## Tunable params
 
@@ -291,7 +297,7 @@ We must also specify whether we want to `maximize` or `minimize` our target metr
 
 ______________________________________________________________________
 
-In \[18\]:
+In \[3\]:
 
 Copied!
 
@@ -347,7 +353,11 @@ study = optuna.create_study( study_name="autoencodix-optimization", direction=di
 study.optimize(objective, n_trials=10)
 
 ```
-[I 2026-06-04 14:22:48,108] A new study created in memory with name: autoencodix-optimization
+[I 2026-11-13 15:04:38,802] A new study created in memory with name: autoencodix-optimization
+```
+
+```
+You are using a CUDA device ('NVIDIA GeForce RTX 5060 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
 ```
 
 ```
@@ -355,20 +365,12 @@ in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataP
 ```
 
 ```
-[I 2026-06-04 14:22:48,746] Trial 0 finished with value: 208.5494140625 and parameters: {'batch_size': 1783, 'drop_p': 0.6482920440979423, 'enc_factor': 1, 'weight_decay': 0.0001619311091244073, 'beta': 7.595132328682394e-05, 'learning_rate': 2.3407464805767515e-05, 'n_layers': 2}. Best is trial 0 with value: 208.5494140625.
-```
-
-```
-Perform ML task with feature df: Latent
-Latent
-Perform ML task for target parameter: condition
-in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
-```
-
-```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package/.venv/lib/python3.12/site-packages/sklearn/linear_model/_sag.py:348: ConvergenceWarning: The max_iter was reached which means the coef_ did not converge
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 412.0139 exceeded max norm of 5.
   warnings.warn(
-[I 2026-06-04 14:22:49,627] Trial 1 finished with value: 204.61236328125 and parameters: {'batch_size': 1499, 'drop_p': 0.35709072680760295, 'enc_factor': 3, 'weight_decay': 0.00047509237210306113, 'beta': 0.12921621108432518, 'learning_rate': 6.573686655138327e-05, 'n_layers': 5}. Best is trial 1 with value: 204.61236328125.
+```
+
+```
+[I 2026-11-13 15:04:50,385] Trial 0 finished with value: 162.620078125 and parameters: {'batch_size': 1783, 'drop_p': 0.6482920440979423, 'enc_factor': 1, 'weight_decay': 0.0001619311091244073, 'beta': 7.595132328682394e-05, 'learning_rate': 2.3407464805767515e-05, 'n_layers': 2}. Best is trial 0 with value: 162.620078125.
 ```
 
 ```
@@ -379,9 +381,12 @@ in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataP
 ```
 
 ```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package/.venv/lib/python3.12/site-packages/sklearn/linear_model/_sag.py:348: ConvergenceWarning: The max_iter was reached which means the coef_ did not converge
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 254.0052 exceeded max norm of 5.
   warnings.warn(
-[I 2026-06-04 14:22:50,426] Trial 2 finished with value: 203.7865625 and parameters: {'batch_size': 236, 'drop_p': 0.603420759160562, 'enc_factor': 3, 'weight_decay': 0.0017169565852473863, 'beta': 6.955392321661599e-05, 'learning_rate': 6.200203677164716e-05, 'n_layers': 5}. Best is trial 2 with value: 203.7865625.
+```
+
+```
+[I 2026-11-13 15:04:53,291] Trial 1 finished with value: 158.47001953125 and parameters: {'batch_size': 1499, 'drop_p': 0.35709072680760295, 'enc_factor': 3, 'weight_decay': 0.00047509237210306113, 'beta': 0.12921621108432507, 'learning_rate': 6.573686655138327e-05, 'n_layers': 5}. Best is trial 1 with value: 158.47001953125.
 ```
 
 ```
@@ -392,66 +397,14 @@ in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataP
 ```
 
 ```
-[I 2026-06-04 14:22:50,808] Trial 3 finished with value: 210.5692578125 and parameters: {'batch_size': 3971, 'drop_p': 0.28208176034331855, 'enc_factor': 4, 'weight_decay': 0.03202997570029044, 'beta': 2.3315244870014054, 'learning_rate': 2.188652665746547e-05, 'n_layers': 2}. Best is trial 2 with value: 203.7865625.
-```
-
-```
-Perform ML task with feature df: Latent
-Latent
-Perform ML task for target parameter: condition
-in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
-```
-
-```
-[I 2026-06-04 14:22:51,727] Trial 4 finished with value: 202.02994140625 and parameters: {'batch_size': 802, 'drop_p': 0.7903282530864718, 'enc_factor': 1, 'weight_decay': 0.0004835378777285505, 'beta': 5.58903952498834, 'learning_rate': 0.0013572540301313666, 'n_layers': 4}. Best is trial 4 with value: 202.02994140625.
-```
-
-```
-Perform ML task with feature df: Latent
-Latent
-Perform ML task for target parameter: condition
-in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
-```
-
-```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package/.venv/lib/python3.12/site-packages/sklearn/linear_model/_sag.py:348: ConvergenceWarning: The max_iter was reached which means the coef_ did not converge
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 503.9401 exceeded max norm of 5.
   warnings.warn(
-[I 2026-06-04 14:22:52,225] Trial 5 finished with value: 202.1137109375 and parameters: {'batch_size': 1380, 'drop_p': 0.6178508349134253, 'enc_factor': 5, 'weight_decay': 1.183458707441061e-05, 'beta': 0.3168588850299515, 'learning_rate': 0.09024940671927402, 'n_layers': 4}. Best is trial 4 with value: 202.02994140625.
 ```
 
 ```
-Perform ML task with feature df: Latent
-Latent
-Perform ML task for target parameter: condition
-in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
-```
-
-```
-[I 2026-06-04 14:22:52,943] Trial 6 finished with value: 205.6899609375 and parameters: {'batch_size': 1241, 'drop_p': 0.7103513956063396, 'enc_factor': 1, 'weight_decay': 0.0006188339116517525, 'beta': 2.8286096492960997, 'learning_rate': 0.0001494364677378836, 'n_layers': 3}. Best is trial 4 with value: 202.02994140625.
-```
-
-```
-Perform ML task with feature df: Latent
-Latent
-Perform ML task for target parameter: condition
-in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
-```
-
-```
-[I 2026-06-04 14:22:53,322] Trial 7 finished with value: 118.65896484375 and parameters: {'batch_size': 644, 'drop_p': 0.017430262083267367, 'enc_factor': 4, 'weight_decay': 7.022834985764343e-05, 'beta': 0.0003919944843607491, 'learning_rate': 0.0009253214657642581, 'n_layers': 2}. Best is trial 7 with value: 118.65896484375.
-```
-
-```
-Perform ML task with feature df: Latent
-Latent
-Perform ML task for target parameter: condition
-in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
-```
-
-```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package/.venv/lib/python3.12/site-packages/sklearn/linear_model/_sag.py:348: ConvergenceWarning: The max_iter was reached which means the coef_ did not converge
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_sag.py:348: ConvergenceWarning: The max_iter was reached which means the coef_ did not converge
   warnings.warn(
-[I 2026-06-04 14:22:53,800] Trial 8 finished with value: 190.7475 and parameters: {'batch_size': 2406, 'drop_p': 0.13205571741522915, 'enc_factor': 3, 'weight_decay': 0.00629554655842228, 'beta': 4.111559438268768e-05, 'learning_rate': 0.0004531311844091796, 'n_layers': 4}. Best is trial 7 with value: 118.65896484375.
+[I 2026-11-13 15:04:57,240] Trial 2 finished with value: 155.779677734375 and parameters: {'batch_size': 236, 'drop_p': 0.603420759160562, 'enc_factor': 3, 'weight_decay': 0.0017169565852473863, 'beta': 6.955392321661599e-05, 'learning_rate': 6.200203677164716e-05, 'n_layers': 5}. Best is trial 2 with value: 155.779677734375.
 ```
 
 ```
@@ -462,9 +415,112 @@ in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataP
 ```
 
 ```
-/Users/lucathale-bombien/PycharmProjects/autoencodix_package/.venv/lib/python3.12/site-packages/sklearn/linear_model/_sag.py:348: ConvergenceWarning: The max_iter was reached which means the coef_ did not converge
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 98.5233 exceeded max norm of 5.
   warnings.warn(
-[I 2026-06-04 14:22:54,334] Trial 9 finished with value: 136.542578125 and parameters: {'batch_size': 1771, 'drop_p': 0.04495811305147845, 'enc_factor': 3, 'weight_decay': 0.0045204178469246655, 'beta': 0.012283854745700366, 'learning_rate': 0.060031476336384136, 'n_layers': 4}. Best is trial 7 with value: 118.65896484375.
+```
+
+```
+[I 2026-11-13 15:04:59,084] Trial 3 finished with value: 161.71560546875 and parameters: {'batch_size': 3971, 'drop_p': 0.28208176034331855, 'enc_factor': 4, 'weight_decay': 0.032029975700290474, 'beta': 2.331524487001407, 'learning_rate': 2.1886526657465428e-05, 'n_layers': 2}. Best is trial 2 with value: 155.779677734375.
+```
+
+```
+Perform ML task with feature df: Latent
+Latent
+Perform ML task for target parameter: condition
+in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 1240.6735 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+[I 2026-11-13 15:05:01,649] Trial 4 finished with value: 153.84572265625 and parameters: {'batch_size': 802, 'drop_p': 0.7903282530864718, 'enc_factor': 1, 'weight_decay': 0.00048353787772855095, 'beta': 5.589039524988341, 'learning_rate': 0.0013572540301313666, 'n_layers': 4}. Best is trial 4 with value: 153.84572265625.
+```
+
+```
+Perform ML task with feature df: Latent
+Latent
+Perform ML task for target parameter: condition
+in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 291.5516 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_sag.py:348: ConvergenceWarning: The max_iter was reached which means the coef_ did not converge
+  warnings.warn(
+[I 2026-11-13 15:05:03,979] Trial 5 finished with value: 154.943359375 and parameters: {'batch_size': 1380, 'drop_p': 0.6178508349134253, 'enc_factor': 5, 'weight_decay': 1.183458707441061e-05, 'beta': 0.31685888502995163, 'learning_rate': 0.0902494067192741, 'n_layers': 4}. Best is trial 4 with value: 153.84572265625.
+```
+
+```
+Perform ML task with feature df: Latent
+Latent
+Perform ML task for target parameter: condition
+in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 694.0703 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+[I 2026-11-13 15:05:06,308] Trial 6 finished with value: 158.2597265625 and parameters: {'batch_size': 1241, 'drop_p': 0.7103513956063396, 'enc_factor': 1, 'weight_decay': 0.0006188339116517525, 'beta': 2.828609649296101, 'learning_rate': 0.0001494364677378836, 'n_layers': 3}. Best is trial 4 with value: 153.84572265625.
+```
+
+```
+Perform ML task with feature df: Latent
+Latent
+Perform ML task for target parameter: condition
+in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 97.6604 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+[I 2026-11-13 15:05:07,945] Trial 7 finished with value: 87.08455078125 and parameters: {'batch_size': 644, 'drop_p': 0.017430262083267367, 'enc_factor': 4, 'weight_decay': 7.022834985764343e-05, 'beta': 0.0003919944843607495, 'learning_rate': 0.0009253214657642581, 'n_layers': 2}. Best is trial 7 with value: 87.08455078125.
+```
+
+```
+Perform ML task with feature df: Latent
+Latent
+Perform ML task for target parameter: condition
+in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 150.4891 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+[I 2026-11-13 15:05:10,617] Trial 8 finished with value: 140.52296875 and parameters: {'batch_size': 2406, 'drop_p': 0.13205571741522915, 'enc_factor': 3, 'weight_decay': 0.00629554655842228, 'beta': 4.111559438268776e-05, 'learning_rate': 0.00045313118440918, 'n_layers': 4}. Best is trial 7 with value: 87.08455078125.
+```
+
+```
+Perform ML task with feature df: Latent
+Latent
+Perform ML task for target parameter: condition
+in handle_direct_user_data with data: <class 'autoencodix.data.datapackage.DataPackage'>
+```
+
+```
+/home/janew/ACX/autoencodix_package/src/autoencodix/trainers/_general_trainer.py:305: UserWarning: Gradient clipping was first applied in epoch 0. Total norm of gradients (adjusted for number of features): 156.6871 exceeded max norm of 5.
+  warnings.warn(
+```
+
+```
+.venv/lib/python3.12/site-packages/sklearn/linear_model/_sag.py:348: ConvergenceWarning: The max_iter was reached which means the coef_ did not converge
+  warnings.warn(
+[I 2026-11-13 15:05:12,641] Trial 9 finished with value: 97.998994140625 and parameters: {'batch_size': 1771, 'drop_p': 0.04495811305147845, 'enc_factor': 3, 'weight_decay': 0.0045204178469246655, 'beta': 0.012283854745700366, 'learning_rate': 0.06003147633638411, 'n_layers': 4}. Best is trial 7 with value: 87.08455078125.
 ```
 
 ```
@@ -479,7 +535,7 @@ Perform ML task for target parameter: condition
 
 Optuna provides built-in visualization tools based on Plotly to easily explore our results.
 
-In \[20\]:
+In \[4\]:
 
 Copied!
 
@@ -502,7 +558,7 @@ plot_optimization_history(study) plt.show()
 
 We can also visualize which hyperparameters had the biggest impact on the objective value.
 
-In \[21\]:
+In \[5\]:
 
 Copied!
 
@@ -518,7 +574,7 @@ from optuna.visualization.matplotlib import plot_param_importances import matplo
 
 ### Comparing tuning on Reconstruction Loss vs. Downstream Performance[¶](#comparing-tuning-on-reconstruction-loss-vs-downstream-performance)
 
-In \[22\]:
+In \[6\]:
 
 Copied!
 
@@ -573,7 +629,7 @@ After the optimization finishes, we can query the study for the best configurati
 
 ______________________________________________________________________
 
-In \[23\]:
+In \[7\]:
 
 Copied!
 
@@ -596,8 +652,8 @@ print("Loaded optuna_study.pkl")
 print(f"Best objective value: {study.best_value}") print(f"Best configuration found: {study.best_params}") import pickle with open("optuna_study.pkl", "wb") as f: pickle.dump(study, f) print("Saved optuna_study.pkl") with open("optuna_study.pkl", "rb") as f: loaded_study = pickle.load(f) print("Loaded optuna_study.pkl")
 
 ```
-Best objective value: 118.65896484375
-Best configuration found: {'batch_size': 644, 'drop_p': 0.017430262083267367, 'enc_factor': 4, 'weight_decay': 7.022834985764343e-05, 'beta': 0.0003919944843607491, 'learning_rate': 0.0009253214657642581, 'n_layers': 2}
+Best objective value: 87.08455078125
+Best configuration found: {'batch_size': 644, 'drop_p': 0.017430262083267367, 'enc_factor': 4, 'weight_decay': 7.022834985764343e-05, 'beta': 0.0003919944843607495, 'learning_rate': 0.0009253214657642581, 'n_layers': 2}
 Saved optuna_study.pkl
 Loaded optuna_study.pkl
 ```

@@ -3163,7 +3163,8 @@ and as the base of other visualizers.</p>
 <span class="normal">953</span>
 <span class="normal">954</span>
 <span class="normal">955</span>
-<span class="normal">956</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GeneralVisualizer</span><span class="p">(</span><span class="n">BaseVisualizer</span><span class="p">):</span>
+<span class="normal">956</span>
+<span class="normal">957</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GeneralVisualizer</span><span class="p">(</span><span class="n">BaseVisualizer</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Visualizer for tabular and single-cell pipelines.</span>
 
 <span class="sd">    Creates loss curves, model-weight heatmaps, latent-space plots (2D scatter,</span>
@@ -3845,6 +3846,7 @@ and as the base of other visualizers.</p>
         <span class="k">return</span> <span class="n">cluster_figure</span>
 
     <span class="nd">@staticmethod</span>
+    <span class="nd">@keep_rcparams</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_plot_latent_ridge</span><span class="p">(</span>
         <span class="n">lat_space</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">labels</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -3870,7 +3872,7 @@ and as the base of other visualizers.</p>
 
         <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">param</span> <span class="o">=</span> <span class="s2">"all"</span>
-            <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"all"</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+            <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"all"</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">lat_space</span><span class="p">)</span>
 
         <span class="c1"># print(labels[0])</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">labels</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
@@ -11498,7 +11500,8 @@ embeddings of translated versus original data to the standard plots.</p>
 <span class="normal">914</span>
 <span class="normal">915</span>
 <span class="normal">916</span>
-<span class="normal">917</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">XModalVisualizer</span><span class="p">(</span><span class="n">BaseVisualizer</span><span class="p">):</span>
+<span class="normal">917</span>
+<span class="normal">918</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">XModalVisualizer</span><span class="p">(</span><span class="n">BaseVisualizer</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Visualizer for cross-modal translation (``XModalix``).</span>
 
 <span class="sd">    Adds per-modality latent space plots, image translation grids and 2D</span>
@@ -12202,6 +12205,7 @@ embeddings of translated versus original data to the standard plots.</p>
         <span class="k">return</span> <span class="n">plot</span>
 
     <span class="nd">@staticmethod</span>
+    <span class="nd">@keep_rcparams</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_plot_latent_ridge_multi</span><span class="p">(</span>
         <span class="n">lat_space</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">modality</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>

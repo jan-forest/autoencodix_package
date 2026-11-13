@@ -293,6 +293,12 @@ Parameters:
 
 Returns: Result: The prediction results including reconstructions and latent spaces.
 
+### `purge() -> None`
+
+Removes training-only objects before the pipeline is saved.
+
+In addition to the cleanup of `GeneralTrainer.purge`, the optimizers and data loaders of the nested modality trainers and of the stacked trainer are dropped. They are not needed for prediction and cannot be pickled with recent PyTorch versions. The modality models are kept, because they are required to encode new data. Nested trainers are copied before they are slimmed down, so a pipeline that is still in use is not changed.
+
 ### `train() -> Result`
 
 Train the stacked model on the concatenated latent space.

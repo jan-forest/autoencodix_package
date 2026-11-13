@@ -358,7 +358,8 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
 
     # Training configuration --------------------------------------------------
     save_memory: bool = Field(
-        default=False, description="If set to True we don't store TrainingDynamics"
+        default=False,
+        description="If set to True we don't store TrainingDynamics. In addition, data passed to predict() is not copied but preprocessed in place, so the same data object must not be passed to predict() again.",
     )
     save_vram: bool = Field(
         default=False,
@@ -478,7 +479,7 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     )
 
     grad_clip_max_norm: Optional[float] = Field(
-        default=5,
+        default=1,
         ge=0.0,
         description="Maximum norm for gradient clipping (see torch.nn.utils.clip_grad_norm_). Set None, to disable gradient clipping.",
     )

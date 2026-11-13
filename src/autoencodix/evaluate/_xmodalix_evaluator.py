@@ -1,4 +1,5 @@
 from typing import Union, Tuple, Optional, no_type_check
+import warnings
 
 
 import pandas as pd
@@ -341,7 +342,11 @@ class XModalixEvaluator(GeneralEvaluator):
     ## New for x-modalix
     @staticmethod
     def _load_input_for_ml(
-        task: str, dataset: DatasetContainer, result: Result
+        task: str,
+        dataset: DatasetContainer,
+        result: Result,
+        n_downsample: Optional[int] = None,
+        reference_reducer: Optional[dict] = None,
     ) -> pd.DataFrame:
         """Loads and processes input data for various machine learning tasks based on the specified task type.
 
@@ -357,11 +362,17 @@ class XModalixEvaluator(GeneralEvaluator):
             task: The type of ML task. Supported values are "Latent", "UMAP", "PCA", "TSNE", and "RandomFeature".
             dataset: The dataset container object holding train, validation, and test splits.
             result: The result object containing model configuration and methods to retrieve latent representations.
+            n_downsample: Accepted for compatibility with ``GeneralEvaluator``; not yet supported for XModalix and ignored.
+            reference_reducer: Accepted for compatibility with ``GeneralEvaluator``; not yet supported for XModalix and ignored.
         Returns:
             A DataFrame containing the processed input data suitable for the specified ML task.
         Raises:
             ValueError: If the provided task is not supported.
         """
+        if reference_reducer:
+            warnings.warn(
+                "reference_reducer is not supported for XModalix evaluation and is ignored."
+            )
 
         # final_epoch = result.model.config.epochs - 1
         modality = task.split("_$_")[1]

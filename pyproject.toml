@@ -11,7 +11,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 license = "Apache-2.0"
-license-files = ["LICENCSE"]
+license-files = ["LICENSE"]
 requires-python = ">=3.9,<3.13"
 dependencies = [
     "lightning-fabric>=2.5.0.post0",
@@ -23,7 +23,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "scikit-learn>=1.6.1",
     "scipy>=1.13.1",
-    "torch>=2.1.0,<2.4.0",
+    "torch>=2.1.0",
     "anndata==0.10.8",
     "mudata==0.2.4",
     "scanpy>=1.10.3",
@@ -72,6 +72,12 @@ dev = [
     "syne-tune>=0.14.2",
     "build>=1.2.1",
 ]
+
+[tool.uv]
+# Only affects uv.lock, not the published package metadata. The default
+# torch 2.15.0 wheel (CUDA 13.2 build) crashed at CUDA initialisation on
+# WSL2 during release testing; 2.14.1 works. Remove once a newer build is verified.
+constraint-dependencies = ["torch<2.15"]
 
 [build-system]
 requires = ["hatchling"]

@@ -243,7 +243,7 @@ class BaseTrainer(abc.ABC):
                     "Warning: MPS backend has limited support for deterministic algorithms. "
                     "Seeding is active, but full reproducibility is not guaranteed."
                 )
-            else:
+            elif not torch.cuda.is_available():
                 print(
                     f"Reproducibility settings for device {self._config.device} are not implemented or necessary i.e. for cpu."
                 )

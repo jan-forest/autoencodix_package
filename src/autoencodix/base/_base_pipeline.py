@@ -123,8 +123,7 @@ class BasePipeline(abc.ABC):
             TypeError: If inputs have incorrect types.
         """
         if not hasattr(self, "_default_config"):
-            raise ValueError(
-                """
+            raise ValueError("""
                             The _default_config attribute has not been specified in your pipeline class.
 
                             Example:
@@ -134,8 +133,7 @@ class BasePipeline(abc.ABC):
                             _default_config in its corresponding pipeline class.
 
                             For more details, please refer to the 'how to add a new architecture' section in our documentation.
-                            """
-            )
+                            """)
         self.model_map = kwargs.pop("model_map", None)
         self._validate_config(config=config)
         self._validate_user_input(data=data)

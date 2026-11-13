@@ -183,6 +183,16 @@ class GeneralTrainer(BaseTrainer):
                 epoch_loss, epoch_sub_losses = self._train_epoch(
                     should_checkpoint=should_checkpoint, epoch=epoch
                 )
+                if not np.isfinite(epoch_loss) and not getattr(
+                    self, "_nonfinite_loss_warning_sent", False
+                ):
+                    warnings.warn(
+                        f"Training loss is not finite (NaN or Inf) in epoch {epoch}. "
+                        "The model has diverged and its results are not usable. Try a "
+                        "lower learning_rate, a different scaling or, if the config "
+                        "offers it, clamp_logvar=True."
+                    )
+                    self._nonfinite_loss_warning_sent = True
                 self._log_losses(
                     epoch=epoch,
                     split="train",
@@ -295,7 +305,7 @@ class GeneralTrainer(BaseTrainer):
                     warnings.warn(
                         f"Gradient clipping was first applied in epoch {epoch}. Total norm of gradients (adjusted for number of features): {total_norm:.4f} exceeded max norm of {self._config.grad_clip_max_norm}."
                     )
-                self._grad_clip_warning_sent = True
+                    self._grad_clip_warning_sent = True
 
             self._optimizer.step()
             self._ontix_hook()

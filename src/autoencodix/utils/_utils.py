@@ -88,6 +88,22 @@ def nested_to_tuple(d, base=()):
                 yield base + (k, v)
 
 
+def keep_rcparams(func):
+    """Decorator that restores the global matplotlib rcParams after ``func`` returns.
+
+    Use it for plotting functions that need a temporary style (e.g.
+    ``sns.set_theme``), so the style does not leak into later plots of the
+    pipeline or of the user.
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        with plt.rc_context():
+            return func(*args, **kwargs)
+
+    return wrapper
+
+
 @no_type_check
 def show_figure(fig):
     """Display a given Matplotlib figure in a new window.

@@ -96,6 +96,8 @@ class Ontix(BasePipeline):
                 f"Expected ontologies to be of type tuple or list, got {type(ontologies)}."
             )
 
+        if config is None:
+            config = self._default_config
         config.latent_dim = len(
             self.ontologies[0]
         )  # Set latent dim to number of nodes in the ontology

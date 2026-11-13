@@ -1,3 +1,4 @@
+import copy
 from typing import Dict, Optional, Tuple, Type
 
 import torch
@@ -142,6 +143,39 @@ class StackixTrainer(GeneralTrainer):
         self._result = self._trainer.train()
 
         return self._result
+
+    def purge(self) -> None:
+        """Removes training-only objects before the pipeline is saved.
+
+        In addition to the cleanup of ``GeneralTrainer.purge``, the optimizers and
+        data loaders of the nested modality trainers and of the stacked trainer are
+        dropped. They are not needed for prediction and cannot be pickled with
+        recent PyTorch versions. The modality models are kept, because they are
+        required to encode new data. Nested trainers are copied before they are
+        slimmed down, so a pipeline that is still in use is not changed.
+        """
+        training_only = (
+            "_trainloader",
+            "_validloader",
+            "_optimizer",
+            "_trainset",
+            "_validset",
+        )
+        if self._modality_trainers:
+            slim_trainers = {}
+            for name, trainer in self._modality_trainers.items():
+                slim = copy.copy(trainer)
+                for attr in training_only:
+                    if hasattr(slim, attr):
+                        delattr(slim, attr)
+                slim_trainers[name] = slim
+            self._modality_trainers = slim_trainers
+            self._orchestrator = copy.copy(self._orchestrator)
+            self._orchestrator.modality_trainers = slim_trainers
+        if getattr(self, "_trainer", None) is not None:
+            self._trainer = copy.copy(self._trainer)
+            self._trainer.purge()
+        super().purge()
 
     def _train_modalities(self) -> None:
         """Trains a Autoencoder for each modality in the dataset.

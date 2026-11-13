@@ -13,3 +13,10 @@ Tutorials/DeepDives/TutData/*
 uv.lock
 # Jupyter checkpoints
 .ipynb_checkpoints/
+
+# Files written by the tutorial notebooks
+tutorial_res/
+Tutorials/**/tutorial_res/
+Tutorials/**/data/
+# Trial log written by Syne Tune in the HPO tutorial
+Tutorials/**/std.out

@@ -1,4 +1,5 @@
 import abc
+import copy
 import re
 from typing import Dict, Optional, Tuple, Type, Union, Any, Literal, List, Callable
 import warnings
@@ -123,8 +124,7 @@ class BasePipeline(abc.ABC):
             TypeError: If inputs have incorrect types.
         """
         if not hasattr(self, "_default_config"):
-            raise ValueError(
-                """
+            raise ValueError("""
                             The _default_config attribute has not been specified in your pipeline class.
 
                             Example:
@@ -134,8 +134,7 @@ class BasePipeline(abc.ABC):
                             _default_config in its corresponding pipeline class.
 
                             For more details, please refer to the 'how to add a new architecture' section in our documentation.
-                            """
-            )
+                            """)
         self.model_map = kwargs.pop("model_map", None)
         self._validate_config(config=config)
         self._validate_user_input(data=data)
@@ -527,7 +526,11 @@ class BasePipeline(abc.ABC):
 
         Args:
             data: Optional new data for predictions. If None, the test split of
-                the preprocessed data is used.
+                the preprocessed data is used. The passed data is copied before
+                preprocessing and stays unchanged, unless ``save_memory=True`` is
+                set in the config: then it is preprocessed (filtered and scaled)
+                in place to avoid the extra copy and must not be passed to
+                ``predict`` again.
             config: Optional custom configuration for prediction.
             from_key: Source modality for cross-modal translation (``XModalix``
                 only).
@@ -637,6 +640,33 @@ class BasePipeline(abc.ABC):
 
         return data
 
+    @staticmethod
+    def _copy_data_package(data_package: DataPackage) -> DataPackage:
+        """Copies a DataPackage including the data it holds.
+
+        ``copy.deepcopy`` fails for ``MuData`` objects that contain ``AnnData``
+        views, so the containers are copied with their own ``copy`` methods.
+
+        Args:
+            data_package: DataPackage to copy.
+        Returns:
+            A new DataPackage that shares no data with the input.
+        """
+
+        def _copy(obj: Any) -> Any:
+            if obj is None:
+                return None
+            if isinstance(obj, dict):
+                return {key: _copy(value) for key, value in obj.items()}
+            if isinstance(obj, (pd.DataFrame, ad.AnnData, MuData)):
+                return obj.copy()
+            return copy.deepcopy(obj)
+
+        new_package = copy.copy(data_package)
+        for name, value in vars(data_package).items():
+            setattr(new_package, name, _copy(value))
+        return new_package
+
     def _handle_user_data(self, data: Any) -> DatasetContainer:
         """Handle user-provided data (DataPackage, AnnData, etc.).
         Args:
@@ -647,6 +677,13 @@ class BasePipeline(abc.ABC):
             ValueError: If data type is unsupported or no test data is available.
         """
         processed_data, _ = self._handle_direct_user_data(data=data)
+        # Preprocessing filters and scales the DataPackage in place. Work on a copy,
+        # so the user's data stays raw and repeated predict(data=...) calls with the
+        # same object are not preprocessed twice. With save_memory=True the copy is
+        # skipped: the passed data is then preprocessed in place and must not be
+        # reused.
+        if not self.config.save_memory:
+            processed_data = self._copy_data_package(processed_data)
         predict_data = self._preprocessor.preprocess(
             raw_user_data=processed_data, predict_new_data=True
         )
@@ -1130,12 +1167,12 @@ class BasePipeline(abc.ABC):
         ``<stem>_preprocessor.pkl`` and ``<stem>_model.pth`` (model weights). Restore
         with ``<PipelineClass>.load(file_path)``.
 
-        Warning:
-            With ``save_all=False`` the pipeline object in memory is slimmed down as
-            a side effect: datasets, raw data and most results are removed and the
-            in-memory model is re-initialized (weights are only kept in the saved
-            files). Reload the pipeline with ``load`` before continuing to work
-            with it, or use ``save_all=True``.
+        Note:
+            Saving does not change the pipeline object in memory. With
+            ``save_all=False`` only the saved files are slimmed down: a pipeline
+            restored with ``load`` has no datasets, raw data or training dynamics
+            (loss curves, latent spaces per epoch) anymore. Run ``predict`` on the
+            loaded pipeline to obtain latent spaces again, or use ``save_all=True``.
 
         Args:
             file_path: Path where the pipeline should be saved.

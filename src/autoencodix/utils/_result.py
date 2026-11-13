@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import MISSING, dataclass, field, fields
 from typing import Any, Optional, Dict, Union
 from anndata import AnnData
 
@@ -158,6 +158,25 @@ class Result:
     # plots: Dict[str, Any] = field(
     #     default_factory=nested_dict
     # )  ## Nested dictionary of plots as figure handles
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        """Restore a pickled Result and add fields it does not have yet.
+
+        Pipelines saved with an earlier version of the package (e.g. the pretrained
+        models on the Hugging Face Hub) lack fields that were added later. They are
+        filled with their defaults, so such pipelines can still be used.
+
+        Args:
+            state: Attribute dictionary of the pickled object.
+        """
+        self.__dict__.update(state)
+        for result_field in fields(self):
+            if result_field.name in self.__dict__:
+                continue
+            if result_field.default is not MISSING:
+                setattr(self, result_field.name, result_field.default)
+            elif result_field.default_factory is not MISSING:
+                setattr(self, result_field.name, result_field.default_factory())
 
     def __getitem__(self, key: str) -> Any:
         """Retrieve the value associated with a specific key.

@@ -12,7 +12,7 @@ from sklearn.manifold import TSNE
 from typing import Any, Dict, Optional, Union, List, no_type_check
 from autoencodix.base._base_visualizer import BaseVisualizer
 from autoencodix.utils._result import Result
-from autoencodix.utils._utils import nested_dict, show_figure
+from autoencodix.utils._utils import keep_rcparams, nested_dict, show_figure
 from autoencodix.configs.default_config import DefaultConfig
 from autoencodix.data._datasetcontainer import DatasetContainer
 
@@ -721,6 +721,7 @@ class XModalVisualizer(BaseVisualizer):
         return plot
 
     @staticmethod
+    @keep_rcparams
     def _plot_latent_ridge_multi(
         lat_space: pd.DataFrame,
         modality: Optional[str] = None,

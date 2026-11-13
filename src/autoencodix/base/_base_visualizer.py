@@ -127,7 +127,9 @@ class BaseVisualizer(abc.ABC):
         Args:
             param: clinical parameter to visualize.
             metric: metric to visualize.
-            ml_alg: ML algorithm to visualize. If None, plots all available algorithms.
+            ml_alg: ML algorithm to visualize, given as class name (e.g.
+                "RandomForestClassifier") or as ``str(model)``. If None, plots all
+                available algorithms.
         Returns:
             None
         """
@@ -149,6 +151,10 @@ class BaseVisualizer(abc.ABC):
 
         algs = list(self.plots["ML_Evaluation"][param][metric].keys())
         if ml_alg is not None:
+            if ml_alg not in algs and ml_alg.split("(")[0] in algs:
+                # Results are stored under the class name of the ML model, accept
+                # str(model) such as "RandomForestClassifier(n_estimators=10)" too
+                ml_alg = ml_alg.split("(")[0]
             if ml_alg not in algs:
                 print(f"ML algorithm {ml_alg} not found for {param} and {metric}")
                 print(f"Available ML algorithms: {algs}")

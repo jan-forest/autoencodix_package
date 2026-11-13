@@ -11,7 +11,7 @@ from umap import UMAP  # type: ignore
 
 from autoencodix.base._base_visualizer import BaseVisualizer
 from autoencodix.utils._result import Result
-from autoencodix.utils._utils import nested_dict, show_figure
+from autoencodix.utils._utils import keep_rcparams, nested_dict, show_figure
 from autoencodix.configs.default_config import DefaultConfig
 
 
@@ -697,6 +697,7 @@ class GeneralVisualizer(BaseVisualizer):
         return cluster_figure
 
     @staticmethod
+    @keep_rcparams
     def _plot_latent_ridge(
         lat_space: pd.DataFrame,
         labels: Optional[Union[list, pd.Series, None]] = None,
@@ -722,7 +723,7 @@ class GeneralVisualizer(BaseVisualizer):
 
         if labels is None:
             param = "all"
-            labels = ["all"] * len(df)
+            labels = ["all"] * len(lat_space)
 
         # print(labels[0])
         if not isinstance(labels[0], str):

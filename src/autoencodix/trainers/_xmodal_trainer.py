@@ -414,9 +414,9 @@ class XModalTrainer(BaseTrainer):
             0  # because of unpaired training we need to sum the samples instead of using len(dataset)
         )
 
-        self._grad_clip_warning_sent = (
-            False  # Reset the warning flag at the start of each epoch
-        )
+        if not hasattr(self, "_grad_clip_warning_sent"):
+            # Warn only once per trainer, not once per epoch
+            self._grad_clip_warning_sent = False
 
         for batch in self._trainloader:
             with self._fabric.autocast():
@@ -469,7 +469,7 @@ class XModalTrainer(BaseTrainer):
                         warnings.warn(
                             f"Gradient clipping was first applied in epoch {self._cur_epoch}. Total norm of gradients (adjusted for number of features): {total_norm:.4f} exceeded max norm of {self._config.grad_clip_max_norm}."
                         )
-                    self._grad_clip_warning_sent = True
+                        self._grad_clip_warning_sent = True
                 # Perform optimizer step for each modality
                 dynamics["optim"].step()
 
@@ -1020,7 +1020,7 @@ class XModalTrainer(BaseTrainer):
                                     warnings.warn(
                                         f"Gradient clipping was first applied in epoch {self._cur_epoch}. Total norm of gradients (adjusted for number of features): {total_norm:.4f} exceeded max norm of {self._config.grad_clip_max_norm}."
                                     )
-                                self._grad_clip_warning_sent = True
+                                    self._grad_clip_warning_sent = True
                             dynamics["optim"].step()
 
                     # --- Logging and Capturing ---

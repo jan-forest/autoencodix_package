@@ -357,7 +357,10 @@ class PairedUnpairedSplitter:
             A mapping with keys ``train``, ``valid``, and ``test``, where each value
             is an array of sample IDs assigned to that split.
         """
-        ids = list(ids)
+        # Sort first: the IDs arrive as a set, whose iteration order changes between
+        # Python processes (string hash randomization). Without sorting, the same
+        # global_seed would give a different split in every run.
+        ids = sorted(ids)
         rng = np.random.default_rng(self.config.global_seed)
         ids = rng.permutation(ids)
         n = len(ids)

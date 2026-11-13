@@ -296,6 +296,18 @@ Set this environment variable before running the pipeline (before `torch` is imp
 export CUBLAS_WORKSPACE_CONFIG=:16:8
 ```
 
+**Python crashes with a segmentation fault as soon as training starts** If the Python process or Jupyter kernel dies without a Python error when you call `fit()` or `run()`, the installed PyTorch build may not work with your GPU driver. We have seen this with `torch 2.15.0` (CUDA 13.2 build) under WSL2. The crash happens when PyTorch initializes CUDA and also occurs with `device="cpu"`. You can confirm it with:
+
+```
+python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+```
+
+If this command crashes as well, install an older PyTorch version:
+
+```
+pip install "torch<2.15"
+```
+
 **Which architecture should I choose?** Start with `Vanillix` or `Varix` as a baseline, then pick a specialized architecture from the [Architectures](#architectures) table that matches your goal, such as interpretability, multi-modal integration, cross-modal translation or imputation. The `.evaluate()` step lets you compare them on your own data.
 
 **Can I use AUTOENCODIX for non-biological data?** Yes. Anything you can load into a `pandas.DataFrame`, `AnnData` or `MuData`, or store as image files, can be passed via `DataPackage`. Biology-specific components such as ontologies or single-cell filters are optional. See the [Input data tutorial](tutorials/DeepDives/InputDataTutorials.ipynb).

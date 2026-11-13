@@ -14,6 +14,10 @@ class TestDataSplitter:
         return DefaultConfig()
 
     @pytest.fixture
+    def default_config_skip_preprocessing(self):
+        return DefaultConfig(skip_preprocessing=True)
+
+    @pytest.fixture
     def default_splitter(self, default_config):
         splitter = DataSplitter(config=default_config)
         return splitter
@@ -219,6 +223,59 @@ class TestDataSplitter:
         with pytest.raises(AssertionError):
             splitter = DataSplitter(default_config, custom_splits)
             _ = splitter.split(sample_data_size)
+
+    def test_missing_ids_handling(
+        self,
+        data_package,
+        default_config,
+        default_config_skip_preprocessing,
+    ):
+        available_ids = {
+            str(sample_id).strip()
+            for full_key, data_obj in data_package
+            if not full_key.startswith("annotation.")
+            for sample_id in data_package._get_sample_ids(data_obj)
+        }
+        missing_id = "missing_sample"
+        train_ids, valid_ids, test_ids = np.array_split(
+            np.array(sorted(available_ids), dtype=object),
+            3,
+        )
+        custom_splits = {
+            "train": np.append(train_ids, missing_id),
+            "valid": valid_ids,
+            "test": test_ids,
+        }
+
+        splitter = PairedUnpairedSplitter(
+            data_package,
+            default_config,
+            custom_splits=custom_splits,
+        )
+        per_modality_splits = splitter._per_modality_splits_from_custom_splits()
+
+        for full_key, data_obj in data_package:
+            if full_key.startswith("annotation."):
+                continue
+            modality_ids = {
+                str(sample_id).strip()
+                for sample_id in data_package._get_sample_ids(data_obj)
+            }
+            assert per_modality_splits[full_key] == {
+                split_name: set(custom_splits[split_name]) & modality_ids
+                for split_name in ("train", "valid", "test")
+            }
+            assert missing_id not in set().union(
+                *per_modality_splits[full_key].values()
+            )
+
+        splitter = PairedUnpairedSplitter(
+            data_package,
+            default_config_skip_preprocessing,
+            custom_splits=custom_splits,
+        )
+        with pytest.raises(ValueError, match="not found in any loaded data modality"):
+            splitter._per_modality_splits_from_custom_splits()
 
 
 # Fixture for sample data

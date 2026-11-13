@@ -1,8 +1,10 @@
 import os
 import re
+from pathlib import Path
 import json
 import ollama
 from dotenv import find_dotenv, load_dotenv
+from openai import OpenAI
 
 try:
     # mistralai>=2.0.0
@@ -10,7 +12,7 @@ try:
 except ImportError:
     # mistralai<2.0.0
     from mistralai import Mistral
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 
 import requests
 import warnings
@@ -27,18 +29,28 @@ class LLMExplainer:
         model_name: str,
         genes_to_latent: Dict[str, List],
         prompt: str,
+        save: Union[str, Path, None],
     ):
         """Initialize LLM client.
 
+        API keys and hosts are read from the environment or a ``.env`` file (see
+        ``LLM_Setup.md``).
+
         Args:
-            client_name: Name of the LLM client.
+            client_name: Name of the LLM client ("mistral", "ollama", "openrouter"
+                or "scads-llm").
             model_name: Name of the model to use.
+            genes_to_latent: Top features (e.g. genes) per latent dimension, as
+                produced by the feature attribution step.
+            prompt: Prompt template sent to the LLM for each latent dimension.
+            save: Path to save the explanations to, or None to not save them.
         """
         load_dotenv(find_dotenv())
         self._client_name = client_name
         self._model = model_name
         self.prompt = prompt
         self.genes_to_latent = genes_to_latent
+        self.save = save
         if self._client_name == "ollama":
             # Set Ollama host for Docker compatibility
             ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
@@ -195,8 +207,22 @@ class LLMExplainer:
                 markdown_sections.append(str(details) + "\n")
 
             markdown_sections.append("\n---\n")
+        # Add model name and client to end of markdown file
+        markdown_sections.append(
+            f"Summary generated with client {self._client_name}, model: {self._model}"
+        )
+
         # ---- WRITE ONE SINGLE FILE ----
-        output_path = os.path.join(os.getcwd(), "latent_explanations.md")
+        if not self.save:
+            output_path = os.path.join(os.getcwd(), "latent_explanations.md")
+        else:
+            self.save = Path(self.save)
+            # checks if path leads to existing directory (false if filename given)
+            if self.save.is_dir():
+                output_path = self.save / "latent_explanations.md"
+            else:
+                output_path = self.save.with_suffix(".md")
+
         with open(output_path, "w") as f:
             f.write("\n".join(markdown_sections))
         print(f"Saved explanations to: {output_path}")

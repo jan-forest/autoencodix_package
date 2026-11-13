@@ -380,13 +380,17 @@ class StackixOrchestrator:
         return self.modality_trainers, self.modality_results
 
     def prepare_latent_datasets(self, split: str) -> NumericDataset:
-        """Prepares datasets with concatenated latent spaces for stacked model training.
+        """Prepares a dataset with concatenated latent spaces for stacked model training.
 
         This is the second phase of Stackix training where latent spaces from
         all modalities are extracted and concatenated.
 
+        Args:
+            split: Data split to prepare ("train", "valid" or "test").
+
         Returns:
-            Training and validation datasets with concatenated latent spaces
+            Dataset of concatenated per-modality latent spaces for the samples
+            present in all modalities.
 
         Raises:
             ValueError: If no modality models have been trained or no latent spaces could be extracted

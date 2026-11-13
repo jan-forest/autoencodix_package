@@ -16,6 +16,19 @@ from autoencodix.configs.default_config import DefaultConfig
 
 
 class GeneralVisualizer(BaseVisualizer):
+    """Visualizer for tabular and single-cell pipelines.
+
+    Creates loss curves, model-weight heatmaps, latent-space plots (2D scatter,
+    ridgeline, clustermap, coverage/correlation) and evaluation plots. Used by
+    ``Vanillix``, ``Varix``, ``Ontix``, ``Disentanglix``, ``Stackix``, ``Maskix``
+    and as the base of other visualizers.
+
+    Attributes:
+        plots: Nested dict of created figures, keyed by plot name.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     plots: Dict[str, Any] = field(
         default_factory=nested_dict
     )  ## Nested dictionary of plots as figure handles
@@ -28,6 +41,23 @@ class GeneralVisualizer(BaseVisualizer):
 
     def visualize(self, result: Result, config: DefaultConfig) -> Result:
         ## Make Model Weights plot
+        """Create the standard plots (model weights, absolute and relative loss curves).
+
+        Plots are stored in ``self.plots`` and shown with the ``show_*`` methods.
+
+        Args:
+            result: Result object with losses and the trained model.
+            config: Configuration of the pipeline run.
+
+        Returns:
+            The unchanged result object.
+
+        Model weights are skipped for inputs with more than 3000 features; loss
+        plots are skipped with a warning if no loss history is available (e.g.
+        after loading a pipeline saved with ``save_all=False``).
+
+        (LLM-generated docstring, pending human review.)
+        """
         if result.model.input_dim <= 3000:
             self.plots["ModelWeights"] = self._plot_model_weights(model=result.model)
         else:

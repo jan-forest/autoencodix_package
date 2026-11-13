@@ -1,6 +1,6 @@
 from typing import Dict, Optional, Type, Union, Tuple, List
-import torch
 import numpy as np
+import warnings
 
 from autoencodix.base._base_dataset import BaseDataset
 from autoencodix.base._base_loss import BaseLoss
@@ -81,6 +81,15 @@ class Ontix(BasePipeline):
             ontologies_dict_list = [
                 self._read_ont_file(ont_file, sep=sep) for ont_file in ontologies
             ]
+            if len(ontologies_dict_list[0].keys()) > len(
+                ontologies_dict_list[1].keys()
+            ):
+                # Warn about possible wrong order of ontologies
+                warnings.warn(
+                    "The first ontology has more parent nodes than the second ontology. "
+                    "This may indicate that the ontologies are not provided in the correct order."
+                )
+
             self.ontologies = tuple(ontologies_dict_list)
         else:
             raise TypeError(

@@ -73,7 +73,10 @@ class XModalTrainer(BaseTrainer):
         config: DefaultConfig,
         model_type: Type[BaseAutoencoder],
         loss_type: Type[BaseLoss],
-        model_map: Dict[DataSetTypes, Type[BaseAutoencoder]],
+        model_map: Dict[DataSetTypes, Type[BaseAutoencoder]] = {
+            DataSetTypes.NUM: VarixArchitecture,
+            DataSetTypes.IMG: ImageVAEArchitecture,
+        },
         sub_loss_type: Type[BaseLoss] = VarixLoss,
         ontologies: Optional[Union[Tuple, List]] = None,
         **kwargs,
@@ -87,9 +90,10 @@ class XModalTrainer(BaseTrainer):
             config: Configuration parameters for training and model architecture
             model_type: Type of autoencoder model to use for each modality (not used directly)
             loss_type: Type of loss function to use for training the stacked model
-            sub_loss_type: Type of loss function to use for individual modality autoencoders
             model_map: Mapping from DataSetTypes to specific autoencoder architectures
+            sub_loss_type: Type of loss function to use for individual modality autoencoders
             ontologies: Ontology information, for compatibility with Ontix
+            **kwargs: Additional keyword arguments passed to ``BaseTrainer``.
         """
         self._trainset = trainset
         self._n_train_modalities = self._trainset.n_modalities  # type: ignore
@@ -107,6 +111,7 @@ class XModalTrainer(BaseTrainer):
         self.n_test: Optional[int] = None
         self.n_train = len(trainset.data) if trainset else 0
         self.n_valid = len(validset.data) if validset else 0
+        self.n_features = trainset.get_input_dim() if trainset else 0
         self._cur_epoch: int = 0
         self._is_checkpoint_epoch: Optional[bool] = None
         self._sub_loss_type = sub_loss_type
@@ -125,7 +130,12 @@ class XModalTrainer(BaseTrainer):
         pass
 
     def _setup_fabric(self, old_model=None):
-        """Sets up the models, optimizers, and data loaders with Lightning Fabric."""
+        """Sets up the models, optimizers, and data loaders with Lightning Fabric.
+
+        Args:
+            old_model: Previously trained models to reuse; new models are built
+                if None.
+        """
 
         self._fabric.launch()
         self._init_adversarial_training()
@@ -148,15 +158,26 @@ class XModalTrainer(BaseTrainer):
         """Initializes DataLoaders with smart sampler selection based on pairing."""
 
         def _build_loader(dataset: MultiModalDataset, is_train: bool):
-            batch_size = self._config.batch_size
+            if len(self._trainset) % self._config.batch_size == 1:
+                corrected_bs = self._config.batch_size + 1
+                while len(self._trainset) % corrected_bs == 1:
+                    corrected_bs = corrected_bs + 1
+                    if len(self._trainset) <= corrected_bs:
+                        break
+                warnings.warn(
+                    f"increased batch_size to {corrected_bs} for trainset, to avoid dropping samples (makes trainingdynamics messy with missing samples per epoch) and having batches of size one (fails for Models with BachNorm)"
+                )
+            else:
+                corrected_bs = self._config.batch_size
+
             collate_fn = create_multimodal_collate_fn(multimodal_dataset=dataset)
 
             if dataset.is_fully_paired:
                 return DataLoader(
                     dataset,
-                    batch_size=batch_size,
+                    batch_size=corrected_bs,
                     shuffle=is_train,
-                    drop_last=is_train,
+                    drop_last=False,
                     collate_fn=collate_fn,
                     pin_memory=self._config.pin_memory,
                 )
@@ -167,7 +188,7 @@ class XModalTrainer(BaseTrainer):
                 )
                 sampler = CoverageEnsuringSampler(
                     multimodal_dataset=dataset,
-                    batch_size=batch_size,
+                    batch_size=corrected_bs,
                 )
                 return DataLoader(
                     dataset,
@@ -393,7 +414,9 @@ class XModalTrainer(BaseTrainer):
             0  # because of unpaired training we need to sum the samples instead of using len(dataset)
         )
 
-        # self._grad_clip_warning_sent = False # Reset the warning flag at the start of each epoch
+        self._grad_clip_warning_sent = (
+            False  # Reset the warning flag at the start of each epoch
+        )
 
         for batch in self._trainloader:
             with self._fabric.autocast():
@@ -508,7 +531,8 @@ class XModalTrainer(BaseTrainer):
         for epoch in range(self._config.epochs):
             self._cur_epoch = epoch
             self._is_checkpoint_epoch = self._should_checkpoint(epoch=epoch)
-            self._fabric.print(f"--- Epoch {epoch + 1}/{self._config.epochs} ---")
+            if self._is_checkpoint_epoch:
+                self._fabric.print(f"--- Epoch {epoch + 1}/{self._config.epochs} ---")
             if epoch == 0 and self._config.profiling:
                 print("Profiling enabled for epoch 0")
                 self._train_one_epoch_with_profiling()
@@ -569,6 +593,9 @@ class XModalTrainer(BaseTrainer):
 
         Args:
             data: A MultiModalDataset containing the input data for the 'from' modality.
+            model: Trained models per modality (e.g. after loading a saved
+                pipeline); the trainer's own models are used if None.
+            **kwargs: Ignored; accepted for interface compatibility.
 
         Returns:
             The Result object populated with prediction results.
@@ -802,7 +829,6 @@ class XModalTrainer(BaseTrainer):
         """
 
         n_samples = max(n_samples, 1)
-        print(f"split: {split}, n_samples: {n_samples}")
         # avg_total_loss = total_loss / n_samples ## Now already normalized
         self._result.losses.add(epoch=self._cur_epoch, split=split, data=total_loss)
 
@@ -814,14 +840,16 @@ class XModalTrainer(BaseTrainer):
             split=split,
             data=sub_losses,
         )
-        self._fabric.print(
-            f"Epoch {self._cur_epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {total_loss:.4f}"
-        )
+        if self._is_checkpoint_epoch:
+            self._fabric.print(
+                f"Epoch {self._cur_epoch + 1}/{self._config.epochs} - {split.capitalize()} Loss: {total_loss:.4f}"
+            )
         # Detailed sub-loss logging in one line
         sub_loss_str = ", ".join(
             [f"{k}: {v:.4f}" for k, v in sub_losses.items() if "_factor" not in k]
         )
-        self._fabric.print(f"Sub-losses - {sub_loss_str}")
+        if self._is_checkpoint_epoch:
+            self._fabric.print(f"Sub-losses - {sub_loss_str}")
 
     def _store_checkpoint(self, split: str, epoch_dynamics: List[Dict]) -> None:
         """Stores model checkpoints and epoch dynamics into the Result object.

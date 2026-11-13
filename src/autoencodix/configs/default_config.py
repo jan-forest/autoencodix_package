@@ -17,13 +17,11 @@ class SchemaPrinterMixin:
 
     @classmethod
     def get_params(cls) -> Dict[str, Dict[str, Any]]:
-        """
-        Get detailed information about all config fields including types and default values.
+        """Get detailed information about all config fields including types and default values.
 
-        Returns
-        -------
-        Dict[str, Dict[str, Any]]
-            Dictionary containing field name, type, default value, and description if available
+        Returns:
+            Dictionary mapping each field name to a dict with the keys "type",
+            "default" and "description".
         """
         fields_info = {}
         for name, field in cls.model_fields.items():  # type: ignore
@@ -59,6 +57,16 @@ class SchemaPrinterMixin:
 
 
 class DataCase(str, Enum):
+    """Supported combinations of input data, set automatically from the data.
+
+    ``MULTI_BULK`` and ``MULTI_SINGLE_CELL`` cover one or more tabular or
+    single-cell modalities that are integrated into one latent space. The
+    ``X_TO_Y`` cases are cross-modal translation setups (``XModalix``,
+    ``Imagix``), e.g. ``IMG_TO_BULK`` translates between images and tabular data.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     MULTI_SINGLE_CELL = "Multi Single Cell"
     MULTI_BULK = "Multi Bulk"
     BULK_TO_BULK = "Bulk<->Bulk"
@@ -69,14 +77,45 @@ class DataCase(str, Enum):
 
 
 class ConfigValidationError(Exception):
+    """Raised when a configuration is inconsistent, e.g. invalid dataset combinations.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     pass
 
 
 class DataInfo(BaseModel, SchemaPrinterMixin):
     # general -------------------------------------
+    """Per-modality data settings, stored in ``DataConfig.data_info[<modality>]``.
+
+    Controls how one data modality is read, filtered, scaled and (for images)
+    resized. Settings here override the corresponding global ``DefaultConfig``
+    values for this modality. Call ``DataInfo.print_schema()`` for all fields
+    with defaults and descriptions.
+
+    Attributes:
+        data_type: Kind of data: "NUMERIC" (features to model), "CATEGORICAL",
+            "IMG" (images) or "ANNOTATION" (sample metadata, not modeled).
+        filtering: Feature selection method applied before training: "VAR"
+            (highest variance), "MAD" (median absolute deviation), "CORR"
+            (correlation-based), "VARCORR" (variance, then correlation),
+            "NONZEROVAR" (drop zero-variance features only) or "NOFILT".
+        sep: Column separator used when reading text files with pandas.
+        extra_anno_file: Optional path to an additional annotation file.
+        is_single_cell: Whether this modality is single-cell data.
+        selected_layers: AnnData layers to use; must include "X".
+        img_width_resize: Target image width in pixels (must equal the height).
+        img_height_resize: Target image height in pixels (must equal the width).
+        translate_direction: "from" or "to" for the source and target modality
+            in cross-modal translation; None otherwise.
+
+    (LLM-generated docstring, pending human review.)
+    """
     file_path: str = Field(default="", description="Path to raw data file")
     data_type: Literal["NUMERIC", "CATEGORICAL", "IMG", "ANNOTATION"] = Field(
-        default="NUMERIC"
+        default="NUMERIC",
+        description="Kind of data: NUMERIC (features to model), CATEGORICAL, IMG (images) or ANNOTATION (sample metadata, not modeled)",
     )
     scaling: Literal[
         "STANDARD", "MINMAX", "ROBUST", "MAXABS", "NONE", "NOTSET", "LOG1P"
@@ -86,13 +125,21 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     )  # can also be set globally, for all data modalities.
 
     filtering: Literal["VAR", "MAD", "CORR", "VARCORR", "NOFILT", "NONZEROVAR"] = Field(
-        default="VAR"
+        default="VAR",
+        description="Feature selection before training: VAR (highest variance), MAD (median absolute deviation), CORR (correlation-based), VARCORR (variance, then correlation), NONZEROVAR (drop zero-variance features only) or NOFILT",
     )
-    sep: Union[str, None] = Field(default=None)  # for pandas read_csv
-    extra_anno_file: Union[str, None] = Field(default=None)
+    sep: Union[str, None] = Field(
+        default=None,
+        description="Column separator used when reading text files with pandas",
+    )
+    extra_anno_file: Union[str, None] = Field(
+        default=None, description="Optional path to an additional annotation file"
+    )
 
     # single cell specific -------------------------
-    is_single_cell: bool = Field(default=False)
+    is_single_cell: bool = Field(
+        default=False, description="Whether this modality is single-cell data"
+    )
 
     min_cells: float = Field(
         default=0.05,
@@ -107,9 +154,15 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         le=1,
         description="Minimum fraction of genes a cell must express to be kept. Cells expressing fewer genes will be filtered out.",
     )  # Controls cell quality filtering
-    selected_layers: List[str] = Field(default=["X"])
+    selected_layers: List[str] = Field(
+        default=["X"],
+        description="AnnData layers to use for single-cell data; must include 'X'",
+    )
 
-    is_X: bool = Field(default=False)  # only for single cell data
+    is_X: bool = Field(
+        default=False,
+        description="Currently unused; kept for compatibility with older configs",
+    )
     normalize_counts: bool = Field(
         default=True, description="Whether to normalize by total counts"
     )
@@ -121,11 +174,18 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
         description="Don't set this gets calculated dynamically, based on k_filter in general config ",
     )
     # image specific ------------------------------
-    img_width_resize: Union[int, None] = Field(default=64)
-    img_height_resize: Union[int, None] = Field(default=64)
+    img_width_resize: Union[int, None] = Field(
+        default=64, description="Target image width in pixels; must equal the height"
+    )
+    img_height_resize: Union[int, None] = Field(
+        default=64, description="Target image height in pixels; must equal the width"
+    )
     # annotation specific -------------------------
     # xmodalix specific -------------------------
-    translate_direction: Union[Literal["from", "to"], None] = Field(default=None)
+    translate_direction: Union[Literal["from", "to"], None] = Field(
+        default=None,
+        description="'from' or 'to' to mark the source and target modality for cross-modal translation; None otherwise",
+    )
     pretrain_epochs: Optional[int] = Field(
         default=None,
         description="Number of pretraining epochs. This overwrites the global 'pretraining_epochs' in DefaultConfig class to have different number of pretraining epochs for each data modality",
@@ -134,6 +194,13 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     @field_validator("selected_layers")
     @classmethod
     def validate_selected_layers(cls, v):
+        """Ensure that the AnnData layer "X" is always among the selected layers.
+
+        Raises:
+            ValueError: If "X" is missing.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if "X" not in v:
             raise ValueError('"X" must always be a part of the selected_layers list')
         return v
@@ -165,6 +232,13 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
     @field_validator("img_width_resize", "img_height_resize")
     @classmethod
     def validate_image_resize(cls, v, info: ValidationInfo):
+        """Ensure image resize dimensions are positive and square.
+
+        Raises:
+            ValueError: If a dimension is not positive or width and height differ.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if v is not None and v <= 0:
             raise ValueError("Image resize dimensions must be positive integers")
 
@@ -177,9 +251,33 @@ class DataInfo(BaseModel, SchemaPrinterMixin):
 
 
 class DataConfig(BaseModel, SchemaPrinterMixin):
-    data_info: Dict[str, DataInfo]
-    require_common_cells: Optional[bool] = Field(default=False)
-    annotation_columns: Optional[List[str]] = Field(default=None)
+    """Data settings for all modalities of a pipeline run.
+
+    Usually filled automatically from the ``DataPackage``; set it explicitly to
+    customize per-modality preprocessing.
+
+    Attributes:
+        data_info: Settings per modality, keyed by modality name.
+        require_common_cells: For single-cell data, keep only cells present in
+            all modalities.
+        annotation_columns: Deprecated; set ``annotation_columns`` in the main
+            config (``DefaultConfig``) instead. Values given here are copied
+            there with a warning.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
+    data_info: Dict[str, DataInfo] = Field(
+        description="Per-modality settings (DataInfo), keyed by modality name"
+    )
+    require_common_cells: Optional[bool] = Field(
+        default=False,
+        description="For single-cell data, keep only cells present in all modalities",
+    )
+    annotation_columns: Optional[List[str]] = Field(
+        default=None,
+        description="Deprecated: set annotation_columns in the main config instead",
+    )
 
 
 # write tests: done
@@ -189,8 +287,14 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     # Input validation
     model_config = ConfigDict(extra="forbid")
     # Datasets configuration --------------------------------------------------
-    data_config: DataConfig = DataConfig(data_info={})
-    annotation_columns: Optional[List[str]] = Field(default=None)
+    data_config: DataConfig = Field(
+        default=DataConfig(data_info={}),
+        description="Per-modality data settings; filled automatically from the DataPackage if not set",
+    )
+    annotation_columns: Optional[List[str]] = Field(
+        default=None,
+        description="Metadata columns used to color plots and as default targets in evaluate()",
+    )
     img_path_col: str = Field(
         default="img_paths",
         description="When working with images, we except a column in your annotation file that specifies the path of the image for a particular sample. Here you can define the name of this column",
@@ -216,7 +320,10 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=False, description="If set don't scale, filter or clean the input data."
     )
 
-    class_param: Optional[str] = Field(default=None)
+    class_param: Optional[str] = Field(
+        default=None,
+        description="Metadata column with class labels; required by Supervisix, enables the class loss of XModalix",
+    )
 
     # Model configuration -----------------------------------------------------
     latent_dim: int = Field(
@@ -312,6 +419,16 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=10.0,
         ge=0,
         description="Gamma weighting factor for Adversial Loss Term i.e. for XModalix Classfier training",
+    )
+    gamma_class_separation: float = Field(
+        default=0.0,
+        ge=0,
+        description="Gamma weighting factor for class separation loss term in Supervisix Training",
+    )
+    delta_class_cohesion: float = Field(
+        default=0.0,
+        ge=0,
+        description="Delta weighting factor for class cohesion loss term in Supervisix Training",
     )
     delta_pair: float = Field(
         default=5.0,
@@ -420,7 +537,10 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
         default=False,
         description="Internal Only: if set to true runs torch.profiler on xmodalix trainer",
     )
-    profile_logs: str = Field(default="profile")
+    profile_logs: str = Field(
+        default="profile",
+        description="Name of the profiler log written to ./profiler_logs (XModalix profiling)",
+    )
 
     ##### VALIDATION ##### -----------------------------------------------------
     ##### ----------------- -----------------------------------------------------
@@ -448,7 +568,21 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     @field_validator("data_config")
     @classmethod
     def validate_data_config(cls, data_config: DataConfig):
-        """Main validation logic for dataset consistency and translation."""
+        """Main validation logic for dataset consistency and translation.
+
+        Checks that at least one NUMERIC or IMG dataset exists, that numeric
+        datasets are either all single-cell or all bulk, and that translation
+        directions ("from"/"to") are set consistently.
+
+        Args:
+            data_config: The data configuration to validate.
+
+        Returns:
+            The validated data configuration.
+
+        Raises:
+            ConfigValidationError: If the dataset combination is inconsistent.
+        """
         data_info = data_config.data_info
 
         numeric_count = sum(
@@ -574,6 +708,13 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
 
     @field_validator("test_ratio", "valid_ratio")
     def validate_ratios(cls, v, values):
+        """Ensure that train, valid and test ratios sum to at most 1.
+
+        Raises:
+            ValueError: If the ratios sum to more than 1.
+
+        (LLM-generated docstring, pending human review.)
+        """
         total = (
             sum(
                 values.data.get(key, 0)
@@ -588,7 +729,11 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     # TODO test if other float precisions work with MPS
     @field_validator("float_precision")
     def validate_float_precision(cls, v, values):
-        """Validate float precision based on device type."""
+        """Validate float precision based on device type.
+
+        Raises:
+            ValueError: If the device is "mps" and the precision is not "32".
+        """
         device = values.data["device"]
         if device == "mps" and v != "32":
             raise ValueError("MPS backend only supports float precision '32'")
@@ -597,12 +742,30 @@ class DefaultConfig(BaseModel, SchemaPrinterMixin):
     # gpu strategy needs to be auto for mps # TODO test if other strategies work
     @field_validator("gpu_strategy")
     def validate_gpu_strategy(cls, v, values):
+        """Ensure that the MPS backend is only used with the "auto" GPU strategy.
+
+        Raises:
+            ValueError: If the device is "mps" and the strategy is not "auto".
+
+        (LLM-generated docstring, pending human review.)
+        """
         device = values.data.get("device")
         if device == "mps" and v != "auto":
             raise ValueError("MPS backend only supports GPU strategy 'auto'")
+        return v
 
     @model_validator(mode="after")
     def validate_k_filter_with_nonzero_var(self):
+        """Forbid combining a global ``k_filter`` with "NONZEROVAR" filtering.
+
+        Returns:
+            The validated config.
+
+        Raises:
+            ValueError: If ``k_filter`` is set and any modality uses "NONZEROVAR".
+
+        (LLM-generated docstring, pending human review.)
+        """
         k_filter = self.k_filter
 
         data_info = self.data_config.data_info

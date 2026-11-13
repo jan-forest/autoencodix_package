@@ -1,6 +1,6 @@
 [project]
 name = "autoencodix"
-version = "0.2.5"
+version = "0.3.0"
 authors = [
   { name="Maximilian Joas & Jan Ewald", email="jan.ewald@uni-leipzig.de" },
 ]
@@ -46,7 +46,9 @@ dependencies = [
     "tensorboard-plugin-profile>=2.20",
     "tensorboard>=2.20.0",
     "python-dotenv>=1.2.1",
+    "syne-tune>=0.16.0",
     "huggingface_hub>=0.24.0",
+    "torchio",
 ]
 
 [dependency-groups]
@@ -67,11 +69,22 @@ dev = [
     "mkdocs-literate-nav>=0.6.2",
     "mkdocs-section-index>=0.3.10",
     "torch-tb-profiler>=0.4.3",
+    "syne-tune>=0.14.2",
+    "build>=1.2.1",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/autoencodix"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: builds/installs a wheel, run explicitly with -m slow",
+    "network: requires access to the Hugging Face Hub",
+]
 
 [tool.ty.rules]
 [tool.ty.src]

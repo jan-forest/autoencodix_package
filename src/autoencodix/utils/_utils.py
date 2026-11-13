@@ -6,19 +6,22 @@ Use of OOP would be overkill for the simple functions in this module.
 from pathlib import Path
 
 # import zipfile
+import copy
 import inspect
 import os
 from collections import defaultdict
 from dataclasses import MISSING, fields, is_dataclass
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, no_type_check
+from typing import Any, Callable, Dict, List, Optional, no_type_check, Union
 from autoencodix.data._datasetcontainer import DatasetContainer
 from autoencodix.utils._result import Result
 
 import dill as pickle  # type: ignore
 import torch
 import pandas as pd
+import numpy as np
 from matplotlib import pyplot as plt
+import numpy as np
 
 from autoencodix.configs.default_config import DefaultConfig
 
@@ -268,11 +271,15 @@ class Saver:
 
     """
 
-    def __init__(self, file_path: str, save_all: bool):
+    def __init__(self, file_path: Union[str, Path], save_all: bool):
         """Initializes the Saver with the base file path.
 
         Args:
-            file_path: The base file path (without extensions).
+            file_path: Path of the pickled pipeline file; preprocessor and model
+                weights are saved next to it as ``<stem>_preprocessor.pkl`` and
+                ``<stem>_model.pth``.
+            save_all: If False, strip data and most results before saving (see
+                ``BasePipeline.save``).
         """
 
         self.save_all = save_all
@@ -299,6 +306,19 @@ class Saver:
 
         self._save_preprocessor(pipeline._preprocessor)  # type: ignore
         self._save_model_state(pipeline)
+
+        # Strip shallow copies, so saving never changes the caller's pipeline
+        # (trained model, results and data stay usable after .save()).
+        pipeline = copy.copy(pipeline)
+        pipeline.result = copy.copy(pipeline.result)
+        if pipeline._trainer is not None:
+            pipeline._trainer = copy.copy(pipeline._trainer)
+            if hasattr(pipeline._trainer, "_modality_dynamics"):
+                # XModalTrainer.purge deletes entries of these dicts in place
+                pipeline._trainer._modality_dynamics = {
+                    mod: dict(dyn)
+                    for mod, dyn in pipeline._trainer._modality_dynamics.items()
+                }
         self.pipeline = pipeline
 
         self.pipeline._trainer.purge()
@@ -337,6 +357,13 @@ class Saver:
         #     os.remove(model_state_path)
 
     def _save_pipeline_object(self, pipeline: "BasePipeline"):
+        """Pickle the pipeline object to ``file_path``.
+
+        Args:
+            pipeline: The pipeline to save.
+
+        (LLM-generated docstring, pending human review.)
+        """
         try:
             with open(self.file_path, "wb") as f:
                 pickle.dump(pipeline, f)
@@ -346,6 +373,13 @@ class Saver:
             raise e
 
     def _save_preprocessor(self, preprocessor):
+        """Pickle the fitted preprocessor (scalers, feature selection) separately.
+
+        Args:
+            preprocessor: The pipeline's preprocessor; nothing is saved if None.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if preprocessor is not None:
             try:
                 with open(self.preprocessor_path, "wb") as f:
@@ -357,6 +391,19 @@ class Saver:
 
     @no_type_check
     def _save_model_state(self, pipeline: "BasePipeline"):
+        """Save the model weights (state dict) on the CPU.
+
+        Multi-model pipelines (``Stackix``, ``XModalix``) store one file per model
+        as ``<model name>_<stem>_model.pth``.
+
+        Args:
+            pipeline: The pipeline whose ``result.model`` is saved.
+
+        Raises:
+            TypeError: If ``result.model`` is neither a module nor a dict of modules.
+
+        (LLM-generated docstring, pending human review.)
+        """
         self.model_state_paths: List[str] = []
         if pipeline.result is not None and pipeline.result.model is not None:  # type: ignore
             if isinstance(pipeline.result.model, torch.nn.Module):
@@ -387,6 +434,20 @@ class Saver:
 
     @no_type_check
     def reset_to_defaults(self, obj):
+        """Reset all result fields except core ones to their defaults, in place.
+
+        Keeps ``adata_latent``, ``losses`` and ``sub_losses``. The model is replaced
+        by a freshly initialized instance of the same class (weights are saved
+        separately), so it can be rebuilt on load.
+
+        Args:
+            obj (Result): The result dataclass to reset.
+
+        Raises:
+            ValueError: If ``obj`` is not a dataclass.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if not is_dataclass(obj):
             raise ValueError("Object must be a dataclass")
 
@@ -407,11 +468,11 @@ class Saver:
                             model = model.module
                         empty_models[model_name] = type(model)(**model.init_args)
                 elif isinstance(obj.model, torch.nn.Module):
-                    obj.model.init_args["ontologies"] = self.pipeline.ontologies
-                    obj.model.init_args["feature_order"] = (
-                        self.pipeline._trainer.feature_order
-                    )
-                    obj.model = type(obj.model)(**obj.model.init_args)
+                    # copy, so the caller's trained model is not modified
+                    init_args = dict(obj.model.init_args)
+                    init_args["ontologies"] = self.pipeline.ontologies
+                    init_args["feature_order"] = self.pipeline._trainer.feature_order
+                    obj.model = type(obj.model)(**init_args)
                 continue
             if f.default_factory is not MISSING:
                 setattr(obj, f.name, f.default_factory())
@@ -430,7 +491,7 @@ class Loader:
         model_state_path: path where model state dict was saved.
     """
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: Union[str, Path]):
         """Initializes the Loader with the base file path.
 
         Args:
@@ -475,6 +536,17 @@ class Loader:
         return loaded_obj
 
     def _load_pipeline_object(self) -> Any:
+        """Unpickle the pipeline object from ``file_path``.
+
+        Warning:
+            Unpickling can execute arbitrary code. Only load files from sources
+            you trust.
+
+        Returns:
+            The loaded pipeline, or None if the file is missing or unreadable.
+
+        (LLM-generated docstring, pending human review.)
+        """
         print(f"Attempting to load a pipeline from {self.file_path}...")
         try:
             if not os.path.exists(self.file_path):
@@ -491,6 +563,13 @@ class Loader:
             return None
 
     def _load_preprocessor(self):
+        """Unpickle the preprocessor saved next to the pipeline file.
+
+        Returns:
+            The preprocessor, or None if the file is missing or unreadable.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if os.path.exists(self.preprocessor_path):
             try:
                 with open(self.preprocessor_path, "rb") as f:
@@ -506,6 +585,21 @@ class Loader:
 
     @no_type_check
     def _load_model_state(self, loaded_obj: "BasePipeline"):
+        """Load the saved model weights into the loaded pipeline's model(s) on the CPU.
+
+        Args:
+            loaded_obj: Pipeline restored by ``_load_pipeline_object``.
+
+        Returns:
+            The model, or a dict of models for multi-model pipelines.
+
+        Raises:
+            ValueError: If the pipeline has no result or model.
+            FileNotFoundError: If a weights file is missing.
+            TypeError: If the model is neither a module nor a dict of modules.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if loaded_obj.result is None:  # type: ignore:
             raise ValueError("Loaded pipeline has no result attribute")
         if loaded_obj.result.model is None:
@@ -617,7 +711,7 @@ def find_translation_keys(
             if from_key == simple_name or from_key == name:
                 from_key_final = name
             # use if instead of elif to allow for reference prediciton where from_key == to_key
-            if to_key == simple_name or from_key == name:
+            if to_key == simple_name or to_key == name:
                 to_key_final = name
         # if the users passes from_key and to_key and we don't find them, we raise an error
         if not (from_key_final and to_key_final):
@@ -688,3 +782,104 @@ def preprocess_explanations(
         result[col] = df.nlargest(n, col).index.tolist()
 
     return result
+
+
+def custom_splits_from_anno(
+    annotation_file: str | Path,
+    split_col: str = "split",
+    sample_id_col: str = "sample_id",
+) -> dict[str, np.ndarray]:
+    """Create custom train/validation/test splits from sample IDs.
+
+    The returned values are sample identifiers, not row positions.
+    Therefore the custom split is independent of annotation ordering,
+    filesystem ordering, and any reordering that occurs while loading
+    or preprocessing the data.
+
+    Args:
+        annotation_file:
+            Path to the annotation CSV file.
+        split_col:
+            Name of the column containing split assignments.
+        sample_id_col:
+            Name of the column containing sample identifiers.
+
+    Returns:
+        Dictionary with keys "train", "valid", and "test".
+        Each value is a one-dimensional NumPy object array containing
+        sample IDs as strings.
+
+    Raises:
+        ValueError:
+            If required columns are missing, split labels are invalid,
+            or sample IDs are missing, empty, or duplicated.
+    """
+
+    # Explicit string dtype prevents identifiers such as "0012"
+    # from being converted to integers.
+    df = pd.read_csv(
+        annotation_file,
+        dtype={sample_id_col: str},
+    )
+
+    if split_col not in df.columns:
+        raise ValueError(f"Missing split column: {split_col}")
+
+    if sample_id_col not in df.columns:
+        raise ValueError(f"Missing sample ID column: {sample_id_col}")
+
+    if df[sample_id_col].isna().any():
+        raise ValueError(f"Missing sample IDs found in column " f"'{sample_id_col}'.")
+
+    sample_ids = df[sample_id_col].astype(str).str.strip()
+
+    if (sample_ids == "").any():
+        raise ValueError(f"Empty sample IDs found in column " f"'{sample_id_col}'.")
+
+    duplicated = sample_ids[sample_ids.duplicated(keep=False)]
+
+    if not duplicated.empty:
+        examples = duplicated.drop_duplicates().tolist()[:10]
+
+        raise ValueError(
+            "Duplicate sample IDs found in annotation. "
+            "Each sample ID must occur exactly once. "
+            f"Examples: {examples}"
+        )
+
+    split_values = df[split_col].astype(str).str.strip().str.lower()
+
+    allowed = {
+        "train",
+        "valid",
+        "test",
+    }
+
+    observed = set(split_values.unique())
+
+    invalid = observed - allowed
+
+    if invalid:
+        raise ValueError(
+            f"Invalid split labels found: {invalid}. " f"Allowed values are: {allowed}"
+        )
+
+    custom_splits = {
+        split_name: sample_ids[split_values == split_name].to_numpy(dtype=object)
+        for split_name in (
+            "train",
+            "valid",
+            "test",
+        )
+    }
+
+    print("Custom split sizes:")
+
+    for split_name, ids in custom_splits.items():
+        print(
+            split_name,
+            len(ids),
+            ids[:10],
+        )
+
+    return custom_splits

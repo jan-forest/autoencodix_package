@@ -11,6 +11,17 @@ from autoencodix.configs.default_config import DefaultConfig
 
 
 class ImagixVisualizer(GeneralVisualizer):
+    """Visualizer for 2D image pipelines (``Imagix``).
+
+    Adds reconstruction grids (original versus reconstructed images) to the
+    standard loss and latent space plots of ``GeneralVisualizer``.
+
+    Attributes:
+        plots: Nested dict of created figures, keyed by plot name.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     plots: Dict[str, Any] = field(
         default_factory=nested_dict
     )  ## Nested dictionary of plots as figure handles
@@ -28,6 +39,17 @@ class ImagixVisualizer(GeneralVisualizer):
         # self.plots["ModelWeights"] = self._plot_model_weights(model=result.model)
 
         ## Make long format of losses
+        """Create the loss curves (absolute and relative) and store them in ``self.plots``.
+
+        Args:
+            result: Result object with losses.
+            config: Configuration of the pipeline run.
+
+        Returns:
+            The unchanged result object.
+
+        (LLM-generated docstring, pending human review.)
+        """
         loss_df_melt = self._make_loss_format(result=result, config=config)
 
         ## Make plot loss absolute
@@ -55,6 +77,13 @@ class ImagixVisualizer(GeneralVisualizer):
 
     def show_weights(self) -> None:
         ## TODO
+        """Not implemented for image models.
+
+        Raises:
+            NotImplementedError: Always.
+
+        (LLM-generated docstring, pending human review.)
+        """
         raise NotImplementedError(
             "Weight visualization for X-Modalix is not implemented."
         )
@@ -62,6 +91,14 @@ class ImagixVisualizer(GeneralVisualizer):
     @no_type_check
     def show_image_recon_grid(self, result: Result, n_samples: int = 3) -> None:
         ## TODO add similar labels/param logic from other visualizations
+        """Show original and reconstructed test images side by side.
+
+        Args:
+            result: Result object with test-split reconstructions.
+            n_samples: Number of images to show.
+
+        (LLM-generated docstring, pending human review.)
+        """
         dataset = result.datasets
 
         ## Overwrite original datasets with new_datasets if available after predict with other data

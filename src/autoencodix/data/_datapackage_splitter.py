@@ -27,6 +27,19 @@ class DataPackageSplitter:
         config: DefaultConfig,
         indices: Dict[str, Dict[str, Dict[str, np.ndarray]]],
     ) -> None:
+        """Store the DataPackage, config and precomputed split indices.
+
+        Args:
+            data_package: The DataPackage to split.
+            config: Pipeline configuration.
+            indices: Sample indices per data attribute, modality and split, i.e.
+                ``indices[attribute][modality][split]``.
+
+        Raises:
+            TypeError: If ``data_package`` is not a DataPackage.
+
+        (LLM-generated docstring, pending human review.)
+        """
         self._data_package = data_package
         self.indices = indices
         self.config = config
@@ -37,6 +50,10 @@ class DataPackageSplitter:
             )
 
     def _shallow_copy(self, value: Any) -> Any:
+        """Return a shallow copy of ``value``, or ``value`` itself if it cannot be copied.
+
+        (LLM-generated docstring, pending human review.)
+        """
         try:
             return copy.copy(value)
         except AttributeError:
@@ -74,14 +91,14 @@ class DataPackageSplitter:
             )
 
     def _split_data_package(self, split: str) -> Optional[DataPackage]:
-        """Creates a new DataPackage where each attribute is indexed (if applicable)
-        by the given indices. Returns None if indices are empty.
+        """Create a DataPackage that contains only the samples of one split.
 
         Args:
-            indices: The indices to use for splitting the DataPackage.
+            split: Name of the split ("train", "valid" or "test").
+
         Returns:
-            A new DataPackage with attributes indexed by the provided indices,
-            or None if indices are empty.
+            A new DataPackage with every modality indexed by the split's indices,
+            or None if no indices are available.
         """
         if len(self.indices) == 0:
             return None
@@ -117,6 +134,10 @@ class DataPackageSplitter:
         return mudata
 
     def _requires_paired(self) -> bool:
+        """Return True unless the config explicitly allows unpaired data.
+
+        (LLM-generated docstring, pending human review.)
+        """
         return self.config.requires_paired is None or self.config.requires_paired
 
     def split(self) -> Dict[str, Optional[Dict[str, Any]]]:

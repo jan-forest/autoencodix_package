@@ -1,4 +1,5 @@
 data/raw
+data/*
 dist/*
 notebooks/census_chunks/
 notebooks/*/*
@@ -9,3 +10,6 @@ Tutorials/DeepDives/TutData/*
 *.pth
 *.h5ad
 *.pyc
+uv.lock
+# Jupyter checkpoints
+.ipynb_checkpoints/

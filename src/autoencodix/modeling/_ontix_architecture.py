@@ -105,7 +105,7 @@ class OntixArchitecture(BaseAutoencoder):
         missing_features = [f for f in feature_order if f not in all_feature_names]
         if missing_features:
             print(
-                f"Features in feature_order not found in all_feature_names: {missing_features}"
+                f"Features in feature_order not found in all_feature_names, first 5: {missing_features[:5]}..."
             )
         print(f"Feature names without filtering: {len(feature_names)}")
 
@@ -220,6 +220,13 @@ class OntixArchitecture(BaseAutoencoder):
         self._decoder = nn.Sequential(*decoder_layers)
 
     def _positive_dec(self, m):
+        """Clamp the weights of a linear layer to be non-negative (applied to the decoder).
+
+        Args:
+            m (nn.Module): Layer to modify in place; non-linear layers are ignored.
+
+        (LLM-generated docstring, pending human review.)
+        """
         if isinstance(m, nn.Linear):
             m.weight.data = m.weight.data.clamp(min=0)
 

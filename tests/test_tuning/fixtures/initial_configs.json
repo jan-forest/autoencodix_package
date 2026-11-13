@@ -1,0 +1,1450 @@
+{
+  "vanillix": {
+    "combined": {
+      "downstream": [
+        {
+          "k_filter": 1057,
+          "n_layers": 2,
+          "enc_factor": 2.152078905725987,
+          "batch_size": 35,
+          "learning_rate": 3.398834630240624e-05,
+          "drop_p": 0.2709383296812686,
+          "weight_decay": 2.6694253697765106e-05,
+          "latent_dim": 37,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 2889,
+          "n_layers": 2,
+          "enc_factor": 3.5029845228882013,
+          "batch_size": 122,
+          "learning_rate": 3.852032671739199e-05,
+          "drop_p": 0.2296423978130885,
+          "weight_decay": 2.2651038370486676e-05,
+          "latent_dim": 56,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 1274,
+          "n_layers": 4,
+          "enc_factor": 1.5281140487137983,
+          "batch_size": 86,
+          "learning_rate": 9.214685527730229e-05,
+          "drop_p": 0.47910682226398227,
+          "weight_decay": 4.284387799885439e-05,
+          "latent_dim": 60,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        }
+      ],
+      "reconstruction": {
+        "10": [
+          {
+            "k_filter": 1572,
+            "n_layers": 3,
+            "enc_factor": 3.4060598265133613,
+            "batch_size": 49,
+            "learning_rate": 0.0002818853357593483,
+            "drop_p": 0.16198594313661466,
+            "weight_decay": 0.0032633476837079425,
+            "latent_dim": 33,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 506,
+            "n_layers": 3,
+            "enc_factor": 1.2485922194336156,
+            "batch_size": 112,
+            "learning_rate": 0.0002921844447384468,
+            "drop_p": 0.41769959907672166,
+            "weight_decay": 1.893562793448723e-05,
+            "latent_dim": 62,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 321,
+            "n_layers": 4,
+            "enc_factor": 3.145417897172496,
+            "batch_size": 208,
+            "learning_rate": 0.0017466205922187397,
+            "drop_p": 0.14915340408401098,
+            "weight_decay": 1.3204877623718659e-05,
+            "latent_dim": 29,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          }
+        ],
+        "50": [
+          {
+            "k_filter": 155,
+            "n_layers": 3,
+            "enc_factor": 1.435403385419959,
+            "batch_size": 62,
+            "learning_rate": 0.0008800219672079395,
+            "drop_p": 0.2306595187728538,
+            "weight_decay": 0.0004191644313938903,
+            "latent_dim": 29,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 3769,
+            "n_layers": 3,
+            "enc_factor": 3.909471747634616,
+            "batch_size": 113,
+            "learning_rate": 0.0001874435184590846,
+            "drop_p": 0.8706484308283067,
+            "weight_decay": 0.0006981361123521049,
+            "latent_dim": 42,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 2806,
+            "n_layers": 2,
+            "enc_factor": 2.2609317431906293,
+            "batch_size": 223,
+            "learning_rate": 0.0007531950249973592,
+            "drop_p": 0.41217192259140917,
+            "weight_decay": 4.1825355068829584e-05,
+            "latent_dim": 19,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          }
+        ],
+        "300": [
+          {
+            "k_filter": 158,
+            "n_layers": 4,
+            "enc_factor": 2.836593436937239,
+            "batch_size": 248,
+            "learning_rate": 1.465627730897283e-05,
+            "drop_p": 0.15759231151410566,
+            "weight_decay": 1.3668640608096819e-05,
+            "latent_dim": 36,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 3111,
+            "n_layers": 2,
+            "enc_factor": 1.743808631035582,
+            "batch_size": 175,
+            "learning_rate": 0.00023184939569675497,
+            "drop_p": 0.32559990425613566,
+            "weight_decay": 0.00016954626127154012,
+            "latent_dim": 47,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 858,
+            "n_layers": 3,
+            "enc_factor": 3.2971655123890735,
+            "batch_size": 225,
+            "learning_rate": 8.533160799839321e-05,
+            "drop_p": 0.7942202522493338,
+            "weight_decay": 0.00016074812239200964,
+            "latent_dim": 5,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          }
+        ]
+      }
+    },
+    "tcga": {
+      "downstream": [
+        {
+          "k_filter": 1292,
+          "n_layers": 2,
+          "enc_factor": 1.3460624144563202,
+          "batch_size": 51,
+          "learning_rate": 0.0007414429768528468,
+          "drop_p": 0.012192958406232112,
+          "weight_decay": 0.00012669761743836676,
+          "latent_dim": 42,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 169,
+          "n_layers": 4,
+          "enc_factor": 2.802855556516733,
+          "batch_size": 65,
+          "learning_rate": 0.007010328632694202,
+          "drop_p": 0.11881294109147464,
+          "weight_decay": 0.0018297357374060755,
+          "latent_dim": 14,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 3441,
+          "n_layers": 2,
+          "enc_factor": 2.251972963658628,
+          "batch_size": 179,
+          "learning_rate": 0.0030061319011881584,
+          "drop_p": 0.03333802332828039,
+          "weight_decay": 0.0005381145654286462,
+          "latent_dim": 42,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        }
+      ],
+      "reconstruction": {
+        "10": [
+          {
+            "k_filter": 183,
+            "n_layers": 3,
+            "enc_factor": 3.402581841715142,
+            "batch_size": 133,
+            "learning_rate": 0.0034787711234806674,
+            "drop_p": 0.26298722906498434,
+            "weight_decay": 0.010925368460028841,
+            "latent_dim": 8,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 385,
+            "n_layers": 3,
+            "enc_factor": 3.0689263223935277,
+            "batch_size": 100,
+            "learning_rate": 0.04985616709841353,
+            "drop_p": 0.8947930572633956,
+            "weight_decay": 0.0837998158967391,
+            "latent_dim": 51,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 308,
+            "n_layers": 4,
+            "enc_factor": 1.2991682849720454,
+            "batch_size": 129,
+            "learning_rate": 0.03120924895825557,
+            "drop_p": 0.09773135730247898,
+            "weight_decay": 8.001095508754165e-05,
+            "latent_dim": 50,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          }
+        ],
+        "50": [
+          {
+            "k_filter": 463,
+            "n_layers": 3,
+            "enc_factor": 2.597301909551641,
+            "batch_size": 214,
+            "learning_rate": 0.0021151335049468503,
+            "drop_p": 0.3727575002921515,
+            "weight_decay": 1.3423234372142999e-05,
+            "latent_dim": 5,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 202,
+            "n_layers": 3,
+            "enc_factor": 2.9845289307273593,
+            "batch_size": 147,
+            "learning_rate": 0.0027569704841146642,
+            "drop_p": 0.10450152264149724,
+            "weight_decay": 0.0014478744062995555,
+            "latent_dim": 43,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 2924,
+            "n_layers": 3,
+            "enc_factor": 3.335678422970373,
+            "batch_size": 158,
+            "learning_rate": 0.008564600747729047,
+            "drop_p": 0.24199296954715688,
+            "weight_decay": 4.3792720909589325e-05,
+            "latent_dim": 54,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          }
+        ],
+        "300": [
+          {
+            "k_filter": 330,
+            "n_layers": 2,
+            "enc_factor": 1.6176119216217644,
+            "batch_size": 88,
+            "learning_rate": 0.0023609220365937407,
+            "drop_p": 0.2106233594331184,
+            "weight_decay": 0.0006699334325820497,
+            "latent_dim": 57,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 2144,
+            "n_layers": 2,
+            "enc_factor": 3.260397691024896,
+            "batch_size": 55,
+            "learning_rate": 0.00014971363767805155,
+            "drop_p": 0.02496552220007117,
+            "weight_decay": 2.8739580128895115e-05,
+            "latent_dim": 37,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 3320,
+            "n_layers": 2,
+            "enc_factor": 3.6963220182005716,
+            "batch_size": 204,
+            "learning_rate": 0.00019055119811235187,
+            "drop_p": 0.34032602307957577,
+            "weight_decay": 0.034884248962137765,
+            "latent_dim": 40,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          }
+        ]
+      }
+    }
+  },
+  "varix": {
+    "combined": {
+      "downstream": [
+        {
+          "k_filter": 2845,
+          "n_layers": 3,
+          "enc_factor": 3.361073234459043,
+          "batch_size": 159,
+          "learning_rate": 0.0033023196273975707,
+          "drop_p": 0.2843712844782789,
+          "weight_decay": 1.0946336390920297e-05,
+          "beta": 0.1497123009757529,
+          "latent_dim": 58,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 2677,
+          "n_layers": 4,
+          "enc_factor": 1.8759055790241845,
+          "batch_size": 170,
+          "learning_rate": 8.629522298260548e-05,
+          "drop_p": 0.37374096762324516,
+          "weight_decay": 0.00019577863808162882,
+          "beta": 0.002726360383223113,
+          "latent_dim": 15,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 1584,
+          "n_layers": 3,
+          "enc_factor": 2.868828698170777,
+          "batch_size": 52,
+          "learning_rate": 0.0003654758769476195,
+          "drop_p": 0.006018606782762593,
+          "weight_decay": 0.05270917256533907,
+          "beta": 0.001932206694889414,
+          "latent_dim": 57,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        }
+      ],
+      "reconstruction": {
+        "10": [
+          {
+            "k_filter": 541,
+            "n_layers": 3,
+            "enc_factor": 1.9804684340973684,
+            "batch_size": 77,
+            "learning_rate": 0.002717325723957953,
+            "drop_p": 0.35043148848100575,
+            "weight_decay": 0.0007864112552472494,
+            "beta": 0.006834620413671464,
+            "latent_dim": 28,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 2364,
+            "n_layers": 2,
+            "enc_factor": 1.5361934723482507,
+            "batch_size": 122,
+            "learning_rate": 0.016495651229885448,
+            "drop_p": 0.7436434350994273,
+            "weight_decay": 0.0058003617069452675,
+            "beta": 7.280293783894691,
+            "latent_dim": 14,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 167,
+            "n_layers": 3,
+            "enc_factor": 1.897673199730901,
+            "batch_size": 33,
+            "learning_rate": 0.003892409946759678,
+            "drop_p": 0.3102688022311318,
+            "weight_decay": 0.0026862017895637022,
+            "beta": 0.0013105639782471901,
+            "latent_dim": 13,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          }
+        ],
+        "50": [
+          {
+            "k_filter": 718,
+            "n_layers": 3,
+            "enc_factor": 1.9777265078010173,
+            "batch_size": 182,
+            "learning_rate": 0.002190122698926713,
+            "drop_p": 0.23600920229783198,
+            "weight_decay": 0.09826424696929824,
+            "beta": 0.5839763374364625,
+            "latent_dim": 31,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 220,
+            "n_layers": 4,
+            "enc_factor": 1.7122654807764912,
+            "batch_size": 175,
+            "learning_rate": 0.013789779549849565,
+            "drop_p": 0.5541879389401917,
+            "weight_decay": 0.00047038119143363605,
+            "beta": 7.26726390945721,
+            "latent_dim": 19,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 263,
+            "n_layers": 3,
+            "enc_factor": 2.0620957297793114,
+            "batch_size": 60,
+            "learning_rate": 1.4736370658634068e-05,
+            "drop_p": 0.06820710052293998,
+            "weight_decay": 0.005334685302305579,
+            "beta": 0.07643195769491923,
+            "latent_dim": 54,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          }
+        ],
+        "300": [
+          {
+            "k_filter": 384,
+            "n_layers": 2,
+            "enc_factor": 2.804013009039549,
+            "batch_size": 45,
+            "learning_rate": 0.00015272787886118968,
+            "drop_p": 0.09977012715489865,
+            "weight_decay": 0.004433577897219041,
+            "beta": 0.008208207356004336,
+            "latent_dim": 53,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 2662,
+            "n_layers": 3,
+            "enc_factor": 1.526666833061923,
+            "batch_size": 231,
+            "learning_rate": 0.0021411940629834747,
+            "drop_p": 0.6996060969472071,
+            "weight_decay": 0.0789184513365815,
+            "beta": 0.05710284665239911,
+            "latent_dim": 40,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 244,
+            "n_layers": 4,
+            "enc_factor": 1.7771241434781295,
+            "batch_size": 56,
+            "learning_rate": 0.0002200447701985038,
+            "drop_p": 0.04032623912671542,
+            "weight_decay": 0.0007504750020810526,
+            "beta": 0.002936170339078701,
+            "latent_dim": 46,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          }
+        ]
+      }
+    },
+    "tcga": {
+      "downstream": [
+        {
+          "k_filter": 1394,
+          "n_layers": 2,
+          "enc_factor": 3.0496070239762147,
+          "batch_size": 219,
+          "learning_rate": 0.022805278717863812,
+          "drop_p": 0.19621402160268422,
+          "weight_decay": 0.002781290503373996,
+          "beta": 0.027217187928069608,
+          "latent_dim": 54,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 3077,
+          "n_layers": 3,
+          "enc_factor": 1.502146273773246,
+          "batch_size": 185,
+          "learning_rate": 6.161738424946646e-05,
+          "drop_p": 0.0004968877567736452,
+          "weight_decay": 0.0013463859386996936,
+          "beta": 0.001985862394452443,
+          "latent_dim": 58,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 1451,
+          "n_layers": 4,
+          "enc_factor": 3.219913453776961,
+          "batch_size": 135,
+          "learning_rate": 0.010749106023452524,
+          "drop_p": 0.8233623172497693,
+          "weight_decay": 1.5083570333819646e-05,
+          "beta": 0.00249058573020994,
+          "latent_dim": 5,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        }
+      ],
+      "reconstruction": {
+        "10": [
+          {
+            "k_filter": 374,
+            "n_layers": 2,
+            "enc_factor": 1.5991352506589738,
+            "batch_size": 102,
+            "learning_rate": 0.02118575207230584,
+            "drop_p": 0.6445729514175086,
+            "weight_decay": 0.009174019092789996,
+            "beta": 0.015342501454455102,
+            "latent_dim": 51,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 1610,
+            "n_layers": 4,
+            "enc_factor": 2.238768623100452,
+            "batch_size": 216,
+            "learning_rate": 0.004304311909977174,
+            "drop_p": 0.20735032114135418,
+            "weight_decay": 0.03529211838179183,
+            "beta": 0.3117250543342117,
+            "latent_dim": 44,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 243,
+            "n_layers": 3,
+            "enc_factor": 3.0097846896048357,
+            "batch_size": 73,
+            "learning_rate": 0.00026010360294215077,
+            "drop_p": 0.1268170707661979,
+            "weight_decay": 5.637577370242227e-05,
+            "beta": 0.0010241054899608176,
+            "latent_dim": 25,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          }
+        ],
+        "50": [
+          {
+            "k_filter": 319,
+            "n_layers": 3,
+            "enc_factor": 1.1625957050767377,
+            "batch_size": 252,
+            "learning_rate": 0.003978782904498988,
+            "drop_p": 0.45559367435221093,
+            "weight_decay": 4.62722675814489e-05,
+            "beta": 0.0011447165026768529,
+            "latent_dim": 5,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 134,
+            "n_layers": 4,
+            "enc_factor": 1.219801101635927,
+            "batch_size": 57,
+            "learning_rate": 0.010794984282144727,
+            "drop_p": 0.23260607277201048,
+            "weight_decay": 0.024330917110605223,
+            "beta": 2.0271778297858325,
+            "latent_dim": 37,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 3590,
+            "n_layers": 3,
+            "enc_factor": 2.2652304294399386,
+            "batch_size": 126,
+            "learning_rate": 1.2996878146198463e-05,
+            "drop_p": 0.6029937555232451,
+            "weight_decay": 0.00021652597094420486,
+            "beta": 0.002114675155834881,
+            "latent_dim": 5,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          }
+        ],
+        "300": [
+          {
+            "k_filter": 635,
+            "n_layers": 3,
+            "enc_factor": 1.678219821494545,
+            "batch_size": 75,
+            "learning_rate": 8.070181069529435e-05,
+            "drop_p": 0.11824890815552468,
+            "weight_decay": 2.5295365829762406e-05,
+            "beta": 0.004228465968782208,
+            "latent_dim": 9,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 3380,
+            "n_layers": 3,
+            "enc_factor": 3.9187311975256924,
+            "batch_size": 221,
+            "learning_rate": 6.31066193493105e-05,
+            "drop_p": 0.6243723754860858,
+            "weight_decay": 0.005363794786963421,
+            "beta": 0.007275941152978669,
+            "latent_dim": 56,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 236,
+            "n_layers": 4,
+            "enc_factor": 1.2876927055323315,
+            "batch_size": 33,
+            "learning_rate": 3.742801164600413e-05,
+            "drop_p": 0.1943319957961131,
+            "weight_decay": 0.002095247693787078,
+            "beta": 0.07761634183904065,
+            "latent_dim": 16,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          }
+        ]
+      }
+    }
+  },
+  "ontix": {
+    "combined": {
+      "downstream": [
+        {
+          "k_filter": 430,
+          "n_layers": 2,
+          "enc_factor": 2.7967098234935146,
+          "batch_size": 123,
+          "learning_rate": 2.8959886980621284e-05,
+          "drop_p": 0.4930141128133946,
+          "weight_decay": 0.07067002184245229,
+          "beta": 0.0007123178945740746,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 3083,
+          "n_layers": 3,
+          "enc_factor": 3.467335839270678,
+          "batch_size": 207,
+          "learning_rate": 0.0008667632932989543,
+          "drop_p": 0.7168809007497224,
+          "weight_decay": 0.0001181934148080836,
+          "beta": 0.0027725047382501722,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 3927,
+          "n_layers": 2,
+          "enc_factor": 1.1731158200419864,
+          "batch_size": 225,
+          "learning_rate": 0.0005107633473867606,
+          "drop_p": 0.21953330723641648,
+          "weight_decay": 0.0013910968119045216,
+          "beta": 0.0006259973267310243,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        }
+      ],
+      "reconstruction": {
+        "10": [
+          {
+            "k_filter": 1983,
+            "n_layers": 4,
+            "enc_factor": 3.4434495973905928,
+            "batch_size": 79,
+            "learning_rate": 0.00029260425567867796,
+            "drop_p": 0.8256140220083016,
+            "weight_decay": 3.8425748421110715e-05,
+            "beta": 0.025859236761509335,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 144,
+            "n_layers": 2,
+            "enc_factor": 3.8419562143378823,
+            "batch_size": 170,
+            "learning_rate": 0.021970968954424276,
+            "drop_p": 0.6837281485544145,
+            "weight_decay": 0.02821156919785431,
+            "beta": 0.013816042902794187,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 3376,
+            "n_layers": 4,
+            "enc_factor": 3.424351008798094,
+            "batch_size": 78,
+            "learning_rate": 1.5177135735524128e-05,
+            "drop_p": 0.12184793673345529,
+            "weight_decay": 0.0002940632243092666,
+            "beta": 0.6651761326332194,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          }
+        ],
+        "50": [
+          {
+            "k_filter": 857,
+            "n_layers": 3,
+            "enc_factor": 2.3834575923870136,
+            "batch_size": 193,
+            "learning_rate": 0.008133553955285717,
+            "drop_p": 0.14375318748798965,
+            "weight_decay": 0.0010275484339489708,
+            "beta": 0.0004420735565238346,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 1288,
+            "n_layers": 3,
+            "enc_factor": 3.813725450048993,
+            "batch_size": 231,
+            "learning_rate": 2.0459645779380703e-05,
+            "drop_p": 0.5308881029608326,
+            "weight_decay": 0.02492683822314823,
+            "beta": 0.6325021968716752,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 1546,
+            "n_layers": 3,
+            "enc_factor": 3.744824331645118,
+            "batch_size": 199,
+            "learning_rate": 0.0797257273852417,
+            "drop_p": 0.18108535278829066,
+            "weight_decay": 0.06700486637674943,
+            "beta": 0.00038773160610193827,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          }
+        ],
+        "300": [
+          {
+            "k_filter": 304,
+            "n_layers": 3,
+            "enc_factor": 2.341704316140305,
+            "batch_size": 218,
+            "learning_rate": 0.0008609676717266283,
+            "drop_p": 0.6776664642671985,
+            "weight_decay": 0.053032769305295636,
+            "beta": 0.00025031007813420766,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 3723,
+            "n_layers": 4,
+            "enc_factor": 1.1084634878474933,
+            "batch_size": 252,
+            "learning_rate": 2.913620180057205e-05,
+            "drop_p": 0.289197912377796,
+            "weight_decay": 0.02151589212337751,
+            "beta": 0.02017933207355277,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 2537,
+            "n_layers": 3,
+            "enc_factor": 1.741138563497684,
+            "batch_size": 113,
+            "learning_rate": 1.9664029108797312e-05,
+            "drop_p": 0.5375508874867455,
+            "weight_decay": 0.026911345673338572,
+            "beta": 0.013656067011705833,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          }
+        ]
+      }
+    },
+    "tcga": {
+      "downstream": [
+        {
+          "k_filter": 2225,
+          "n_layers": 3,
+          "enc_factor": 1.1117736338707631,
+          "batch_size": 195,
+          "learning_rate": 0.0009853658486341473,
+          "drop_p": 0.06810793092593458,
+          "weight_decay": 0.09562968739463347,
+          "beta": 0.001939726772048429,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 473,
+          "n_layers": 2,
+          "enc_factor": 1.4127654252606336,
+          "batch_size": 156,
+          "learning_rate": 0.0020612331443380038,
+          "drop_p": 0.6483118234850282,
+          "weight_decay": 0.032660528870994486,
+          "beta": 0.0006030897323349734,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 2257,
+          "n_layers": 3,
+          "enc_factor": 2.430347395171943,
+          "batch_size": 137,
+          "learning_rate": 0.00191088874742727,
+          "drop_p": 0.20592572321674113,
+          "weight_decay": 0.005788495285765509,
+          "beta": 0.006602868231062787,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        }
+      ],
+      "reconstruction": {
+        "10": [
+          {
+            "k_filter": 583,
+            "n_layers": 3,
+            "enc_factor": 2.801898179192039,
+            "batch_size": 204,
+            "learning_rate": 0.003661035861014162,
+            "drop_p": 0.646323380681671,
+            "weight_decay": 0.07244799793797184,
+            "beta": 0.0005831679683760124,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 3187,
+            "n_layers": 4,
+            "enc_factor": 3.494390270239742,
+            "batch_size": 208,
+            "learning_rate": 0.0035063059262822275,
+            "drop_p": 0.3002615994693739,
+            "weight_decay": 0.027050200566707927,
+            "beta": 0.0012547509379507483,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 280,
+            "n_layers": 4,
+            "enc_factor": 1.5132795654511284,
+            "batch_size": 141,
+            "learning_rate": 0.05212980014522695,
+            "drop_p": 0.5086053746848903,
+            "weight_decay": 0.09545484701497829,
+            "beta": 0.11315864267461972,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          }
+        ],
+        "50": [
+          {
+            "k_filter": 649,
+            "n_layers": 3,
+            "enc_factor": 2.912649799148762,
+            "batch_size": 120,
+            "learning_rate": 0.025493006075430893,
+            "drop_p": 0.5475786587319602,
+            "weight_decay": 6.868349934166501e-05,
+            "beta": 0.00010422664213410911,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 317,
+            "n_layers": 4,
+            "enc_factor": 1.5169446189057898,
+            "batch_size": 33,
+            "learning_rate": 5.621333638828131e-05,
+            "drop_p": 0.43114904659962905,
+            "weight_decay": 0.025562991473770644,
+            "beta": 0.019144456164386335,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 265,
+            "n_layers": 3,
+            "enc_factor": 3.1969815973038607,
+            "batch_size": 61,
+            "learning_rate": 0.001269730023364035,
+            "drop_p": 0.049897654441208174,
+            "weight_decay": 0.00033958513629073515,
+            "beta": 0.006733649164181694,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          }
+        ],
+        "300": [
+          {
+            "k_filter": 434,
+            "n_layers": 2,
+            "enc_factor": 1.0052585412945374,
+            "batch_size": 198,
+            "learning_rate": 7.795828856708996e-05,
+            "drop_p": 0.2633408927295091,
+            "weight_decay": 9.416464985856667e-05,
+            "beta": 0.00028708522784045117,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 1500,
+            "n_layers": 3,
+            "enc_factor": 3.357867951555937,
+            "batch_size": 186,
+            "learning_rate": 0.0021056339549768138,
+            "drop_p": 0.5997311014530644,
+            "weight_decay": 0.0005460842118941284,
+            "beta": 0.11376302287088327,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 208,
+            "n_layers": 3,
+            "enc_factor": 3.990543218103427,
+            "batch_size": 66,
+            "learning_rate": 0.003956729144204563,
+            "drop_p": 0.2261916958391815,
+            "weight_decay": 0.00024480413459883685,
+            "beta": 0.0002565628811977902,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          }
+        ]
+      }
+    }
+  },
+  "disentanglix": {
+    "combined": {
+      "downstream": [
+        {
+          "k_filter": 3192,
+          "n_layers": 2,
+          "enc_factor": 3.88332155671601,
+          "batch_size": 186,
+          "learning_rate": 0.00012949239958984175,
+          "drop_p": 0.18741964730681546,
+          "weight_decay": 0.0002923635082606169,
+          "latent_dim": 22,
+          "beta_mi": 0.023456411077333372,
+          "beta_tc": 117.11080051498587,
+          "beta_dimKL": 0.7039391575861601,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 4055,
+          "n_layers": 2,
+          "enc_factor": 3.828894424647467,
+          "batch_size": 173,
+          "learning_rate": 4.258646912865924e-05,
+          "drop_p": 0.16984204243939358,
+          "weight_decay": 0.055355421942011054,
+          "latent_dim": 51,
+          "beta_mi": 0.0022183570659502347,
+          "beta_tc": 4.248479965792164,
+          "beta_dimKL": 0.007275279294159567,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 2823,
+          "n_layers": 3,
+          "enc_factor": 3.818923050432615,
+          "batch_size": 242,
+          "learning_rate": 0.051945431376634335,
+          "drop_p": 0.725116338004754,
+          "weight_decay": 0.0003811631184173441,
+          "latent_dim": 49,
+          "beta_mi": 0.012563401802247895,
+          "beta_tc": 1.391401331243942,
+          "beta_dimKL": 1.3852027671719542,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        }
+      ],
+      "reconstruction": {
+        "10": [
+          {
+            "k_filter": 368,
+            "n_layers": 3,
+            "enc_factor": 3.5363666107754126,
+            "batch_size": 53,
+            "learning_rate": 0.0010383657999402426,
+            "drop_p": 0.8364311226677544,
+            "weight_decay": 5.791386759490452e-05,
+            "latent_dim": 63,
+            "beta_mi": 0.0012458548232454978,
+            "beta_tc": 805.5061262238011,
+            "beta_dimKL": 0.036673680283568315,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 2345,
+            "n_layers": 4,
+            "enc_factor": 3.1100716842505713,
+            "batch_size": 95,
+            "learning_rate": 0.0269244031551083,
+            "drop_p": 0.8719814594697104,
+            "weight_decay": 0.00040500607878142574,
+            "latent_dim": 46,
+            "beta_mi": 0.6352496825005928,
+            "beta_tc": 0.9017900403565431,
+            "beta_dimKL": 0.24698238305459358,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 202,
+            "n_layers": 3,
+            "enc_factor": 1.810429418702995,
+            "batch_size": 241,
+            "learning_rate": 7.982821342365777e-05,
+            "drop_p": 0.3702702838825881,
+            "weight_decay": 0.013040704465285166,
+            "latent_dim": 38,
+            "beta_mi": 3.6199138653983747,
+            "beta_tc": 333.6102336157224,
+            "beta_dimKL": 0.4189348952353784,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          }
+        ],
+        "50": [
+          {
+            "k_filter": 839,
+            "n_layers": 3,
+            "enc_factor": 3.3323475084297693,
+            "batch_size": 220,
+            "learning_rate": 0.0017343862121499208,
+            "drop_p": 0.35633134652365195,
+            "weight_decay": 0.0016970772464659854,
+            "latent_dim": 46,
+            "beta_mi": 0.13779921686316868,
+            "beta_tc": 8.136513733722621,
+            "beta_dimKL": 0.05436706505162664,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 2146,
+            "n_layers": 2,
+            "enc_factor": 2.294158782471669,
+            "batch_size": 53,
+            "learning_rate": 0.000658782713558455,
+            "drop_p": 0.6276705657559581,
+            "weight_decay": 0.00014962975855875091,
+            "latent_dim": 25,
+            "beta_mi": 0.01489200678898855,
+            "beta_tc": 0.15019661299683246,
+            "beta_dimKL": 0.009076342452649698,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 195,
+            "n_layers": 3,
+            "enc_factor": 1.1906890387322848,
+            "batch_size": 232,
+            "learning_rate": 3.7197353715029424e-05,
+            "drop_p": 0.3684457352545963,
+            "weight_decay": 4.8530042697593865e-05,
+            "latent_dim": 52,
+            "beta_mi": 0.022016867037345088,
+            "beta_tc": 94.21906998261079,
+            "beta_dimKL": 0.015906103078497623,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          }
+        ],
+        "300": [
+          {
+            "k_filter": 141,
+            "n_layers": 4,
+            "enc_factor": 3.7554829262268203,
+            "batch_size": 159,
+            "learning_rate": 0.00983298949183602,
+            "drop_p": 0.14135774795243208,
+            "weight_decay": 3.604504764381089e-05,
+            "latent_dim": 17,
+            "beta_mi": 0.8520052929271662,
+            "beta_tc": 64.34351083222086,
+            "beta_dimKL": 0.0011856793162072924,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 2561,
+            "n_layers": 3,
+            "enc_factor": 2.782680330678602,
+            "batch_size": 250,
+            "learning_rate": 0.004415945221641974,
+            "drop_p": 0.6219149554366937,
+            "weight_decay": 6.0979912814445565e-05,
+            "latent_dim": 20,
+            "beta_mi": 0.41375448122421415,
+            "beta_tc": 352.1232526148499,
+            "beta_dimKL": 0.0038594185100736056,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 2345,
+            "n_layers": 2,
+            "enc_factor": 1.1615946662520749,
+            "batch_size": 246,
+            "learning_rate": 0.00011815598531730829,
+            "drop_p": 0.49882673606014727,
+            "weight_decay": 0.014151393750345598,
+            "latent_dim": 26,
+            "beta_mi": 0.05810638925613893,
+            "beta_tc": 118.78322585185066,
+            "beta_dimKL": 6.63809534136652,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          }
+        ]
+      }
+    },
+    "tcga": {
+      "downstream": [
+        {
+          "k_filter": 1616,
+          "n_layers": 2,
+          "enc_factor": 3.027564369456143,
+          "batch_size": 160,
+          "learning_rate": 0.005156841933664806,
+          "drop_p": 0.2726176534838804,
+          "weight_decay": 0.021582810850797732,
+          "latent_dim": 28,
+          "beta_mi": 0.02935714720579787,
+          "beta_tc": 21.713616066376673,
+          "beta_dimKL": 0.019207491704279645,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 2615,
+          "n_layers": 2,
+          "enc_factor": 2.6188717389884015,
+          "batch_size": 153,
+          "learning_rate": 0.0019088860276746558,
+          "drop_p": 0.07711080653785467,
+          "weight_decay": 0.0014009622266419857,
+          "latent_dim": 19,
+          "beta_mi": 0.15052301697536996,
+          "beta_tc": 0.15399223024116512,
+          "beta_dimKL": 0.003063422679533915,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        },
+        {
+          "k_filter": 3567,
+          "n_layers": 4,
+          "enc_factor": 3.6847211672404723,
+          "batch_size": 167,
+          "learning_rate": 0.06804126054784923,
+          "drop_p": 0.44441821473406146,
+          "weight_decay": 1.2715933287469943e-05,
+          "latent_dim": 11,
+          "beta_mi": 3.1734085159242147,
+          "beta_tc": 47.942757128091664,
+          "beta_dimKL": 0.21620101036120778,
+          "epochs": 300,
+          "checkpoint_interval": 300,
+          "loss_reduction": "sum"
+        }
+      ],
+      "reconstruction": {
+        "10": [
+          {
+            "k_filter": 525,
+            "n_layers": 3,
+            "enc_factor": 1.3611782597047015,
+            "batch_size": 41,
+            "learning_rate": 0.032725634689205474,
+            "drop_p": 0.2021065308703048,
+            "weight_decay": 0.0466697087633557,
+            "latent_dim": 48,
+            "beta_mi": 9.471456932835219,
+            "beta_tc": 1408.758344882714,
+            "beta_dimKL": 0.056714176349792034,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 182,
+            "n_layers": 3,
+            "enc_factor": 1.2802852521851622,
+            "batch_size": 240,
+            "learning_rate": 0.0008289212257630114,
+            "drop_p": 0.5473870024561295,
+            "weight_decay": 0.0004154958752702763,
+            "latent_dim": 41,
+            "beta_mi": 0.002722601339182305,
+            "beta_tc": 85.12430212951966,
+            "beta_dimKL": 0.002763271243857093,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 2132,
+            "n_layers": 3,
+            "enc_factor": 2.0375626934203352,
+            "batch_size": 158,
+            "learning_rate": 1.3440451505422832e-05,
+            "drop_p": 0.44208907955914434,
+            "weight_decay": 0.04842106009171422,
+            "latent_dim": 62,
+            "beta_mi": 0.0023761150581949075,
+            "beta_tc": 9.36326658695667,
+            "beta_dimKL": 7.7197903374428565,
+            "epochs": 10,
+            "checkpoint_interval": 10,
+            "loss_reduction": "sum"
+          }
+        ],
+        "50": [
+          {
+            "k_filter": 347,
+            "n_layers": 2,
+            "enc_factor": 1.982281894533114,
+            "batch_size": 86,
+            "learning_rate": 0.0014272352791190298,
+            "drop_p": 0.43201038771080674,
+            "weight_decay": 0.00010361754740364083,
+            "latent_dim": 7,
+            "beta_mi": 2.06113395934158,
+            "beta_tc": 9016.430733796613,
+            "beta_dimKL": 7.541314042863369,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 3949,
+            "n_layers": 3,
+            "enc_factor": 2.098433055340512,
+            "batch_size": 195,
+            "learning_rate": 0.0007450049485194168,
+            "drop_p": 0.7362852172281349,
+            "weight_decay": 0.028400063046691362,
+            "latent_dim": 42,
+            "beta_mi": 0.005196554201918544,
+            "beta_tc": 4608.2496852295035,
+            "beta_dimKL": 0.0017060133871472079,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 160,
+            "n_layers": 3,
+            "enc_factor": 3.0173144622350927,
+            "batch_size": 176,
+            "learning_rate": 0.004523945682765439,
+            "drop_p": 0.5033180887954122,
+            "weight_decay": 1.766420649775029e-05,
+            "latent_dim": 4,
+            "beta_mi": 0.025007979063035802,
+            "beta_tc": 5763.174626044114,
+            "beta_dimKL": 0.7920714630058995,
+            "epochs": 50,
+            "checkpoint_interval": 50,
+            "loss_reduction": "sum"
+          }
+        ],
+        "300": [
+          {
+            "k_filter": 402,
+            "n_layers": 3,
+            "enc_factor": 2.228302367588083,
+            "batch_size": 121,
+            "learning_rate": 0.0001685911866544581,
+            "drop_p": 0.7687598239413156,
+            "weight_decay": 0.0002292482718823646,
+            "latent_dim": 5,
+            "beta_mi": 0.0013428397841061472,
+            "beta_tc": 0.16127059616987213,
+            "beta_dimKL": 2.4824144150180065,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 184,
+            "n_layers": 3,
+            "enc_factor": 3.9577543368077137,
+            "batch_size": 190,
+            "learning_rate": 0.006370587282661631,
+            "drop_p": 0.4731942607644586,
+            "weight_decay": 0.00231814184910625,
+            "latent_dim": 22,
+            "beta_mi": 0.015042306973503717,
+            "beta_tc": 1.893120511899231,
+            "beta_dimKL": 6.683638444659881,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          },
+          {
+            "k_filter": 174,
+            "n_layers": 3,
+            "enc_factor": 2.83345590799562,
+            "batch_size": 70,
+            "learning_rate": 0.018841571743340706,
+            "drop_p": 0.23513771501654954,
+            "weight_decay": 1.4028067698136238e-05,
+            "latent_dim": 29,
+            "beta_mi": 0.0900035370353195,
+            "beta_tc": 1.5714007873992113,
+            "beta_dimKL": 0.011559726715339126,
+            "epochs": 300,
+            "checkpoint_interval": 300,
+            "loss_reduction": "sum"
+          }
+        ]
+      }
+    }
+  }
+}

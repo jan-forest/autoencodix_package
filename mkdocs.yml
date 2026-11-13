@@ -1,4 +1,5 @@
 site_name: Autoencodix
+site_url: https://jan-forest.github.io/autoencodix_package/   # required by llmstxt; also enables sitemap.xml
 theme:
   name: material
 
@@ -12,7 +13,9 @@ nav:
       - Stackix: tutorials/PipelineTutorials/Stackix.ipynb
       - Ontix: tutorials/PipelineTutorials/Ontix.ipynb
       - Maskix: tutorials/PipelineTutorials/Maskix.ipynb
+      - Supervisix: tutorials/PipelineTutorials/Supervisix.ipynb
       - Imagix: tutorials/PipelineTutorials/Imagix.ipynb
+      - Imagix3D: tutorials/PipelineTutorials/Imagix3D.ipynb
       - X-Modalix: tutorials/PipelineTutorials/XModalix.ipynb
   - Deep Dives:
       - Config: tutorials/DeepDives/ConfigTutorial.ipynb
@@ -23,6 +26,7 @@ nav:
       - Explain Step: tutorials/DeepDives/ExplainStep.ipynb
       - Hyperparameter Optimization: tutorials/DeepDives/HyperparameterOptimizationTutorial.ipynb
       - "Hyperparameter Optimization (Optuna)": tutorials/DeepDives/HyperparameterOptimizationOptunaTutorial.ipynb
+      - Propose Initial Config: tutorials/DeepDives/ProposeInitialConfigTutorial.ipynb
       - Using Pre-Trained Models: tutorials/DeepDives/UsingPreTrainedModels.ipynb
       - Memory-Efficient Saving: tutorials/DeepDives/MemoryEfficientSaving.ipynb
   - Developer Guide: tutorials/DevGuide.ipynb
@@ -33,23 +37,50 @@ nav:
   - Disentanglix: api/disentanglix.md
   - Evaluate: api/evaluate.md
   - Imagix: api/imagix.md
+  - Imagix3D: api/imagix3d.md
+  - Maskix: api/maskix.md
   - Modeling: api/modeling.md
   - Ontix: api/ontix.md
   - Stackix: api/stackix.md
+  - Supervisix: api/supervisix.md
   - Trainers: api/trainers.md
   - Utils: api/utils.md
   - Vanillix: api/vanillix.md
   - Varix: api/varix.md
   - Visualize: api/visualize.md
+  - XModalix: api/xmodalix.md
 
 plugins:
 - search
+# Generates /llms.txt (index) and /llms-full.txt (all pages as Markdown) for LLMs and coding agents.
+# New pages are picked up automatically through the glob patterns below.
+- llmstxt:
+    markdown_description: >
+      AUTOENCODIX is a Python framework to train, evaluate, explain and share autoencoders
+      for biological data and beyond (bulk and single-cell omics, images, any tabular data).
+      All architectures share one pipeline API (preprocess, fit, predict, visualize, generate,
+      evaluate, explain, save/load) and are configured with validated Pydantic configs;
+      call `<Name>Config.print_schema()` to list all parameters. Pretrained models are on
+      https://huggingface.co/autoencodix. Source: https://github.com/jan-forest/autoencodix_package
+    full_output: llms-full.txt
+    preprocess: tools/llmstxt_preprocess.py   # drops API source listings, truncates long notebook outputs
+    sections:
+      Getting started:
+      - index.md: Overview, installation, quick start, architectures with references, pretrained models
+      Pipeline tutorials (one per architecture, start with Vanillix):
+      - tutorials/PipelineTutorials/*.ipynb
+      Deep dives (data input, config, evaluation, visualization, explainability, tuning, pretrained models):
+      - tutorials/DeepDives/*.ipynb
+      Developer guide:
+      - tutorials/DevGuide.ipynb: How to add a new architecture
+      API reference:
+      - api/*.md
 - mkdocstrings:
     handlers:
       python:
-        docstring_style: google
-        show_signature_annotations: true
         options:
+          docstring_style: google
+          show_signature_annotations: true
           extra:
             members_order: alphabetic
 - mkdocs-jupyter:

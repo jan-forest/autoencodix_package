@@ -23,6 +23,15 @@ sklearn.set_config(enable_metadata_routing=True)
 
 
 class XModalixEvaluator(GeneralEvaluator):
+    """Evaluator for cross-modal (``XModalix``) results.
+
+    Extends ``GeneralEvaluator`` so that each modality's latent space is
+    evaluated separately, and adds ``pure_vae_comparison`` to compare
+    translation quality against a single-modality VAE.
+
+    (LLM-generated docstring, pending human review.)
+    """
+
     def __init__(self):
         # super().__init__()
         pass
@@ -254,6 +263,21 @@ class XModalixEvaluator(GeneralEvaluator):
         task: str,
         sub: str,
     ) -> pd.DataFrame:
+        """Add model, modality and task columns to a results table.
+
+        Args:
+            results: Scores of one evaluation run.
+            sklearn_ml: The estimator used.
+            ml_type: "classification" or "regression".
+            task: Combined name "<feature set>_$_<modality>".
+            sub: Annotation parameter that was predicted.
+
+        Returns:
+            The results with the columns "ML_ALG", "ML_TYPE", "MODALITY",
+            "ML_TASK" and "ML_SUBTASK".
+
+        (LLM-generated docstring, pending human review.)
+        """
         res_ml_alg = [str(sklearn_ml) for x in range(0, results.shape[0])]
         res_ml_type = [ml_type for x in range(0, results.shape[0])]
         res_ml_subtask = [sub for x in range(0, results.shape[0])]
@@ -284,14 +308,32 @@ class XModalixEvaluator(GeneralEvaluator):
         Returns:
             list: A list of expanded reference method names, each suffixed with a key from the latent space.
         """
-        if not isinstance(result.latentspaces.get(epoch=-1, split="train"), dict):
+        # Check if latentspace is available for train or test split
+        train_available = False
+        test_available = False
+        try:
+            train_latent = result.latentspaces.get(epoch=-1, split="train")
+            if isinstance(train_latent, dict):
+                train_available = True
+        except Exception:
+            pass
+        try:
+            test_latent = result.latentspaces.get(epoch=-1, split="test")
+            if isinstance(test_latent, dict):
+                test_available = True
+        except Exception:
+            pass
+
+        if not (train_available and test_available):
             raise NotImplementedError(
-                "This evaluate feature does not support .save(save_all=False) results."
+                "Neither train nor test latentspace is available in the result object. Please ensure that the result object contains latent space information for at least one of these splits."
             )
+
+        split_to_use = "train" if train_available else "test"
         reference_methods = [
             f"{method}_$_{key}"
             for method in reference_methods
-            for key in result.latentspaces.get(epoch=-1, split="train").keys()
+            for key in result.latentspaces.get(epoch=-1, split=split_to_use).keys()
         ]
 
         return reference_methods

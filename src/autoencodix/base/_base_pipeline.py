@@ -1,4 +1,5 @@
 import abc
+import re
 from typing import Dict, Optional, Tuple, Type, Union, Any, Literal, List, Callable
 import warnings
 import anndata as ad  # type: ignore
@@ -7,6 +8,7 @@ import pandas as pd
 import torch
 from mudata import MuData  # type: ignore
 from torch.utils.data import Dataset
+from pathlib import Path
 
 # ML evaluation
 from sklearn import linear_model  # type: ignore
@@ -87,6 +89,10 @@ class BasePipeline(abc.ABC):
     ) -> None:  # ty: ignore[call-non-callable]
         """Initializes the pipeline with components and configuration.
 
+        Concrete pipelines (e.g. ``Vanillix``, ``Varix``) pass their component types
+        here; users normally only provide ``data``, ``config`` and, where relevant,
+        ``ontologies``, ``custom_split`` or ``masking_fn``.
+
         Args:
             dataset_type: Class for dataset implementations.
             trainer_type: Class for model training implementations.
@@ -94,19 +100,31 @@ class BasePipeline(abc.ABC):
             loss_type: Class for loss function implementations.
             datasplitter_type: Class for data splitting implementation.
             preprocessor_type: Class for data preprocessing implementation.
-            visualizer: Component for generating visualizations.
-            data: Input data to be processed or already processed data.
-            evaluator: Component for assessing model performance.
-            result: Storage container for pipeline outputs.
-            config: Configuration parameters for all pipeline components.
-            custom_split: User-provided data splits (train/validation/test).
-            **kwargs: Additional keyword arguments.
+            data: Input data: a ``DataPackage``, an already preprocessed
+                ``DatasetContainer``, or raw ``AnnData``, ``MuData``, ``pandas.DataFrame``
+                or dict, which is wrapped into a ``DataPackage`` automatically.
+            visualizer: Class for generating visualizations.
+            evaluator: Class for assessing model performance.
+            result: Storage container for pipeline outputs. A new ``Result`` is
+                created if None.
+            config: Configuration parameters for all pipeline components. The
+                pipeline's default config is used if None.
+            custom_split: User-provided data splits, mapping "train", "valid" and
+                "test" to sample indices.
+            ontologies: Ontology definitions for ``Ontix`` (sparse decoder layers);
+                ignored by other pipelines.
+            masking_fn: Custom masking function for ``Maskix``; ignored by other
+                pipelines.
+            masking_fn_kwargs: Keyword arguments passed to ``masking_fn``.
+            **kwargs: Additional keyword arguments (e.g. ``model_map``).
 
         Raises:
+            ValueError: If the pipeline class does not define ``_default_config``.
             TypeError: If inputs have incorrect types.
         """
         if not hasattr(self, "_default_config"):
-            raise ValueError("""
+            raise ValueError(
+                """
                             The _default_config attribute has not been specified in your pipeline class.
 
                             Example:
@@ -116,7 +134,8 @@ class BasePipeline(abc.ABC):
                             _default_config in its corresponding pipeline class.
 
                             For more details, please refer to the 'how to add a new architecture' section in our documentation.
-                            """)
+                            """
+            )
         self.model_map = kwargs.pop("model_map", None)
         self._validate_config(config=config)
         self._validate_user_input(data=data)
@@ -155,6 +174,7 @@ class BasePipeline(abc.ABC):
         self._preprocessor = self._preprocessor_type(
             config=self.config, ontologies=self.ontologies
         )
+        self._preprocessor.custom_splits = custom_split
 
         self.visualizer = (
             visualizer()  # ty: ignore[call-non-callable]
@@ -506,13 +526,22 @@ class BasePipeline(abc.ABC):
         result container.
 
         Args:
-            data: Optional new data for predictions.
+            data: Optional new data for predictions. If None, the test split of
+                the preprocessed data is used.
             config: Optional custom configuration for prediction.
+            from_key: Source modality for cross-modal translation (``XModalix``
+                only).
+            to_key: Target modality for cross-modal translation (``XModalix``
+                only).
             **kwargs: Additional configuration parameters as keyword arguments.
+
+        Returns:
+            The updated ``Result`` object with latent spaces and reconstructions.
 
         Raises:
             NotImplementedError: If required components aren't initialized.
-            ValueError: If no test data is available or data format is invalid.
+            ValueError: If no test data is available, the data format is invalid,
+                or ``fit`` has not been called.
         """
         self._validate_prediction_requirements()
         if self._trainer is None:
@@ -893,16 +922,63 @@ class BasePipeline(abc.ABC):
         metric_regression: str = "r2",  # Default is 'r2'
         reference_methods: list = [],  # Default [], Options are "PCA", "UMAP", "TSNE", "RandomFeature"
         reference_reducer: dict = {},  # Option to provide pre-fitted reducer objects for PCA, UMAP or TSNE, e.g. {"PCA": pca_reducer, "UMAP": umap_reducer, "TSNE": tsne_reducer}
-        split_type: Literal[
-            "use-split", "CV-5", "LOOC"
-        ] = "use-split",  # Default is "use-split", other options: "CV-5", ... "LOOCV"?
+        split_type: str = "use-split",  # "use-split", "LOOCV" or "CV-<N>", e.g. "CV-5"
         n_downsample: Optional[int] = 10000,
         top_k_classes: Optional[int] = 20,
         exclude_classes: Union[
             list, None
         ] = None,  # Default is None, if provided exclude these classes from evaluation
     ) -> Result:
-        """TODO"""
+        """Benchmark the learned embedding on downstream machine-learning tasks.
+
+        Trains scikit-learn models on the latent space (and optionally on reference
+        embeddings such as PCA or UMAP) to predict annotation columns, and stores the
+        performance per task, method and split in ``result.embedding_evaluation``.
+        Categorical columns are treated as classification, numeric columns as
+        regression. A summary plot is created afterwards.
+
+        Args:
+            ml_model_class: Scikit-learn classifier used for categorical parameters.
+            ml_model_regression: Scikit-learn regressor used for numeric parameters.
+            params: Annotation columns to predict. If empty, the
+                ``annotation_columns`` from the data config are used.
+            metric_class: Scikit-learn scoring name for classification tasks.
+            metric_regression: Scikit-learn scoring name for regression tasks.
+            reference_methods: Additional embeddings to compare against the latent
+                space: "PCA", "UMAP", "TSNE" and/or "RandomFeature" (five random
+                feature subsets of the input). The latent space is always evaluated.
+            reference_reducer: Optional pre-fitted reducers, e.g.
+                ``{"PCA": pca, "UMAP": umap}``, to reuse the same transformation
+                across runs.
+            split_type: Evaluation strategy: "use-split" (train on the train split,
+                score on valid/test), "CV-N" for N-fold cross-validation (e.g.
+                "CV-5"), or "LOOCV" for leave-one-out. Falls back to "CV-5" if no
+                train split is available.
+            n_downsample: Maximum number of samples used per evaluation for speed;
+                None disables downsampling.
+            top_k_classes: Keep only the k most frequent classes per parameter and
+                merge the rest into "other"; None keeps all classes.
+            exclude_classes: Class labels to drop before evaluation.
+
+        Returns:
+            The updated ``Result`` object.
+
+        Raises:
+            NotImplementedError: If no evaluator is set or the model is not trained.
+            ValueError: If ``split_type`` is invalid, no parameters are given or
+                configured, latent spaces are missing (run ``predict`` first), or
+                "RandomFeature" is requested without preprocessed data.
+
+        (LLM-generated docstring, pending human review.)
+        """
+        if not (
+            split_type in ("use-split", "LOOCV")
+            or re.fullmatch(r"CV-[1-9]\d*", split_type)
+        ):
+            raise ValueError(
+                f"Invalid split_type {split_type!r}. Use 'use-split', 'LOOCV' "
+                "or 'CV-<N>' for N-fold cross-validation (e.g. 'CV-5')."
+            )
         if self.evaluator is None:
             raise NotImplementedError("Evaluator not initialized")
         if self.result.model is None:
@@ -994,6 +1070,12 @@ class BasePipeline(abc.ABC):
 
         These visualizations help in understanding the model's performance and
         the structure of the latent space representations.
+
+        Args:
+            split: Data split to plot ("train", "valid", "test" or "all").
+            **kwargs: Optional ``params``: annotation column(s) used to color the
+                latent space plots. Defaults to ``annotation_columns`` from the
+                data config.
         """
         print("Creating plots ...")
 
@@ -1044,8 +1126,23 @@ class BasePipeline(abc.ABC):
     def save(self, file_path: str, save_all: bool = False):
         """Saves the pipeline to a file.
 
+        Writes three files next to each other: ``<file_path>`` (pickled pipeline),
+        ``<stem>_preprocessor.pkl`` and ``<stem>_model.pth`` (model weights). Restore
+        with ``<PipelineClass>.load(file_path)``.
+
+        Warning:
+            With ``save_all=False`` the pipeline object in memory is slimmed down as
+            a side effect: datasets, raw data and most results are removed and the
+            in-memory model is re-initialized (weights are only kept in the saved
+            files). Reload the pipeline with ``load`` before continuing to work
+            with it, or use ``save_all=True``.
+
         Args:
             file_path: Path where the pipeline should be saved.
+            save_all: If True, save the complete pipeline including data and all
+                results. If False (default), save only what is needed for
+                inference (model, config, preprocessor, losses and ``adata_latent``)
+                to reduce file size.
         """
         saver = Saver(file_path, save_all=save_all)
         saver.save(self)
@@ -1216,6 +1313,7 @@ class BasePipeline(abc.ABC):
         llm_model: str = "mistral-large-latest",
         top_n_genes: int = 40,
         prompt: str = PROMPT,
+        save: Union[str, Path, None] = None,
     ) -> pd.DataFrame:
         """Runs the feature-importance explainer and returns gene-by-latent-dimension attribution scores.
 
@@ -1234,6 +1332,8 @@ class BasePipeline(abc.ABC):
             llm_client: The LLM client to use for feature importance calculation.
             llm_model: The LLM model to use for feature importance calculation.
             top_n_genes: How many top (contribution to embedding) genes to consider for LLM explanation.
+            prompt: Prompt to pass to the LLM when explaining a latent dimension.
+            save: Path to directory with or without filename to save the generated .md file to. If set to None the file will be saved to the current working directory as "latent explanations.md".
 
         Returns:
             pd.DataFrame: The generated samples in the input space.
@@ -1344,6 +1444,7 @@ class BasePipeline(abc.ABC):
                 model_name=llm_model,
                 genes_to_latent=gene_attributions,  # Example gene list
                 prompt=prompt,
+                save=save,
             )
             print("Start LLM explanation generation")
             explanation = llm_explainer.explain()
@@ -1352,4 +1453,16 @@ class BasePipeline(abc.ABC):
         return df_attributions
 
     def impute(self, corrupted_tensor: torch.Tensor):
+        """Impute missing values in a corrupted input tensor.
+
+        Only implemented by the ``Maskix`` pipeline; see ``Maskix.impute``.
+
+        Args:
+            corrupted_tensor: Input data with missing or corrupted entries.
+
+        Raises:
+            NotImplementedError: Always, for pipelines other than ``Maskix``.
+
+        (LLM-generated docstring, pending human review.)
+        """
         raise NotImplementedError("Impute method only implemented for Maskix pipeline.")

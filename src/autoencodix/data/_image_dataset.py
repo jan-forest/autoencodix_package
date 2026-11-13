@@ -30,11 +30,16 @@ class ImageDataset(TensorAwareDataset):
         split_indices: Optional[Dict[str, Any]] = None,
         metadata: Optional[pd.DataFrame] = None,
     ):
-        """
-        Initialize the dataset
+        """Initialize the dataset and convert all images to tensors once.
+
         Args:
-            data: List of image data objects
-            config: Configuration object
+            data: List of image data objects.
+            config: Configuration object; defines the tensor dtype.
+            split_indices: Indices of the samples belonging to this split.
+            metadata: Sample metadata (annotation) for the images.
+
+        Raises:
+            ValueError: If ``config`` is None.
         """
         self.raw_data = data  # image data before conversion to keep original infos
         self.config = config

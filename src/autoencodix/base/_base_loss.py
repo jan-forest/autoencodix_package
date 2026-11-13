@@ -293,15 +293,17 @@ class BaseLoss(nn.Module, ABC):
         output and the provided targets.
 
         Args:
-            *kwargs depending on the loss type and pipeline
-
+            *args: Positional arguments, depending on the loss type and pipeline
+                (typically the model output and the target tensor).
+            **kwargs: Keyword arguments, depending on the loss type and pipeline
+                (e.g. ``epoch`` for annealing).
 
         Returns:
-            - The total loss value as a scalar tensor.
-            - A dictionary of individual loss components, where the keys are
-                descriptive strings (e.g., "reconstruction_loss", "kl_loss") and
-                the values are the corresponding loss tensors.
-            - Implementation in subclasses is flexible, so for new loss classes this can differ.
+            Typically a tuple of the total loss as a scalar tensor and a dictionary
+            of individual loss components, where the keys are descriptive strings
+            (e.g. "reconstruction_loss", "kl_loss") and the values are the
+            corresponding loss tensors. Implementation in subclasses is flexible,
+            so for new loss classes this can differ.
 
         Note:
             Subclasses must implement this method to define the specific loss

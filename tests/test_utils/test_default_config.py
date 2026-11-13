@@ -21,6 +21,19 @@ class TestDefaultConfig:
         with pytest.raises(ValidationError):
             DefaultConfig(device="mps", gpu_strategy="ddp")
 
+    def test_default_config_keeps_user_gpu_strategy(self):
+        # regression: the validator used to return None and drop the value
+        assert DefaultConfig(device="cpu", gpu_strategy="ddp").gpu_strategy == "ddp"
+
+    def test_default_config_all_fields_described(self):
+        # print_schema() is the documented way to discover parameters
+        undescribed = [
+            name
+            for name, field in DefaultConfig.model_fields.items()
+            if not field.description
+        ]
+        assert undescribed == []
+
     def test_default_config_get_params(self):
         config = DefaultConfig()
         params = config.get_params()

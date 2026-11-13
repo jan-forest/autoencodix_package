@@ -1,6 +1,6 @@
 [project]
 name = "autoencodix"
-version = "0.2.5"
+version = "0.3.0"
 authors = [
   { name="Maximilian Joas & Jan Ewald", email="jan.ewald@uni-leipzig.de" },
 ]
